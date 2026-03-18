@@ -274,22 +274,16 @@
   </main>
 
     <script type="module">
-    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-    const SUPABASE_URL = "https://asptfmokzykwzlshsncw.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzcHRmbW9renlrd3psc2hzbmN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MzcxNzcsImV4cCI6MjA4ODExMzE3N30.JkMLHPCV2AH5ELZV_1RfcoW250QEofLGvnDKSDpkcn0";
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { storage: window.sessionStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
-    });
+    import { supabase } from "./js/blmf-supabase.js";
 
     const ROUTES = {
       BLOG: "https://cclamazonia.noblogs.org",
       REGIMENTO: "https://cclamazonia.noblogs.org/regimento-blmf/",
-      CATALOGO: "https://cclamazonia-cmd.github.io/blmf-catalogo/",
-      CRIAR: "https://cclamazonia-cmd.github.io/blmf-conta/criar-conta.html",
-      CADASTRO: "https://cclamazonia-cmd.github.io/blmf-conta/cadastro.html",
-      CONTA: "https://cclamazonia-cmd.github.io/blmf-conta/conta.html",
-      PAINEL: "https://cclamazonia-cmd.github.io/blmf-conta/painel.html",
+      CATALOGO: "https://cclamazonia-cmd.github.io/anarbib-staging/",
+      CRIAR: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/criar-conta.html",
+      CADASTRO: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html",
+      CONTA: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html",
+      PAINEL: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html",
     };
 
     const BLOG_URL = ROUTES.BLOG;
@@ -412,8 +406,8 @@
         const resolved = new URL(next, ROUTES.CADASTRO);
         const isSameHost = resolved.origin === new URL(ROUTES.CADASTRO).origin;
         const allowedPath =
-          resolved.pathname.startsWith("/blmf-catalogo/") ||
-          resolved.pathname.startsWith("/blmf-conta/");
+          resolved.pathname.startsWith("/anarbib-staging/") ||
+          resolved.pathname.startsWith("/anarbib-conta-staging/");
         if (!isSameHost || !allowedPath) return "";
         return resolved.toString();
       } catch (_) {
