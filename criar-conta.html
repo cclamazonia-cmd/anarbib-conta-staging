@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Criar conta — Biblioteca Libertária Maxwell Ferreira</title>
+  <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
+  <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
+  <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
+  <link rel="stylesheet" href="./css/app.css" />
+  
+  <style>
+    :root{
+      --panel:rgba(18,18,18,.96);
+      --text:#f2f2f2;
+      --muted:rgba(255,255,255,.74);
+      --red:#b30018;
+      --red2:#e11d2f;
+      --line:rgba(255,255,255,.10);
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+      --ok:#4ade80;
+      --warn:#fbbf24;
+      --bad:#fb7185;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif;accent-color:#c00000}
+    body{
+      background-image:
+        linear-gradient(rgba(0,0,0,.78), rgba(0,0,0,.78)),
+        url("https://cclamazonia.noblogs.org/files/2024/11/Arte-CCLA-paredao.jpg");
+      background-size:cover;
+      background-position:center;
+      background-attachment:fixed;
+      background-repeat:no-repeat;
+    }
+    a,a:visited{color:inherit;text-decoration:none}
+    .wrap{
+      max-width:1680px;
+      margin:0 auto;
+      padding:24px;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width:0;
+    }
+    .logo{
+      height:64px;
+      width:auto;
+      max-width:170px;
+      object-fit:contain;
+      display:block;
+      flex-shrink:0;
+      filter:drop-shadow(0 8px 18px rgba(0,0,0,.35));
+    }
+    .brand-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+    .brand-title{font-size:1rem;font-weight:900;line-height:1.1}
+    .brand-subtitle{color:var(--muted);font-size:.9rem;line-height:1.2}
+    .actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+    }
+    button,.btn{
+      border:1px solid var(--line);
+      background:rgba(18,18,18,.92);
+      color:var(--text) !important;
+      border-radius:14px;
+      padding:10px 12px;
+      cursor:pointer;
+      box-shadow:var(--shadow);
+      font-weight:900;
+      font-size:.95rem;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      min-height:46px;
+      text-decoration:none;
+      appearance:none;
+      -webkit-appearance:none;
+      line-height:1.2;
+    }
+    button:hover,button:focus,.btn:hover,.btn:focus{
+      border-color:rgba(255,255,255,.22) !important;
+      color:var(--text) !important;
+    }
+    button[type="submit"]:not(.btn), .btn.primary{
+      border:none;
+      background:linear-gradient(135deg,var(--red2),var(--red));
+    }
+    .hero{
+      border:1px solid rgba(255,255,255,.08);
+      background:linear-gradient(135deg, rgba(179,0,24,.95), rgba(90,0,12,.96));
+      border-radius:22px;
+      padding:18px;
+      box-shadow:var(--shadow);
+    }
+    .hero h1{margin:0 0 6px;font-size:1.5rem}
+    .hero p{margin:0;color:rgba(255,255,255,.92);font-size:.98rem;line-height:1.35}
+    .notice,.rules,#cadastroForm{
+      border:1px solid rgba(255,255,255,.08);
+      background:var(--panel);
+      border-radius:22px;
+      padding:16px;
+      box-shadow:var(--shadow);
+    }
+    .notice{
+      background:linear-gradient(180deg, rgba(179,0,24,.18), rgba(18,18,18,.96));
+    }
+    .notice small{display:block;line-height:1.45;margin-top:6px;color:#f0f0f0}
+    .rules summary{cursor:pointer}
+    .rules ul{margin:10px 0 0 18px;color:#f0f0f0}
+    .rules a,.rules a:visited,.notice a,.notice a:visited,label.checkbox a,label.checkbox a:visited{
+      color:#fff !important;
+      text-decoration:underline;
+    }
+    .muted,.hint,.requiredLegend,.required{color:#cfcfcf;font-size:.94rem;line-height:1.45}
+    .reqMark{color:#ff8f8f;font-weight:700;margin-left:4px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+    label{
+      display:block;
+      font-size:.9rem;
+      color:var(--muted);
+      margin:0 0 6px;
+    }
+    input,select,textarea{
+      width:100%;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(12,12,12,.75);
+      color:var(--text);
+      border-radius:14px;
+      padding:12px 12px;
+      outline:none;
+      font:inherit;
+      margin:0 0 12px;
+    }
+    input:focus,select:focus,textarea:focus,button:focus,.btn:focus{
+      border-color:rgba(225,29,47,.85) !important;
+      box-shadow:0 0 0 3px rgba(225,29,47,.18) !important;
+    }
+    .checkbox{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      min-height:48px;
+      padding:12px 14px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(12,12,12,.75);
+      border-radius:14px;
+      margin:0 0 12px;
+    }
+    .checkbox input[type="checkbox"]{
+      width:18px;
+      height:18px;
+      margin:2px 0 0;
+      flex:0 0 auto;
+      accent-color:var(--red2);
+    }
+    .checkbox span{display:block;color:var(--text);line-height:1.4}
+    hr{
+      height:1px;
+      border:none;
+      background:rgba(255,255,255,.08);
+      margin:14px 0;
+    }
+    h2{margin:0 0 10px}
+    .msg{
+      margin-top:10px;
+      font-size:.92rem;
+      min-height:1.2em;
+      color:var(--muted);
+    }
+    .msg.ok{color:var(--ok)}
+    .msg.warn{color:var(--warn)}
+    .msg.bad{color:var(--bad)}
+    @media (max-width:980px){
+      .wrap{padding:16px}
+      .topbar{align-items:flex-start}
+      .grid2,.grid3{grid-template-columns:1fr}
+      .actions{width:100%}
+      .actions .btn, .actions button{width:auto;max-width:100%}
+    }
+  </style>
+
+</head>
+
+<body>
+  <main class="wrap">
+    <div class="topbar">
+      <div class="brand" aria-label="Biblioteca Libertária Maxwell Ferreira">
+        <img
+          class="logo"
+          src="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png"
+          alt="Logotipo BLMF"
+          onerror="this.style.display='none'"
+        />
+        <div class="brand-copy">
+          <div class="brand-title">BLMF</div>
+          <div class="brand-subtitle">Biblioteca Libertária Maxwell Ferreira</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <a class="btn" href="https://cclamazonia.noblogs.org">Voltar ao blogue</a>
+        <a class="btn" href="https://cclamazonia-cmd.github.io/blmf-catalogo/">Voltar ao catálogo</a>
+        <a class="btn" href="./cadastro.html">Já tenho conta (entrar)</a>
+        <a class="btn" href="https://cclamazonia.noblogs.org/regimento-blmf/" rel="noopener">Regimento</a>
+      </div>
+    </div>
+
+    <div class="hero">
+      <h1>Criar conta</h1>
+      <p>Abertura de conta (leitor/a/e)</p>
+    </div>
+
+<div class="notice" role="note" aria-label="Aviso de segurança">
+      <b>Importante (segurança):</b>
+      <small>
+        A senha que você receberá por e-mail é <b>provisória</b>. Após o primeiro acesso, você deverá
+        <b>alterar sua senha na Conta</b>.
+      </small>
+      <small>
+        Se você perder o acesso, use em <b>Cadastro</b> o botão <b>“Esqueci minha senha”</b> para receber um link de redefinição.
+      </small>
+      <small>
+        Se você não encontrar o e-mail de criação de conta, verifique “Spam/Lixo eletrônico”.
+      </small>
+    </div>
+
+    <details class="rules">
+      <summary><b>Regimento (resumo)</b> <span class="muted">— leia antes de criar sua conta</span></summary>
+      <ul>
+        <li>A biblioteca empresta <b>apenas livros</b>. Periódicos e brochuras são para <b>consulta local</b>.</li>
+        <li>Você pode emprestar <b>até 5 livros</b> ao mesmo tempo.</li>
+        <li>Prazos de empréstimo (conforme quantidade de livros emprestados):
+          <ul>
+            <li>1 livro: <b>21 dias</b></li>
+            <li>2–3 livros: <b>30 dias</b></li>
+            <li>4–5 livros: <b>38 dias</b></li>
+          </ul>
+        </li>
+        <li>Prorrogações: em geral, é possível solicitar <b>1 prorrogação</b>, quando não houver reserva pendente do mesmo exemplar.</li>
+        <li>Em caso de atraso, a biblioteca envia avisos. Se a situação não for regularizada em até <b>30 dias</b> após o aviso de atraso, o acesso a novos empréstimos pode ficar <b>suspenso</b> até regularização.</li>
+        <li>Regimento completo: <a id="regLinkTop" href="#" rel="noopener">abrir</a></li>
+      </ul>
+    </details>
+
+    <p class="hint">
+      Preencha os campos abaixo para criar sua conta.
+    </p>
+    <p class="requiredLegend"><span class="reqMark">*</span> Campo obrigatório</p>
+    <p class="hint">
+      Campos obrigatórios: <b>Nome</b>, <b>Sobrenome</b>, <b>E-mail</b>, <b>Telefone</b> e as duas caixas de confirmação.
+    </p>
+    <p class="hint">
+      Todos os campos de endereço são opcionais, inclusive <b>Estado</b> e <b>País</b>.
+    </p>
+
+    <form id="cadastroForm" novalidate>
+      <div class="grid2">
+        <div>
+          <label for="firstName">Nome <span class="reqMark">*</span></label>
+          <input type="text" id="firstName" autocomplete="given-name" placeholder="Nome" required />
+        </div>
+        <div>
+          <label for="lastName">Sobrenome <span class="reqMark">*</span></label>
+          <input type="text" id="lastName" autocomplete="family-name" placeholder="SOBRENOME" required />
+        </div>
+      </div>
+
+      <label for="email">E-mail <span class="reqMark">*</span></label>
+      <input type="email" id="email" autocomplete="email" required />
+
+      <label for="phone">Telefone <span class="reqMark">*</span></label>
+      <input type="tel" id="phone" autocomplete="tel" placeholder="+55 (91) 1234-5678" required />
+
+      <label for="gender">Gênero</label>
+      <select id="gender">
+
+        <option value="">—</option>
+        <option value="feminino">Feminino</option>
+        <option value="masculino">Masculino</option>
+        <option value="neutro">Neutro</option>
+        <option value="não informar">Prefiro não informar</option>
+        <option value="outro">Outro</option>
+      </select>
+      <p class="hint" style="margin-top:6px;">Campo opcional.</p>
+
+      <hr />
+
+      <h2 style="margin: 0 0 10px;">Endereço</h2>
+
+      <label for="addr1">Endereço 1</label>
+      <input type="text" id="addr1" autocomplete="address-line1" />
+
+      <label for="addr2">Complemento / referência</label>
+      <input type="text" id="addr2" autocomplete="address-line2" />
+
+      <div class="grid3">
+        <div>
+          <label for="unit">Casa ou Apartamento nº</label>
+          <input type="text" id="unit" placeholder="Ex.: Casa 2 / Ap. 301" />
+        </div>
+        <div>
+          <label for="cep">CEP</label>
+          <input type="text" id="cep" inputmode="numeric" autocomplete="postal-code" placeholder="XXXXX-XXX ou 01234-567" />
+        </div>
+        <div>
+          <label for="bairro">Bairro</label>
+          <input type="text" id="bairro" autocomplete="address-level3" placeholder="Opcional" />
+        </div>
+      </div>
+
+      <label for="city">Cidade</label>
+      <input type="text" id="city" autocomplete="address-level2" placeholder="NOME DA CIDADE" />
+
+      <div class="grid2">
+        <div>
+          <label for="state">Estado</label>
+          <select id="state">
+            <option value="">— selecione —</option>
+            <option value="NSA">Não se aplica (NSA)</option>
+            <option value="AC">Acre (AC)</option>
+            <option value="AL">Alagoas (AL)</option>
+            <option value="AP">Amapá (AP)</option>
+            <option value="AM">Amazonas (AM)</option>
+            <option value="BA">Bahia (BA)</option>
+            <option value="CE">Ceará (CE)</option>
+            <option value="DF">Distrito Federal (DF)</option>
+            <option value="ES">Espírito Santo (ES)</option>
+            <option value="GO">Goiás (GO)</option>
+            <option value="MA">Maranhão (MA)</option>
+            <option value="MT">Mato Grosso (MT)</option>
+            <option value="MS">Mato Grosso do Sul (MS)</option>
+            <option value="MG">Minas Gerais (MG)</option>
+            <option value="PA">Pará (PA)</option>
+            <option value="PB">Paraíba (PB)</option>
+            <option value="PR">Paraná (PR)</option>
+            <option value="PE">Pernambuco (PE)</option>
+            <option value="PI">Piauí (PI)</option>
+            <option value="RJ">Rio de Janeiro (RJ)</option>
+            <option value="RN">Rio Grande do Norte (RN)</option>
+            <option value="RS">Rio Grande do Sul (RS)</option>
+            <option value="RO">Rondônia (RO)</option>
+            <option value="RR">Roraima (RR)</option>
+            <option value="SC">Santa Catarina (SC)</option>
+            <option value="SP">São Paulo (SP)</option>
+            <option value="SE">Sergipe (SE)</option>
+            <option value="TO">Tocantins (TO)</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="country">País</label>
+          
+          <select id="country">
+            <option value="Brasil">Brasil</option>
+            <option value="">— selecione —</option>
+            <option value="Afeganistão">Afeganistão</option>
+            <option value="África do Sul">África do Sul</option>
+            <option value="Albânia">Albânia</option>
+            <option value="Alemanha">Alemanha</option>
+            <option value="Andorra">Andorra</option>
+            <option value="Angola">Angola</option>
+            <option value="Antígua e Barbuda">Antígua e Barbuda</option>
+            <option value="Arábia Saudita">Arábia Saudita</option>
+            <option value="Argélia">Argélia</option>
+            <option value="Argentina">Argentina</option>
+            <option value="Armênia">Armênia</option>
+            <option value="Austrália">Austrália</option>
+            <option value="Áustria">Áustria</option>
+            <option value="Azerbaijão">Azerbaijão</option>
+            <option value="Bahamas">Bahamas</option>
+            <option value="Bahrein">Bahrein</option>
+            <option value="Bangladesh">Bangladesh</option>
+            <option value="Barbados">Barbados</option>
+            <option value="Belarus">Belarus</option>
+            <option value="Bélgica">Bélgica</option>
+            <option value="Belize">Belize</option>
+            <option value="Benim">Benim</option>
+            <option value="Bolívia">Bolívia</option>
+            <option value="Bósnia e Herzegovina">Bósnia e Herzegovina</option>
+            <option value="Botsuana">Botsuana</option>
+            <option value="Brunei">Brunei</option>
+            <option value="Bulgária">Bulgária</option>
+            <option value="Burkina Faso">Burkina Faso</option>
+            <option value="Burundi">Burundi</option>
+            <option value="Butão">Butão</option>
+            <option value="Cabo Verde">Cabo Verde</option>
+            <option value="Camarões">Camarões</option>
+            <option value="Camboja">Camboja</option>
+            <option value="Canadá">Canadá</option>
+            <option value="Catar">Catar</option>
+            <option value="Cazaquistão">Cazaquistão</option>
+            <option value="Chade">Chade</option>
+            <option value="Chile">Chile</option>
+            <option value="China">China</option>
+            <option value="Chipre">Chipre</option>
+            <option value="Colômbia">Colômbia</option>
+            <option value="Comores">Comores</option>
+            <option value="Congo">Congo</option>
+            <option value="Coreia do Norte">Coreia do Norte</option>
+            <option value="Coreia do Sul">Coreia do Sul</option>
+            <option value="Costa do Marfim">Costa do Marfim</option>
+            <option value="Costa Rica">Costa Rica</option>
+            <option value="Croácia">Croácia</option>
+            <option value="Cuba">Cuba</option>
+            <option value="Dinamarca">Dinamarca</option>
+            <option value="Djibuti">Djibuti</option>
+            <option value="Dominica">Dominica</option>
+            <option value="Egito">Egito</option>
+            <option value="El Salvador">El Salvador</option>
+            <option value="Emirados Árabes Unidos">Emirados Árabes Unidos</option>
+            <option value="Equador">Equador</option>
+            <option value="Eritreia">Eritreia</option>
+            <option value="Eslováquia">Eslováquia</option>
+            <option value="Eslovênia">Eslovênia</option>
+            <option value="Espanha">Espanha</option>
+            <option value="Essuatíni">Essuatíni</option>
+            <option value="Estados Unidos">Estados Unidos</option>
+            <option value="Estônia">Estônia</option>
+            <option value="Etiópia">Etiópia</option>
+            <option value="Fiji">Fiji</option>
+            <option value="Filipinas">Filipinas</option>
+            <option value="Finlândia">Finlândia</option>
+            <option value="França">França</option>
+            <option value="Gabão">Gabão</option>
+            <option value="Gâmbia">Gâmbia</option>
+            <option value="Gana">Gana</option>
+            <option value="Geórgia">Geórgia</option>
+            <option value="Granada">Granada</option>
+            <option value="Grécia">Grécia</option>
+            <option value="Guatemala">Guatemala</option>
+            <option value="Guiana">Guiana</option>
+            <option value="Guiné">Guiné</option>
+            <option value="Guiné-Bissau">Guiné-Bissau</option>
+            <option value="Guiné Equatorial">Guiné Equatorial</option>
+            <option value="Haiti">Haiti</option>
+            <option value="Honduras">Honduras</option>
+            <option value="Hungria">Hungria</option>
+            <option value="Iêmen">Iêmen</option>
+            <option value="Ilhas Marshall">Ilhas Marshall</option>
+            <option value="Ilhas Salomão">Ilhas Salomão</option>
+            <option value="Índia">Índia</option>
+            <option value="Indonésia">Indonésia</option>
+            <option value="Irã">Irã</option>
+            <option value="Iraque">Iraque</option>
+            <option value="Irlanda">Irlanda</option>
+            <option value="Islândia">Islândia</option>
+            <option value="Israel">Israel</option>
+            <option value="Itália">Itália</option>
+            <option value="Jamaica">Jamaica</option>
+            <option value="Japão">Japão</option>
+            <option value="Jordânia">Jordânia</option>
+            <option value="Kiribati">Kiribati</option>
+            <option value="Kuwait">Kuwait</option>
+            <option value="Laos">Laos</option>
+            <option value="Lesoto">Lesoto</option>
+            <option value="Letônia">Letônia</option>
+            <option value="Líbano">Líbano</option>
+            <option value="Libéria">Libéria</option>
+            <option value="Líbia">Líbia</option>
+            <option value="Liechtenstein">Liechtenstein</option>
+            <option value="Lituânia">Lituânia</option>
+            <option value="Luxemburgo">Luxemburgo</option>
+            <option value="Macedônia do Norte">Macedônia do Norte</option>
+            <option value="Madagascar">Madagascar</option>
+            <option value="Malásia">Malásia</option>
+            <option value="Maláui">Maláui</option>
+            <option value="Maldivas">Maldivas</option>
+            <option value="Mali">Mali</option>
+            <option value="Malta">Malta</option>
+            <option value="Marrocos">Marrocos</option>
+            <option value="Maurício">Maurício</option>
+            <option value="Mauritânia">Mauritânia</option>
+            <option value="México">México</option>
+            <option value="Mianmar">Mianmar</option>
+            <option value="Micronésia">Micronésia</option>
+            <option value="Moçambique">Moçambique</option>
+            <option value="Moldávia">Moldávia</option>
+            <option value="Mônaco">Mônaco</option>
+            <option value="Mongólia">Mongólia</option>
+            <option value="Montenegro">Montenegro</option>
+            <option value="Namíbia">Namíbia</option>
+            <option value="Nauru">Nauru</option>
+            <option value="Nepal">Nepal</option>
+            <option value="Nicarágua">Nicarágua</option>
+            <option value="Níger">Níger</option>
+            <option value="Nigéria">Nigéria</option>
+            <option value="Noruega">Noruega</option>
+            <option value="Nova Zelândia">Nova Zelândia</option>
+            <option value="Omã">Omã</option>
+            <option value="Países Baixos">Países Baixos</option>
+            <option value="Palau">Palau</option>
+            <option value="Panamá">Panamá</option>
+            <option value="Papua-Nova Guiné">Papua-Nova Guiné</option>
+            <option value="Paquistão">Paquistão</option>
+            <option value="Paraguai">Paraguai</option>
+            <option value="Peru">Peru</option>
+            <option value="Polônia">Polônia</option>
+            <option value="Portugal">Portugal</option>
+            <option value="Quênia">Quênia</option>
+            <option value="Quirguistão">Quirguistão</option>
+            <option value="Reino Unido">Reino Unido</option>
+            <option value="República Centro-Africana">República Centro-Africana</option>
+            <option value="República Democrática do Congo">República Democrática do Congo</option>
+            <option value="República Dominicana">República Dominicana</option>
+            <option value="República Tcheca">República Tcheca</option>
+            <option value="Romênia">Romênia</option>
+            <option value="Ruanda">Ruanda</option>
+            <option value="Rússia">Rússia</option>
+            <option value="Samoa">Samoa</option>
+            <option value="San Marino">San Marino</option>
+            <option value="Santa Lúcia">Santa Lúcia</option>
+            <option value="São Cristóvão e Névis">São Cristóvão e Névis</option>
+            <option value="São Tomé e Príncipe">São Tomé e Príncipe</option>
+            <option value="São Vicente e Granadinas">São Vicente e Granadinas</option>
+            <option value="Seicheles">Seicheles</option>
+            <option value="Senegal">Senegal</option>
+            <option value="Serra Leoa">Serra Leoa</option>
+            <option value="Sérvia">Sérvia</option>
+            <option value="Singapura">Singapura</option>
+            <option value="Síria">Síria</option>
+            <option value="Somália">Somália</option>
+            <option value="Sri Lanka">Sri Lanka</option>
+            <option value="Sudão">Sudão</option>
+            <option value="Sudão do Sul">Sudão do Sul</option>
+            <option value="Suécia">Suécia</option>
+            <option value="Suíça">Suíça</option>
+            <option value="Suriname">Suriname</option>
+            <option value="Tailândia">Tailândia</option>
+            <option value="Taiwan">Taiwan</option>
+            <option value="Tajiquistão">Tajiquistão</option>
+            <option value="Tanzânia">Tanzânia</option>
+            <option value="Timor-Leste">Timor-Leste</option>
+            <option value="Togo">Togo</option>
+            <option value="Tonga">Tonga</option>
+            <option value="Trinidad e Tobago">Trinidad e Tobago</option>
+            <option value="Tunísia">Tunísia</option>
+            <option value="Turcomenistão">Turcomenistão</option>
+            <option value="Turquia">Turquia</option>
+            <option value="Tuvalu">Tuvalu</option>
+            <option value="Ucrânia">Ucrânia</option>
+            <option value="Uganda">Uganda</option>
+            <option value="Uruguai">Uruguai</option>
+            <option value="Uzbequistão">Uzbequistão</option>
+            <option value="Vanuatu">Vanuatu</option>
+            <option value="Vaticano">Vaticano</option>
+            <option value="Venezuela">Venezuela</option>
+            <option value="Vietnã">Vietnã</option>
+            <option value="Zâmbia">Zâmbia</option>
+            <option value="Zimbábue">Zimbábue</option>
+          </select>
+        </div>
+      </div>
+
+      <hr />
+
+      <label class="checkbox" for="acceptRules">
+        <input type="checkbox" id="acceptRules" required />
+        <span>
+          Eu li e aceito o <a id="regLink" href="#" rel="noopener">Regimento</a> da Biblioteca (empréstimos, prazos, prorrogações e atrasos). <span class="reqMark">*</span>
+        </span>
+      </label>
+
+      <label class="checkbox" for="consent">
+        <input type="checkbox" id="consent" required />
+        <span>
+          Eu aceito que meu endereço de e-mail seja usado para o envio de informações sobre minha conta: <span class="reqMark">*</span>
+          <b>reservas</b>, <b>empréstimos</b>, <b>prorrogações</b>, <b>devoluções</b> e <b>avisos de atraso</b>.
+        </span>
+      </label>
+
+      <p id="requiredMsg" class="required" style="display:none;">
+        Para enviar o cadastro, preencha Nome, Sobrenome, E-mail e Telefone, e marque as duas caixas obrigatórias.
+      </p>
+
+      <button type="submit">Enviar cadastro</button>
+      <button type="button" class="btn" id="back">Voltar</button>
+
+      <p id="msg" class="msg" aria-live="polite"></p>
+    </form>
+  </main>
+
+  <script type="module">
+    import { CONFIG } from "./js/config.js";
+
+    const REGIMENTO_URL = 'https://cclamazonia.noblogs.org/regimento-blmf/';
+
+    // Wire regimento links
+    for (const id of ["regLinkTop", "regLink"]) {
+      const a = document.getElementById(id);
+      if (a) a.href = REGIMENTO_URL;
+    }
+
+    const form = document.getElementById("cadastroForm");
+    const msg = document.getElementById("msg");
+    const requiredMsg = document.getElementById("requiredMsg");
+
+    const consent = document.getElementById("consent");
+    const acceptRules = document.getElementById("acceptRules");
+    const firstName = document.getElementById("firstName");
+    const lastName = document.getElementById("lastName");
+    const email = document.getElementById("email");
+    const phone = document.getElementById("phone");
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    function setMsg(text = "", kind = "") {
+      msg.textContent = text;
+      msg.className = kind ? `msg ${kind}` : "msg";
+    }
+
+    function mapRegisterError(data, status) {
+      const raw = String(data?.error || "").toLowerCase();
+
+      if (status === 409 || raw.includes("already") || raw.includes("já existe") || raw.includes("already registered")) {
+        return "Este e-mail já está cadastrado. Use “Já tenho conta (entrar)” ou “Esqueci minha senha”.";
+      }
+      if (status === 429 || raw.includes("rate limit")) {
+        return "Muitas tentativas em pouco tempo. Aguarde um pouco e tente novamente.";
+      }
+      if (status === 400) {
+        return "Não foi possível enviar o cadastro. Revise os campos obrigatórios e tente novamente.";
+      }
+      return "Não foi possível concluir o cadastro agora. Tente novamente.";
+    }
+
+
+    function validateCheckboxes() {
+      const ok = consent.checked && acceptRules.checked;
+      requiredMsg.style.display = ok ? "none" : "block";
+      return ok;
+    }
+
+    for (const cb of [consent, acceptRules]) {
+      cb.addEventListener("invalid", () => {
+        cb.setCustomValidity("Você precisa marcar esta caixa para continuar.");
+      });
+      cb.addEventListener("change", () => {
+        cb.setCustomValidity("");
+        validateCheckboxes();
+      });
+    }
+    for (const [field, message] of [
+      [firstName, "Preencha o nome."],
+      [lastName, "Preencha o sobrenome."],
+      [email, "Preencha um e-mail válido."],
+      [phone, "Preencha o telefone."]
+    ]) {
+      field.addEventListener("invalid", () => {
+        if (field.validity.valueMissing) {
+          field.setCustomValidity(message);
+        } else if (field === email && field.validity.typeMismatch) {
+          field.setCustomValidity("Preencha um e-mail válido.");
+        } else {
+          field.setCustomValidity("");
+        }
+      });
+      field.addEventListener("input", () => {
+        field.setCustomValidity("");
+      });
+    }
+
+
+    document.getElementById("back").addEventListener("click", () => {
+      window.location.href = "./cadastro.html";
+    });
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setMsg("");
+      requiredMsg.style.display = "none";
+
+      if (!validateCheckboxes()) {
+        requiredMsg.style.display = "block";
+        (!acceptRules.checked ? acceptRules : consent).focus();
+        return;
+      }
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      submitBtn.disabled = true;
+
+      const bairro = document.getElementById("bairro").value.trim();
+      const complemento = document.getElementById("addr2").value.trim();
+      const address2Combined = [bairro && `Bairro: ${bairro}`, complemento && `Complemento: ${complemento}`]
+        .filter(Boolean)
+        .join(" | ");
+
+      const payload = {
+        email: document.getElementById("email").value.trim(),
+        first_name: document.getElementById("firstName").value.trim(),
+        last_name: document.getElementById("lastName").value.trim(),
+        phone: document.getElementById("phone").value.trim(),
+        gender: document.getElementById("gender").value,
+        address_1: document.getElementById("addr1").value.trim(),
+        address_2: address2Combined,
+        address_unit: document.getElementById("unit").value.trim(),
+        cep: document.getElementById("cep").value.trim(),
+        city: document.getElementById("city").value.trim(),
+        state: document.getElementById("state").value,
+        country: document.getElementById("country").value,
+        consent_email: true,
+        accept_rules: true
+      };
+
+      try {
+        const res = await fetch(`${CONFIG.FUNCTIONS_BASE_URL}/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const text = await res.text();
+        let data = {};
+        try { data = JSON.parse(text); } catch {}
+
+        if (!res.ok) {
+          setMsg(mapRegisterError(data, res.status), "bad");
+          return;
+        }
+
+        if (data.email_usuaria_enviado === false) {
+          setMsg(
+            "Cadastro concluído, mas houve um problema ao enviar o e-mail automaticamente. Entre em contato com a biblioteca para receber sua senha. Depois do primeiro acesso, altere sua senha na Conta.",
+            "warn"
+          );
+        } else {
+          setMsg(
+            "Cadastro enviado com sucesso. Verifique seu e-mail (e Spam/Lixo eletrônico) para receber sua senha. Depois do primeiro acesso, altere sua senha na Conta.",
+            "ok"
+          );
+        }
+
+        form.reset();
+      } catch (err) {
+        setMsg("Falha de rede ao enviar o cadastro. Tente novamente.", "bad");
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

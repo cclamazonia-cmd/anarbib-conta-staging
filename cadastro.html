@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Cadastro — Biblioteca Libertária Maxwell Ferreira</title>
+  <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
+  <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
+  <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
+  <link rel="stylesheet" href="./css/app.css" />
+  
+  <style>
+    :root{
+      --panel:rgba(18,18,18,.96);
+      --text:#f2f2f2;
+      --muted:rgba(255,255,255,.74);
+      --red:#b30018;
+      --red2:#e11d2f;
+      --line:rgba(255,255,255,.10);
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+      --ok:#4ade80;
+      --warn:#fbbf24;
+      --bad:#fb7185;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif;accent-color:#c00000}
+    body{
+      background-image:
+        linear-gradient(rgba(0,0,0,.78), rgba(0,0,0,.78)),
+        url("https://cclamazonia.noblogs.org/files/2024/11/Arte-CCLA-paredao.jpg");
+      background-size:cover;
+      background-position:center;
+      background-attachment:fixed;
+      background-repeat:no-repeat;
+    }
+    a,a:visited{color:inherit;text-decoration:none}
+    .wrap{
+      max-width:1680px;
+      margin:0 auto;
+      padding:24px;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width:0;
+    }
+    .logo{
+      height:64px;
+      width:auto;
+      max-width:170px;
+      object-fit:contain;
+      display:block;
+      flex-shrink:0;
+      filter:drop-shadow(0 8px 18px rgba(0,0,0,.35));
+    }
+    .brand-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+    .brand-title{font-size:1rem;font-weight:900;line-height:1.1}
+    .brand-subtitle{color:var(--muted);font-size:.9rem;line-height:1.2}
+    .actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+    }
+    button,.btn{
+      border:1px solid var(--line);
+      background:rgba(18,18,18,.92);
+      color:var(--text) !important;
+      border-radius:14px;
+      padding:10px 12px;
+      cursor:pointer;
+      box-shadow:var(--shadow);
+      font-weight:900;
+      font-size:.95rem;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      min-height:46px;
+      text-decoration:none;
+      appearance:none;
+      -webkit-appearance:none;
+      line-height:1.2;
+    }
+    button:hover,button:focus,.btn:hover,.btn:focus{
+      border-color:rgba(255,255,255,.22) !important;
+      color:var(--text) !important;
+    }
+    button[type="submit"]:not(.btn), .btn.primary{
+      border:none;
+      background:linear-gradient(135deg,var(--red2),var(--red));
+    }
+    .hero{
+      border:1px solid rgba(255,255,255,.08);
+      background:linear-gradient(135deg, rgba(179,0,24,.95), rgba(90,0,12,.96));
+      border-radius:22px;
+      padding:18px;
+      box-shadow:var(--shadow);
+    }
+    .hero h1{margin:0 0 6px;font-size:1.5rem}
+    .hero p{margin:0;color:rgba(255,255,255,.92);font-size:.98rem;line-height:1.35}
+    .rules,
+    .notice,
+    #loginBox,
+    #recoveryBox{
+      border:1px solid rgba(255,255,255,.08);
+      background:var(--panel);
+      border-radius:22px;
+      padding:16px;
+      box-shadow:var(--shadow);
+    }
+    .notice{
+      background:linear-gradient(180deg, rgba(179,0,24,.18), rgba(18,18,18,.96));
+    }
+    .rules summary{cursor:pointer}
+    .rules ul{margin:10px 0 0 18px;color:#f0f0f0}
+    .rules a,.rules a:visited,.notice a,.notice a:visited,.small a,.small a:visited{
+      color:#fff !important;
+      text-decoration:underline;
+    }
+    label{
+      display:block;
+      font-size:.9rem;
+      color:var(--muted);
+      margin:0 0 6px;
+    }
+    input,select,textarea{
+      width:100%;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(12,12,12,.75);
+      color:var(--text);
+      border-radius:14px;
+      padding:12px 12px;
+      outline:none;
+      font:inherit;
+      margin:0 0 12px;
+    }
+    input:focus,select:focus,textarea:focus,button:focus,.btn:focus{
+      border-color:rgba(225,29,47,.85) !important;
+      box-shadow:0 0 0 3px rgba(225,29,47,.18) !important;
+    }
+    .small{color:#cfcfcf;font-size:.9rem}
+    .rowbtn{display:flex;gap:10px;align-items:center;justify-content:flex-start;flex-wrap:wrap}
+    .msg{
+      margin-top:10px;
+      font-size:.92rem;
+      min-height:1.2em;
+      color:var(--muted);
+    }
+    .msg.ok{color:var(--ok)}
+    .msg.warn{color:var(--warn)}
+    .msg.bad{color:var(--bad)}
+    .hide{display:none !important}
+    @media (max-width:980px){
+      .wrap{padding:16px}
+      .topbar{align-items:flex-start}
+      .actions{width:100%}
+      .actions .btn, .actions button{width:auto;max-width:100%}
+      .rowbtn > *{width:100%}
+    }
+  </style>
+
+</head>
+<body>
+  <main class="wrap">
+    <div class="topbar">
+      <div class="brand" aria-label="Biblioteca Libertária Maxwell Ferreira">
+        <img
+          class="logo"
+          src="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png"
+          alt="Logotipo BLMF"
+          onerror="this.style.display='none'"
+        />
+        <div class="brand-copy">
+          <div class="brand-title">BLMF</div>
+          <div class="brand-subtitle">Biblioteca Libertária Maxwell Ferreira</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="backBlog" class="btn" type="button">Voltar ao blogue</button>
+        <button id="backCatalog" class="btn" type="button">Voltar ao catálogo</button>
+        <button id="goCriarConta" class="btn" type="button">Criar conta</button>
+        <button id="goRegimento" class="btn" type="button">Regimento</button>
+      </div>
+    </div>
+
+    <div class="hero">
+      <h1>Cadastro</h1>
+      <p>Entrar · Esqueci minha senha · Redefinir senha</p>
+    </div>
+
+    <details class="rules">
+      <summary><b>Regimento (resumo)</b> <span class="small">— empréstimos, prazos e atrasos</span></summary>
+      <ul>
+        <li>A biblioteca empresta <b>apenas livros</b>. Periódicos e brochuras são para <b>consulta local</b>.</li>
+        <li>Até <b>5 livros</b> por pessoa.</li>
+        <li>Prazos: 1 livro (<b>21 dias</b>), 2–3 livros (<b>30 dias</b>), 4–5 livros (<b>38 dias</b>).</li>
+        <li>Em caso de atraso, a biblioteca envia avisos. Após 30 dias sem regularização, pode haver <b>suspensão</b> de novos empréstimos.</li>
+        <li>Regimento completo: <a id="regLink" href="#" rel="noopener">abrir</a></li>
+      </ul>
+    </details>
+
+    <!-- LOGIN -->
+    <section id="loginBox">
+      <form id="loginForm">
+        <label for="email">E-mail</label>
+        <input type="email" id="email" autocomplete="username" required />
+
+        <label for="password">Senha</label>
+        <input type="password" id="password" autocomplete="current-password" required />
+
+        <button type="submit">Entrar</button>
+      </form>
+
+      <p id="msg" class="msg" aria-live="polite"></p>
+
+      <div class="notice" aria-label="Recuperação de senha">
+        <b>Esqueceu a senha?</b>
+        <div class="small">Envie um link para redefinir sua senha (você voltará para esta tela).</div>
+        <div class="small">Se você não encontrar o e-mail, verifique “Spam/Lixo eletrônico”.</div>
+      </div>
+
+      <div class="rowbtn">
+        <button id="forgotBtn" class="btn" type="button">Esqueci minha senha</button>
+      </div>
+
+      <form id="forgotForm" class="hide" novalidate style="margin-top:10px;">
+        <label for="forgotEmail">E-mail da conta</label>
+        <input id="forgotEmail" type="email" autocomplete="email" required />
+
+        <div class="rowbtn">
+          <button type="submit">Enviar link</button>
+          <button type="button" id="cancelForgot" class="btn">Cancelar</button>
+        </div>
+
+        <p id="forgotMsg" class="msg" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <!-- RECOVERY MODE (reset password) -->
+    <section id="recoveryBox" class="hide" aria-label="Redefinir senha">
+      <div class="notice">
+        <b>Redefinir senha</b>
+        <div class="small">Escolha uma nova senha para sua conta.</div>
+      </div>
+
+      <form id="resetForm" novalidate>
+        <label for="newPassword">Nova senha</label>
+        <input id="newPassword" type="password" autocomplete="new-password" required />
+
+        <label for="newPassword2">Confirmar nova senha</label>
+        <input id="newPassword2" type="password" autocomplete="new-password" required />
+
+        <div class="rowbtn">
+          <button type="submit">Salvar nova senha</button>
+          <button type="button" id="toggleResetPw" class="btn">Mostrar senha</button>
+        </div>
+
+        <p id="resetMsg" class="msg" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+
+    <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+    const SUPABASE_URL = "https://asptfmokzykwzlshsncw.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzcHRmbW9renlrd3psc2hzbmN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MzcxNzcsImV4cCI6MjA4ODExMzE3N30.JkMLHPCV2AH5ELZV_1RfcoW250QEofLGvnDKSDpkcn0";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { storage: window.sessionStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    });
+
+    const ROUTES = {
+      BLOG: "https://cclamazonia.noblogs.org",
+      REGIMENTO: "https://cclamazonia.noblogs.org/regimento-blmf/",
+      CATALOGO: "https://cclamazonia-cmd.github.io/blmf-catalogo/",
+      CRIAR: "https://cclamazonia-cmd.github.io/blmf-conta/criar-conta.html",
+      CADASTRO: "https://cclamazonia-cmd.github.io/blmf-conta/cadastro.html",
+      CONTA: "https://cclamazonia-cmd.github.io/blmf-conta/conta.html",
+      PAINEL: "https://cclamazonia-cmd.github.io/blmf-conta/painel.html",
+    };
+
+    const BLOG_URL = ROUTES.BLOG;
+    const REGIMENTO_URL = ROUTES.REGIMENTO;
+
+    document.getElementById("regLink").href = REGIMENTO_URL;
+
+    document.getElementById("backBlog").addEventListener("click", (e) => {
+      e.preventDefault();
+      window.location.href = BLOG_URL;
+    });
+
+    document.getElementById("backCatalog").addEventListener("click", (e) => {
+      e.preventDefault();
+      window.location.href = ROUTES.CATALOGO;
+    });
+
+    document.getElementById("goCriarConta").addEventListener("click", () => {
+      window.location.href = ROUTES.CRIAR;
+    });
+    document.getElementById("goRegimento").addEventListener("click", () => {
+      window.location.href = REGIMENTO_URL;
+    });
+
+    const loginBox = document.getElementById("loginBox");
+    const recoveryBox = document.getElementById("recoveryBox");
+
+    const forgotBtn = document.getElementById("forgotBtn");
+    const forgotForm = document.getElementById("forgotForm");
+    const forgotMsg = document.getElementById("forgotMsg");
+    const cancelForgot = document.getElementById("cancelForgot");
+
+    function setMsg(el, text = "", kind = "") {
+      if (!el) return;
+      el.textContent = text;
+      el.className = kind ? `msg ${kind}` : "msg";
+    }
+
+    function mapAuthError(error, context = "generic") {
+      const raw = String(error?.message || "").toLowerCase();
+
+      if (context === "login") {
+        if (raw.includes("invalid login credentials") || raw.includes("invalid_credentials")) {
+          return "E-mail ou senha incorretos.";
+        }
+        if (raw.includes("email not confirmed")) {
+          return "Seu e-mail ainda não foi confirmado.";
+        }
+        if (raw.includes("rate limit")) {
+          return "Muitas tentativas em pouco tempo. Aguarde um pouco e tente novamente.";
+        }
+        return "Não foi possível entrar agora. Tente novamente.";
+      }
+
+      if (context === "forgot") {
+        if (raw.includes("rate limit")) {
+          return "Você pediu links demais em pouco tempo. Aguarde um pouco e tente de novo.";
+        }
+        if (raw.includes("for security purposes")) {
+          return "Por segurança, aguarde um pouco antes de pedir outro link.";
+        }
+        return "Não foi possível enviar o link agora. Tente novamente.";
+      }
+
+      if (context === "reset") {
+        if (raw.includes("same password")) {
+          return "Escolha uma senha diferente da anterior.";
+        }
+        if (raw.includes("session")) {
+          return "O link de redefinição expirou. Peça um novo link em “Esqueci minha senha”.";
+        }
+        return "Não foi possível salvar a nova senha agora. Tente novamente.";
+      }
+
+      return "Ocorreu um erro. Tente novamente.";
+    }
+
+
+    forgotBtn.addEventListener("click", () => {
+      forgotForm.classList.remove("hide");
+      forgotBtn.classList.add("hide");
+      document.getElementById("forgotEmail").value = document.getElementById("email").value.trim();
+      setMsg(forgotMsg, "");
+    });
+
+    cancelForgot.addEventListener("click", () => {
+      forgotForm.classList.add("hide");
+      forgotBtn.classList.remove("hide");
+      setMsg(forgotMsg, "");
+    });
+
+    function parseHashParams() {
+      const raw = (window.location.hash || "").replace(/^#/, "");
+      return new URLSearchParams(raw);
+    }
+
+    const params = parseHashParams();
+    const isRecovery = params.get("type") === "recovery" && !!params.get("access_token");
+
+    if (isRecovery) {
+      const access_token = params.get("access_token");
+      const refresh_token = params.get("refresh_token") || "";
+
+      try {
+        await supabase.auth.setSession({ access_token, refresh_token });
+      } catch (e) {
+        console.warn("setSession failed:", e);
+      }
+
+      loginBox.classList.add("hide");
+      recoveryBox.classList.remove("hide");
+    }
+
+    function getNextParam() {
+      const u = new URL(window.location.href);
+      const next = (u.searchParams.get("next") || "").trim();
+      if (!next) return "";
+
+      try {
+        const resolved = new URL(next, ROUTES.CADASTRO);
+        const isSameHost = resolved.origin === new URL(ROUTES.CADASTRO).origin;
+        const allowedPath =
+          resolved.pathname.startsWith("/blmf-catalogo/") ||
+          resolved.pathname.startsWith("/blmf-conta/");
+        if (!isSameHost || !allowedPath) return "";
+        return resolved.toString();
+      } catch (_) {
+        return "";
+      }
+    }
+
+    async function fetchIsLibrarian(userId) {
+      if (!userId) return false;
+
+      try {
+        const apiRead = await supabase
+          .schema("api")
+          .from("profiles")
+          .select("is_librarian")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (!apiRead.error) return apiRead.data?.is_librarian === true;
+      } catch (e) {
+        console.warn("api.profiles.is_librarian read exception:", e);
+      }
+
+      try {
+        const publicRead = await supabase
+          .from("profiles")
+          .select("is_librarian")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (!publicRead.error) return publicRead.data?.is_librarian === true;
+      } catch (e) {
+        console.warn("public.profiles.is_librarian read exception:", e);
+      }
+
+      return false;
+    }
+
+    async function getStableSessionUserId(signInData) {
+      const directUserId =
+        signInData?.user?.id ||
+        signInData?.session?.user?.id ||
+        null;
+
+      if (directUserId) return directUserId;
+
+      for (let i = 0; i < 12; i += 1) {
+        try {
+          const { data } = await supabase.auth.getSession();
+          const userId = data?.session?.user?.id || null;
+          if (userId) return userId;
+        } catch (e) {
+          console.warn("getSession retry failed:", e);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 80));
+      }
+
+      try {
+        const { data } = await supabase.auth.getUser();
+        return data?.user?.id || null;
+      } catch {
+        return null;
+      }
+    }
+
+    async function afterLoginRedirect(signInData) {
+      const userId = await getStableSessionUserId(signInData);
+      const next = getNextParam();
+
+      if (!userId) {
+        window.location.href = ROUTES.CADASTRO;
+        return;
+      }
+
+      if (next) {
+        window.location.href = next;
+        return;
+      }
+
+      const isLib = await fetchIsLibrarian(userId);
+      window.location.href = isLib ? ROUTES.PAINEL : ROUTES.CONTA;
+    }
+
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById("msg");
+      setMsg(msg, "");
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setMsg(msg, mapAuthError(error, "login"), "bad");
+        return;
+      }
+
+      await afterLoginRedirect(data);
+    });
+
+    document.getElementById("forgotForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setMsg(forgotMsg, "");
+
+      const email = document.getElementById("forgotEmail").value.trim();
+      if (!email) { setMsg(forgotMsg, "Informe um e-mail válido.", "bad"); return; }
+
+      const redirectTo = new URL("./cadastro.html", window.location.href).toString();
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+      if (error) {
+        setMsg(forgotMsg, mapAuthError(error, "forgot"), "bad");
+        return;
+      }
+
+      setMsg(forgotMsg, "Link enviado. Se você não encontrar o e-mail, verifique “Spam/Lixo eletrônico”.", "ok");
+    });
+
+    const resetMsg = document.getElementById("resetMsg");
+    const rp1 = document.getElementById("newPassword");
+    const rp2 = document.getElementById("newPassword2");
+    const toggleResetPw = document.getElementById("toggleResetPw");
+
+    toggleResetPw.addEventListener("click", () => {
+      const show = rp1.type === "password";
+      rp1.type = show ? "text" : "password";
+      rp2.type = show ? "text" : "password";
+      toggleResetPw.textContent = show ? "Ocultar senha" : "Mostrar senha";
+    });
+
+    document.getElementById("resetForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setMsg(resetMsg, "");
+
+      const p1 = rp1.value;
+      const p2 = rp2.value;
+
+      if (!p1 || p1.length < 10) { setMsg(resetMsg, "A senha deve ter pelo menos 10 caracteres.", "bad"); return; }
+      if (p1 !== p2) { setMsg(resetMsg, "As senhas não coincidem.", "bad"); return; }
+
+      const { error } = await supabase.auth.updateUser({ password: p1 });
+      if (error) {
+        setMsg(resetMsg, mapAuthError(error, "reset"), "bad");
+        return;
+      }
+
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData?.user?.id;
+        if (userId) {
+          const { error: profErr } = await supabase
+            .from("profiles")
+            .update({ must_change_password: false, password_changed_at: new Date().toISOString() })
+            .eq("id", userId);
+
+          if (profErr) console.warn("profiles update warn:", profErr.message);
+        }
+      } catch (e) {
+        console.warn("profiles update skipped:", e);
+      }
+
+      setMsg(resetMsg, "Senha redefinida com sucesso. Agora você pode entrar.", "ok");
+
+      history.replaceState(null, "", window.location.pathname);
+
+      setTimeout(() => { window.location.href = ROUTES.CADASTRO; }, 2000);
+    });
+  </script>
+</body>
+</html>
