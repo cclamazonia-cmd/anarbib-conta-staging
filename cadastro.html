@@ -278,13 +278,7 @@
   </main>
 
     <script type="module">
-    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-    const SUPABASE_URL = "https://uflwmikiyjfnikiphtcp.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmbHdraWtpampmbmlraXBodGNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NjM0MTksImV4cCI6MjA4NTUzOTQxOX0.x-qCVvWD2pfjpDEp7hifQ2wCKAzOsO3gaA7KNdzD60I";
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { storage: window.sessionStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
-    });
+    import { supabase } from "./js/blmf-supabase.js";
 
     const ROUTES = {
       BLOG: "https://cclamazonia.noblogs.org",
@@ -491,6 +485,17 @@
       }
     }
 
+    async function persistReturnedSession(signInData) {
+      const access_token = signInData?.session?.access_token;
+      const refresh_token = signInData?.session?.refresh_token;
+      if (!access_token || !refresh_token) return;
+      try {
+        await supabase.auth.setSession({ access_token, refresh_token });
+      } catch (e) {
+        console.warn("persistReturnedSession failed:", e);
+      }
+    }
+
     async function afterLoginRedirect(signInData) {
       const userId = await getStableSessionUserId(signInData);
       const next = getNextParam();
@@ -519,10 +524,12 @@
 
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
+        console.error("BLMF cadastro login error:", error);
         setMsg(msg, mapAuthError(error, "login"), "bad");
         return;
       }
 
+      await persistReturnedSession(data);
       await afterLoginRedirect(data);
     });
 
