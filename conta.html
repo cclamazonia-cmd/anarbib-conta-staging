@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Conta — Biblioteca Libertária Maxwell Ferreira</title>
-  <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
-  <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
-  <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
+  <title>AnarBib – conta</title>
+  <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
+  <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
+  <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
   <link rel="stylesheet" href="./css/app.css" />
   <style>
     body{
@@ -678,9 +678,10 @@ button[type="submit"] *,
     <div class="topbar">
       <div class="brand">
         <img
+          id="brandLogo"
           class="logo"
           src="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png"
-          alt="Logotipo BLMF"
+          alt="AnarBib"
           onerror="this.style.display='none'"
         />
       </div>
@@ -695,8 +696,8 @@ button[type="submit"] *,
 
     <main class="card">
       <div class="hero">
-        <h1>Conta — Biblioteca Libertária Maxwell Ferreira</h1>
-        <p>Área do/a/e leitor/a/e</p>
+        <h1 id="pageHeroTitle">Conta</h1>
+        <p id="pageHeroSubtitle">Espaço do/a/e leitor/a/e</p>
         <div class="chips">
           <span class="chip" id="chipContaEspaco">Espaço: leitor/a/e</span>
           <span class="chip" id="chipContaEmail">E-mail: —</span>
@@ -1121,13 +1122,25 @@ button[type="submit"] *,
   </div>
 
   <script type="module">
+    import { CONFIG, applyPageChrome, buildAuthRedirectTarget } from "./js/config.js";
     import { supabase } from "./js/blmf-supabase.js";
 
+    applyPageChrome("conta", {
+      logoId: "brandLogo",
+      heroTitleId: "pageHeroTitle",
+      heroSubtitleId: "pageHeroSubtitle",
+      routeMap: {
+        btnBlog: "blog",
+        btnCatalogo: "catalogo",
+        btnRegimento: "regimentoPdf"
+      }
+    });
+
     const ROUTES = {
-      CADASTRO: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html",
-      CATALOGO: "https://cclamazonia-cmd.github.io/anarbib-staging/",
-      PAINEL: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html",
-      REGIMENTO: "https://cclamazonia.noblogs.org/files/2026/03/Regimento-BLMF-v2.3.pdf",
+      CADASTRO: CONFIG.ROUTES.cadastro,
+      CATALOGO: CONFIG.ROUTES.catalogo,
+      PAINEL: CONFIG.ROUTES.painel,
+      REGIMENTO: CONFIG.ROUTES.regimentoPdf,
     };
 
     const $ = (id) => document.getElementById(id);
@@ -1145,7 +1158,7 @@ button[type="submit"] *,
     const { data: sessData } = await supabase.auth.getSession();
     const session = sessData?.session || null;
     if (!session) {
-      window.location.href = ROUTES.CADASTRO + "?next=conta.html";
+      window.location.href = buildAuthRedirectTarget("conta.html");
       throw new Error("No session");
     }
 
