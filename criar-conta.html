@@ -216,10 +216,10 @@
       </div>
 
       <div class="actions">
-        <a class="btn" id="btnBlog" href="#">Voltar ao blogue</a>
-        <a class="btn" id="btnCatalogo" href="#">Voltar ao catálogo</a>
-        <a class="btn" id="btnCadastro" href="#">Já tenho conta (entrar)</a>
-        <a class="btn" id="btnRegimentoTop" href="#" rel="noopener">Regimento</a>
+        <a class="btn" id="btnBlog" href="https://cclamazonia.noblogs.org">Voltar ao blogue</a>
+        <a class="btn" id="btnCatalogo" href="https://cclamazonia-cmd.github.io/anarbib-staging/">Voltar ao catálogo</a>
+        <a class="btn" id="btnCadastro" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html">Já tenho conta (entrar)</a>
+        <a class="btn" id="btnRegimentoTop" href="https://cclamazonia.noblogs.org/files/2026/03/Regimento-BLMF-v2.3.pdf" rel="noopener">Regimento</a>
       </div>
     </div>
 
@@ -598,23 +598,63 @@
   </main>
 
   <script type="module">
-    import { CONFIG, applyPageChrome } from "./js/config.js";
-
-    applyPageChrome("criar_conta", {
-      logoId: "brandLogo",
-      brandTitleId: "brandTitle",
-      brandSubtitleId: "brandSubtitle",
-      heroTitleId: "pageHeroTitle",
-      heroSubtitleId: "pageHeroSubtitle",
-      routeMap: {
-        btnBlog: "blog",
-        btnCatalogo: "catalogo",
-        btnCadastro: "cadastro",
-        btnRegimentoTop: "regimentoPage"
+    const FALLBACK_CONFIG = {
+      SUPABASE_URL: "https://asptfmokzykwzlshsncw.supabase.co",
+      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzcHRmbW9renlrd3psc2hzbmN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MzcxNzcsImV4cCI6MjA4ODExMzE3N30.JkMLHPCV2AH5ELZV_1RfcoW250QEofLGvnDKSDpkcn0",
+      FUNCTIONS_BASE_URL: "https://asptfmokzykwzlshsncw.supabase.co/functions/v1",
+      ROUTES: {
+        blog: "https://cclamazonia.noblogs.org",
+        catalogo: "https://cclamazonia-cmd.github.io/anarbib-staging/",
+        cadastro: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html",
+        regimentoPage: "https://cclamazonia.noblogs.org/files/2026/03/Regimento-BLMF-v2.3.pdf"
       }
-    });
+    };
 
-    const REGIMENTO_URL = CONFIG.ROUTES.regimentoPage;
+    let CONFIG = FALLBACK_CONFIG;
+    let applyPageChrome = null;
+    try {
+      const mod = await import("./js/config.js");
+      CONFIG = {
+        ...FALLBACK_CONFIG,
+        ...(mod?.CONFIG || {}),
+        ROUTES: {
+          ...FALLBACK_CONFIG.ROUTES,
+          ...(mod?.CONFIG?.ROUTES || {})
+        }
+      };
+      applyPageChrome = mod?.applyPageChrome || null;
+    } catch (_) {}
+
+    CONFIG = {
+      ...CONFIG,
+      SUPABASE_URL: FALLBACK_CONFIG.SUPABASE_URL,
+      SUPABASE_ANON_KEY: FALLBACK_CONFIG.SUPABASE_ANON_KEY,
+      FUNCTIONS_BASE_URL: FALLBACK_CONFIG.FUNCTIONS_BASE_URL,
+      ROUTES: {
+        ...CONFIG.ROUTES,
+        ...FALLBACK_CONFIG.ROUTES
+      }
+    };
+
+    try {
+      if (typeof applyPageChrome === "function") {
+        applyPageChrome("criar_conta", {
+          logoId: "brandLogo",
+          brandTitleId: "brandTitle",
+          brandSubtitleId: "brandSubtitle",
+          heroTitleId: "pageHeroTitle",
+          heroSubtitleId: "pageHeroSubtitle",
+          routeMap: {
+            btnBlog: "blog",
+            btnCatalogo: "catalogo",
+            btnCadastro: "cadastro",
+            btnRegimentoTop: "regimentoPage"
+          }
+        });
+      }
+    } catch (_) {}
+
+    const REGIMENTO_URL = FALLBACK_CONFIG.ROUTES.regimentoPage;
     const ANARBIB_LOGO_URL = "https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png";
 
     const brandLogo = document.getElementById("brandLogo");
@@ -624,6 +664,16 @@
     if (brandLogo) brandLogo.src = ANARBIB_LOGO_URL;
     if (brandTitle) brandTitle.textContent = "AnarBib";
     if (brandSubtitle) brandSubtitle.textContent = "Rede AnarBib · Criar a sua conta de leitor@.";
+
+    Object.entries({
+      btnBlog: FALLBACK_CONFIG.ROUTES.blog,
+      btnCatalogo: FALLBACK_CONFIG.ROUTES.catalogo,
+      btnCadastro: FALLBACK_CONFIG.ROUTES.cadastro,
+      btnRegimentoTop: FALLBACK_CONFIG.ROUTES.regimentoPage
+    }).forEach(([id, href]) => {
+      const a = document.getElementById(id);
+      if (a) a.href = href;
+    });
 
     // Wire regimento links
     for (const id of ["regLinkTop", "regLink"]) {
