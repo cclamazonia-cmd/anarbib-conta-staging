@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Criar conta — Biblioteca Libertária Maxwell Ferreira</title>
-  <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
-  <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
-  <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
+  <title>AnarBib – criar conta</title>
+  <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
+  <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
+  <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
   <link rel="stylesheet" href="./css/app.css" />
   
   <style>
@@ -201,30 +201,31 @@
 <body>
   <main class="wrap">
     <div class="topbar">
-      <div class="brand" aria-label="Biblioteca Libertária Maxwell Ferreira">
+      <div class="brand" id="brandWrap" aria-label="AnarBib">
         <img
+          id="brandLogo"
           class="logo"
           src="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png"
-          alt="Logotipo BLMF"
+          alt="AnarBib"
           onerror="this.style.display='none'"
         />
         <div class="brand-copy">
-          <div class="brand-title">BLMF</div>
-          <div class="brand-subtitle">Biblioteca Libertária Maxwell Ferreira</div>
+          <div id="brandTitle" class="brand-title">AnarBib</div>
+          <div id="brandSubtitle" class="brand-subtitle">Rede AnarBib · instância de teste com biblioteca participante</div>
         </div>
       </div>
 
       <div class="actions">
-        <a class="btn" href="https://cclamazonia.noblogs.org">Voltar ao blogue</a>
-        <a class="btn" href="https://cclamazonia-cmd.github.io/blmf-catalogo/">Voltar ao catálogo</a>
-        <a class="btn" href="./cadastro.html">Já tenho conta (entrar)</a>
-        <a class="btn" href="https://cclamazonia.noblogs.org/regimento-blmf/" rel="noopener">Regimento</a>
+        <a class="btn" id="btnBlog" href="#">Voltar ao blogue</a>
+        <a class="btn" id="btnCatalogo" href="#">Voltar ao catálogo</a>
+        <a class="btn" id="btnCadastro" href="#">Já tenho conta (entrar)</a>
+        <a class="btn" id="btnRegimentoTop" href="#" rel="noopener">Regimento</a>
       </div>
     </div>
 
     <div class="hero">
-      <h1>Criar conta</h1>
-      <p>Abertura de conta (leitor/a/e)</p>
+      <h1 id="pageHeroTitle">Criar conta</h1>
+      <p id="pageHeroSubtitle">Abertura de conta (leitor/a/e)</p>
     </div>
 
 <div class="notice" role="note" aria-label="Aviso de segurança">
@@ -597,9 +598,23 @@
   </main>
 
   <script type="module">
-    import { CONFIG } from "./js/config.js";
+    import { CONFIG, applyPageChrome } from "./js/config.js";
 
-    const REGIMENTO_URL = 'https://cclamazonia.noblogs.org/regimento-blmf/';
+    applyPageChrome("criar_conta", {
+      logoId: "brandLogo",
+      brandTitleId: "brandTitle",
+      brandSubtitleId: "brandSubtitle",
+      heroTitleId: "pageHeroTitle",
+      heroSubtitleId: "pageHeroSubtitle",
+      routeMap: {
+        btnBlog: "blog",
+        btnCatalogo: "catalogo",
+        btnCadastro: "cadastro",
+        btnRegimentoTop: "regimentoPage"
+      }
+    });
+
+    const REGIMENTO_URL = CONFIG.ROUTES.regimentoPage;
 
     // Wire regimento links
     for (const id of ["regLinkTop", "regLink"]) {
@@ -678,7 +693,7 @@
 
 
     document.getElementById("back").addEventListener("click", () => {
-      window.location.href = "./cadastro.html";
+      window.location.href = CONFIG.ROUTES.cadastro;
     });
 
     form.addEventListener("submit", async (e) => {
