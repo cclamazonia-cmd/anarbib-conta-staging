@@ -1687,10 +1687,26 @@ button[type="submit"] *,
       const cadastroLabel = data.is_restricted ? "restrito" : (data.must_change_password ? "requer troca de senha" : "regular");
       setChipText(chipContaCadastro, "Cadastro", cadastroLabel);
 
-      isLibrarian = !!data.is_librarian;
+      const sessionMeta = {
+        ...(session?.user?.user_metadata || {}),
+        ...(session?.user?.app_metadata || {})
+      };
+      const metaIsLibrarian = [
+        sessionMeta.is_librarian,
+        sessionMeta.isLibrarian,
+        sessionMeta.librarian,
+        sessionMeta.role,
+        sessionMeta.roles
+      ].some((value) => {
+        if (value === true) return true;
+        if (Array.isArray(value)) return value.map((v) => String(v).toLowerCase()).includes("librarian");
+        return ["true", "librarian", "bibliotecario", "bibliotecária", "bibliotecaire"].includes(String(value || "").trim().toLowerCase());
+      });
+      isLibrarian = (data?.is_librarian === true) || metaIsLibrarian;
       const go = $("goPainelBiblio");
       if (go) {
         go.href = ROUTES.PAINEL;
+        go.hidden = !isLibrarian;
         go.style.display = isLibrarian ? "inline-flex" : "none";
       }
     }
