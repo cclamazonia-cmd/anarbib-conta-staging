@@ -1447,6 +1447,128 @@ button[type="submit"] *,
       return data || [];
     }
 
+    async function fetchMyProfileCompat(userId) {
+      let apiProfile = null;
+      try {
+        apiProfile = await fetchApiSingle("my_profile");
+      } catch (_) {
+        apiProfile = null;
+      }
+
+      if (apiProfile && (apiProfile.is_authenticated || apiProfile.has_profile_row)) {
+        return {
+          ...apiProfile,
+          can_access_painel: apiProfile.can_access_painel === true || apiProfile.is_librarian === true,
+          can_access_catalogacao: apiProfile.can_access_catalogacao === true || apiProfile.is_librarian === true
+        };
+      }
+
+      const fullSelect = "email, first_name, last_name, phone, address, gender, consent_email, must_change_password, password_changed_at, is_librarian, is_restricted, restricted_since, restricted_reason, created_at, updated_at";
+      const attempts = [
+        () => supabase.schema("api").from("profiles").select(fullSelect).eq("id", userId).maybeSingle(),
+        () => supabase.from("profiles").select(fullSelect).eq("id", userId).maybeSingle()
+      ];
+
+      let legacyData = null;
+      for (const run of attempts) {
+        try {
+          const res = await run();
+          if (!res?.error && res?.data) {
+            legacyData = res.data;
+            break;
+          }
+        } catch (_) {}
+      }
+
+      return {
+        id: userId,
+        is_authenticated: true,
+        has_profile_row: !!legacyData,
+        email: legacyData?.email || session?.user?.email || "",
+        first_name: legacyData?.first_name || "",
+        last_name: legacyData?.last_name || "",
+        full_name: [legacyData?.first_name || "", legacyData?.last_name || ""].filter(Boolean).join(" ").trim() || null,
+        phone: legacyData?.phone || "",
+        address: legacyData?.address || "",
+        gender: legacyData?.gender || "",
+        consent_email: legacyData?.consent_email ?? true,
+        is_librarian: legacyData?.is_librarian === true,
+        must_change_password: legacyData?.must_change_password === true,
+        password_changed_at: legacyData?.password_changed_at || null,
+        is_restricted: legacyData?.is_restricted === true,
+        restricted_since: legacyData?.restricted_since || null,
+        restricted_reason: legacyData?.restricted_reason || "",
+        default_library_id: null,
+        default_library_slug: null,
+        default_library_name: null,
+        can_access_conta: true,
+        can_access_painel: legacyData?.is_librarian === true,
+        can_access_catalogacao: legacyData?.is_librarian === true,
+        created_at: legacyData?.created_at || null,
+        updated_at: legacyData?.updated_at || null
+      };
+    }
+
+    async function fetchLibraryContextCompat() {
+      try {
+        const ctx = await fetchApiSingle("my_library_context");
+        if (ctx) return ctx;
+      } catch (_) {}
+
+      try {
+        const { data, error } = await supabase
+          .from("v_library_service_public")
+          .select("*")
+          .limit(1)
+          .maybeSingle();
+        if (!error && data) {
+          return {
+            user_id: session?.user?.id || null,
+            email: session?.user?.email || null,
+            is_authenticated: true,
+            is_librarian: !!currentProfile?.is_librarian,
+            library_id: data.library_id || null,
+            library_slug: data.slug || null,
+            library_name: data.name || null,
+            service_mode: data.service_mode || null,
+            public_message: data.public_message || "",
+            allows_new_reservations: data.allows_new_reservations === true,
+            allows_new_loans: data.allows_new_loans === true,
+            service_updated_at: data.updated_at || null,
+            can_access_conta: true,
+            can_access_painel: !!currentProfile?.is_librarian,
+            can_access_catalogacao: !!currentProfile?.is_librarian
+          };
+        }
+      } catch (_) {}
+
+      return null;
+    }
+
+    async function saveProfileCompat(payload) {
+      const record = {
+        id: session.user.id,
+        email: session?.user?.email || currentProfile?.email || null,
+        ...payload
+      };
+
+      let res = null;
+      try {
+        res = await supabase.from("profiles").update(payload).eq("id", session.user.id).select("id").maybeSingle();
+        if (!res.error) return { error: null };
+      } catch (error) {
+        res = { error };
+      }
+
+      try {
+        const up = await supabase.from("profiles").upsert(record, { onConflict: "id" }).select("id").maybeSingle();
+        if (!up.error) return { error: null };
+        return { error: up.error || res?.error || null };
+      } catch (error) {
+        return { error: error || res?.error || null };
+      }
+    }
+
     function parseRpcError(err) {
       const msg = String(err?.message || "");
       if (msg.includes("AUTH_REQUIRED")) return "É preciso entrar na conta.";
@@ -1568,6 +1690,7 @@ button[type="submit"] *,
       return "Não foi possível alterar sua senha agora. Tente novamente. Se o problema continuar, saia e entre de novo.";
     }
 
+    
     function renderProfile(profile) {
       currentProfile = profile;
       $("firstName").value = profile?.first_name || "";
@@ -1583,7 +1706,7 @@ button[type="submit"] *,
       const cadastroLabel = profile?.is_restricted ? "restrito" : (profile?.must_change_password ? "requer troca de senha" : "regular");
       setChipText(chipContaCadastro, "Cadastro", cadastroLabel);
 
-      isLibrarian = !!profile?.can_access_painel;
+      isLibrarian = !!(profile?.can_access_painel || profile?.is_librarian);
       if (goPainelBiblio) {
         goPainelBiblio.href = ROUTES.PAINEL;
         goPainelBiblio.style.display = isLibrarian ? "inline-flex" : "none";
@@ -1813,9 +1936,10 @@ button[type="submit"] *,
       return new Map((data || []).map((row) => [String(row.bib_ref), row]));
     }
 
+    
     async function loadProfile() {
       try {
-        const profile = await fetchApiSingle("my_profile");
+        const profile = await fetchMyProfileCompat(session.user.id);
         if (!profile || !profile.is_authenticated) {
           window.location.href = buildAuthRedirectTarget("conta.html");
           throw new Error("No authenticated profile");
@@ -1834,7 +1958,7 @@ button[type="submit"] *,
             profileMsg.textContent = "Seu perfil ainda não foi criado no sistema. Peça à biblioteca para criar seu perfil (ccl-amazonia@riseup.net).";
             return null;
           }
-          const profileAfterInsert = await fetchApiSingle("my_profile");
+          const profileAfterInsert = await fetchMyProfileCompat(session.user.id);
           renderProfile(profileAfterInsert);
           return profileAfterInsert;
         }
@@ -1847,9 +1971,10 @@ button[type="submit"] *,
       }
     }
 
+    
     async function loadLibraryContext() {
       try {
-        const context = await fetchApiSingle("my_library_context");
+        const context = await fetchLibraryContextCompat();
         renderLibraryContext(context);
         return context;
       } catch (error) {
@@ -1859,44 +1984,62 @@ button[type="submit"] *,
       }
     }
 
+    
     async function createReservationsFromBibRefs(refs) {
       const libraryId = currentLibraryContext?.library_id || null;
-      if (!libraryId) {
-        throw new Error("DEFAULT_LIBRARY_REQUIRED");
-      }
-
-      const { data, error } = await supabase
-        .schema("api")
-        .from("catalog_books_public")
-        .select("book_id, bib_ref, titulo, autor, library_id")
-        .eq("library_id", libraryId)
-        .in("bib_ref", refs);
-
-      if (error) throw error;
-
-      const booksByRef = new Map((data || []).map((row) => [String(row.bib_ref), row]));
       const results = [];
 
-      for (const ref of refs) {
-        const book = booksByRef.get(String(ref));
-        if (!book) {
-          results.push({ ref, ok: false, message: "Livro não encontrado na sua biblioteca padrão." });
-          continue;
-        }
+      if (libraryId) {
+        try {
+          const { data, error } = await supabase
+            .schema("api")
+            .from("catalog_books_public")
+            .select("book_id, bib_ref, titulo, autor, library_id")
+            .eq("library_id", libraryId)
+            .in("bib_ref", refs);
 
-        const rpc = await supabase.rpc("create_my_reservation", {
-          p_book_id: book.book_id,
-          p_library_id: null,
-          p_notes: "Reserva criada pela conta do(a/e) leitor(a/e)."
-        });
+          if (!error) {
+            const booksByRef = new Map((data || []).map((row) => [String(row.bib_ref), row]));
 
-        if (rpc.error) {
-          results.push({ ref, ok: false, message: parseRpcError(rpc.error) });
-        } else {
-          results.push({ ref, ok: true, title: book.titulo || ref });
-        }
+            for (const ref of refs) {
+              const book = booksByRef.get(String(ref));
+              if (!book) {
+                results.push({ ref, ok: false, message: "Livro não encontrado na sua biblioteca padrão." });
+                continue;
+              }
+
+              const rpc = await supabase.rpc("create_my_reservation", {
+                p_book_id: book.book_id,
+                p_library_id: null,
+                p_notes: "Reserva criada pela conta do(a/e) leitor(a/e)."
+              });
+
+              if (rpc.error) {
+                results.push({ ref, ok: false, message: parseRpcError(rpc.error) });
+              } else {
+                results.push({ ref, ok: true, title: book.titulo || ref });
+              }
+            }
+
+            return results;
+          }
+        } catch (_) {}
       }
 
+      const rpc = await supabase.rpc("fn_v2_create_reserva_by_bib_refs", {
+        p_user_id: session.user.id,
+        p_bib_refs: refs,
+        p_expires_at: null,
+        p_notes: "Reserva criada pela conta do(a/e) leitor(a/e)."
+      });
+
+      if (rpc.error) {
+        throw rpc.error;
+      }
+
+      for (const ref of refs) {
+        results.push({ ref, ok: true, title: ref });
+      }
       return results;
     }
 
@@ -2535,7 +2678,7 @@ button[type="submit"] *,
         gender: $("gender").value,
         address: packAddress()
       };
-      const { error } = await supabase.from("profiles").update(payload).eq("id", session.user.id);
+      const { error } = await saveProfileCompat(payload);
       if (error) {
         profileMsg.textContent = "Erro ao salvar: " + error.message;
         return;
