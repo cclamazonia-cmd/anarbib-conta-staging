@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Cadastro — Biblioteca Libertária Maxwell Ferreira</title>
-  <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
-  <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
-  <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
+  <title>Cadastro — Rede AnarBib</title>
+  <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
+  <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
+  <link rel="apple-touch-icon"https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
   <link rel="stylesheet" href="./css/app.css" />
   
   <style>
@@ -175,16 +175,16 @@
 <body>
   <main class="wrap">
     <div class="topbar">
-      <div class="brand" aria-label="Biblioteca Libertária Maxwell Ferreira">
+      <div class="brand" aria-label="AnarBib">
         <img
           class="logo"
-          src="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png"
-          alt="Logotipo BLMF"
+          src="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png"
+          alt="Logotipo AnarBib"
           onerror="this.style.display='none'"
         />
         <div class="brand-copy">
-          <div class="brand-title">BLMF</div>
-          <div class="brand-subtitle">Biblioteca Libertária Maxwell Ferreira</div>
+          <div class="brand-title">AnarBib</div>
+          <div class="brand-subtitle">Rede de Bibliotecas libertárias e anarquistas</div>
         </div>
       </div>
 
@@ -192,7 +192,6 @@
         <button id="backBlog" class="btn" type="button">Voltar ao blogue</button>
         <button id="backCatalog" class="btn" type="button">Voltar ao catálogo</button>
         <button id="goCriarConta" class="btn" type="button">Criar conta</button>
-        <button id="goRegimento" class="btn" type="button">Regimento</button>
       </div>
     </div>
 
@@ -200,17 +199,6 @@
       <h1>Cadastro</h1>
       <p>Entrar · Esqueci minha senha · Redefinir senha</p>
     </div>
-
-    <details class="rules">
-      <summary><b>Regimento (resumo)</b> <span class="small">— empréstimos, prazos e atrasos</span></summary>
-      <ul>
-        <li>A biblioteca empresta <b>apenas livros</b>. Periódicos e brochuras são para <b>consulta local</b>.</li>
-        <li>Até <b>5 livros</b> por pessoa.</li>
-        <li>Prazos: 1 livro (<b>21 dias</b>), 2–3 livros (<b>30 dias</b>), 4–5 livros (<b>38 dias</b>).</li>
-        <li>Em caso de atraso, a biblioteca envia avisos. Após 30 dias sem regularização, pode haver <b>suspensão</b> de novos empréstimos.</li>
-        <li>Regimento completo: <a id="regLink" href="#" rel="noopener">abrir</a></li>
-      </ul>
-    </details>
 
     <!-- LOGIN -->
     <section id="loginBox">
@@ -282,23 +270,12 @@
 
     const ROUTES = {
       BLOG: "https://cclamazonia.noblogs.org",
-      REGIMENTO: "https://cclamazonia.noblogs.org/regimento-blmf/",
       CATALOGO: "https://cclamazonia-cmd.github.io/anarbib-staging/",
       CRIAR: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/criar-conta.html",
       CADASTRO: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html",
       CONTA: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html",
       PAINEL: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html",
     };
-
-    const BLOG_URL = ROUTES.BLOG;
-    const REGIMENTO_URL = "https://cclamazonia.noblogs.org/files/2026/03/Regimento-BLMF-v2.3.pdf";
-
-    document.getElementById("regLink").href = "https://cclamazonia.noblogs.org/files/2026/03/Regimento-BLMF-v2.3.pdf";
-
-    document.getElementById("backBlog").addEventListener("click", (e) => {
-      e.preventDefault();
-      window.location.href = BLOG_URL;
-    });
 
     document.getElementById("backCatalog").addEventListener("click", (e) => {
       e.preventDefault();
@@ -307,9 +284,6 @@
 
     document.getElementById("goCriarConta").addEventListener("click", () => {
       window.location.href = ROUTES.CRIAR;
-    });
-    document.getElementById("goRegimento").addEventListener("click", () => {
-      window.location.href = "https://cclamazonia.noblogs.org/files/2026/03/Regimento-BLMF-v2.3.pdf";
     });
 
     const loginBox = document.getElementById("loginBox");
@@ -535,7 +509,7 @@
 
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        console.error("BLMF cadastro login error:", error);
+        console.error("AnarBib cadastro login error:", error);
         setMsg(msg, mapAuthError(error, "login"), "bad");
         return;
       }
