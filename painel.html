@@ -485,7 +485,7 @@
         <a class="btn" id="btnBlog" href="https://cclamazonia.noblogs.org">Voltar ao blogue</a>
         <a class="btn" id="btnCatalogo" href="https://cclamazonia-cmd.github.io/anarbib-staging/">Voltar ao catálogo</a>
         <a class="btn" id="btnCatalogacao" href="https://cclamazonia-cmd.github.io/anarbib-staging/catalogacao.html">Catalogação</a>
-        <a class="btn" id="btnManual" href="./Manual_do_AnarBib.pdf" target="_blank" rel="noopener noreferrer">Manual do AnarBib</a>
+        <a class="btn" id="btnManual" href="https://cclamazonia-cmd.github.io/anarbib-staging/Manual_do_AnarBib.pdf" target="_blank" rel="noopener noreferrer">Manual do AnarBib</a>
         <a class="btn hidden" id="btnModoLeitor" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html">Ir para modo leitor</a>
         <button class="btn primary" id="btnSair" type="button">Sair</button>
       </div>
@@ -493,7 +493,7 @@
 
     <div class="hero">
       <h1 id="pageHeroTitle">Painel</h1>
-      <p id="pageHeroSubtitle">Gestão bibliotecária militante</p>
+      <p id="pageHeroSubtitle">Gestão da biblioteca participante</p>
       <p id="helloLine"></p>
       <div class="chips">
         <span class="chip" id="chipFuncao">Função: —</span>
@@ -1307,90 +1307,90 @@
 
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
     const FALLBACK_CONFIG = {
-  SUPABASE_URL: "https://asptfmokzykwzlshsncw.supabase.co",
-  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzcHRmbW9renlrd3psc2hzbmN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MzcxNzcsImV4cCI6MjA4ODExMzE3N30.JkMLHPCV2AH5ELZV_1RfcoW250QEofLGvnDKSDpkcn0",
-  ROUTES: {
-    blog: "https://cclamazonia.noblogs.org",
-    catalogo: "https://cclamazonia-cmd.github.io/anarbib-staging/",
-    catalogacao: "https://cclamazonia-cmd.github.io/anarbib-staging/catalogacao.html",
-    cadastro: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html",
-    conta: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html",
-    manual: "./Manual_do_AnarBib.pdf"
-  }
-};
+      SUPABASE_URL: "https://asptfmokzykwzlshsncw.supabase.co",
+      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzcHRmbW9renlrd3psc2hzbmN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MzcxNzcsImV4cCI6MjA4ODExMzE3N30.JkMLHPCV2AH5ELZV_1RfcoW250QEofLGvnDKSDpkcn0",
+      ROUTES: {
+        blog: "https://cclamazonia.noblogs.org",
+        catalogo: "https://cclamazonia-cmd.github.io/anarbib-staging/",
+        catalogacao: "https://cclamazonia-cmd.github.io/anarbib-staging/catalogacao.html",
+        cadastro: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html",
+        conta: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html",
+        manual: "https://cclamazonia-cmd.github.io/anarbib-staging/Manual_do_AnarBib.pdf"
+      }
+    };
 
-let CONFIG = FALLBACK_CONFIG;
-let applyPageChrome = () => {};
+    let CONFIG = FALLBACK_CONFIG;
+    let applyPageChrome = null;
+    try {
+      const mod = await import("./js/config.js");
+      CONFIG = {
+        ...FALLBACK_CONFIG,
+        ...(mod?.CONFIG || {}),
+        ROUTES: {
+          ...FALLBACK_CONFIG.ROUTES,
+          ...(mod?.CONFIG?.ROUTES || {})
+        }
+      };
+      applyPageChrome = mod?.applyPageChrome || null;
+    } catch (_) {}
 
-try {
-  const mod = await import("./js/config.js");
-  const incoming = mod?.CONFIG || {};
-  CONFIG = {
-    ...FALLBACK_CONFIG,
-    ...incoming,
-    ROUTES: {
-      ...FALLBACK_CONFIG.ROUTES,
-      ...(incoming?.ROUTES || {})
-    }
-  };
-  if (!CONFIG.SUPABASE_URL) CONFIG.SUPABASE_URL = FALLBACK_CONFIG.SUPABASE_URL;
-  if (!CONFIG.SUPABASE_ANON_KEY) CONFIG.SUPABASE_ANON_KEY = FALLBACK_CONFIG.SUPABASE_ANON_KEY;
-  if (typeof mod?.applyPageChrome === "function") applyPageChrome = mod.applyPageChrome;
-} catch (err) {
-  console.warn("config.js indisponível em painel; usando fallback inline.", err);
-}
+    CONFIG = {
+      ...CONFIG,
+      SUPABASE_URL: FALLBACK_CONFIG.SUPABASE_URL,
+      SUPABASE_ANON_KEY: FALLBACK_CONFIG.SUPABASE_ANON_KEY,
+      ROUTES: {
+        ...CONFIG.ROUTES,
+        ...FALLBACK_CONFIG.ROUTES
+      }
+    };
 
     const $ = (id) => document.getElementById(id);
     const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
 
     try {
-      applyPageChrome("painel", {
-        logoId: "brandLogo",
-        heroTitleId: "pageHeroTitle",
-        heroSubtitleId: "pageHeroSubtitle",
-        routeMap: {
-          btnBlog: "blog",
-          btnCatalogo: "catalogo",
-          btnCatalogacao: "catalogacao",
-          btnManual: "manual",
-          btnModoLeitor: "conta"
-        }
-      });
-    } catch (err) {
-      console.warn("applyPageChrome falhou em painel; mantendo rotas inline.", err);
-    }
+      if (typeof applyPageChrome === "function") {
+        applyPageChrome("painel", {
+          logoId: "brandLogo",
+          heroTitleId: "pageHeroTitle",
+          heroSubtitleId: "pageHeroSubtitle",
+          routeMap: {
+            btnBlog: "blog",
+            btnCatalogo: "catalogo",
+            btnCatalogacao: "catalogacao",
+            btnManual: "manual",
+            btnModoLeitor: "conta"
+          }
+        });
+      }
+    } catch (_) {}
 
     const ROUTES = {
-      BLOG_HOME: CONFIG.ROUTES.blog,
-      CATALOGO: CONFIG.ROUTES.catalogo,
-      CATALOGACAO: CONFIG.ROUTES.catalogacao,
-      CADASTRO: CONFIG.ROUTES.cadastro,
-      CONTA: CONFIG.ROUTES.conta,
-      MANUAL: CONFIG.ROUTES.manual,
+      BLOG_HOME: FALLBACK_CONFIG.ROUTES.blog,
+      CATALOGO: FALLBACK_CONFIG.ROUTES.catalogo,
+      CATALOGACAO: FALLBACK_CONFIG.ROUTES.catalogacao,
+      CADASTRO: FALLBACK_CONFIG.ROUTES.cadastro,
+      CONTA: FALLBACK_CONFIG.ROUTES.conta,
+      MANUAL: FALLBACK_CONFIG.ROUTES.manual,
     };
 
-const TOPBAR_ROUTES = {
-  btnBlog: ROUTES.BLOG_HOME,
-  btnCatalogo: ROUTES.CATALOGO,
-  btnCatalogacao: ROUTES.CATALOGACAO,
-  btnManual: ROUTES.MANUAL,
-  btnModoLeitor: ROUTES.CONTA
-};
-
-Object.entries(TOPBAR_ROUTES).forEach(([id, href]) => {
-  const el = $(id);
-  if (el) el.setAttribute('href', href);
-});
-
-
-const pageHeroSubtitle = $('pageHeroSubtitle');
-if (pageHeroSubtitle) pageHeroSubtitle.textContent = 'Gestão bibliotecária militante';
-
-    const SUPABASE_URL = CONFIG.SUPABASE_URL;
-    const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
+    const SUPABASE_URL = FALLBACK_CONFIG.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = FALLBACK_CONFIG.SUPABASE_ANON_KEY;
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { storage: window.localStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+      auth: { storage: window.sessionStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    });
+
+    Object.entries({
+      btnBlog: ROUTES.BLOG_HOME,
+      btnCatalogo: ROUTES.CATALOGO,
+      btnCatalogacao: ROUTES.CATALOGACAO,
+      btnManual: ROUTES.MANUAL,
+      btnModoLeitor: ROUTES.CONTA
+    }).forEach(([id, href]) => {
+      const node = $(id);
+      if (!node) return;
+      node.href = href;
     });
 
     const statusTimers = new Map();
