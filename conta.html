@@ -689,7 +689,6 @@ button[type="submit"] *,
         <a id="btnCatalogo" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-staging/">Voltar ao catálogo</a>
         <a id="goPainelBiblio" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html" style="display:none;">Ir para modo bibliotecário</a>
         <a id="btnBlog" class="header-btn" href="https://cclamazonia.noblogs.org">Voltar ao blogue</a>
-        <a id="btnRegimento" class="header-btn" href="https://cclamazonia.noblogs.org/files/2026/03/Regimento-BLMF-v2.3.pdf" target="_blank" rel="noopener noreferrer">Regimento (PDF)</a>
         <button id="logout" class="logout-btn" type="button">Sair</button>
       </div>
     </div>
@@ -1169,7 +1168,6 @@ button[type="submit"] *,
       routeMap: {
         btnBlog: "blog",
         btnCatalogo: "catalogo",
-        btnRegimento: "regimento"
       }
     });
 
@@ -1177,19 +1175,12 @@ button[type="submit"] *,
       CADASTRO: CONFIG.ROUTES.cadastro,
       CATALOGO: CONFIG.ROUTES.catalogo,
       PAINEL: CONFIG.ROUTES.painel,
-      REGIMENTO: CONFIG.ROUTES.regimento,
     };
 
     const $ = (id) => document.getElementById(id);
     $("btnCatalogo")?.addEventListener("click", (e) => {
       e.preventDefault();
       window.location.assign(ROUTES.CATALOGO);
-    });
-    const btnRegimento = $("btnRegimento");
-    if (btnRegimento) btnRegimento.href = ROUTES.REGIMENTO;
-    $("logout")?.addEventListener("click", async () => {
-      await supabase.auth.signOut();
-      window.location.href = ROUTES.CADASTRO;
     });
 
     const { data: sessData } = await supabase.auth.getSession();
