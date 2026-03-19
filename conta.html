@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Conta — Biblioteca Libertária Maxwell Ferreira</title>
-  <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
-  <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
-  <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
+  <title>AnarBib – conta</title>
+  <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
+  <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
+  <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
   <link rel="stylesheet" href="./css/app.css" />
   <style>
     body{
@@ -678,9 +678,10 @@ button[type="submit"] *,
     <div class="topbar">
       <div class="brand">
         <img
+          id="brandLogo"
           class="logo"
-          src="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png"
-          alt="Logotipo BLMF"
+          src="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png"
+          alt="AnarBib"
           onerror="this.style.display='none'"
         />
       </div>
@@ -688,15 +689,15 @@ button[type="submit"] *,
         <a id="btnCatalogo" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-staging/">Voltar ao catálogo</a>
         <a id="goPainelBiblio" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html" style="display:none;">Ir para modo bibliotecário</a>
         <a id="btnBlog" class="header-btn" href="https://cclamazonia.noblogs.org">Voltar ao blogue</a>
-        <a id="btnRegimento" class="header-btn" href="https://cclamazonia.noblogs.org/files/2026/03/Regimento-BLMF-v2.3.pdf" target="_blank" rel="noopener noreferrer">Regimento (PDF)</a>
+        <a id="btnRegimento" class="header-btn" href="#" target="_blank" rel="noopener noreferrer">Regimento (PDF)</a>
         <button id="logout" class="logout-btn" type="button">Sair</button>
       </div>
     </div>
 
     <main class="card">
       <div class="hero">
-        <h1>Conta — Biblioteca Libertária Maxwell Ferreira</h1>
-        <p>Área do/a/e leitor/a/e</p>
+        <h1 id="pageHeroTitle">Conta</h1>
+        <p id="pageHeroSubtitle">Espaço do/a/e leitor/a/e</p>
         <div class="chips">
           <span class="chip" id="chipContaEspaco">Espaço: leitor/a/e</span>
           <span class="chip" id="chipContaEmail">E-mail: —</span>
@@ -1120,14 +1121,63 @@ button[type="submit"] *,
   </main>
   </div>
 
+
+  <script>
+    (() => {
+      const tabButtons = Array.from(document.querySelectorAll(".tab-btn"));
+      const tabPanels = Array.from(document.querySelectorAll(".tab-panel"));
+      if (!tabButtons.length || !tabPanels.length) return;
+
+      window.__contaTabsFallbackBound = true;
+
+      const setActiveTabFallback = (key, { pushHash = true } = {}) => {
+        tabButtons.forEach((btn) => {
+          const active = btn.dataset.tab === key;
+          btn.classList.toggle("active", active);
+          btn.setAttribute("aria-selected", active ? "true" : "false");
+        });
+        tabPanels.forEach((panel) => {
+          panel.classList.toggle("active", panel.dataset.tab === key);
+        });
+        if (pushHash) location.hash = "#" + key;
+      };
+
+      tabButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (btn.disabled) return;
+          setActiveTabFallback(btn.dataset.tab);
+        });
+      });
+
+      const initial = (location.hash || "").replace("#", "");
+      if (initial && tabPanels.some((p) => p.dataset.tab === initial)) {
+        setActiveTabFallback(initial, { pushHash: false });
+      } else {
+        setActiveTabFallback("perfil", { pushHash: false });
+      }
+    })();
+  </script>
+
   <script type="module">
-    import { supabase } from "./blmf-supabase.js";
+    import { CONFIG, applyPageChrome, buildAuthRedirectTarget } from "./js/config.js";
+    import { supabase } from "./js/blmf-supabase.js";
+
+    applyPageChrome("conta", {
+      logoId: "brandLogo",
+      heroTitleId: "pageHeroTitle",
+      heroSubtitleId: "pageHeroSubtitle",
+      routeMap: {
+        btnBlog: "blog",
+        btnCatalogo: "catalogo",
+        btnRegimento: "regimentoPdf"
+      }
+    });
 
     const ROUTES = {
-      CADASTRO: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html",
-      CATALOGO: "https://cclamazonia-cmd.github.io/anarbib-staging/",
-      PAINEL: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html",
-      REGIMENTO: "https://cclamazonia.noblogs.org/files/2026/03/Regimento-BLMF-v2.3.pdf",
+      CADASTRO: CONFIG.ROUTES.cadastro,
+      CATALOGO: CONFIG.ROUTES.catalogo,
+      PAINEL: CONFIG.ROUTES.painel,
+      REGIMENTO: CONFIG.ROUTES.regimentoPdf,
     };
 
     const $ = (id) => document.getElementById(id);
@@ -1145,7 +1195,7 @@ button[type="submit"] *,
     const { data: sessData } = await supabase.auth.getSession();
     const session = sessData?.session || null;
     if (!session) {
-      window.location.href = ROUTES.CADASTRO + "?next=conta.html";
+      window.location.href = buildAuthRedirectTarget("conta.html");
       throw new Error("No session");
     }
 
@@ -1467,14 +1517,16 @@ button[type="submit"] *,
       if (restricted && current === "reservar") setActiveTab("perfil", { pushHash: true });
     }
 
-    tabButtons.forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        if (mustChangePassword && btn.dataset.tab !== "perfil") return;
-        if (userIsRestricted && btn.dataset.tab === "reservar") return;
-        setActiveTab(btn.dataset.tab);
-        await refreshContaForActiveTab();
+    if (!window.__contaTabsFallbackBound) {
+      tabButtons.forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          if (mustChangePassword && btn.dataset.tab !== "perfil") return;
+          if (userIsRestricted && btn.dataset.tab === "reservar") return;
+          setActiveTab(btn.dataset.tab);
+          await refreshContaForActiveTab();
+        });
       });
-    });
+    }
 
     const initial = (location.hash || "").replace("#", "");
     if (initial === "biblio" && !isLibrarian) {
