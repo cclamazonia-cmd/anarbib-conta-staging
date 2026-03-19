@@ -1626,29 +1626,39 @@ button[type="submit"] *,
       return map;
     }
 
+    async function fetchMyProfileRow(userId) {
+      const fullSelect = "email, first_name, last_name, phone, address, gender, must_change_password, password_changed_at, is_librarian, is_restricted, restricted_since, restricted_reason";
+      const legacySelect = "email, first_name, last_name, phone, address, gender, must_change_password, password_changed_at, is_librarian";
+      let lastError = null;
+
+      const attempts = [
+        () => supabase.schema("api").from("my_profile").select(fullSelect).maybeSingle(),
+        () => supabase.schema("api").from("profiles").select(fullSelect).eq("id", userId).maybeSingle(),
+        () => supabase.from("profiles").select(fullSelect).eq("id", userId).maybeSingle(),
+        () => supabase.schema("api").from("profiles").select(legacySelect).eq("id", userId).maybeSingle(),
+        () => supabase.from("profiles").select(legacySelect).eq("id", userId).maybeSingle()
+      ];
+
+      for (const run of attempts) {
+        try {
+          const res = await run();
+          if (!res?.error) return { data: res?.data || null, error: null };
+          lastError = res.error;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      return { data: null, error: lastError };
+    }
+
     async function loadProfile() {
       let data = null;
       let error = null;
 
-      const q1 = await supabase
-        .schema("api")
-        .from("profiles")
-        .select("email, first_name, last_name, phone, address, gender, must_change_password, password_changed_at, is_librarian, is_restricted, restricted_since, restricted_reason")
-        .eq("id", session.user.id)
-        .maybeSingle();
-
-      if (!q1.error) {
-        data = q1.data;
-      } else {
-        const q2 = await supabase
-          .schema("api")
-          .from("profiles")
-          .select("email, first_name, last_name, phone, address, gender, must_change_password, password_changed_at, is_librarian")
-          .eq("id", session.user.id)
-          .maybeSingle();
-        data = q2.data;
-        error = q2.error;
-      }
+      const profileRead = await fetchMyProfileRow(session.user.id);
+      data = profileRead.data;
+      error = profileRead.error;
 
       if (!error && !data) {
         const emailFromSession = session?.user?.email || "";
@@ -1663,17 +1673,13 @@ button[type="submit"] *,
           profileMsg.textContent = "Seu perfil ainda não foi criado no sistema. Peça à biblioteca para criar seu perfil (ccl-amazonia@riseup.net).";
           return;
         }
-        const q3 = await supabase
-          .schema("api")
-          .from("profiles")
-          .select("email, first_name, last_name, phone, address, gender, must_change_password, password_changed_at, is_librarian, is_restricted, restricted_since, restricted_reason")
-          .eq("id", session.user.id)
-          .maybeSingle();
-        if (q3.error || !q3.data) {
+        const profileAfterInsert = await fetchMyProfileRow(session.user.id);
+        if (profileAfterInsert.error || !profileAfterInsert.data) {
           profileMsg.textContent = "Perfil criado, mas não foi possível carregá-lo agora. Recarregue a página.";
           return;
         }
-        data = q3.data;
+        data = profileAfterInsert.data;
+        error = null;
       }
 
       if (error) {

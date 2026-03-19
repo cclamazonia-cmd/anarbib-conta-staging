@@ -1374,7 +1374,7 @@
     const SUPABASE_URL = CONFIG.SUPABASE_URL;
     const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { storage: window.sessionStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+      auth: { storage: window.localStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
     });
 
     const statusTimers = new Map();
@@ -2294,51 +2294,40 @@
       if (!sess){ location.assign(ROUTES.CADASTRO); return null; }
       return sess;
     }
+    async function fetchMyAccessRow(userId){
+      let lastError = null;
+      const attempts = [
+        () => supabase.schema('api').from('my_access').select('id, email, is_librarian, is_restricted').maybeSingle(),
+        () => supabase.schema('api').from('profiles').select('id, email, is_librarian, is_restricted').eq('id', userId).maybeSingle(),
+        () => supabase.from('profiles').select('id, email, is_librarian, is_restricted').eq('id', userId).maybeSingle()
+      ];
+      for (const run of attempts) {
+        try {
+          const res = await run();
+          if (!res?.error) return { data: res?.data || null, error: null };
+          lastError = res.error;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      return { data: null, error: lastError };
+    }
     async function requireBibliotecaOrRedirect(){
-      let isLibrarianFlag = false;
-      let lastErrorMessage = '';
+      const accessRead = await fetchMyAccessRow(session.user.id);
+      const accessRow = accessRead?.data || null;
+      const lastErrorMessage = accessRead?.error?.message || '';
 
-      try {
-        const apiRead = await supabase
-          .schema('api')
-          .from('profiles')
-          .select('is_librarian')
-          .eq('id', session.user.id)
-          .maybeSingle();
-
-        if (!apiRead.error) {
-          isLibrarianFlag = apiRead.data?.is_librarian === true;
-          if (!isLibrarianFlag){ location.assign(ROUTES.CONTA); return false; }
-          return true;
-        }
-        lastErrorMessage = apiRead.error?.message || '';
-        console.warn('api.profiles.is_librarian read failed:', apiRead.error);
-      } catch (e) {
-        lastErrorMessage = e?.message || String(e || '');
-        console.warn('api.profiles.is_librarian read exception:', e);
+      if (!accessRow) {
+        setStatus('statusLoans', 'Não consegui verificar o acesso da biblioteca' + (lastErrorMessage ? ': ' + lastErrorMessage : '.'), 'bad', false);
+        return false;
       }
 
-      try {
-        const publicRead = await supabase
-          .from('profiles')
-          .select('is_librarian')
-          .eq('id', session.user.id)
-          .maybeSingle();
-
-        if (!publicRead.error) {
-          isLibrarianFlag = publicRead.data?.is_librarian === true;
-          if (!isLibrarianFlag){ location.assign(ROUTES.CONTA); return false; }
-          return true;
-        }
-        lastErrorMessage = publicRead.error?.message || lastErrorMessage;
-        console.warn('public.profiles.is_librarian read failed:', publicRead.error);
-      } catch (e) {
-        lastErrorMessage = e?.message || lastErrorMessage || String(e || '');
-        console.warn('public.profiles.is_librarian read exception:', e);
+      if (accessRow.is_librarian !== true){
+        location.assign(ROUTES.CONTA);
+        return false;
       }
 
-      setStatus('statusLoans', 'Não consegui verificar o acesso da biblioteca' + (lastErrorMessage ? ': ' + lastErrorMessage : '.'), 'bad', false);
-      return false;
+      return true;
     }
     async function fillHeader(){
       setChip('chipEmail', 'E-mail: ' + (session?.user?.email || '—'));
