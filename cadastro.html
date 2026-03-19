@@ -496,6 +496,17 @@
       }
     }
 
+    async function ensureCurrentUserProfile() {
+      try {
+        const { error } = await supabase.rpc("fn_ensure_current_user_profile");
+        if (error) {
+          console.warn("fn_ensure_current_user_profile warn:", error);
+        }
+      } catch (e) {
+        console.warn("fn_ensure_current_user_profile exception:", e);
+      }
+    }
+
     async function afterLoginRedirect(signInData) {
       const userId = await getStableSessionUserId(signInData);
       const next = getNextParam();
@@ -530,6 +541,7 @@
       }
 
       await persistReturnedSession(data);
+      await ensureCurrentUserProfile();
       await afterLoginRedirect(data);
     });
 
