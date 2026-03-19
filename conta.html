@@ -687,7 +687,7 @@ button[type="submit"] *,
       </div>
       <div class="topbar-actions">
         <a id="btnCatalogo" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-staging/">Voltar ao catálogo</a>
-        <a id="goPainelBiblio" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html" style="display:none;">Painel de gestão</a>
+        <a id="goPainelBiblio" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html">Painel de gestão</a>
         <button id="logout" class="logout-btn" type="button" onclick="try{localStorage.removeItem('anarbib_active_tab');sessionStorage.removeItem('anarbib_active_tab');}catch(_e){}window.location.assign('https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html');return false;">Sair</button>
       </div>
     </div>
@@ -1713,8 +1713,8 @@ button[type="submit"] *,
       const go = $("goPainelBiblio");
       if (go) {
         go.href = ROUTES.PAINEL;
-        go.hidden = !isLibrarian;
-        go.style.display = isLibrarian ? "inline-flex" : "none";
+        go.hidden = false;
+        go.style.display = "inline-flex";
       }
     }
 
