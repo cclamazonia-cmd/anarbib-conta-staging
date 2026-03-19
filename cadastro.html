@@ -269,7 +269,7 @@
 
     const ROUTES = {
       BLOG: "https://cclamazonia.noblogs.org",
-      CATALOGO: "https://cclamazonia-cmd.github.io/anarbib-staging/",
+      CATALOGO: "https://cclamazonia-cmd.github.io/anarbib-staging/index.html",
       CRIAR: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/criar-conta.html",
       CADASTRO: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html",
       CONTA: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html",
@@ -400,8 +400,69 @@
       }
     }
 
-    async function fetchIsLibrarian(userId) {
-      if (!userId) return false;
+    const AUTH_STORAGE_KEY = "sb-asptfmokzykwzlshsncw-auth-token";
+
+    function readBooleanHints(source) {
+      if (!source || typeof source !== "object") return null;
+      const candidates = [
+        source.is_librarian,
+        source.isLibrarian,
+        source.bibliotecario,
+        source.role === "librarian" ? true : undefined,
+        Array.isArray(source.roles) && source.roles.includes("librarian") ? true : undefined,
+      ];
+      for (const value of candidates) {
+        if (value === true || value === false) return value;
+        if (value === "true") return true;
+        if (value === "false") return false;
+      }
+      return null;
+    }
+
+    function readLibrarianHintFromSession(signInData) {
+      const sessionUser = signInData?.session?.user || null;
+      const directUser = signInData?.user || null;
+      const hint =
+        readBooleanHints(sessionUser?.app_metadata) ??
+        readBooleanHints(sessionUser?.user_metadata) ??
+        readBooleanHints(directUser?.app_metadata) ??
+        readBooleanHints(directUser?.user_metadata);
+      return hint === true;
+    }
+
+    function persistSessionToBrowserStorages(signInData, isLib = null) {
+      const session = signInData?.session || null;
+      if (!session) return;
+      const serialized = JSON.stringify(session);
+      try { window.localStorage.setItem(AUTH_STORAGE_KEY, serialized); } catch (e) { console.warn("localStorage auth persist failed:", e); }
+      try { window.sessionStorage.setItem(AUTH_STORAGE_KEY, serialized); } catch (e) { console.warn("sessionStorage auth persist failed:", e); }
+      if (isLib === true || isLib === false) {
+        try { window.sessionStorage.setItem("anarbib_is_librarian_hint", String(isLib)); } catch {}
+        try { window.localStorage.setItem("anarbib_is_librarian_hint", String(isLib)); } catch {}
+      }
+    }
+
+    async function waitForSharedSession(signInData) {
+      persistSessionToBrowserStorages(signInData);
+
+      for (let i = 0; i < 12; i += 1) {
+        try {
+          const { data } = await supabase.auth.getSession();
+          if (data?.session?.user?.id) {
+            persistSessionToBrowserStorages({ session: data.session });
+            return data.session;
+          }
+        } catch (e) {
+          console.warn("waitForSharedSession retry failed:", e);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
+      return signInData?.session || null;
+    }
+
+    async function fetchIsLibrarian(userId, signInData = null) {
+      if (!userId) return readLibrarianHintFromSession(signInData);
 
       try {
         const apiRead = await supabase
@@ -411,7 +472,7 @@
           .eq("id", userId)
           .maybeSingle();
 
-        if (!apiRead.error) return apiRead.data?.is_librarian === true;
+        if (!apiRead.error && apiRead.data) return apiRead.data?.is_librarian === true;
       } catch (e) {
         console.warn("api.profiles.is_librarian read exception:", e);
       }
@@ -423,12 +484,12 @@
           .eq("id", userId)
           .maybeSingle();
 
-        if (!publicRead.error) return publicRead.data?.is_librarian === true;
+        if (!publicRead.error && publicRead.data) return publicRead.data?.is_librarian === true;
       } catch (e) {
         console.warn("public.profiles.is_librarian read exception:", e);
       }
 
-      return false;
+      return readLibrarianHintFromSession(signInData);
     }
 
     async function getStableSessionUserId(signInData) {
@@ -481,21 +542,29 @@
     }
 
     async function afterLoginRedirect(signInData) {
+      await waitForSharedSession(signInData);
+
       const userId = await getStableSessionUserId(signInData);
       const next = getNextParam();
 
       if (!userId) {
-        window.location.href = ROUTES.CADASTRO;
+        window.location.replace(ROUTES.CADASTRO);
         return;
       }
+
+      const isLib = await fetchIsLibrarian(userId, signInData);
+      persistSessionToBrowserStorages(signInData, isLib);
+
+      try { window.sessionStorage.setItem("anarbib_last_login_target", isLib ? ROUTES.PAINEL : ROUTES.CONTA); } catch {}
+      try { window.localStorage.setItem("anarbib_last_login_target", isLib ? ROUTES.PAINEL : ROUTES.CONTA); } catch {}
 
       if (next) {
-        window.location.href = next;
+        window.location.replace(next);
         return;
       }
 
-      const isLib = await fetchIsLibrarian(userId);
-      window.location.href = isLib ? ROUTES.PAINEL : ROUTES.CONTA;
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      window.location.replace(isLib ? ROUTES.PAINEL : ROUTES.CONTA);
     }
 
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
