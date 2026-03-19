@@ -686,9 +686,9 @@ button[type="submit"] *,
         />
       </div>
       <div class="topbar-actions">
-        <a id="btnCatalogo" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-staging/index.html">Voltar ao catálogo</a>
-        <a id="goPainelBiblio" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html" style="display:none" hidden>Painel de gestão</a>
-        <button id="logout" class="logout-btn" type="button">Sair</button>
+        <a id="btnCatalogo" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-staging/">Voltar ao catálogo</a>
+        <a id="goPainelBiblio" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html">Painel de gestão</a>
+        <button id="logout" class="logout-btn" type="button" onclick="try{localStorage.removeItem('anarbib_active_tab');sessionStorage.removeItem('anarbib_active_tab');}catch(_e){}window.location.assign('https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html');return false;">Sair</button>
       </div>
     </div>
 
@@ -1157,7 +1157,6 @@ button[type="submit"] *,
   </script>
 
   <script type="module">
-
     import { CONFIG, applyPageChrome, buildAuthRedirectTarget } from "./js/config.js";
     import { supabase } from "./js/blmf-supabase.js";
 
@@ -1173,30 +1172,22 @@ button[type="submit"] *,
 
     const ROUTES = {
       CADASTRO: CONFIG.ROUTES.cadastro,
-      CATALOGO: "https://cclamazonia-cmd.github.io/anarbib-staging/index.html",
+      CATALOGO: CONFIG.ROUTES.catalogo,
       PAINEL: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html",
     };
 
     const $ = (id) => document.getElementById(id);
-
     $("btnCatalogo")?.addEventListener("click", (e) => {
       e.preventDefault();
       window.location.assign(ROUTES.CATALOGO);
     });
 
-    const logoutBtn = $("logout");
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", async () => {
-        try {
-          localStorage.removeItem("anarbib_active_tab");
-          sessionStorage.removeItem("anarbib_active_tab");
-        } catch (_) {}
-        try {
-          await supabase.auth.signOut();
-        } catch (_) {}
-        window.location.assign(ROUTES.CADASTRO);
-      });
-    }
+    $("logout")?.addEventListener("click", async () => {
+      try {
+        await supabase.auth.signOut();
+      } catch (_) {}
+      window.location.assign(ROUTES.CADASTRO);
+    });
 
     const { data: sessData } = await supabase.auth.getSession();
     const session = sessData?.session || null;
@@ -1214,35 +1205,52 @@ button[type="submit"] *,
     const reserveMsg = $("reserveMsg");
     const activeReserveMsg = $("activeReserveMsg");
     const loanMsg = $("loanMsg");
-    const historyMsg = $("historyMsg");
+    let loanMsgHoldUntil = 0;
+    let loanMsgTimer = null;
+    function setLoanMsgText(message, holdMs = 0) {
+      if (!loanMsg) return;
+      if (loanMsgTimer) {
+        clearTimeout(loanMsgTimer);
+        loanMsgTimer = null;
+      }
+      loanMsg.textContent = message || "";
+      loanMsgHoldUntil = message && holdMs > 0 ? (Date.now() + holdMs) : 0;
+      if (message && holdMs > 0) {
+        loanMsgTimer = setTimeout(() => {
+          loanMsg.textContent = "";
+          loanMsgHoldUntil = 0;
+          loanMsgTimer = null;
+        }, holdMs);
+      }
+    }
     const historyEl = $("history");
+    const historyMsg = $("historyMsg");
     const loansEl = $("loans");
     const activeReservationsEl = $("activeReservations");
     const serviceStateNotice = $("serviceStateNotice");
     const reserveServiceNotice = $("reserveServiceNotice");
+    const reserveFormEl = $("reserveForm");
     const reserveSubmitBtn = $("reserveSubmitBtn");
     const bibRefInput = $("bibRef");
     const chipContaEmail = $("chipContaEmail");
     const chipContaCadastro = $("chipContaCadastro");
     const chipContaReservas = $("chipContaReservas");
     const chipContaEmprestimos = $("chipContaEmprestimos");
-    const goPainelBiblio = $("goPainelBiblio");
+
+    function setChipText(el, label, value) {
+      if (!el) return;
+      el.textContent = `${label}: ${value ?? "—"}`;
+    }
 
     let mustChangePassword = false;
     let userIsRestricted = false;
     let isLibrarian = false;
-    let currentProfile = null;
-    let currentLibraryContext = null;
-    let currentReservationSummary = null;
-    let loanMsgHoldUntil = 0;
-    let loanMsgTimer = null;
-    let contaRefreshPromise = null;
+    let publicServiceState = null;
 
     const SERVICE_MODE_LABELS = {
       em_organizacao: "Em organização",
       atendimento_eventual: "Atendimento eventual",
       atendimento_semanal: "Atendimento semanal",
-      funcionamento_normal: "Funcionamento normal",
       fechado_temporariamente: "Fechado temporariamente"
     };
 
@@ -1250,7 +1258,6 @@ button[type="submit"] *,
       em_organizacao: "A biblioteca está em organização. O atendimento ocorre conforme a capacidade operacional atual.",
       atendimento_eventual: "A biblioteca funciona com atendimento eventual. Consulte os canais do CCLA para informações atualizadas.",
       atendimento_semanal: "A biblioteca funciona com atendimento semanal em ritmo regular. Consulte os canais do CCLA para os horários e orientações vigentes.",
-      funcionamento_normal: "A biblioteca está funcionando normalmente no momento.",
       fechado_temporariamente: "A biblioteca está temporariamente fechada para atendimento presencial. Consulte os canais do CCLA para atualizações e orientações."
     };
 
@@ -1262,11 +1269,6 @@ button[type="submit"] *,
         '"': "&quot;",
         "'": "&#39;"
       }[c]));
-    }
-
-    function setChipText(el, label, value) {
-      if (!el) return;
-      el.textContent = `${label}: ${value ?? "—"}`;
     }
 
     function fmtDateOnly(v) {
@@ -1307,21 +1309,137 @@ button[type="submit"] *,
       if (el) el.innerHTML = `<p>${escapeHtml(msg)}</p>`;
     }
 
-    function setLoanMsgText(message, holdMs = 0) {
-      if (!loanMsg) return;
-      if (loanMsgTimer) {
-        clearTimeout(loanMsgTimer);
-        loanMsgTimer = null;
+    function normalizeServiceState(row) {
+      if (!row || typeof row !== "object") return null;
+      return {
+        service_mode: String(row.service_mode || "").trim() || null,
+        allow_reservations: row.allow_reservations === true,
+        public_message: String(row.public_message || "").trim(),
+        updated_at: row.updated_at || null
+      };
+    }
+
+    function getServiceModeMessage(state) {
+      if (!state) return "Informação temporariamente indisponível.";
+      return state.public_message || SERVICE_MODE_MESSAGES[state.service_mode] || "Informação temporariamente indisponível.";
+    }
+
+    function renderPublicServiceState() {
+      const mode = publicServiceState?.service_mode || null;
+      const modeLabel = SERVICE_MODE_LABELS[mode] || "Informação temporariamente indisponível";
+      const message = getServiceModeMessage(publicServiceState);
+      if (serviceStateNotice) {
+        serviceStateNotice.style.display = "block";
+        serviceStateNotice.innerHTML = `<b>Funcionamento: ${escapeHtml(modeLabel)}</b><div class="small">${escapeHtml(message)}</div>`;
       }
-      loanMsg.textContent = message || "";
-      loanMsgHoldUntil = message && holdMs > 0 ? (Date.now() + holdMs) : 0;
-      if (message && holdMs > 0) {
-        loanMsgTimer = setTimeout(() => {
-          loanMsg.textContent = "";
-          loanMsgHoldUntil = 0;
-          loanMsgTimer = null;
-        }, holdMs);
+      const reservationsClosed = publicServiceState ? publicServiceState.allow_reservations === false : false;
+      if (reserveServiceNotice) {
+        if (reservationsClosed) {
+          reserveServiceNotice.style.display = "block";
+          reserveServiceNotice.innerHTML = `<b>Reservas temporariamente fechadas</b><div class="small">As novas reservas públicas estão fechadas no momento. Consulte os canais do CCLA para atualizações e orientações.</div>`;
+        } else {
+          reserveServiceNotice.style.display = "none";
+          reserveServiceNotice.innerHTML = "";
+        }
       }
+
+      if (bibRefInput) bibRefInput.disabled = reservationsClosed;
+      if (reserveSubmitBtn) {
+        reserveSubmitBtn.disabled = reservationsClosed;
+        reserveSubmitBtn.textContent = reservationsClosed ? "Reservas temporariamente fechadas" : "Reservar";
+      }
+    }
+
+    async function loadPublicServiceState() {
+      const { data, error } = await supabase
+        .from("v_library_service_public")
+        .select("*")
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.warn("loadPublicServiceState error:", error);
+        publicServiceState = null;
+        renderPublicServiceState();
+        return;
+      }
+
+      publicServiceState = normalizeServiceState(data);
+      renderPublicServiceState();
+    }
+
+    function normalizeOneRef(input) {
+      const raw = String(input || "").trim();
+      if (!raw) return "";
+      const cleaned = raw
+        .replace(/^biblivre[-:\s]*/i, "")
+        .replace(/^bib[_\s-]*ref\s*:?\s*/i, "")
+        .trim();
+      const m = cleaned.match(/(\d{3,})/);
+      return m ? m[1].padStart(7, "0") : cleaned;
+    }
+
+    function parseRefs(raw) {
+      return Array.from(new Set(
+        String(raw || "")
+          .split(",")
+          .map((s) => normalizeOneRef(s))
+          .filter(Boolean)
+      ));
+    }
+
+    function explainPasswordUpdateError(error) {
+      const raw = String(error?.message || "").toLowerCase().trim();
+      if (!raw) return "Não foi possível alterar sua senha agora. Tente novamente.";
+
+      if (
+        raw.includes("same password") ||
+        raw.includes("same as the old password") ||
+        raw.includes("should be different") ||
+        raw.includes("password should be different")
+      ) {
+        return "Escolha uma senha diferente da atual.";
+      }
+
+      if (
+        raw.includes("session") ||
+        raw.includes("jwt") ||
+        raw.includes("token") ||
+        raw.includes("login") ||
+        raw.includes("reauth") ||
+        raw.includes("expired") ||
+        raw.includes("not authenticated") ||
+        raw.includes("authentication")
+      ) {
+        return "Sua sessão expirou. Saia e entre novamente para alterar a senha.";
+      }
+
+      if (
+        raw.includes("weak password") ||
+        raw.includes("password strength") ||
+        raw.includes("password is too short")
+      ) {
+        return "Sua nova senha não foi aceita. Use uma senha mais forte, com pelo menos 10 caracteres.";
+      }
+
+      if (
+        raw.includes("network") ||
+        raw.includes("fetch") ||
+        raw.includes("failed to fetch") ||
+        raw.includes("load failed")
+      ) {
+        return "Não foi possível conectar ao sistema agora. Tente novamente em instantes.";
+      }
+
+      if (
+        raw.includes("rate limit") ||
+        raw.includes("too many requests") ||
+        raw.includes("too many attempts")
+      ) {
+        return "Houve muitas tentativas em pouco tempo. Aguarde um pouco e tente novamente.";
+      }
+
+      return "Não foi possível alterar sua senha agora. Tente novamente. Se o problema continuar, saia e entre de novo.";
     }
 
     function setActiveTab(key, { pushHash = true } = {}) {
@@ -1332,6 +1450,43 @@ button[type="submit"] *,
       });
       tabPanels.forEach((panel) => panel.classList.toggle("active", panel.dataset.tab === key));
       if (pushHash) location.hash = "#" + key;
+    }
+
+    let contaRefreshPromise = null;
+
+    function getActiveContaTab() {
+      return (document.querySelector('.tab-panel.active')?.dataset.tab) || 'perfil';
+    }
+
+    async function refreshContaForActiveTab() {
+      const activeTab = getActiveContaTab();
+      if (activeTab === 'perfil') {
+        await loadProfile();
+        return;
+      }
+      if (activeTab === 'reservar') {
+        await renderActiveReservations();
+        return;
+      }
+      if (activeTab === 'curso') {
+        await renderLoans();
+        return;
+      }
+      if (activeTab === 'historico') {
+        await renderHistory();
+      }
+    }
+
+    async function refreshContaView() {
+      if (contaRefreshPromise) return contaRefreshPromise;
+      contaRefreshPromise = (async () => {
+        await loadProfile();
+        await loadPublicServiceState();
+        await refreshContaForActiveTab();
+      })().finally(() => {
+        contaRefreshPromise = null;
+      });
+      return contaRefreshPromise;
     }
 
     function enforcePasswordChangeUI(enforce) {
@@ -1370,218 +1525,13 @@ button[type="submit"] *,
       });
     }
 
-    const initialTab = (location.hash || "").replace("#", "");
-    if (initialTab && tabPanels.some((p) => p.dataset.tab === initialTab)) {
-      setActiveTab(initialTab, { pushHash: false });
+    const initial = (location.hash || "").replace("#", "");
+    if (initial === "biblio" && !isLibrarian) {
+      setActiveTab("perfil", { pushHash: false });
+    } else if (initial && tabPanels.some((p) => p.dataset.tab === initial)) {
+      setActiveTab(initial, { pushHash: false });
     } else {
       setActiveTab("perfil", { pushHash: false });
-    }
-
-    function normalizeServiceState(row) {
-      if (!row || typeof row !== "object") return null;
-      return {
-        user_id: row.user_id || null,
-        email: row.email || null,
-        is_authenticated: !!row.is_authenticated,
-        is_librarian: !!row.is_librarian,
-        library_id: row.library_id || null,
-        library_slug: row.library_slug || null,
-        library_name: row.library_name || null,
-        service_mode: String(row.service_mode || "").trim() || null,
-        public_message: String(row.public_message || "").trim(),
-        allows_new_reservations: row.allows_new_reservations === true,
-        allows_new_loans: row.allows_new_loans === true,
-        service_updated_at: row.service_updated_at || null,
-        can_access_conta: row.can_access_conta !== false,
-        can_access_painel: row.can_access_painel === true,
-        can_access_catalogacao: row.can_access_catalogacao === true
-      };
-    }
-
-    function getServiceModeMessage(state) {
-      if (!state) return "Informação temporariamente indisponível.";
-      return state.public_message || SERVICE_MODE_MESSAGES[state.service_mode] || "Informação temporariamente indisponível.";
-    }
-
-    function renderLibraryContext(context) {
-      const state = normalizeServiceState(context);
-      currentLibraryContext = state;
-
-      const modeLabel = SERVICE_MODE_LABELS[state?.service_mode] || "Informação temporariamente indisponível";
-      const message = getServiceModeMessage(state);
-
-      if (serviceStateNotice) {
-        serviceStateNotice.style.display = "block";
-        serviceStateNotice.innerHTML = `<b>Funcionamento: ${escapeHtml(modeLabel)}</b><div class="small">${escapeHtml(message)}</div>`;
-      }
-
-      const reservationsClosed = state ? state.allows_new_reservations === false : false;
-      if (reserveServiceNotice) {
-        if (reservationsClosed) {
-          reserveServiceNotice.style.display = "block";
-          reserveServiceNotice.innerHTML = `<b>Reservas temporariamente fechadas</b><div class="small">As novas reservas públicas estão fechadas no momento. Consulte os canais do CCLA para atualizações e orientações.</div>`;
-        } else {
-          reserveServiceNotice.style.display = "none";
-          reserveServiceNotice.innerHTML = "";
-        }
-      }
-
-      if (bibRefInput) bibRefInput.disabled = reservationsClosed;
-      if (reserveSubmitBtn) {
-        reserveSubmitBtn.disabled = reservationsClosed;
-        reserveSubmitBtn.textContent = reservationsClosed ? "Reservas temporariamente fechadas" : "Reservar";
-      }
-    }
-
-    async function fetchApiSingle(viewName, columns = "*") {
-      const { data, error } = await supabase.schema("api").from(viewName).select(columns).limit(1).maybeSingle();
-      if (error) throw error;
-      return data || null;
-    }
-
-    async function fetchApiMany(viewName, columns = "*", orderBy = null, ascending = false) {
-      let query = supabase.schema("api").from(viewName).select(columns);
-      if (orderBy) query = query.order(orderBy, { ascending });
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    }
-
-    async function fetchMyProfileCompat(userId) {
-      let apiProfile = null;
-      try {
-        apiProfile = await fetchApiSingle("my_profile");
-      } catch (_) {
-        apiProfile = null;
-      }
-
-      if (apiProfile && (apiProfile.is_authenticated || apiProfile.has_profile_row)) {
-        return {
-          ...apiProfile,
-          can_access_painel: apiProfile.can_access_painel === true || apiProfile.is_librarian === true,
-          can_access_catalogacao: apiProfile.can_access_catalogacao === true || apiProfile.is_librarian === true
-        };
-      }
-
-      const fullSelect = "email, first_name, last_name, phone, address, gender, consent_email, must_change_password, password_changed_at, is_librarian, is_restricted, restricted_since, restricted_reason, created_at, updated_at";
-      const attempts = [
-        () => supabase.schema("api").from("profiles").select(fullSelect).eq("id", userId).maybeSingle(),
-        () => supabase.from("profiles").select(fullSelect).eq("id", userId).maybeSingle()
-      ];
-
-      let legacyData = null;
-      for (const run of attempts) {
-        try {
-          const res = await run();
-          if (!res?.error && res?.data) {
-            legacyData = res.data;
-            break;
-          }
-        } catch (_) {}
-      }
-
-      return {
-        id: userId,
-        is_authenticated: true,
-        has_profile_row: !!legacyData,
-        email: legacyData?.email || session?.user?.email || "",
-        first_name: legacyData?.first_name || "",
-        last_name: legacyData?.last_name || "",
-        full_name: [legacyData?.first_name || "", legacyData?.last_name || ""].filter(Boolean).join(" ").trim() || null,
-        phone: legacyData?.phone || "",
-        address: legacyData?.address || "",
-        gender: legacyData?.gender || "",
-        consent_email: legacyData?.consent_email ?? true,
-        is_librarian: legacyData?.is_librarian === true,
-        must_change_password: legacyData?.must_change_password === true,
-        password_changed_at: legacyData?.password_changed_at || null,
-        is_restricted: legacyData?.is_restricted === true,
-        restricted_since: legacyData?.restricted_since || null,
-        restricted_reason: legacyData?.restricted_reason || "",
-        default_library_id: null,
-        default_library_slug: null,
-        default_library_name: null,
-        can_access_conta: true,
-        can_access_painel: legacyData?.is_librarian === true,
-        can_access_catalogacao: legacyData?.is_librarian === true,
-        created_at: legacyData?.created_at || null,
-        updated_at: legacyData?.updated_at || null
-      };
-    }
-
-    async function fetchLibraryContextCompat() {
-      try {
-        const ctx = await fetchApiSingle("my_library_context");
-        if (ctx) return ctx;
-      } catch (_) {}
-
-      try {
-        const { data, error } = await supabase
-          .from("v_library_service_public")
-          .select("*")
-          .limit(1)
-          .maybeSingle();
-        if (!error && data) {
-          return {
-            user_id: session?.user?.id || null,
-            email: session?.user?.email || null,
-            is_authenticated: true,
-            is_librarian: !!currentProfile?.is_librarian,
-            library_id: data.library_id || null,
-            library_slug: data.slug || null,
-            library_name: data.name || null,
-            service_mode: data.service_mode || null,
-            public_message: data.public_message || "",
-            allows_new_reservations: data.allows_new_reservations === true,
-            allows_new_loans: data.allows_new_loans === true,
-            service_updated_at: data.updated_at || null,
-            can_access_conta: true,
-            can_access_painel: !!currentProfile?.is_librarian,
-            can_access_catalogacao: !!currentProfile?.is_librarian
-          };
-        }
-      } catch (_) {}
-
-      return null;
-    }
-
-    async function saveProfileCompat(payload) {
-      const record = {
-        id: session.user.id,
-        email: session?.user?.email || currentProfile?.email || null,
-        ...payload
-      };
-
-      let res = null;
-      try {
-        res = await supabase.from("profiles").update(payload).eq("id", session.user.id).select("id").maybeSingle();
-        if (!res.error) return { error: null };
-      } catch (error) {
-        res = { error };
-      }
-
-      try {
-        const up = await supabase.from("profiles").upsert(record, { onConflict: "id" }).select("id").maybeSingle();
-        if (!up.error) return { error: null };
-        return { error: up.error || res?.error || null };
-      } catch (error) {
-        return { error: error || res?.error || null };
-      }
-    }
-
-    function parseRpcError(err) {
-      const msg = String(err?.message || "");
-      if (msg.includes("AUTH_REQUIRED")) return "É preciso entrar na conta.";
-      if (msg.includes("PROFILE_REQUIRED")) return "Sua ficha de perfil ainda não está pronta.";
-      if (msg.includes("ACCOUNT_RESTRICTED")) return "Esta conta está com acesso restrito.";
-      if (msg.includes("DEFAULT_LIBRARY_REQUIRED")) return "Não foi possível identificar sua biblioteca padrão.";
-      if (msg.includes("REMOTE_LIBRARY_NOT_ENABLED")) return "Por enquanto, a reserva só pode ser feita na sua biblioteca padrão.";
-      if (msg.includes("RESERVATIONS_DISABLED")) return "As reservas estão temporariamente fechadas nesta biblioteca.";
-      if (msg.includes("BOOK_NOT_HELD_BY_LIBRARY")) return "Este livro não está disponível para reserva na sua biblioteca.";
-      if (msg.includes("BOOK_NOT_LOANABLE")) return "Este item não pode ser reservado para empréstimo.";
-      if (msg.includes("ACTIVE_RESERVATION_ALREADY_EXISTS")) return "Você já tem uma reserva ativa para este livro.";
-      if (msg.includes("ACTIVE_RESERVATION_NOT_FOUND")) return "A reserva ativa não foi encontrada.";
-      return msg || "Não foi possível concluir a ação agora.";
     }
 
     function packAddress() {
@@ -1649,155 +1599,430 @@ button[type="submit"] *,
       $("country").value = extract("País", addressText) || "Brasil";
     }
 
-    function normalizeOneRef(input) {
-      const raw = String(input || "").trim();
-      if (!raw) return "";
-      const cleaned = raw
-        .replace(/^biblivre[-:\s]*/i, "")
-        .replace(/^bib[_\s-]*ref\s*:?\s*/i, "")
-        .trim();
-      const m = cleaned.match(/(\d{3,})/);
-      return m ? m[1].padStart(7, "0") : cleaned;
+    async function fetchBooksMapByBibRefs(refs) {
+      const clean = Array.from(new Set((refs || []).map((r) => String(r || "").trim()).filter(Boolean)));
+      if (!clean.length) return new Map();
+      const { data } = await supabase
+        .schema("api")
+        .from("books_public")
+        .select("bib_ref, titulo, autor, editora, ano")
+        .in("bib_ref", clean);
+      return new Map((data || []).map((row) => [String(row.bib_ref), row]));
     }
 
-    function parseRefs(raw) {
-      return Array.from(new Set(
-        String(raw || "")
-          .split(",")
-          .map((s) => normalizeOneRef(s))
-          .filter(Boolean)
-      ));
+    async function fetchRotulosMapByBibRefs(refs) {
+      const clean = Array.from(new Set((refs || []).map((r) => String(r || "").trim()).filter(Boolean)));
+      if (!clean.length) return new Map();
+      const { data } = await supabase
+        .from("exemplares")
+        .select("bib_ref, tombo")
+        .in("bib_ref", clean)
+        .order("tombo", { ascending: true });
+      const map = new Map();
+      for (const row of (data || [])) {
+        const key = String(row?.bib_ref || "").trim();
+        if (key && !map.has(key) && row?.tombo) map.set(key, String(row.tombo));
+      }
+      return map;
     }
 
-    function explainPasswordUpdateError(error) {
-      const raw = String(error?.message || "").toLowerCase().trim();
-      if (!raw) return "Não foi possível alterar sua senha agora. Tente novamente.";
-      if (raw.includes("same password") || raw.includes("same as the old password") || raw.includes("should be different")) {
-        return "Escolha uma senha diferente da atual.";
+    async function fetchMyProfileRow(userId) {
+      const fullSelect = "email, first_name, last_name, phone, address, gender, must_change_password, password_changed_at, is_librarian, is_restricted, restricted_since, restricted_reason";
+      const legacySelect = "email, first_name, last_name, phone, address, gender, must_change_password, password_changed_at, is_librarian";
+      let lastError = null;
+
+      const attempts = [
+        () => supabase.schema("api").from("my_profile").select(fullSelect).maybeSingle(),
+        () => supabase.schema("api").from("profiles").select(fullSelect).eq("id", userId).maybeSingle(),
+        () => supabase.from("profiles").select(fullSelect).eq("id", userId).maybeSingle(),
+        () => supabase.schema("api").from("profiles").select(legacySelect).eq("id", userId).maybeSingle(),
+        () => supabase.from("profiles").select(legacySelect).eq("id", userId).maybeSingle()
+      ];
+
+      for (const run of attempts) {
+        try {
+          const res = await run();
+          if (!res?.error) return { data: res?.data || null, error: null };
+          lastError = res.error;
+        } catch (error) {
+          lastError = error;
+        }
       }
-      if (raw.includes("session") || raw.includes("jwt") || raw.includes("token") || raw.includes("login") || raw.includes("reauth") || raw.includes("expired") || raw.includes("not authenticated") || raw.includes("authentication")) {
-        return "Sua sessão expirou. Saia e entre novamente para alterar a senha.";
-      }
-      if (raw.includes("weak password") || raw.includes("password strength") || raw.includes("password is too short")) {
-        return "Sua nova senha não foi aceita. Use uma senha mais forte, com pelo menos 10 caracteres.";
-      }
-      if (raw.includes("network") || raw.includes("fetch") || raw.includes("failed to fetch") || raw.includes("load failed")) {
-        return "Não foi possível conectar ao sistema agora. Tente novamente em instantes.";
-      }
-      if (raw.includes("rate limit") || raw.includes("too many requests") || raw.includes("too many attempts")) {
-        return "Houve muitas tentativas em pouco tempo. Aguarde um pouco e tente novamente.";
-      }
-      return "Não foi possível alterar sua senha agora. Tente novamente. Se o problema continuar, saia e entre de novo.";
+
+      return { data: null, error: lastError };
     }
 
-    
-    function renderProfile(profile) {
-      currentProfile = profile;
-      $("firstName").value = profile?.first_name || "";
-      $("lastName").value = profile?.last_name || "";
-      $("phone").value = profile?.phone || "";
-      $("gender").value = profile?.gender || "";
-      loadAddressFields(profile?.address || "");
+    let profileMsgTimer = null;
 
-      enforcePasswordChangeUI(!!profile?.must_change_password);
-      enforceRestrictionUI(!!profile?.is_restricted, profile?.restricted_reason);
-
-      setChipText(chipContaEmail, "E-mail", profile?.email || session?.user?.email || "—");
-      const cadastroLabel = profile?.is_restricted ? "restrito" : (profile?.must_change_password ? "requer troca de senha" : "regular");
-      setChipText(chipContaCadastro, "Cadastro", cadastroLabel);
-
-      isLibrarian = !!(profile?.can_access_painel || profile?.is_librarian);
-      if (goPainelBiblio) {
-        goPainelBiblio.href = ROUTES.PAINEL;
-        goPainelBiblio.style.display = isLibrarian ? "inline-flex" : "none";
-        goPainelBiblio.hidden = !isLibrarian;
+    function flashProfileMessage(text, ttlMs = 0) {
+      profileMsg.textContent = String(text || "");
+      if (profileMsgTimer) clearTimeout(profileMsgTimer);
+      profileMsgTimer = null;
+      if (ttlMs > 0 && text) {
+        profileMsgTimer = setTimeout(() => {
+          if (profileMsg.textContent === text) profileMsg.textContent = "";
+        }, ttlMs);
       }
     }
 
-    function renderReservationsSummary(summary) {
-      currentReservationSummary = summary || null;
-      const activeCount = Number(summary?.active_count || 0);
-      setChipText(chipContaReservas, "Reservas ativas", String(activeCount));
+    async function saveProfileCompat(payload) {
+      const record = {
+        id: session.user.id,
+        email: session?.user?.email || null,
+        consent_email: true,
+        ...payload
+      };
+
+      let lastError = null;
+
+      try {
+        const upd = await supabase
+          .from("profiles")
+          .update(payload)
+          .eq("id", session.user.id)
+          .select("id")
+          .maybeSingle();
+
+        if (!upd.error && upd.data?.id) return { error: null, mode: "update" };
+        if (upd.error) lastError = upd.error;
+      } catch (error) {
+        lastError = error;
+      }
+
+      try {
+        const up = await supabase
+          .from("profiles")
+          .upsert(record, { onConflict: "id" })
+          .select("id")
+          .maybeSingle();
+
+        if (!up.error && up.data?.id) return { error: null, mode: "upsert" };
+        return { error: up.error || lastError || new Error("Não foi possível salvar o perfil.") };
+      } catch (error) {
+        return { error: error || lastError || new Error("Não foi possível salvar o perfil.") };
+      }
     }
 
-    function renderActiveReservationsCanonical(rows) {
-      if (!activeReservationsEl) return;
-      if (!rows.length) {
-        showEmpty(activeReservationsEl, "Você não tem reservas ativas no momento.");
+    async function loadProfile() {
+      let data = null;
+      let error = null;
+
+      const profileRead = await fetchMyProfileRow(session.user.id);
+      data = profileRead.data;
+      error = profileRead.error;
+
+      if (!error && !data) {
+        const emailFromSession = session?.user?.email || "";
+        let insErr = null;
+        const ins1 = await supabase.from("profiles").insert({ id: session.user.id, email: emailFromSession, consent_email: true });
+        insErr = ins1.error;
+        if (insErr && String(insErr.message || "").toLowerCase().includes("consent_email")) {
+          const ins2 = await supabase.from("profiles").insert({ id: session.user.id, email: emailFromSession });
+          insErr = ins2.error;
+        }
+        if (insErr) {
+          profileMsg.textContent = "Seu perfil ainda não foi criado no sistema. Peça à biblioteca para criar seu perfil (ccl-amazonia@riseup.net).";
+          return;
+        }
+        const profileAfterInsert = await fetchMyProfileRow(session.user.id);
+        if (profileAfterInsert.error || !profileAfterInsert.data) {
+          profileMsg.textContent = "Perfil criado, mas não foi possível carregá-lo agora. Recarregue a página.";
+          return;
+        }
+        data = profileAfterInsert.data;
+        error = null;
+      }
+
+      if (error) {
+        profileMsg.textContent = "Erro ao carregar perfil: " + error.message;
         return;
       }
 
-      const desktopRows = rows.map((r) => `
-        <tr>
-          <td>#${escapeHtml(r.id)}</td>
-          <td class="mono">${escapeHtml(r.book_id)}</td>
-          <td>${escapeHtml(r.titulo || "Livro")}${r.autor ? `<br><small>${escapeHtml(r.autor)}</small>` : ""}</td>
-          <td class="mono">${escapeHtml(r.bib_ref || "—")}</td>
-          <td>${escapeHtml(r.library_name || "—")}</td>
-          <td>${escapeHtml(fmtDateTimeBelem(r.reserved_at))} (Belém)</td>
-          <td>${escapeHtml(r.status || "active")}</td>
-          <td>
-            <div class="reservation-actions">
-              <span class="action-slot-empty" aria-hidden="true"></span>
-              <span class="action-slot-empty" aria-hidden="true"></span>
-              <button type="button" class="secondary mini-btn" data-cancel-canonical="${r.id}">Cancelar</button>
-            </div>
-          </td>
-        </tr>
-      `).join("");
+      $("firstName").value = data.first_name || "";
+      $("lastName").value = data.last_name || "";
+      $("phone").value = data.phone || "";
+      $("gender").value = data.gender || "";
+      loadAddressFields(data.address || "");
 
-      const mobileCards = rows.map((r) => `
-        <article class="mobile-card">
-          <h4>${escapeHtml(r.titulo || "Livro")}</h4>
-          ${r.autor ? `<p class="author">${escapeHtml(r.autor)}</p>` : ""}
-          <div class="mobile-kv">
-            <div class="k">Reserva</div><div class="v">#${escapeHtml(r.id)}</div>
-            <div class="k">Livro</div><div class="v mono">${escapeHtml(r.book_id)}</div>
-            <div class="k">Referência</div><div class="v mono">${escapeHtml(r.bib_ref || "—")}</div>
-            <div class="k">Biblioteca</div><div class="v">${escapeHtml(r.library_name || "—")}</div>
-            <div class="k">Criada em</div><div class="v">${escapeHtml(fmtDateTimeBelem(r.reserved_at))} (Belém)</div>
-            <div class="k">Situação</div><div class="v">${escapeHtml(r.status || "active")}</div>
-          </div>
-          <div class="mobile-actions">
-            <button type="button" class="secondary mini-btn" data-cancel-canonical="${r.id}">Cancelar</button>
-          </div>
-        </article>
-      `).join("");
+      if (typeof data.must_change_password === "boolean") enforcePasswordChangeUI(data.must_change_password);
+      if (typeof data.is_restricted === "boolean") enforceRestrictionUI(data.is_restricted, data.restricted_reason);
 
-      activeReservationsEl.innerHTML = `
-        <div class="desktop-only">
-          <div class="table-scroll">
-            <table class="list-table">
-              <thead>
-                <tr><th>Reserva</th><th>Livro</th><th>Título</th><th>Referência</th><th>Biblioteca</th><th>Criada em</th><th>Situação</th><th>Ação</th></tr>
-              </thead>
-              <tbody>${desktopRows}</tbody>
-            </table>
-          </div>
-        </div>
-        <div class="mobile-only mobile-cards">${mobileCards}</div>
-      `;
+      setChipText(chipContaEmail, "E-mail", data.email || session?.user?.email || "—");
+      const cadastroLabel = data.is_restricted ? "restrito" : (data.must_change_password ? "requer troca de senha" : "regular");
+      setChipText(chipContaCadastro, "Cadastro", cadastroLabel);
 
-      activeReservationsEl.querySelectorAll("[data-cancel-canonical]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const reservationId = Number(btn.getAttribute("data-cancel-canonical"));
-          if (!reservationId) return;
-          btn.disabled = true;
-          if (activeReserveMsg) activeReserveMsg.textContent = "Cancelando reserva...";
-          const { error } = await supabase.rpc("cancel_my_reservation", { p_reservation_id: reservationId });
-          if (error) {
-            activeReserveMsg.textContent = parseRpcError(error);
-            btn.disabled = false;
-            return;
-          }
-          activeReserveMsg.textContent = "Reserva cancelada.";
-          await refreshReservationsData();
-          await renderHistory();
-        });
+      const sessionMeta = {
+        ...(session?.user?.user_metadata || {}),
+        ...(session?.user?.app_metadata || {})
+      };
+      const metaIsLibrarian = [
+        sessionMeta.is_librarian,
+        sessionMeta.isLibrarian,
+        sessionMeta.librarian,
+        sessionMeta.role,
+        sessionMeta.roles
+      ].some((value) => {
+        if (value === true) return true;
+        if (Array.isArray(value)) return value.map((v) => String(v).toLowerCase()).includes("librarian");
+        return ["true", "librarian", "bibliotecario", "bibliotecária", "bibliotecaire"].includes(String(value || "").trim().toLowerCase());
+      });
+      isLibrarian = (data?.is_librarian === true) || metaIsLibrarian;
+      const go = $("goPainelBiblio");
+      if (go) {
+        go.href = ROUTES.PAINEL;
+        go.hidden = false;
+        go.style.display = "inline-flex";
+      }
+    }
+
+    async function createReservaV2(bibRefs) {
+      const rpc = await supabase.rpc("fn_v2_create_reserva_by_bib_refs", {
+        p_user_id: session.user.id,
+        p_bib_refs: bibRefs,
+        p_expires_at: null,
+        p_notes: "Reserva criada pela conta do(a/e) leitor(a/e)."
+      });
+      return rpc;
+    }
+
+    async function cancelReservaV2(reservaId, lineNo) {
+      return await supabase.rpc("fn_v2_cancel_reserva_linhas_as_leitor", {
+        p_reserva_id: reservaId,
+        p_line_nos: [lineNo],
+        p_notes: "Cancelamento solicitado pela conta do(a/e) leitor(a/e)."
       });
     }
 
-    async function renderActiveReservationsLegacyFallback() {
+    function reservationStatusLabel(status, row) {
+      const s = String(status || "");
+      if (s === "ativa") return "Ativa";
+      if (s === "convertida_em_emprestimo") return row?.emprestimo_item_id ? `Transformada em empréstimo` : "Transformada em empréstimo";
+      if (s === "cancelada_leitor") return "Cancelada por você";
+      if (s === "cancelada_biblioteca") return "Cancelada pela biblioteca";
+      if (s === "expirada") return "Expirada";
+      if (s === "pending") return "Pendente";
+      if (s === "fulfilled") return row?.fulfilled_loan_id ? `Transformada em empréstimo #${row.fulfilled_loan_id}` : "Confirmada";
+      if (s === "cancelled_by_reader") return "Cancelada por você";
+      if (s === "cancelled_by_staff_temp") return "Bloqueada temporariamente pela biblioteca";
+      if (s === "cancelled_by_staff_perm") return "Bloqueada pela biblioteca";
+      if (s === "released_by_staff") return "Bloqueio levantado pela biblioteca";
+      if (s === "cancelled") return "Cancelada";
+      return s || "—";
+    }
+
+    function translateReservationWorkflowStage(stage) {
+      return ({
+        solicitada: "Reserva recebida",
+        em_preparacao: "Livro em preparação",
+        aviso_enviado: "Livro pronto para retirada",
+        retirada_a_combinar: "Retirada a combinar",
+        retirada_agendada: "Retirada agendada",
+        "re-retirada_agendada": "Retirada reagendada",
+        pronta_para_retirada: "Livro pronto para retirada",
+        nao_retirada: "Não retirada",
+        liberada_para_circulacao: "Liberada para circulação",
+        retirada_efetivada: "Retirada efetivada",
+        cancelada_leitor: "Cancelada por você",
+        cancelada_biblioteca: "Cancelada pela biblioteca",
+        expirada: "Expirada"
+      })[String(stage || "")] || "Reserva recebida";
+    }
+
+    function reservationNeedsPickupReply(stage) {
+      return ["retirada_agendada", "re-retirada_agendada"].includes(String(stage || "").trim());
+    }
+
+    function reservationWorkflowLabel(row) {
+      const stage = String(row?.workflow_stage_effective || "").trim();
+      return stage ? translateReservationWorkflowStage(stage) : reservationStatusLabel(row?.item_status, row);
+    }
+
+    function translatePickupReplyStatus(status) {
+      return ({
+        confirmado_leitor: "Você confirmou esse horário",
+        recusado_leitor: "Você informou que não pode nesse horário"
+      })[String(status || "")] || "";
+    }
+
+    function reservationWorkflowDetailLines(row) {
+      const lines = [];
+      if (row?.pickup_scheduled_for) lines.push(`Retirada prevista: ${fmtDateTimeBelem(row.pickup_scheduled_for)} (Belém)`);
+      const pickupReplyLabel = translatePickupReplyStatus(row?.pickup_reply_status);
+      if (pickupReplyLabel) lines.push(pickupReplyLabel);
+      if (row?.pickup_reply_note) lines.push(String(row.pickup_reply_note));
+      if (row?.workflow_note) lines.push(String(row.workflow_note));
+      return lines;
+    }
+
+    async function setReservaPickupReply(rid, lineNo, replyStatus, note = null) {
+      return await supabase.rpc("fn_v2_set_reserva_linhas_pickup_reply", {
+        p_reserva_id: rid,
+        p_line_nos: [lineNo],
+        p_reply_status: replyStatus,
+        p_note: note
+      });
+    }
+
+    function actionSlotEmpty() {
+      return `<span class="action-slot-empty" aria-hidden="true"></span>`;
+    }
+
+    function actionSlotNote(message) {
+      return `<span class="action-slot-note">${escapeHtml(message)}</span>`;
+    }
+
+    function buildActionGrid(items, className = "loan-actions") {
+      const slots = Array.isArray(items) ? items.filter(Boolean).slice(0, 3) : [];
+      while (slots.length < 3) slots.push(actionSlotEmpty());
+      return `<div class="${className}">${slots.join("")}</div>`;
+    }
+
+    function buildLoanRenewButtonV2(emprestimoId) {
+      return !userIsRestricted
+        ? `<button type="button" class="secondary mini-btn" data-renew-v2="${emprestimoId}">Renovar (uma única vez)</button>`
+        : `<button type="button" class="secondary mini-btn" disabled>Renovação bloqueada</button>`;
+    }
+
+    function buildLoanRenewButtonOld(loanId, canRenew, reasonText) {
+      return canRenew
+        ? `<button type="button" class="secondary mini-btn" data-renew-old="${loanId}">Renovar (uma única vez)</button>`
+        : `<button type="button" class="secondary mini-btn" disabled>${escapeHtml(reasonText || "Renovação indisponível")}</button>`;
+    }
+
+    function reservationPickupReplyActions(row) {
+      const cancelBtn = `<button type="button" class="secondary mini-btn" data-cancel-v2="${row.reserva_id}|${row.line_no}">Cancelar</button>`;
+      if (!reservationNeedsPickupReply(row?.workflow_stage_effective)) {
+        return buildActionGrid([actionSlotEmpty(), actionSlotEmpty(), cancelBtn], "reservation-actions");
+      }
+      if (String(row?.pickup_reply_status || "").trim()) {
+        return buildActionGrid([actionSlotEmpty(), actionSlotEmpty(), cancelBtn], "reservation-actions");
+      }
+      return buildActionGrid([
+        `<button type="button" class="secondary mini-btn" data-pickup-reply="${row.reserva_id}|${row.line_no}|confirmado_leitor">Confirmar horário</button>`,
+        `<button type="button" class="secondary mini-btn" data-pickup-reply="${row.reserva_id}|${row.line_no}|recusado_leitor">Não posso nesse horário</button>`,
+        cancelBtn
+      ], "reservation-actions");
+    }
+
+    async function renderActiveReservations() {
+      if (!activeReservationsEl) return;
+      if (activeReserveMsg) activeReserveMsg.textContent = "";
+      activeReservationsEl.textContent = "Carregando...";
+
+      const v2 = await supabase
+        .schema("api")
+        .from("reserva_itens_followup_ui")
+        .select("reserva_id, sub_id, line_no, titulo, autor, bib_ref, rotulo, item_status, reserva_created_at, expires_at, reserva_status, emprestimo_item_id, workflow_stage_effective, workflow_note, pickup_scheduled_for, workflow_stage_updated_at_effective, pickup_reply_status, pickup_reply_note, pickup_reply_at")
+        .eq("user_id", session.user.id)
+        .eq("item_status", "ativa")
+        .order("reserva_id", { ascending: false })
+        .order("line_no", { ascending: true });
+
+      if (!v2.error && (v2.data || []).length) {
+        setChipText(chipContaReservas, "Reservas ativas", String((v2.data || []).length));
+        const rotulosMap = await fetchRotulosMapByBibRefs((v2.data || []).map((r) => r.bib_ref));
+        const rows = v2.data.map((r) => {
+          const rotulo = r.rotulo || rotulosMap.get(String(r.bib_ref || "").trim()) || "—";
+          const validade = r.expires_at || addDays(r.reserva_created_at || Date.now(), 14);
+          const workflowLabel = reservationWorkflowLabel(r);
+          const workflowDetails = reservationWorkflowDetailLines(r);
+          return `
+          <tr>
+            <td>#${r.reserva_id}</td>
+            <td class="mono">${escapeHtml(r.sub_id)}</td>
+            <td>${escapeHtml(r.titulo || "Livro")} ${r.autor ? `<br><small>${escapeHtml(r.autor)}</small>` : ""}</td>
+            <td class="mono">${escapeHtml(r.bib_ref || "—")}</td>
+            <td class="mono">${escapeHtml(rotulo)}</td>
+            <td>${escapeHtml(fmtDateTimeBelem(r.reserva_created_at))} (Belém)</td>
+            <td>${escapeHtml(fmtDateTimeBelem(validade))} (Belém)</td>
+            <td><b>${escapeHtml(workflowLabel)}</b>${workflowDetails.length ? `<br><small>${workflowDetails.map((line) => escapeHtml(line)).join("<br>")}</small>` : ""}</td>
+            <td>${reservationPickupReplyActions(r)}</td>
+          </tr>`;
+        }).join("");
+        const mobileCards = v2.data.map((r) => {
+          const rotulo = r.rotulo || rotulosMap.get(String(r.bib_ref || "").trim()) || "—";
+          const validade = r.expires_at || addDays(r.reserva_created_at || Date.now(), 14);
+          const workflowLabel = reservationWorkflowLabel(r);
+          const workflowDetails = reservationWorkflowDetailLines(r);
+          return `
+            <article class="mobile-card">
+              <h4>${escapeHtml(r.titulo || "Livro")}</h4>
+              ${r.autor ? `<p class="author">${escapeHtml(r.autor)}</p>` : ""}
+              <div class="mobile-kv">
+                <div class="k">Lote</div><div class="v">#${escapeHtml(r.reserva_id)}</div>
+                <div class="k">Livro</div><div class="v mono">${escapeHtml(r.sub_id)}</div>
+                <div class="k">Referência</div><div class="v mono">${escapeHtml(r.bib_ref || "—")}</div>
+                <div class="k">Rótulo</div><div class="v mono">${escapeHtml(rotulo)}</div>
+                <div class="k">Criada em</div><div class="v">${escapeHtml(fmtDateTimeBelem(r.reserva_created_at))} (Belém)</div>
+                <div class="k">Validade</div><div class="v"><b>${escapeHtml(fmtDateTimeBelem(validade))} (Belém)</b></div>
+                <div class="k">Situação</div><div class="v"><b>${escapeHtml(workflowLabel)}</b>${workflowDetails.length ? `<br><small>${workflowDetails.map((line) => escapeHtml(line)).join("<br>")}</small>` : ""}</div>
+              </div>
+              <div class="mobile-actions">
+                ${reservationPickupReplyActions(r)}
+              </div>
+            </article>`;
+        }).join("");
+
+        activeReservationsEl.innerHTML = `
+          <div class="desktop-only">
+            <div class="table-scroll">
+              <table class="list-table">
+                <thead>
+                  <tr><th>Lote</th><th>Livro</th><th>Título</th><th>Referência</th><th>Rótulo</th><th>Criada em</th><th>Validade</th><th>Situação</th><th>Ação</th></tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+          </div>
+          <div class="mobile-only mobile-cards">${mobileCards}</div>`;
+
+        activeReservationsEl.querySelectorAll("[data-cancel-v2]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const [rid, lineNo] = String(btn.getAttribute("data-cancel-v2") || "").split("|").map(Number);
+            if (!rid || !lineNo) return;
+            btn.disabled = true;
+            if (activeReserveMsg) activeReserveMsg.textContent = "Cancelando reserva...";
+            const res = await cancelReservaV2(rid, lineNo);
+            if (res.error) {
+              activeReserveMsg.textContent = "Erro ao cancelar: " + res.error.message;
+              btn.disabled = false;
+              return;
+            }
+            activeReserveMsg.textContent = "Reserva cancelada.";
+            await renderActiveReservations();
+            await renderHistory();
+          });
+        });
+        activeReservationsEl.querySelectorAll("[data-pickup-reply]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const [rid, lineNo, replyStatus] = String(btn.getAttribute("data-pickup-reply") || "").split("|");
+            const reservaId = Number(rid);
+            const reservaLineNo = Number(lineNo);
+            if (!reservaId || !reservaLineNo || !replyStatus) return;
+            const proceed = window.confirm(replyStatus === "confirmado_leitor"
+              ? "Confirma que poderá retirar o livro nesse horário?"
+              : "Confirma que você não poderá comparecer nesse horário?");
+            if (!proceed) return;
+            btn.disabled = true;
+            if (activeReserveMsg) activeReserveMsg.textContent = replyStatus === "confirmado_leitor"
+              ? "Registrando sua confirmação..."
+              : "Registrando sua resposta...";
+            const res = await setReservaPickupReply(reservaId, reservaLineNo, replyStatus, null);
+            if (res.error) {
+              activeReserveMsg.textContent = "Erro ao registrar sua resposta: " + res.error.message;
+              btn.disabled = false;
+              return;
+            }
+            activeReserveMsg.textContent = replyStatus === "confirmado_leitor"
+              ? "Horário confirmado. A biblioteca foi avisada."
+              : "Resposta registrada. A biblioteca foi avisada para propor outro horário.";
+            await renderActiveReservations();
+            await renderHistory();
+          });
+        });
+        return;
+      }
+
       const oldRes = await supabase
         .schema("api")
         .from("reservas")
@@ -1807,51 +2032,60 @@ button[type="submit"] *,
         .order("created_at", { ascending: false });
 
       if (oldRes.error) {
-        console.error("renderActiveReservations legacy error:", oldRes.error);
+        console.error("renderActiveReservations error:", oldRes.error);
         return showEmpty(activeReservationsEl, "Não foi possível carregar suas reservas ativas.");
       }
       if (!oldRes.data || !oldRes.data.length) {
+        setChipText(chipContaReservas, "Reservas ativas", "0");
         return showEmpty(activeReservationsEl, "Você não tem reservas ativas no momento.");
       }
 
+      setChipText(chipContaReservas, "Reservas ativas", String((oldRes.data || []).length));
+
       const booksMap = await fetchBooksMapByBibRefs(oldRes.data.map((r) => r.bib_ref));
-      const desktopRows = oldRes.data.map((r) => {
+      const rotulosMap = await fetchRotulosMapByBibRefs(oldRes.data.map((r) => r.bib_ref));
+      const rows = oldRes.data.map((r) => {
         const book = booksMap.get(String(r.bib_ref)) || {};
+        const title = book.titulo || `Referência ${r.bib_ref}`;
+        const author = book.autor || "";
+        const rotulo = rotulosMap.get(String(r.bib_ref || "").trim()) || "—";
+        const validade = addDays(r.created_at || Date.now(), 14);
+        const canCancel = String(r.status || "") === "pending";
         return `
           <tr>
-            <td>#${escapeHtml(r.id)}</td>
+            <td>#${r.id}</td>
             <td class="mono">—</td>
-            <td>${escapeHtml(book.titulo || `Referência ${r.bib_ref}`)}${book.autor ? `<br><small>${escapeHtml(book.autor)}</small>` : ""}</td>
+            <td>${escapeHtml(title)}${author ? `<br><small>${escapeHtml(author)}</small>` : ""}</td>
             <td class="mono">${escapeHtml(r.bib_ref)}</td>
-            <td>—</td>
-            <td>${escapeHtml(fmtDateTimeBelem(r.created_at))} (Belém)</td>
-            <td>${escapeHtml(r.status || "pending")}</td>
-            <td>
-              <div class="reservation-actions">
-                <span class="action-slot-empty" aria-hidden="true"></span>
-                <span class="action-slot-empty" aria-hidden="true"></span>
-                <button type="button" class="secondary mini-btn" data-cancel-legacy="${r.id}">Cancelar</button>
-              </div>
-            </td>
+            <td class="mono">${escapeHtml(rotulo)}</td>
+            <td>${escapeHtml(fmtDateOnly(r.created_at))}</td>
+            <td>${escapeHtml(fmtDateTimeBelem(validade))} (Belém)</td>
+            <td>${escapeHtml(reservationStatusLabel(r.status, r))}${r.cancelled_reason ? `<br><small>${escapeHtml(r.cancelled_reason)}</small>` : ""}</td>
+            <td>${canCancel ? buildActionGrid([actionSlotEmpty(), actionSlotEmpty(), `<button type="button" class="secondary mini-btn" data-cancel-old="${r.id}">Cancelar</button>`], "reservation-actions") : `<div class="reservation-actions">${actionSlotNote("Sem ação")}</div>`}</td>
           </tr>`;
       }).join("");
-
       const mobileCards = oldRes.data.map((r) => {
         const book = booksMap.get(String(r.bib_ref)) || {};
+        const title = book.titulo || `Referência ${r.bib_ref}`;
+        const author = book.autor || "";
+        const rotulo = rotulosMap.get(String(r.bib_ref || "").trim()) || "—";
+        const validade = addDays(r.created_at || Date.now(), 14);
+        const canCancel = String(r.status || "") === "pending";
         return `
           <article class="mobile-card">
-            <h4>${escapeHtml(book.titulo || `Referência ${r.bib_ref}`)}</h4>
-            ${book.autor ? `<p class="author">${escapeHtml(book.autor)}</p>` : ""}
+            <h4>${escapeHtml(title)}</h4>
+            ${author ? `<p class="author">${escapeHtml(author)}</p>` : ""}
             <div class="mobile-kv">
-              <div class="k">Reserva</div><div class="v">#${escapeHtml(r.id)}</div>
+              <div class="k">Lote</div><div class="v">#${escapeHtml(r.id)}</div>
               <div class="k">Livro</div><div class="v mono">—</div>
-              <div class="k">Referência</div><div class="v mono">${escapeHtml(r.bib_ref)}</div>
-              <div class="k">Biblioteca</div><div class="v">—</div>
-              <div class="k">Criada em</div><div class="v">${escapeHtml(fmtDateTimeBelem(r.created_at))} (Belém)</div>
-              <div class="k">Situação</div><div class="v">${escapeHtml(r.status || "pending")}</div>
+              <div class="k">Referência</div><div class="v mono">${escapeHtml(r.bib_ref || "—")}</div>
+              <div class="k">Rótulo</div><div class="v mono">${escapeHtml(rotulo)}</div>
+              <div class="k">Criada em</div><div class="v">${escapeHtml(fmtDateOnly(r.created_at))}</div>
+              <div class="k">Validade</div><div class="v"><b>${escapeHtml(fmtDateTimeBelem(validade))} (Belém)</b></div>
+              <div class="k">Situação</div><div class="v">${escapeHtml(reservationStatusLabel(r.status, r))}${r.cancelled_reason ? `<br><small>${escapeHtml(r.cancelled_reason)}</small>` : ""}</div>
             </div>
             <div class="mobile-actions">
-              <button type="button" class="secondary mini-btn" data-cancel-legacy="${r.id}">Cancelar</button>
+              ${canCancel ? buildActionGrid([actionSlotEmpty(), actionSlotEmpty(), `<button type="button" class="secondary mini-btn" data-cancel-old="${r.id}">Cancelar</button>`], "reservation-actions") : `<div class="reservation-actions">${actionSlotNote("Sem ação")}</div>`}
             </div>
           </article>`;
       }).join("");
@@ -1861,21 +2095,20 @@ button[type="submit"] *,
           <div class="table-scroll">
             <table class="list-table">
               <thead>
-                <tr><th>Reserva</th><th>Livro</th><th>Título</th><th>Referência</th><th>Biblioteca</th><th>Criada em</th><th>Situação</th><th>Ação</th></tr>
+                <tr><th>Lote</th><th>Livro</th><th>Título</th><th>Referência</th><th>Rótulo</th><th>Criada em</th><th>Validade</th><th>Situação</th><th>Ação</th></tr>
               </thead>
-              <tbody>${desktopRows}</tbody>
+              <tbody>${rows}</tbody>
             </table>
           </div>
         </div>
-        <div class="mobile-only mobile-cards">${mobileCards}</div>
-      `;
+        <div class="mobile-only mobile-cards">${mobileCards}</div>`;
 
-      activeReservationsEl.querySelectorAll("[data-cancel-legacy]").forEach((btn) => {
+      activeReservationsEl.querySelectorAll("[data-cancel-old]").forEach((btn) => {
         btn.addEventListener("click", async () => {
-          const reservaId = Number(btn.getAttribute("data-cancel-legacy"));
+          const reservaId = Number(btn.getAttribute("data-cancel-old"));
           if (!reservaId) return;
           btn.disabled = true;
-          if (activeReserveMsg) activeReserveMsg.textContent = "Cancelando reserva...";
+          activeReserveMsg.textContent = "Cancelando reserva...";
           let rpc = await supabase.rpc("cancel_my_reserva", { p_reserva_id: reservaId });
           if (rpc.error && /function|does not exist|não existe/i.test(String(rpc.error.message || ""))) {
             rpc = await supabase.rpc("cancel_reserva", { p_reserva_id: reservaId });
@@ -1886,161 +2119,46 @@ button[type="submit"] *,
             return;
           }
           activeReserveMsg.textContent = "Reserva cancelada.";
-          await refreshReservationsData();
+          await renderActiveReservations();
           await renderHistory();
         });
       });
     }
 
-    async function renderActiveReservations() {
-      if (!activeReservationsEl) return;
-      if (activeReserveMsg) activeReserveMsg.textContent = "";
-      activeReservationsEl.textContent = "Carregando...";
-      try {
-        const rows = await fetchApiMany("my_reservations_active", "*", "reserved_at", false);
-        if (rows.length) {
-          renderActiveReservationsCanonical(rows);
-          return;
+    async function tryRenewV2(loanId) {
+      const candidates = [
+        ["fn_v2_extend_emprestimo_once", { p_emprestimo_id: loanId }],
+        ["fn_v2_renew_emprestimo", { p_emprestimo_id: loanId }],
+        ["renew_emprestimo_v2", { p_emprestimo_id: loanId }],
+        ["extend_loan_once_v2", { p_emprestimo_id: loanId }]
+      ];
+      let lastErr = null;
+      for (const [fn, args] of candidates) {
+        const res = await supabase.rpc(fn, args);
+        if (!res.error) return res;
+        lastErr = res.error;
+        if (!/function|does not exist|não existe|No function matches/i.test(String(res.error.message || ""))) {
+          return res;
         }
-      } catch (error) {
-        console.warn("my_reservations_active error:", error);
       }
-      await renderActiveReservationsLegacyFallback();
+      return { error: lastErr, data: null };
     }
 
-    async function fetchReservationSummary() {
-      try {
-        const summary = await fetchApiSingle("my_reservations_summary");
-        renderReservationsSummary(summary);
-        return summary;
-      } catch (error) {
-        console.warn("my_reservations_summary error:", error);
-        setChipText(chipContaReservas, "Reservas ativas", "—");
-        return null;
-      }
-    }
-
-    async function refreshReservationsData() {
-      await fetchReservationSummary();
-      await renderActiveReservations();
-    }
-
-    async function fetchBooksMapByBibRefs(refs) {
-      const clean = Array.from(new Set((refs || []).map((r) => String(r || "").trim()).filter(Boolean)));
-      if (!clean.length) return new Map();
-      const { data } = await supabase
-        .schema("api")
-        .from("catalog_books_public")
-        .select("bib_ref, titulo, autor, editora, ano")
-        .in("bib_ref", clean);
-      return new Map((data || []).map((row) => [String(row.bib_ref), row]));
-    }
-
-    
-    async function loadProfile() {
-      try {
-        const profile = await fetchMyProfileCompat(session.user.id);
-        if (!profile || !profile.is_authenticated) {
-          window.location.href = buildAuthRedirectTarget("conta.html");
-          throw new Error("No authenticated profile");
+    async function tryRenewOld(loanId) {
+      const candidates = [
+        ["renew_loan", { p_loan_id: loanId }],
+        ["extend_loan_once", { p_loan_id: loanId }]
+      ];
+      let lastErr = null;
+      for (const [fn, args] of candidates) {
+        const res = await supabase.rpc(fn, args);
+        if (!res.error) return res;
+        lastErr = res.error;
+        if (!/function|does not exist|não existe|No function matches/i.test(String(res.error.message || ""))) {
+          return res;
         }
-
-        if (!profile.has_profile_row) {
-          const emailFromSession = session?.user?.email || "";
-          let insErr = null;
-          const ins1 = await supabase.from("profiles").insert({ id: session.user.id, email: emailFromSession, consent_email: true });
-          insErr = ins1.error;
-          if (insErr && String(insErr.message || "").toLowerCase().includes("consent_email")) {
-            const ins2 = await supabase.from("profiles").insert({ id: session.user.id, email: emailFromSession });
-            insErr = ins2.error;
-          }
-          if (insErr) {
-            profileMsg.textContent = "Seu perfil ainda não foi criado no sistema. Peça à biblioteca para criar seu perfil (ccl-amazonia@riseup.net).";
-            return null;
-          }
-          const profileAfterInsert = await fetchMyProfileCompat(session.user.id);
-          renderProfile(profileAfterInsert);
-          return profileAfterInsert;
-        }
-
-        renderProfile(profile);
-        return profile;
-      } catch (error) {
-        profileMsg.textContent = "Erro ao carregar perfil: " + (error.message || error);
-        return null;
       }
-    }
-
-    
-    async function loadLibraryContext() {
-      try {
-        const context = await fetchLibraryContextCompat();
-        renderLibraryContext(context);
-        return context;
-      } catch (error) {
-        console.warn("my_library_context error:", error);
-        renderLibraryContext(null);
-        return null;
-      }
-    }
-
-    
-    async function createReservationsFromBibRefs(refs) {
-      const libraryId = currentLibraryContext?.library_id || null;
-      const results = [];
-
-      if (libraryId) {
-        try {
-          const { data, error } = await supabase
-            .schema("api")
-            .from("catalog_books_public")
-            .select("book_id, bib_ref, titulo, autor, library_id")
-            .eq("library_id", libraryId)
-            .in("bib_ref", refs);
-
-          if (!error) {
-            const booksByRef = new Map((data || []).map((row) => [String(row.bib_ref), row]));
-
-            for (const ref of refs) {
-              const book = booksByRef.get(String(ref));
-              if (!book) {
-                results.push({ ref, ok: false, message: "Livro não encontrado na sua biblioteca padrão." });
-                continue;
-              }
-
-              const rpc = await supabase.rpc("create_my_reservation", {
-                p_book_id: book.book_id,
-                p_library_id: null,
-                p_notes: "Reserva criada pela conta do(a/e) leitor(a/e)."
-              });
-
-              if (rpc.error) {
-                results.push({ ref, ok: false, message: parseRpcError(rpc.error) });
-              } else {
-                results.push({ ref, ok: true, title: book.titulo || ref });
-              }
-            }
-
-            return results;
-          }
-        } catch (_) {}
-      }
-
-      const rpc = await supabase.rpc("fn_v2_create_reserva_by_bib_refs", {
-        p_user_id: session.user.id,
-        p_bib_refs: refs,
-        p_expires_at: null,
-        p_notes: "Reserva criada pela conta do(a/e) leitor(a/e)."
-      });
-
-      if (rpc.error) {
-        throw rpc.error;
-      }
-
-      for (const ref of refs) {
-        results.push({ ref, ok: true, title: ref });
-      }
-      return results;
+      return { error: lastErr, data: null };
     }
 
     function getReturnScheduleLabel(status) {
@@ -2098,64 +2216,6 @@ button[type="submit"] *,
       return dateTimeLocalToIso(`${dateValue}T${timeValue}`);
     }
 
-    async function tryRenewV2(loanId) {
-      const candidates = [
-        ["fn_v2_extend_emprestimo_once", { p_emprestimo_id: loanId }],
-        ["fn_v2_renew_emprestimo", { p_emprestimo_id: loanId }],
-        ["renew_emprestimo_v2", { p_emprestimo_id: loanId }],
-        ["extend_loan_once_v2", { p_emprestimo_id: loanId }]
-      ];
-      let lastErr = null;
-      for (const [fn, args] of candidates) {
-        const res = await supabase.rpc(fn, args);
-        if (!res.error) return res;
-        lastErr = res.error;
-        if (!/function|does not exist|não existe|No function matches/i.test(String(res.error.message || ""))) {
-          return res;
-        }
-      }
-      return { error: lastErr, data: null };
-    }
-
-    async function tryRenewOld(loanId) {
-      const candidates = [
-        ["renew_loan", { p_loan_id: loanId }],
-        ["extend_loan_once", { p_loan_id: loanId }]
-      ];
-      let lastErr = null;
-      for (const [fn, args] of candidates) {
-        const res = await supabase.rpc(fn, args);
-        if (!res.error) return res;
-        lastErr = res.error;
-        if (!/function|does not exist|não existe|No function matches/i.test(String(res.error.message || ""))) {
-          return res;
-        }
-      }
-      return { error: lastErr, data: null };
-    }
-
-    function actionSlotEmpty() {
-      return `<span class="action-slot-empty" aria-hidden="true"></span>`;
-    }
-
-    function buildActionGrid(items, className = "loan-actions") {
-      const slots = Array.isArray(items) ? items.filter(Boolean).slice(0, 3) : [];
-      while (slots.length < 3) slots.push(actionSlotEmpty());
-      return `<div class="${className}">${slots.join("")}</div>`;
-    }
-
-    function buildLoanRenewButtonV2(emprestimoId) {
-      return !userIsRestricted
-        ? `<button type="button" class="secondary mini-btn" data-renew-v2="${emprestimoId}">Renovar (uma única vez)</button>`
-        : `<button type="button" class="secondary mini-btn" disabled>Renovação bloqueada</button>`;
-    }
-
-    function buildLoanRenewButtonOld(loanId, canRenew, reasonText) {
-      return canRenew
-        ? `<button type="button" class="secondary mini-btn" data-renew-old="${loanId}">Renovar (uma única vez)</button>`
-        : `<button type="button" class="secondary mini-btn" disabled>${escapeHtml(reasonText || "Renovação indisponível")}</button>`;
-    }
-
     async function scheduleReturnV2(loanId, lineNo, isoWhen) {
       return supabase.rpc("fn_v2_schedule_emprestimo_return", {
         p_emprestimo_id: loanId,
@@ -2209,6 +2269,7 @@ button[type="submit"] *,
         activeLoanCount += (v2.data || []).length;
         const rows = v2.data.map((r) => {
           const renewBtn = buildLoanRenewButtonV2(r.emprestimo_id);
+
           const key = `${r.emprestimo_id}|${r.line_no}`;
           const dueShown = r.extended_until || r.due_at;
           const statusLabel = getReturnScheduleLabel(r.return_schedule_status);
@@ -2254,6 +2315,7 @@ button[type="submit"] *,
         }).join("");
         const mobileCards = v2.data.map((r) => {
           const renewBtn = buildLoanRenewButtonV2(r.emprestimo_id);
+
           const key = `${r.emprestimo_id}|${r.line_no}`;
           const dueShown = r.extended_until || r.due_at;
           const statusLabel = getReturnScheduleLabel(r.return_schedule_status);
@@ -2373,7 +2435,6 @@ button[type="submit"] *,
         loansEl.innerHTML = "<p>Não há empréstimos em curso.</p>";
         return;
       }
-
       setChipText(chipContaEmprestimos, "Empréstimos em curso", String(activeLoanCount));
       loansEl.innerHTML = sections.join("");
 
@@ -2529,34 +2590,32 @@ button[type="submit"] *,
       historyEl.textContent = "Carregando...";
       if (historyMsg) historyMsg.textContent = "";
 
-      const items = [];
-
-      try {
-        const canonicalReservations = await fetchApiMany("my_reservations_history", "*", "closed_at", false);
-        for (const r of canonicalReservations) {
-          const closedAt = r.closed_at || r.cancelled_at || r.fulfilled_at || r.expired_at || r.updated_at || r.reserved_at;
-          const statusLabel = ({
-            cancelled: "cancelada",
-            fulfilled: "concluída",
-            expired: "expirada"
-          })[String(r.status || "").trim()] || String(r.status || "encerrada");
-          items.push({
-            when: closedAt,
-            html: `<li><b>Reserva #${escapeHtml(r.id)}</b> — ${escapeHtml(r.titulo || "Livro")} — ${escapeHtml(statusLabel)}${closedAt ? ` em ${escapeHtml(fmtDateTime(closedAt))}` : ""}</li>`
-          });
-        }
-      } catch (error) {
-        console.warn("my_reservations_history error:", error);
-      }
-
-      const [v2Loans, oldLoans, oldReservas] = await Promise.all([
+      const [v2Loans, oldLoans, v2Reservas, oldReservas] = await Promise.all([
         supabase.schema("api").from("emprestimo_itens_ui").select("emprestimo_id, line_no, sub_id, titulo, autor, bib_ref, rotulo, emprestimo_created_at, due_at, item_status, returned_at").eq("user_id", session.user.id).order("emprestimo_created_at", { ascending:false }).limit(200),
         supabase.schema("api").from("loans_detalhes").select("id, batch_id, due_date, checkout_date, returned_date, books").eq("user_id", session.user.id).order("checkout_date", { ascending:false }).limit(300),
+        supabase.schema("api").from("reserva_itens_ui").select("reserva_id, sub_id, titulo, autor, bib_ref, rotulo, reserva_created_at, expires_at, item_status, converted_at, cancelled_at").eq("user_id", session.user.id).neq("item_status", "ativa").order("reserva_created_at", { ascending:false }).limit(200),
         supabase.schema("api").from("reservas").select("id, bib_ref, created_at, status, fulfilled_at, fulfilled_loan_id, cancelled_at, cancelled_reason").eq("user_id", session.user.id).neq("status", "pending").order("created_at", { ascending:false }).limit(100)
       ]);
 
-      if (v2Loans.error || oldLoans.error || oldReservas.error) {
-        console.error("renderHistory errors", { v2Loans: v2Loans.error, oldLoans: oldLoans.error, oldReservas: oldReservas.error });
+      const items = [];
+
+      if (v2Loans.error || oldLoans.error || v2Reservas.error || oldReservas.error) {
+        console.error("renderHistory errors", { v2Loans: v2Loans.error, oldLoans: oldLoans.error, v2Reservas: v2Reservas.error, oldReservas: oldReservas.error });
+        const msgs = [];
+        if (v2Loans.error) msgs.push("v2 empréstimos: " + (v2Loans.error.message || JSON.stringify(v2Loans.error)));
+        if (oldLoans.error) msgs.push("loans antigos: " + (oldLoans.error.message || JSON.stringify(oldLoans.error)));
+        if (v2Reservas.error) msgs.push("v2 reservas: " + (v2Reservas.error.message || JSON.stringify(v2Reservas.error)));
+        if (oldReservas.error) msgs.push("reservas antigas: " + (oldReservas.error.message || JSON.stringify(oldReservas.error)));
+        if (historyMsg) historyMsg.textContent = "Diagnóstico histórico — " + msgs.join(" | ");
+      }
+
+      if (!v2Reservas.error) {
+        for (const r of (v2Reservas.data || [])) {
+          items.push({
+            when: r.cancelled_at || r.converted_at || r.reserva_created_at,
+            html: `<li><b>Reserva #${escapeHtml(r.reserva_id)}</b> — <span class="mono">${escapeHtml(r.sub_id)}</span> — ${escapeHtml(r.titulo || 'Livro')} — ${escapeHtml(reservationStatusLabel(r.item_status, r))}</li>`
+          });
+        }
       }
 
       if (!oldReservas.error) {
@@ -2565,7 +2624,7 @@ button[type="submit"] *,
           const book = booksMap.get(String(r.bib_ref)) || {};
           items.push({
             when: r.cancelled_at || r.fulfilled_at || r.created_at,
-            html: `<li><b>Reserva #${escapeHtml(r.id)}</b> — ${escapeHtml(book.titulo || ('Referência ' + r.bib_ref))} — ${escapeHtml(String(r.status || "encerrada"))}${r.cancelled_reason ? ` — ${escapeHtml(r.cancelled_reason)}` : ""}</li>`
+            html: `<li><b>Reserva #${escapeHtml(r.id)}</b> — ${escapeHtml(book.titulo || ('Referência ' + r.bib_ref))} — ${escapeHtml(reservationStatusLabel(r.status, r))}${r.cancelled_reason ? ` — ${escapeHtml(r.cancelled_reason)}` : ""}</li>`
           });
         }
       }
@@ -2680,7 +2739,7 @@ button[type="submit"] *,
       };
       const { error } = await saveProfileCompat(payload);
       if (error) {
-        profileMsg.textContent = "Erro ao salvar: " + error.message;
+        flashProfileMessage("Erro ao salvar: " + error.message);
         return;
       }
 
@@ -2700,7 +2759,6 @@ button[type="submit"] *,
       };
       const { error: authError } = await supabase.auth.updateUser({ data: metadataPatch });
       profileMsg.textContent = authError ? ("Dados salvos, mas houve um problema ao atualizar o cadastro: " + authError.message) : "Dados atualizados com sucesso.";
-      await loadProfile();
     });
 
     const pwInput = $("newPassword");
@@ -2727,13 +2785,12 @@ button[type="submit"] *,
       pwMsg.textContent = profErr ? "Senha alterada. (Aviso: não foi possível atualizar o status no perfil.)" : "Senha alterada com sucesso.";
       enforcePasswordChangeUI(false);
       pwInput.value = ""; pwInput2.value = ""; pwInput.type = "password"; pwInput2.type = "password"; if (togglePwBtn) togglePwBtn.textContent = "Mostrar senha";
-      await loadProfile();
     });
 
     $("reserveForm")?.addEventListener("submit", async (e) => {
       e.preventDefault();
       reserveMsg.textContent = "";
-      if (currentLibraryContext && currentLibraryContext.allows_new_reservations === false) {
+      if (publicServiceState && publicServiceState.allow_reservations === false) {
         reserveMsg.textContent = "As reservas públicas estão temporariamente fechadas. Consulte os canais do CCLA para atualizações e orientações.";
         return;
       }
@@ -2751,82 +2808,30 @@ button[type="submit"] *,
         return;
       }
 
-      try {
-        const results = await createReservationsFromBibRefs(refs);
-        const okCount = results.filter((r) => r.ok).length;
-        const failCount = results.length - okCount;
-
-        if (!okCount && failCount) {
-          reserveMsg.textContent = results.map((r) => `${r.ref}: ${r.message}`).join(" | ");
-          return;
-        }
-
-        if (okCount && !failCount) {
-          reserveMsg.textContent = `Reserva registrada com sucesso para ${okCount} livro(s).`;
-        } else {
-          reserveMsg.textContent = `Reservas criadas: ${okCount}. Pendências: ${failCount}. ${results.filter((r) => !r.ok).map((r) => `${r.ref}: ${r.message}`).join(" | ")}`;
-        }
-
+      const resV2 = await createReservaV2(refs);
+      if (!resV2.error) {
+        reserveMsg.textContent = `Reserva registrada com sucesso para ${refs.length} livro(s).`;
         $("bibRef").value = "";
-        await refreshReservationsData();
+        await renderActiveReservations();
         await renderHistory();
-      } catch (error) {
-        reserveMsg.textContent = parseRpcError(error);
+        return;
       }
+
+      reserveMsg.textContent = "Erro ao reservar: " + resV2.error.message;
+      return;
     });
 
-    function getActiveContaTab() {
-      return (document.querySelector(".tab-panel.active")?.dataset.tab) || "perfil";
-    }
-
-    async function refreshContaForActiveTab() {
-      const activeTab = getActiveContaTab();
-      if (activeTab === "perfil") {
-        await loadProfile();
-        await loadLibraryContext();
-        await fetchReservationSummary();
-        return;
-      }
-      if (activeTab === "reservar") {
-        await loadLibraryContext();
-        await refreshReservationsData();
-        return;
-      }
-      if (activeTab === "curso") {
-        await renderLoans();
-        return;
-      }
-      if (activeTab === "historico") {
-        await renderHistory();
-      }
-    }
-
-    async function refreshContaView() {
-      if (contaRefreshPromise) return contaRefreshPromise;
-      contaRefreshPromise = (async () => {
-        await loadProfile();
-        await loadLibraryContext();
-        await fetchReservationSummary();
-        await refreshContaForActiveTab();
-      })().finally(() => {
-        contaRefreshPromise = null;
-      });
-      return contaRefreshPromise;
-    }
-
     await loadProfile();
-    await loadLibraryContext();
-    await fetchReservationSummary();
+    await loadPublicServiceState();
     await renderActiveReservations();
     await renderLoans();
     await renderHistory();
 
-    document.addEventListener("visibilitychange", () => {
+    document.addEventListener('visibilitychange', () => {
       if (!document.hidden) refreshContaView();
     });
-    window.addEventListener("focus", () => refreshContaView());
-    window.addEventListener("pageshow", () => refreshContaView());
-
+    window.addEventListener('focus', () => refreshContaView());
+    window.addEventListener('pageshow', () => refreshContaView());
   </script>
 </body>
 </html>
