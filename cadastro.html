@@ -282,7 +282,7 @@
 
     const ROUTES = {
       BLOG: "https://cclamazonia.noblogs.org",
-      REGIMENTO: "https://cclamazonia.noblogs.org/files/2026/03/Regimento-BLMF-v2.3.pdf",
+      REGIMENTO: "https://cclamazonia.noblogs.org/regimento-blmf/",
       CATALOGO: "https://cclamazonia-cmd.github.io/anarbib-staging/",
       CRIAR: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/criar-conta.html",
       CADASTRO: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html",
@@ -291,9 +291,9 @@
     };
 
     const BLOG_URL = ROUTES.BLOG;
-    const REGIMENTO_URL = ROUTES.REGIMENTO;
+    const REGIMENTO_URL = "https://cclamazonia.noblogs.org/files/2026/03/Regimento-BLMF-v2.3.pdf";
 
-    document.getElementById("regLink").href = REGIMENTO_URL;
+    document.getElementById("regLink").href = "https://cclamazonia.noblogs.org/files/2026/03/Regimento-BLMF-v2.3.pdf";
 
     document.getElementById("backBlog").addEventListener("click", (e) => {
       e.preventDefault();
@@ -309,7 +309,7 @@
       window.location.href = ROUTES.CRIAR;
     });
     document.getElementById("goRegimento").addEventListener("click", () => {
-      window.location.href = REGIMENTO_URL;
+      window.location.href = "https://cclamazonia.noblogs.org/files/2026/03/Regimento-BLMF-v2.3.pdf";
     });
 
     const loginBox = document.getElementById("loginBox");
