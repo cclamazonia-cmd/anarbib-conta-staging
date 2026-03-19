@@ -65,7 +65,7 @@
       filter:drop-shadow(0 8px 18px rgba(0,0,0,.35));
     }
     .brand-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
-    .brand-title{font-size:1rem;font-weight:900;line-height:1.1}
+    .brand-title{font-size:1.5rem;font-weight:900;line-height:1.1}
     .brand-subtitle{color:var(--muted);font-size:.9rem;line-height:1.2}
     .actions{
       display:flex;
@@ -205,13 +205,13 @@
         <img
           id="brandLogo"
           class="logo"
-          src="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png"
+          src="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png"
           alt="AnarBib"
           onerror="this.style.display='none'"
         />
         <div class="brand-copy">
           <div id="brandTitle" class="brand-title">AnarBib</div>
-          <div id="brandSubtitle" class="brand-subtitle">Rede AnarBib · instância de teste com biblioteca participante</div>
+          <div id="brandSubtitle" class="brand-subtitle">Rede AnarBib · Criar a sua conta de leitor@.</div>
         </div>
       </div>
 
@@ -615,6 +615,15 @@
     });
 
     const REGIMENTO_URL = CONFIG.ROUTES.regimentoPage;
+    const ANARBIB_LOGO_URL = "https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png";
+
+    const brandLogo = document.getElementById("brandLogo");
+    const brandTitle = document.getElementById("brandTitle");
+    const brandSubtitle = document.getElementById("brandSubtitle");
+
+    if (brandLogo) brandLogo.src = ANARBIB_LOGO_URL;
+    if (brandTitle) brandTitle.textContent = "AnarBib";
+    if (brandSubtitle) brandSubtitle.textContent = "Rede AnarBib · Criar a sua conta de leitor@.";
 
     // Wire regimento links
     for (const id of ["regLinkTop", "regLink"]) {
