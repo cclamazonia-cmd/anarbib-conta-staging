@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>BLMF — Painel</title>
-  <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
-  <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
-  <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
+  <title>AnarBib – painel</title>
+  <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
+  <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
+  <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
   <style>
     :root{
       --panel:rgba(18,18,18,.96);
@@ -479,7 +479,7 @@
   <div class="wrap">
     <div class="topbar">
       <div class="brand">
-        <img class="logo" src="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png" alt="BLMF">
+        <img id="brandLogo" class="logo" src="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png" alt="AnarBib">
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <a class="btn" id="btnBlog" href="#">Voltar ao blogue</a>
@@ -492,7 +492,8 @@
     </div>
 
     <div class="hero">
-      <h1>Painel (gestão da biblioteca)</h1>
+      <h1 id="pageHeroTitle">Painel</h1>
+      <p id="pageHeroSubtitle">Gestão da biblioteca participante</p>
       <p id="helloLine"></p>
       <div class="chips">
         <span class="chip" id="chipFuncao">Função: —</span>
@@ -1306,27 +1307,35 @@
 
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+    import { CONFIG, applyPageChrome } from "./js/config.js";
 
     const $ = (id) => document.getElementById(id);
     const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
 
-    const GH_BASE = location.origin;
-    const ROUTES = {
-      BLOG_HOME: "https://cclamazonia.noblogs.org/",
-      CATALOGO: `${GH_BASE}/blmf-catalogo/`,
-      CATALOGACAO: `${GH_BASE}/blmf-catalogo/catalogacao.html`,
-      CADASTRO: `${GH_BASE}/blmf-conta/cadastro.html`,
-      CONTA: `${GH_BASE}/blmf-conta/conta.html`,
-      MANUAL: `${GH_BASE}/blmf-catalogo/Manual_do_AnarBib.pdf`,
-    };
-    $("btnBlog").href = ROUTES.BLOG_HOME;
-    $("btnCatalogo").href = ROUTES.CATALOGO;
-    $("btnCatalogacao").href = ROUTES.CATALOGACAO;
-    $("btnManual").href = ROUTES.MANUAL;
-    $("btnModoLeitor").href = ROUTES.CONTA;
+    applyPageChrome("painel", {
+      logoId: "brandLogo",
+      heroTitleId: "pageHeroTitle",
+      heroSubtitleId: "pageHeroSubtitle",
+      routeMap: {
+        btnBlog: "blog",
+        btnCatalogo: "catalogo",
+        btnCatalogacao: "catalogacao",
+        btnManual: "manual",
+        btnModoLeitor: "conta"
+      }
+    });
 
-    const SUPABASE_URL = "https://asptfmokzykwzlshsncw.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzcHRmbW9renlrd3psc2hzbmN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MzcxNzcsImV4cCI6MjA4ODExMzE3N30.JkMLHPCV2AH5ELZV_1RfcoW250QEofLGvnDKSDpkcn0";
+    const ROUTES = {
+      BLOG_HOME: CONFIG.ROUTES.blog,
+      CATALOGO: CONFIG.ROUTES.catalogo,
+      CATALOGACAO: CONFIG.ROUTES.catalogacao,
+      CADASTRO: CONFIG.ROUTES.cadastro,
+      CONTA: CONFIG.ROUTES.conta,
+      MANUAL: CONFIG.ROUTES.manual,
+    };
+
+    const SUPABASE_URL = CONFIG.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: { storage: window.sessionStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
     });
@@ -2301,14 +2310,13 @@
     }
 
     async function fetchActiveReservations(){
-      const v2Views = ['reserva_itens_followup_ui'];
+      const v2Views = ['v_reserva_itens_v2_ui'];
       let v2Rows = [];
       let lastV2Error = null;
       let hadV2ReadableSource = false;
 
       for (const viewName of v2Views) {
         const qv2 = await supabase
-          .schema('api')
           .from(viewName)
           .select('*')
           .limit(500);
@@ -2440,8 +2448,7 @@
 
     async function fetchActiveLoans(){
       const qv2 = await supabase
-        .schema('api')
-        .from('emprestimo_itens_ui')
+        .from('v_emprestimo_itens_v2_ui_fix')
         .select('*')
         .eq('item_status', 'aberto')
         .order('due_at', { ascending:true })
@@ -3532,8 +3539,7 @@
       const [v2, old] = await Promise.all([
         cleanRefs.length
           ? supabase
-              .schema('api')
-              .from('emprestimo_itens_ui')
+              .from('v_emprestimo_itens_v2_ui_fix')
               .select('bib_ref')
               .in('bib_ref', cleanRefs)
               .eq('item_status', 'aberto')
@@ -3568,8 +3574,7 @@
     async function countOpenLoansForUserHybrid(userId){
       const [v2, old] = await Promise.all([
         supabase
-          .schema('api')
-          .from('emprestimo_itens_ui')
+          .from('v_emprestimo_itens_v2_ui_fix')
           .select('emprestimo_item_id', { count: 'exact', head: true })
           .eq('user_id', userId)
           .eq('item_status', 'aberto'),
