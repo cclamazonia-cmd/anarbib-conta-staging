@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-library-slug="default" data-theme-slug="default" data-library-name="AnarBib">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -8,18 +8,15 @@
   <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
   <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
   <link rel="stylesheet" href="./css/app.css" />
+  <link rel="stylesheet" href="./assets/css/theme-base.css">
+  <script src="./assets/js/library-context.js" defer></script>
+  <script src="./assets/js/theme-loader.js" defer></script>
   <style>
     body{
-      background-image:
-        linear-gradient(rgba(0,0,0,.62), rgba(0,0,0,.62)),
-        url('https://cclamazonia.noblogs.org/files/2026/03/ni-dieu-ni-maitre-une-histoire-de-lanarchisme-episodes-3-et-4-09-15-2022-1024x639-1441403844.png');
-      background-size:cover;
-      background-position:center center;
-      background-attachment:fixed;
-      background-repeat:no-repeat;
+      background: transparent;
     }
     .card{
-      background: rgba(10,10,10,.88);
+      background: var(--panel);
       backdrop-filter: blur(2px);
     }
     main.card{
@@ -420,7 +417,7 @@
 
   
 /* red-only override */
-html{ accent-color:#c00000; }
+html{ accent-color:var(--brand-color-primary, #c00000); }
 a:any-link{ color:inherit; }
 .card a:not(.secondary),
 .card a:not(.secondary):visited,
@@ -430,7 +427,7 @@ a:any-link{ color:inherit; }
 .small a:visited,
 .tab-panel a:not(.secondary),
 .tab-panel a:not(.secondary):visited{
-  color:#c00000 !important;
+  color:var(--brand-color-primary, #c00000) !important;
 }
 input:focus, select:focus, textarea:focus{
   outline:none;
@@ -481,19 +478,19 @@ button[type="submit"] *,
 
 
     :root{
-      --panel:rgba(10,10,10,.90);
-      --text:#f4f4f4;
-      --muted:rgba(255,255,255,.78);
-      --red:#6f0a12;
-      --red2:#bb1e2c;
-      --line:rgba(255,255,255,.12);
-      --shadow:0 16px 38px rgba(0,0,0,.42);
+      --panel:var(--brand-panel-bg, rgba(10,10,10,.90));
+      --text:var(--brand-text, #f4f4f4);
+      --muted:var(--brand-muted, rgba(255,255,255,.78));
+      --red:var(--brand-color-primary, #6f0a12);
+      --red2:var(--brand-color-primary, #bb1e2c);
+      --line:var(--brand-panel-border, rgba(255,255,255,.12));
+      --shadow:var(--brand-shadow, 0 16px 38px rgba(0,0,0,.42));
       --ok:#4ade80;
       --warn:#fbbf24;
       --bad:#fb7185;
     }
     *{box-sizing:border-box}
-    html,body{margin:0;padding:0;color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif}
+    html,body{margin:0;padding:0;color:var(--text);font-family:var(--brand-font-body, Inter,Segoe UI,Arial,sans-serif)}
     a,a:visited{color:inherit;text-decoration:none}
     .wrap{max-width:1680px;margin:0 auto;padding:24px}
     .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
@@ -544,14 +541,14 @@ button[type="submit"] *,
       backdrop-filter:none;
     }
     .hero{
-      border:1px solid rgba(255,255,255,.10);
-      background:linear-gradient(135deg, rgba(122,11,20,.92), rgba(50,7,11,.94));
+      border:1px solid var(--line);
+      background:linear-gradient(135deg, var(--brand-color-primary, #7a0b14), var(--brand-color-secondary, #32070b));
       border-radius:22px;
       padding:18px;
       box-shadow:var(--shadow);
       margin-bottom:16px;
     }
-    .hero h1{margin:0 0 6px;font-size:1.5rem}
+    .hero h1{margin:0 0 6px;font-size:1.5rem;font-family:var(--brand-font-heading, inherit)}
     .hero p{margin:0;color:rgba(255,255,255,.92)}
     .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
     .chip{
@@ -679,6 +676,7 @@ button[type="submit"] *,
       <div class="brand">
         <img
           id="brandLogo"
+          data-brand-logo
           class="logo"
           src="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png"
           alt="AnarBib"
@@ -1650,57 +1648,6 @@ button[type="submit"] *,
       }
 
       return { data: null, error: lastError };
-    }
-
-    let profileMsgTimer = null;
-
-    function flashProfileMessage(text, ttlMs = 0) {
-      profileMsg.textContent = String(text || "");
-      if (profileMsgTimer) clearTimeout(profileMsgTimer);
-      profileMsgTimer = null;
-      if (ttlMs > 0 && text) {
-        profileMsgTimer = setTimeout(() => {
-          if (profileMsg.textContent === text) profileMsg.textContent = "";
-        }, ttlMs);
-      }
-    }
-
-    async function saveProfileCompat(payload) {
-      const record = {
-        id: session.user.id,
-        email: session?.user?.email || null,
-        consent_email: true,
-        ...payload
-      };
-
-      let lastError = null;
-
-      try {
-        const upd = await supabase
-          .from("profiles")
-          .update(payload)
-          .eq("id", session.user.id)
-          .select("id")
-          .maybeSingle();
-
-        if (!upd.error && upd.data?.id) return { error: null, mode: "update" };
-        if (upd.error) lastError = upd.error;
-      } catch (error) {
-        lastError = error;
-      }
-
-      try {
-        const up = await supabase
-          .from("profiles")
-          .upsert(record, { onConflict: "id" })
-          .select("id")
-          .maybeSingle();
-
-        if (!up.error && up.data?.id) return { error: null, mode: "upsert" };
-        return { error: up.error || lastError || new Error("Não foi possível salvar o perfil.") };
-      } catch (error) {
-        return { error: error || lastError || new Error("Não foi possível salvar o perfil.") };
-      }
     }
 
     async function loadProfile() {
@@ -2737,9 +2684,9 @@ button[type="submit"] *,
         gender: $("gender").value,
         address: packAddress()
       };
-      const { error } = await saveProfileCompat(payload);
+      const { error } = await supabase.from("profiles").update(payload).eq("id", session.user.id);
       if (error) {
-        flashProfileMessage("Erro ao salvar: " + error.message);
+        profileMsg.textContent = "Erro ao salvar: " + error.message;
         return;
       }
 
