@@ -7,7 +7,6 @@
   <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
   <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
   <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
-  <link rel="stylesheet" href="./css/app.css" />
   <link rel="stylesheet" href="./assets/css/theme-base.css">
   <script src="./assets/js/library-context.js" defer></script>
   <script src="./assets/js/theme-loader.js" defer></script>
@@ -594,7 +593,7 @@
     let CONFIG = FALLBACK_CONFIG;
     let applyPageChrome = null;
     try {
-      const mod = await import("./js/config.js");
+      const mod = await import("./shared/config.js");
       CONFIG = {
         ...FALLBACK_CONFIG,
         ...(mod?.CONFIG || {}),

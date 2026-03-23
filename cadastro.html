@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-library-slug="default" data-theme-slug="default" data-library-name="AnarBib">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -7,31 +7,27 @@
   <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
   <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
   <link rel="apple-touch-icon"https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
-  <link rel="stylesheet" href="./css/app.css" />
+  <link rel="stylesheet" href="./assets/css/theme-base.css">
+  <script src="./assets/js/library-context.js" defer></script>
+  <script src="./assets/js/theme-loader.js" defer></script>
   
   <style>
     :root{
-      --panel:rgba(10,10,10,.90);
-      --text:#f4f4f4;
-      --muted:rgba(255,255,255,.78);
-      --red:#7a0b14;
-      --red2:#bb1e2c;
-      --line:rgba(255,255,255,.12);
-      --shadow:0 16px 38px rgba(0,0,0,.42);
+      --panel:var(--brand-panel-bg);
+      --text:var(--brand-text);
+      --muted:var(--brand-muted);
+      --red:var(--brand-color-primary);
+      --red2:color-mix(in srgb, var(--brand-color-primary) 84%, white 16%);
+      --line:var(--brand-panel-border);
+      --shadow:var(--brand-shadow);
       --ok:#4ade80;
       --warn:#fbbf24;
       --bad:#fb7185;
     }
     *{box-sizing:border-box}
-    html,body{margin:0;padding:0;color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif;accent-color:#c00000}
+    html,body{margin:0;padding:0;color:var(--text);font-family:var(--brand-font-body, Inter, Segoe UI, Arial, sans-serif);accent-color:var(--brand-color-primary)}
     body{
-      background-image:
-        linear-gradient(rgba(0,0,0,.62), rgba(0,0,0,.62)),
-        url('https://cclamazonia.noblogs.org/files/2026/03/ni-dieu-ni-maitre-une-histoire-de-lanarchisme-episodes-3-et-4-09-15-2022-1024x639-1441403844.png');
-      background-size:cover;
-      background-position:center center;
-      background-attachment:fixed;
-      background-repeat:no-repeat;
+      background:transparent;
     }
     a,a:visited{color:inherit;text-decoration:none}
     .wrap{
@@ -65,8 +61,8 @@
       filter:drop-shadow(0 8px 18px rgba(0,0,0,.35));
     }
     .brand-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
-    .brand-title{font-size:1rem;font-weight:900;line-height:1.1}
-    .brand-subtitle{color:var(--muted);font-size:.9rem;line-height:1.2}
+    .brand-title{font-size:1rem;font-weight:900;line-height:1.1;font-family:var(--brand-font-heading, inherit)}
+    .brand-subtitle{color:var(--muted);font-size:.9rem;line-height:1.2;font-family:var(--brand-font-accent, var(--brand-font-body, inherit))}
     .actions{
       display:flex;
       flex-wrap:wrap;
@@ -75,7 +71,7 @@
     }
     button,.btn{
       border:1px solid var(--line);
-      background:rgba(12,12,12,.84);
+      background:var(--brand-panel-bg);
       color:var(--text) !important;
       border-radius:14px;
       padding:10px 12px;
@@ -102,13 +98,16 @@
       background:linear-gradient(135deg,var(--red2),var(--red));
     }
     .hero{
-      border:1px solid rgba(255,255,255,.10);
-      background:linear-gradient(135deg, rgba(122,11,20,.92), rgba(50,7,11,.94));
+      border:1px solid var(--line);
+      background:linear-gradient(135deg,
+        color-mix(in srgb, var(--brand-color-primary) 78%, black 22%),
+        color-mix(in srgb, var(--brand-color-secondary, #111111) 72%, var(--brand-color-primary) 28%)
+      );
       border-radius:22px;
       padding:18px;
       box-shadow:var(--shadow);
     }
-    .hero h1{margin:0 0 6px;font-size:1.5rem}
+    .hero h1{margin:0 0 6px;font-size:1.5rem;font-family:var(--brand-font-heading, inherit)}
     .hero p{margin:0;color:rgba(255,255,255,.92);font-size:.98rem;line-height:1.35}
     .rules,
     .notice,
@@ -178,6 +177,7 @@
       <div class="brand" aria-label="AnarBib">
         <img
           class="logo"
+          data-brand-logo
           src="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png"
           alt="Logotipo AnarBib"
           onerror="this.style.display='none'"
