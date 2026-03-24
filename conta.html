@@ -683,9 +683,9 @@ button[type="submit"] *,
         />
       </div>
       <div class="topbar-actions">
-        <a id="btnCatalogo" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-staging/index.html">Voltar ao catálogo</a>
-        <a id="goPainelBiblio" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html" hidden style="display:none">Painel de gestão</a>
-        <button id="logout" class="logout-btn" type="button">Sair</button>
+        <a id="btnCatalogo" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-staging/">Voltar ao catálogo</a>
+        <a id="goPainelBiblio" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html">Painel de gestão</a>
+        <button id="logout" class="logout-btn" type="button" onclick="try{localStorage.removeItem('anarbib_active_tab');sessionStorage.removeItem('anarbib_active_tab');}catch(_e){}window.location.assign('https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html');return false;">Sair</button>
       </div>
     </div>
 
@@ -1173,44 +1173,6 @@ button[type="submit"] *,
       PAINEL: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html",
     };
 
-    const AUTH_STORAGE_KEY = "sb-asptfmokzykwzlshsncw-auth-token";
-
-    function normalizeStoredSession(payload) {
-      if (payload?.access_token && payload?.refresh_token) {
-        return { access_token: payload.access_token, refresh_token: payload.refresh_token };
-      }
-      if (payload?.currentSession?.access_token && payload?.currentSession?.refresh_token) {
-        return { access_token: payload.currentSession.access_token, refresh_token: payload.currentSession.refresh_token };
-      }
-      return null;
-    }
-
-    function readStoredSessionCandidate() {
-      const stores = [window.localStorage, window.sessionStorage];
-      for (const store of stores) {
-        try {
-          const raw = store?.getItem?.(AUTH_STORAGE_KEY);
-          if (!raw) continue;
-          const parsed = JSON.parse(raw);
-          const normalized = normalizeStoredSession(parsed);
-          if (normalized?.access_token && normalized?.refresh_token) return normalized;
-        } catch (_) {}
-      }
-      return null;
-    }
-
-    async function hydrateSessionFromBrowserStorage() {
-      const stored = readStoredSessionCandidate();
-      if (!stored) return null;
-      try {
-        const { data, error } = await supabase.auth.setSession(stored);
-        if (error) return null;
-        return data?.session || null;
-      } catch (_) {
-        return null;
-      }
-    }
-
     const $ = (id) => document.getElementById(id);
     $("btnCatalogo")?.addEventListener("click", (e) => {
       e.preventDefault();
@@ -1219,20 +1181,13 @@ button[type="submit"] *,
 
     $("logout")?.addEventListener("click", async () => {
       try {
-        window.localStorage.removeItem("anarbib_active_tab");
-        window.sessionStorage.removeItem("anarbib_active_tab");
-      } catch (_) {}
-      try {
         await supabase.auth.signOut();
       } catch (_) {}
       window.location.assign(ROUTES.CADASTRO);
     });
 
     const { data: sessData } = await supabase.auth.getSession();
-    let session = sessData?.session || null;
-    if (!session) {
-      session = await hydrateSessionFromBrowserStorage();
-    }
+    const session = sessData?.session || null;
     if (!session) {
       window.location.href = buildAuthRedirectTarget("conta.html");
       throw new Error("No session");
@@ -1351,23 +1306,20 @@ button[type="submit"] *,
       if (el) el.innerHTML = `<p>${escapeHtml(msg)}</p>`;
     }
 
-    function getAllowsNewReservations(row) {
-      if (!row || typeof row !== "object") return false;
-      if (row.allows_new_reservations === true || row.allows_new_reservations === false) {
-        return row.allows_new_reservations === true;
-      }
-      if (row.allow_reservations === true || row.allow_reservations === false) {
-        return row.allow_reservations === true;
-      }
-      return false;
+    function isMissingRelationError(error) {
+      const msg = String(error?.message || error || "").toLowerCase();
+      return msg.includes("schema cache") || msg.includes("could not find the table") || msg.includes("relation") && msg.includes("does not exist");
     }
 
     function normalizeServiceState(row) {
       if (!row || typeof row !== "object") return null;
+      const hasAllowReservations = typeof row.allow_reservations === "boolean";
+      const hasAllowsNewReservations = typeof row.allows_new_reservations === "boolean";
       return {
-        library_id: String(row.library_id || "").trim() || null,
         service_mode: String(row.service_mode || "").trim() || null,
-        allows_new_reservations: getAllowsNewReservations(row),
+        allow_reservations: hasAllowReservations
+          ? row.allow_reservations
+          : (hasAllowsNewReservations ? row.allows_new_reservations : null),
         public_message: String(row.public_message || "").trim(),
         updated_at: row.updated_at || null
       };
@@ -1386,7 +1338,7 @@ button[type="submit"] *,
         serviceStateNotice.style.display = "block";
         serviceStateNotice.innerHTML = `<b>Funcionamento: ${escapeHtml(modeLabel)}</b><div class="small">${escapeHtml(message)}</div>`;
       }
-      const reservationsClosed = publicServiceState ? publicServiceState.allows_new_reservations === false : false;
+      const reservationsClosed = publicServiceState ? publicServiceState.allow_reservations === false : false;
       if (reserveServiceNotice) {
         if (reservationsClosed) {
           reserveServiceNotice.style.display = "block";
@@ -1404,148 +1356,27 @@ button[type="submit"] *,
       }
     }
 
-    function normalizeLibraryId(value) {
-      const v = String(value || "").trim();
-      return v || null;
-    }
-
-    function normalizeContaAccessRow(row) {
-      if (!row || typeof row !== "object") return null;
-      return {
-        ...row,
-        library_id: normalizeLibraryId(row.library_id),
-        library_slug: String(row.library_slug || row.slug || "").trim() || "",
-        library_name: String(row.library_name || row.name || "").trim() || "",
-        role: String(row.role || "").trim() || "",
-        status: String(row.status || "active").trim() || "active",
-      };
-    }
-
-    function pickPrimaryContaAccess(rows) {
-      const normalized = (Array.isArray(rows) ? rows : []).map(normalizeContaAccessRow).filter(Boolean);
-      const activeRows = normalized.filter((row) => String(row.status || "active").toLowerCase() === "active");
-      return activeRows.find((row) => row.is_primary === true) || activeRows[0] || null;
-    }
-
-    async function fetchContaAccessRows(userId) {
-      let lastError = null;
-      const directAttempts = [
-        () => supabase.from("my_access").select("*"),
-        () => supabase.from("my_session_context").select("*").limit(20),
-      ];
-
-      for (const run of directAttempts) {
-        try {
-          const res = await run();
-          if (!res?.error) {
-            const rows = Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []);
-            if (rows.length) return { data: rows.map(normalizeContaAccessRow).filter(Boolean), error: null };
-          } else {
-            lastError = res.error;
-          }
-        } catch (error) {
-          lastError = error;
-        }
-      }
-
-      try {
-        const membershipRes = await supabase
-          .from("user_library_memberships")
-          .select("user_id,library_id,role,status,is_primary")
-          .eq("user_id", userId)
-          .eq("status", "active");
-
-        if (!membershipRes?.error) {
-          const membershipRows = Array.isArray(membershipRes?.data) ? membershipRes.data : [];
-          if (membershipRows.length) {
-            const libraryIds = Array.from(new Set(membershipRows.map((row) => normalizeLibraryId(row?.library_id)).filter(Boolean)));
-            let librariesById = new Map();
-            if (libraryIds.length) {
-              const librariesRes = await supabase
-                .from("libraries")
-                .select("id,slug,name,short_name")
-                .in("id", libraryIds);
-              if (!librariesRes?.error) {
-                librariesById = new Map((librariesRes.data || []).map((row) => [normalizeLibraryId(row.id), row]));
-              } else {
-                lastError = librariesRes.error;
-              }
-            }
-
-            const mergedRows = membershipRows.map((row) => {
-              const lib = librariesById.get(normalizeLibraryId(row?.library_id)) || {};
-              return normalizeContaAccessRow({
-                ...row,
-                library_name: lib?.name || "",
-                library_slug: lib?.slug || "",
-                library_short_name: lib?.short_name || "",
-              });
-            }).filter(Boolean);
-
-            if (mergedRows.length) return { data: mergedRows, error: null };
-          }
-        } else {
-          lastError = membershipRes.error;
-        }
-      } catch (error) {
-        lastError = error;
-      }
-
-      return { data: [], error: lastError };
-    }
-
-    async function resolveContaLibraryIdentity() {
-      const accessRead = await fetchContaAccessRows(session.user.id);
-      const accessRows = accessRead?.data || [];
-      const picked = pickPrimaryContaAccess(accessRows);
-      if (picked?.library_id) return picked;
-
-      const docSlug = String(document.documentElement?.dataset?.librarySlug || "").trim();
-      if (docSlug && docSlug !== "default") {
-        try {
-          const { data, error } = await supabase
-            .from("libraries")
-            .select("id,slug,name,short_name")
-            .eq("slug", docSlug)
-            .maybeSingle();
-          if (!error && data?.id) {
-            return normalizeContaAccessRow({
-              library_id: data.id,
-              library_slug: data.slug,
-              library_name: data.name,
-              library_short_name: data.short_name,
-              status: "active",
-            });
-          }
-        } catch (_) {}
-      }
-
-      return null;
-    }
-
     async function loadPublicServiceState() {
       let data = null;
       let error = null;
-      const libraryIdentity = await resolveContaLibraryIdentity();
 
-      if (libraryIdentity?.library_id) {
-        const filtered = await supabase
-          .from("v_library_service_public")
-          .select("*")
-          .eq("library_id", libraryIdentity.library_id)
-          .maybeSingle();
-        data = filtered?.data || null;
-        error = filtered?.error || null;
-      }
+      const attempts = [
+        () => supabase.schema("api").from("library_service_public").select("*").limit(1).maybeSingle(),
+        () => supabase.from("v_library_service_public").select("*").limit(1).maybeSingle()
+      ];
 
-      if (!data && !error) {
-        const fallback = await supabase
-          .from("v_library_service_public")
-          .select("*")
-          .limit(1)
-          .maybeSingle();
-        data = fallback?.data || null;
-        error = fallback?.error || null;
+      for (const run of attempts) {
+        try {
+          const res = await run();
+          if (!res?.error) {
+            data = res?.data || null;
+            error = null;
+            break;
+          }
+          error = res.error;
+        } catch (err) {
+          error = err;
+        }
       }
 
       if (error) {
@@ -1906,18 +1737,12 @@ button[type="submit"] *,
         if (Array.isArray(value)) return value.map((v) => String(v).toLowerCase()).includes("librarian");
         return ["true", "librarian", "bibliotecario", "bibliotecária", "bibliotecaire"].includes(String(value || "").trim().toLowerCase());
       });
-      const accessRead = await fetchContaAccessRows(session.user.id);
-      const accessRows = accessRead?.data || [];
-      const accessIsLibrarian = accessRows.some((row) => {
-        const role = String(row?.role || "").toLowerCase();
-        return String(row?.status || "active").toLowerCase() === "active" && (role === "librarian" || row?.is_librarian === true || row?.can_access_painel === true);
-      });
-      isLibrarian = (data?.is_librarian === true) || metaIsLibrarian || accessIsLibrarian;
+      isLibrarian = (data?.is_librarian === true) || metaIsLibrarian;
       const go = $("goPainelBiblio");
       if (go) {
         go.href = ROUTES.PAINEL;
-        go.hidden = !isLibrarian;
-        go.style.display = isLibrarian ? "inline-flex" : "none";
+        go.hidden = false;
+        go.style.display = "inline-flex";
       }
     }
 
@@ -2054,6 +1879,71 @@ button[type="submit"] *,
       if (!activeReservationsEl) return;
       if (activeReserveMsg) activeReserveMsg.textContent = "";
       activeReservationsEl.textContent = "Carregando...";
+
+      const currentQ = await supabase
+        .schema("api")
+        .from("my_reservations_active")
+        .select("id, library_name, bib_ref, titulo, autor, status, notes, reserved_at, created_at, updated_at, expired_at")
+        .order("created_at", { ascending: false });
+
+      if (!currentQ.error) {
+        const rowsData = currentQ.data || [];
+        if (!rowsData.length) {
+          setChipText(chipContaReservas, "Reservas ativas", "0");
+          return showEmpty(activeReservationsEl, "Você não tem reservas ativas no momento.");
+        }
+        setChipText(chipContaReservas, "Reservas ativas", String(rowsData.length));
+        const rotulosMap = await fetchRotulosMapByBibRefs(rowsData.map((r) => r.bib_ref));
+        const rows = rowsData.map((r) => {
+          const rotulo = rotulosMap.get(String(r.bib_ref || "").trim()) || "—";
+          const validade = addDays(r.reserved_at || r.created_at || Date.now(), 14);
+          return `
+          <tr>
+            <td>#${escapeHtml(r.id)}</td>
+            <td class="mono">—</td>
+            <td>${escapeHtml(r.titulo || "Livro")}${r.autor ? `<br><small>${escapeHtml(r.autor)}</small>` : ""}</td>
+            <td class="mono">${escapeHtml(r.bib_ref || "—")}</td>
+            <td class="mono">${escapeHtml(rotulo)}</td>
+            <td>${escapeHtml(fmtDateTimeBelem(r.reserved_at || r.created_at))} (Belém)</td>
+            <td>${escapeHtml(fmtDateTimeBelem(validade))} (Belém)</td>
+            <td><b>${escapeHtml(reservationStatusLabel(r.status, r))}</b>${r.library_name ? `<br><small>${escapeHtml(r.library_name)}</small>` : ""}</td>
+            <td><div class="reservation-actions">${actionSlotNote("Sem ação")}</div></td>
+          </tr>`;
+        }).join("");
+        const mobileCards = rowsData.map((r) => {
+          const rotulo = rotulosMap.get(String(r.bib_ref || "").trim()) || "—";
+          const validade = addDays(r.reserved_at || r.created_at || Date.now(), 14);
+          return `
+            <article class="mobile-card">
+              <h4>${escapeHtml(r.titulo || "Livro")}</h4>
+              ${r.autor ? `<p class="author">${escapeHtml(r.autor)}</p>` : ""}
+              <div class="mobile-kv">
+                <div class="k">Lote</div><div class="v">#${escapeHtml(r.id)}</div>
+                <div class="k">Livro</div><div class="v mono">—</div>
+                <div class="k">Referência</div><div class="v mono">${escapeHtml(r.bib_ref || "—")}</div>
+                <div class="k">Rótulo</div><div class="v mono">${escapeHtml(rotulo)}</div>
+                <div class="k">Criada em</div><div class="v">${escapeHtml(fmtDateTimeBelem(r.reserved_at || r.created_at))} (Belém)</div>
+                <div class="k">Validade</div><div class="v"><b>${escapeHtml(fmtDateTimeBelem(validade))} (Belém)</b></div>
+                <div class="k">Situação</div><div class="v">${escapeHtml(reservationStatusLabel(r.status, r))}${r.library_name ? ` · ${escapeHtml(r.library_name)}` : ""}</div>
+              </div>
+              <div class="mobile-actions"><div class="reservation-actions">${actionSlotNote("Sem ação")}</div></div>
+            </article>`;
+        }).join("");
+
+        activeReservationsEl.innerHTML = `
+          <div class="desktop-only">
+            <div class="table-scroll">
+              <table class="list-table">
+                <thead>
+                  <tr><th>Lote</th><th>Livro</th><th>Título</th><th>Referência</th><th>Rótulo</th><th>Criada em</th><th>Validade</th><th>Situação</th><th>Ação</th></tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+          </div>
+          <div class="mobile-only mobile-cards">${mobileCards}</div>`;
+        return;
+      }
 
       const v2 = await supabase
         .schema("api")
@@ -2405,6 +2295,13 @@ button[type="submit"] *,
 
       if (v2.error || oldQ.error) {
         console.error("renderLoans errors", { v2: v2.error, oldQ: oldQ.error });
+        const bothMissing = isMissingRelationError(v2.error) && isMissingRelationError(oldQ.error);
+        if (bothMissing) {
+          setChipText(chipContaEmprestimos, "Empréstimos em curso", "0");
+          if (loanMsg) loanMsg.textContent = "Informação de empréstimos ainda não disponível neste ambiente.";
+          loansEl.innerHTML = "<p>Os empréstimos em curso ainda não estão disponíveis neste ambiente de staging.</p>";
+          return;
+        }
         const msgs = [];
         if (v2.error) msgs.push("v2: " + (v2.error.message || JSON.stringify(v2.error)));
         if (oldQ.error) msgs.push("loans: " + (oldQ.error.message || JSON.stringify(oldQ.error)));
@@ -2736,6 +2633,31 @@ button[type="submit"] *,
       historyEl.textContent = "Carregando...";
       if (historyMsg) historyMsg.textContent = "";
 
+      const currentHistory = await supabase
+        .schema("api")
+        .from("my_reservations_history")
+        .select("id, library_name, bib_ref, titulo, autor, status, reserved_at, created_at, updated_at, cancelled_at, fulfilled_at, expired_at, closed_at")
+        .order("closed_at", { ascending: false })
+        .limit(200);
+
+      if (!currentHistory.error) {
+        const rowsData = currentHistory.data || [];
+        if (!rowsData.length) {
+          historyEl.innerHTML = "<p>Não há histórico ainda.</p>";
+          return;
+        }
+        const items = rowsData.map((r) => {
+          const when = r.closed_at || r.cancelled_at || r.fulfilled_at || r.expired_at || r.updated_at || r.created_at;
+          return {
+            when,
+            html: `<li><b>Reserva #${escapeHtml(r.id)}</b> — ${escapeHtml(r.titulo || ('Referência ' + (r.bib_ref || '—')))}${r.autor ? ` — ${escapeHtml(r.autor)}` : ""} — ${escapeHtml(reservationStatusLabel(r.status, r))}${r.library_name ? ` — ${escapeHtml(r.library_name)}` : ""}</li>`
+          };
+        });
+        items.sort((a, b) => new Date(b.when || 0) - new Date(a.when || 0));
+        historyEl.innerHTML = `<ul>${items.map((i) => i.html).join("")}</ul>`;
+        return;
+      }
+
       const [v2Loans, oldLoans, v2Reservas, oldReservas] = await Promise.all([
         supabase.schema("api").from("emprestimo_itens_ui").select("emprestimo_id, line_no, sub_id, titulo, autor, bib_ref, rotulo, emprestimo_created_at, due_at, item_status, returned_at").eq("user_id", session.user.id).order("emprestimo_created_at", { ascending:false }).limit(200),
         supabase.schema("api").from("loans_detalhes").select("id, batch_id, due_date, checkout_date, returned_date, books").eq("user_id", session.user.id).order("checkout_date", { ascending:false }).limit(300),
@@ -2936,7 +2858,7 @@ button[type="submit"] *,
     $("reserveForm")?.addEventListener("submit", async (e) => {
       e.preventDefault();
       reserveMsg.textContent = "";
-      if (publicServiceState && publicServiceState.allows_new_reservations === false) {
+      if (publicServiceState && publicServiceState.allow_reservations === false) {
         reserveMsg.textContent = "As reservas públicas estão temporariamente fechadas. Consulte os canais do CCLA para atualizações e orientações.";
         return;
       }
