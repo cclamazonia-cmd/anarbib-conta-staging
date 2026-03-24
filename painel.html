@@ -1779,100 +1779,58 @@
       return isCanonicalServiceDefaultMessage(t) ? '' : t;
     }
 
-    function normalizeLibraryId(value){
-      const normalized = String(value ?? '').trim();
-      return normalized || null;
-    }
-
-    function getAllowsNewReservations(state){
-      if (state && Object.prototype.hasOwnProperty.call(state, 'allows_new_reservations')) return !!state.allows_new_reservations;
-      return !!state?.allow_reservations;
-    }
-
-    function normalizeLibraryServiceState(state, fallbackLibraryId=null){
-      return {
-        ...(state || {}),
-        library_id: normalizeLibraryId(state?.library_id ?? fallbackLibraryId),
-        service_mode: String(state?.service_mode || 'em_organizacao').trim() || 'em_organizacao',
-        allows_new_reservations: getAllowsNewReservations(state),
-        public_message: String(state?.public_message || ''),
-        internal_message: String(state?.internal_message || '')
-      };
+    function isMissingLibraryServiceColumn(error, columnName){
+      const msg = String(error?.message || error || '').toLowerCase();
+      return msg.includes(`could not find the '${String(columnName).toLowerCase()}' column of 'library_service_state'`) ||
+             msg.includes(`column "${String(columnName).toLowerCase()}" of relation "library_service_state" does not exist`) ||
+             msg.includes(`library_service_state.${String(columnName).toLowerCase()} does not exist`);
     }
 
     function renderLibraryServiceState(state){
-      const normalizedState = normalizeLibraryServiceState(state);
-      const modeText = translateServiceMode(normalizedState.service_mode);
-      const reservationsText = normalizedState.allows_new_reservations ? 'Reservas públicas: abertas' : 'Reservas públicas: fechadas';
+      const modeText = translateServiceMode(state?.service_mode);
+      const reservationsText = state?.allow_reservations ? 'Reservas públicas: abertas' : 'Reservas públicas: fechadas';
       setChip('chipServiceMode', `Modo: ${modeText}`);
       setChip('chipReservationsState', reservationsText);
 
-      if ($('serviceModeSelect')) $('serviceModeSelect').value = normalizedState.service_mode || 'em_organizacao';
-      if ($('allowReservationsToggle')) $('allowReservationsToggle').checked = !!normalizedState.allows_new_reservations;
-      if ($('publicServiceMessage')) $('publicServiceMessage').value = getEditablePublicServiceMessage(normalizedState);
-      if ($('internalServiceMessage')) $('internalServiceMessage').value = normalizedState.internal_message || '';
+      if ($('serviceModeSelect')) $('serviceModeSelect').value = state?.service_mode || 'em_organizacao';
+      if ($('allowReservationsToggle')) $('allowReservationsToggle').checked = !!state?.allow_reservations;
+      if ($('publicServiceMessage')) $('publicServiceMessage').value = getEditablePublicServiceMessage(state);
+      if ($('internalServiceMessage')) $('internalServiceMessage').value = state?.internal_message || '';
     }
 
     async function resolveCurrentLibraryIdentity(){
-      const directCandidates = [
+      const candidates = [
         currentAccessRow?.library_id,
         currentIdentityRow?.library_id,
         libraryServiceState?.library_id,
-      ].map((value) => normalizeLibraryId(value)).filter(Boolean);
-      if (directCandidates.length) return { id: directCandidates[0], row: null };
+      ].map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0);
+      if (candidates.length) return { id: candidates[0], row: null };
 
-      const slugCandidates = [
-        currentAccessRow?.library_slug,
-        currentAccessRow?.slug,
-        currentIdentityRow?.library_slug,
-        currentIdentityRow?.slug,
-      ].map((value) => String(value || '').trim()).filter(Boolean);
+      const slug = String(
+        currentAccessRow?.library_slug ||
+        currentAccessRow?.default_library_slug ||
+        currentIdentityRow?.library_slug ||
+        currentIdentityRow?.default_library_slug ||
+        ''
+      ).trim();
 
-      for (const slug of slugCandidates) {
+      if (slug) {
         const { data, error } = await supabase
           .from('libraries')
           .select('id,slug,name,short_name')
           .eq('slug', slug)
           .maybeSingle();
         if (error) throw error;
-        const libraryId = normalizeLibraryId(data?.id);
-        if (libraryId) return { id: libraryId, row: data || null };
+        if (data?.id) return { id: Number(data.id), row: data };
       }
 
-      const sessionUserId = String(session?.user?.id || '').trim();
-      if (!sessionUserId) return { id: null, row: null };
-
-      const membershipRes = await supabase
-        .from('user_library_memberships')
-        .select('user_id,library_id,role,status,is_primary')
-        .eq('user_id', sessionUserId)
-        .eq('status', 'active')
-        .eq('role', 'librarian')
-        .order('is_primary', { ascending:false })
-        .limit(10);
-      if (membershipRes.error) throw membershipRes.error;
-
-      const membershipRows = Array.isArray(membershipRes.data) ? membershipRes.data : [];
-      const primaryMembership = membershipRows.find((row) => row?.is_primary === true) || membershipRows[0] || null;
-      const libraryIds = Array.from(new Set(membershipRows.map((row) => normalizeLibraryId(row?.library_id)).filter(Boolean)));
-      if (!libraryIds.length) return { id: null, row: null };
-
-      const librariesRes = await supabase
-        .from('libraries')
-        .select('id,slug,name,short_name')
-        .in('id', libraryIds);
-      if (librariesRes.error) throw librariesRes.error;
-
-      const librariesById = new Map((librariesRes.data || []).map((row) => [normalizeLibraryId(row?.id), row]));
-      const preferredId = normalizeLibraryId(primaryMembership?.library_id) || libraryIds[0] || null;
-      if (!preferredId) return { id: null, row: null };
-      return { id: preferredId, row: librariesById.get(preferredId) || null };
+      return { id: null, row: null };
     }
 
     async function loadLibraryServiceState({silent=false} = {}){
       try {
         const resolved = await resolveCurrentLibraryIdentity();
-        const libraryId = normalizeLibraryId(resolved?.id);
+        const libraryId = resolved?.id || null;
         if (!libraryId) throw new Error('Biblioteca ativa não identificada para carregar o funcionamento.');
 
         const { data, error } = await supabase
@@ -1882,14 +1840,20 @@
           .maybeSingle();
         if (error) throw error;
 
-        libraryServiceState = normalizeLibraryServiceState(data, libraryId);
+        libraryServiceState = data || {
+          library_id: libraryId,
+          service_mode: 'em_organizacao',
+          allow_reservations: false,
+          public_message: '',
+          internal_message: ''
+        };
         renderLibraryServiceState(libraryServiceState);
         if (!silent) clearStatus('serviceStateMsg');
       } catch (e) {
         libraryServiceState = null;
         renderLibraryServiceState({
           service_mode: 'em_organizacao',
-          allows_new_reservations: false,
+          allow_reservations: false,
           public_message: '',
           internal_message: ''
         });
@@ -1905,26 +1869,58 @@
       btn.disabled = true;
       try {
         const resolved = await resolveCurrentLibraryIdentity();
-        const libraryId = normalizeLibraryId(resolved?.id);
+        const libraryId = resolved?.id || null;
         if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar o funcionamento.');
 
         const payload = {
           library_id: libraryId,
           service_mode: $('serviceModeSelect').value,
-          allows_new_reservations: !!$('allowReservationsToggle').checked,
+          allow_reservations: !!$('allowReservationsToggle').checked,
           public_message: $('publicServiceMessage').value.trim(),
           internal_message: $('internalServiceMessage').value.trim()
         };
-        const { data, error } = await supabase
+
+        let data = null;
+        let error = null;
+        let ignoredInternalMessage = false;
+
+        ({ data, error } = await supabase
           .from('library_service_state')
           .upsert(payload, { onConflict: 'library_id' })
           .select('*')
-          .maybeSingle();
+          .maybeSingle());
+
+        if (error && isMissingLibraryServiceColumn(error, 'internal_message')) {
+          const fallbackPayload = {
+            library_id: payload.library_id,
+            service_mode: payload.service_mode,
+            allow_reservations: payload.allow_reservations,
+            public_message: payload.public_message
+          };
+
+          ({ data, error } = await supabase
+            .from('library_service_state')
+            .upsert(fallbackPayload, { onConflict: 'library_id' })
+            .select('*')
+            .maybeSingle());
+
+          ignoredInternalMessage = !error;
+        }
+
         if (error) throw error;
 
-        libraryServiceState = normalizeLibraryServiceState(data || payload, libraryId);
+        libraryServiceState = {
+          ...(data || payload),
+          internal_message: ignoredInternalMessage ? '' : payload.internal_message
+        };
         renderLibraryServiceState(libraryServiceState);
-        setStatus('serviceStateMsg', 'Modo de funcionamento atualizado.', 'ok');
+        setStatus(
+          'serviceStateMsg',
+          ignoredInternalMessage
+            ? 'Modo de funcionamento atualizado. A mensagem interna não foi salva porque esse campo não está ativo neste projeto.'
+            : 'Modo de funcionamento atualizado.',
+          'ok'
+        );
       } catch (e) {
         setStatus('serviceStateMsg', 'Não consegui salvar o modo de funcionamento: ' + (e.message || String(e)), 'bad', false);
       } finally {
@@ -2595,13 +2591,6 @@
     let currentIdentityRow = null;
     async function fetchMyAccessRows(userId){
       let lastError = null;
-      const normalizeAccessRow = (row) => ({
-        ...(row || {}),
-        library_id: normalizeLibraryId(row?.library_id),
-        library_slug: String(row?.library_slug || row?.slug || '').trim(),
-        library_name: String(row?.library_name || row?.name || '').trim(),
-        library_short_name: String(row?.library_short_name || row?.short_name || '').trim(),
-      });
       const directAttempts = [
         () => supabase.from('my_access').select('*'),
         () => supabase.from('my_session_context').select('*').limit(1),
@@ -2611,8 +2600,7 @@
         try {
           const res = await run();
           if (!res?.error) {
-            const rows = Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []);
-            return { data: rows.map(normalizeAccessRow), error: null };
+            return { data: Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []), error: null };
           }
           lastError = res.error;
         } catch (error) {
@@ -2642,7 +2630,7 @@
         if (!membershipRes?.error) {
           const membershipRows = Array.isArray(membershipRes?.data) ? membershipRes.data : [];
           if (membershipRows.length) {
-            const libraryIds = Array.from(new Set(membershipRows.map((row) => normalizeLibraryId(row?.library_id)).filter(Boolean)));
+            const libraryIds = Array.from(new Set(membershipRows.map((row) => Number(row?.library_id)).filter((v) => Number.isFinite(v) && v > 0)));
             let librariesById = new Map();
             if (libraryIds.length) {
               const librariesRes = await supabase
@@ -2650,26 +2638,24 @@
                 .select('id,slug,name,short_name')
                 .in('id', libraryIds);
               if (!librariesRes?.error) {
-                librariesById = new Map((librariesRes.data || []).map((row) => [normalizeLibraryId(row?.id), row]));
+                librariesById = new Map((librariesRes.data || []).map((row) => [Number(row.id), row]));
               } else {
                 lastError = librariesRes.error;
               }
             }
 
             const mergedRows = membershipRows.map((row) => {
-              const libraryId = normalizeLibraryId(row?.library_id);
-              const lib = librariesById.get(libraryId) || {};
-              return normalizeAccessRow({
+              const lib = librariesById.get(Number(row?.library_id)) || {};
+              return {
                 ...(profileRow || {}),
                 ...row,
-                library_id: libraryId,
-                library_name: lib?.name || '',
-                library_slug: lib?.slug || '',
+                library_name: lib?.name || profileRow?.default_library_name || '',
+                library_slug: lib?.slug || profileRow?.default_library_slug || '',
                 library_short_name: lib?.short_name || '',
                 can_access_painel: String(row?.role || '').toLowerCase() === 'librarian',
                 is_librarian: String(row?.role || '').toLowerCase() === 'librarian',
                 is_restricted: !!profileRow?.is_restricted,
-              });
+              };
             });
 
             if (mergedRows.length) return { data: mergedRows, error: null };
@@ -2681,7 +2667,7 @@
         lastError = error;
       }
 
-      if (profileRow) return { data: [normalizeAccessRow(profileRow)], error: null };
+      if (profileRow) return { data: [profileRow], error: null };
       return { data: [], error: lastError };
     }
     function pickCurrentLibrarianAccess(rows){
