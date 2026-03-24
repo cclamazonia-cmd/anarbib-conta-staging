@@ -119,6 +119,55 @@
       background:linear-gradient(180deg, rgba(179,0,24,.18), rgba(10,10,10,.90));
     }
     .notice small{display:block;line-height:1.45;margin-top:6px;color:#f0f0f0}
+
+    .identity-strip{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:2px;
+      margin-bottom:8px;
+    }
+    .identity-logos{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .identity-logo{
+      height:42px;
+      width:auto;
+      max-width:120px;
+      object-fit:contain;
+      display:block;
+      filter:drop-shadow(0 6px 14px rgba(0,0,0,.28));
+    }
+    .identity-plus{
+      color:var(--muted);
+      font-weight:800;
+      font-size:1rem;
+      line-height:1;
+    }
+    .id-box{
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(12,12,12,.62);
+      border-radius:18px;
+      padding:14px 16px;
+      box-shadow:var(--shadow);
+      display:none;
+    }
+    .id-box b{display:block;margin-bottom:6px}
+    .id-value{
+      display:inline-block;
+      margin-top:4px;
+      padding:8px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      font-weight:900;
+      letter-spacing:.03em;
+      word-break:break-all;
+    }
     .rules summary{cursor:pointer}
     .rules ul{margin:10px 0 0 18px;color:#f0f0f0}
     .rules a,.rules a:visited,.notice a,.notice a:visited,label.checkbox a,label.checkbox a:visited{
@@ -227,10 +276,20 @@
     </div>
 
 <div class="notice" role="note" aria-label="Aviso de segurança">
+      <div class="identity-strip">
+        <div class="identity-logos" aria-label="Identidade visual do cadastro">
+          <img id="identityAnarbibLogo" class="identity-logo" src="./logo-anarbib.svg" alt="AnarBib" />
+          <span class="identity-plus" aria-hidden="true">+</span>
+          <img id="identityLibraryLogo" class="identity-logo" src="./logo_blmf.svg" alt="Biblioteca escolhida" />
+        </div>
+      </div>
       <b>Importante (segurança):</b>
-      <small>
-        A senha que você receberá por e-mail é <b>provisória</b>. Após o primeiro acesso, você deverá
+      <small id="securityIntro">
+        A senha que você receberá por e-mail é <b>provisória</b>. No primeiro acesso, você deverá
         <b>alterar sua senha na Conta</b>.
+      </small>
+      <small id="securityIdNotice">
+        Depois da criação da conta, seus acessos regulares serão feitos com seu <b>ID público pessoal</b>, que substituirá o uso do e-mail no login.
       </small>
       <small>
         Se você perder o acesso, use em <b>Cadastro</b> o botão <b>“Esqueci minha senha”</b> para receber um link de redefinição.
@@ -238,7 +297,14 @@
       <small>
         Se você não encontrar o e-mail de criação de conta, verifique “Spam/Lixo eletrônico”.
       </small>
+      <small id="libraryAddressNotice" style="display:none;"></small>
     </div>
+
+    <section id="publicIdBox" class="id-box" aria-live="polite">
+      <b>Seu ID público</b>
+      <div class="hint" id="publicIdHint">Guarde este identificador. Nos próximos acessos, você entrará com ele e sua senha.</div>
+      <div id="publicIdValue" class="id-value">—</div>
+    </section>
 
     <p class="hint">
       Preencha os campos abaixo para criar sua conta.
@@ -573,12 +639,6 @@
       <button type="submit">Enviar cadastro</button>
       <button type="button" class="btn" id="back">Voltar</button>
 
-      <div id="publicIdNotice" class="notice" style="display:none; margin-top:12px;" aria-live="polite">
-        <b>Seu ID público</b>
-        <div class="small" style="margin-top:8px;">Guarde este identificador. Nos próximos acessos, entre em <b>Cadastro</b> com seu <b>ID público</b> e sua senha.</div>
-        <div id="publicIdValue" style="margin-top:10px; font-size:1.05rem; font-weight:900; letter-spacing:.04em;"></div>
-      </div>
-
       <p id="msg" class="msg" aria-live="polite"></p>
     </form>
   </main>
@@ -641,11 +701,181 @@
     } catch (_) {}
 
     const REGIMENTO_URL = FALLBACK_CONFIG.ROUTES.regimentoPage;
-    const ANARBIB_LOGO_URL = "https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png";
+
+    // Detrompeurs de logos : chaque bibliothèque doit avoir un identifiant stable
+    // et un fichier dédié pour éviter les confusions de nom.
+    const LOGO_ASSETS = Object.freeze({
+      anarbib: "./logo-anarbib.svg",
+      blmf: "./logo_blmf.svg",
+      btl: "./logo_btl.svg"
+    });
+
+    const LIBRARY_DIRECTORY = Object.freeze({
+      default: {
+        slug: "default",
+        display_name: "AnarBib",
+        short_name: "AnarBib",
+        logo_file_key: "anarbib",
+        logo_url: LOGO_ASSETS.anarbib,
+        contact_email: "",
+        reply_to_email: "",
+        postal_address: "",
+        admin_email: "ccl-amazonia@riseup.net",
+        email_delivery_mode: "normal",
+        is_test_mode: false,
+        name_aliases: ["anarbib", "rede anarbib"]
+      },
+      blmf: {
+        slug: "blmf",
+        display_name: "Biblioteca Libertária Maxwell Ferreira",
+        short_name: "BLMF",
+        logo_file_key: "blmf",
+        logo_url: LOGO_ASSETS.blmf,
+        contact_email: "cclamazonia@gmail.com",
+        reply_to_email: "cclamazonia@gmail.com",
+        postal_address: "rua Bruno De Menezes (ant. General Gurjão) 301 - Campina - 66017-040 - BELÉM DO PARÁ - PA - BRASIL",
+        admin_email: "ccl-amazonia@riseup.net",
+        email_delivery_mode: "normal",
+        is_test_mode: false,
+        name_aliases: [
+          "biblioteca libertária maxwell ferreira",
+          "biblioteca libertaria maxwell ferreira",
+          "blmf",
+          "maxwell ferreira"
+        ]
+      },
+      btl: {
+        slug: "btl",
+        display_name: "Biblioteca Terra Livre",
+        short_name: "BTL",
+        logo_file_key: "btl",
+        logo_url: LOGO_ASSETS.btl,
+        contact_email: "bibliotecaterralivre@gmail.com",
+        reply_to_email: "bibliotecaterralivre@gmail.com",
+        postal_address: "Caixa Postal 195 -01031-970 - SÃO PAULO - SP – BRASIL",
+        admin_email: "ccl-amazonia@riseup.net",
+        email_delivery_mode: "test_only",
+        is_test_mode: true,
+        name_aliases: [
+          "biblioteca terra livre",
+          "btl",
+          "terra livre"
+        ]
+      }
+    });
+
+    const ANARBIB_LOGO_URL = LOGO_ASSETS.anarbib;
+
+    function normalizeLookup(value) {
+      return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toLowerCase();
+    }
+
+    function findLibraryMetaBySlugOrName(rawSlug, rawName) {
+      const slug = normalizeLookup(rawSlug);
+      const name = normalizeLookup(rawName);
+
+      if (slug && LIBRARY_DIRECTORY[slug]) return LIBRARY_DIRECTORY[slug];
+
+      for (const meta of Object.values(LIBRARY_DIRECTORY)) {
+        const aliases = Array.isArray(meta.name_aliases) ? meta.name_aliases : [];
+        if (name && aliases.some((alias) => normalizeLookup(alias) === name)) return meta;
+      }
+
+      return LIBRARY_DIRECTORY.default;
+    }
+
+    function inferCurrentLibraryMeta() {
+      const html = document.documentElement;
+      const params = new URLSearchParams(window.location.search);
+
+      const datasetSlug = String(html?.dataset?.librarySlug || "").trim();
+      const datasetName = String(html?.dataset?.libraryName || "").trim();
+      const querySlug = String(params.get("library") || params.get("library_slug") || "").trim();
+      const queryName = String(params.get("library_name") || "").trim();
+
+      const baseMeta = findLibraryMetaBySlugOrName(querySlug || datasetSlug, queryName || datasetName);
+
+      return {
+        ...baseMeta,
+        slug: String(querySlug || datasetSlug || baseMeta.slug || "default").trim().toLowerCase(),
+        name: String(datasetName || queryName || baseMeta.display_name || "AnarBib").trim(),
+        logo_url: String(html?.dataset?.libraryLogo || params.get("library_logo") || baseMeta.logo_url || "").trim(),
+        contact_email: String(html?.dataset?.libraryContactEmail || params.get("library_contact_email") || baseMeta.contact_email || "").trim(),
+        reply_to_email: String(html?.dataset?.libraryReplyToEmail || params.get("library_reply_to_email") || baseMeta.reply_to_email || "").trim(),
+        address: String(html?.dataset?.libraryAddress || params.get("library_address") || baseMeta.postal_address || "").trim(),
+        admin_email: String(html?.dataset?.anarbibAdminEmail || params.get("anarbib_admin_email") || baseMeta.admin_email || "ccl-amazonia@riseup.net").trim(),
+        email_delivery_mode: String(params.get("email_delivery_mode") || baseMeta.email_delivery_mode || "normal").trim(),
+        is_test_mode: String(params.get("library_test_mode") || "") === "true" ? true : Boolean(baseMeta.is_test_mode),
+        logo_file_key: baseMeta.logo_file_key || ""
+      };
+    }
+
+    function applyIdentityNotice(meta) {
+      const libLogo = document.getElementById("identityLibraryLogo");
+      const anarbibLogo = document.getElementById("identityAnarbibLogo");
+      const intro = document.getElementById("securityIntro");
+      const idNotice = document.getElementById("securityIdNotice");
+      const addrNotice = document.getElementById("libraryAddressNotice");
+      const publicIdHint = document.getElementById("publicIdHint");
+
+      const libName = meta?.name || "biblioteca escolhida";
+
+      if (anarbibLogo) anarbibLogo.src = ANARBIB_LOGO_URL;
+
+      if (libLogo) {
+        if (meta?.logo_url) {
+          libLogo.src = meta.logo_url;
+          libLogo.alt = libName;
+          libLogo.style.display = "";
+        } else {
+          libLogo.style.display = "none";
+        }
+      }
+
+      if (intro) {
+        intro.innerHTML = `A senha que você receberá por e-mail é <b>provisória</b>. No primeiro acesso à <b>${libName}</b>, você entrará com essa senha provisória e deverá <b>alterar sua senha na Conta</b>.`;
+      }
+
+      if (idNotice) {
+        idNotice.innerHTML = `Depois da criação da conta, seus acessos regulares serão feitos com seu <b>ID público pessoal</b>, que substituirá o uso do e-mail no login da <b>${libName}</b>.`;
+      }
+
+      if (publicIdHint) {
+        publicIdHint.innerHTML = `Guarde este identificador. Nos próximos acessos à <b>${libName}</b>, você entrará com ele e sua senha.`;
+      }
+
+      if (addrNotice) {
+        const pieces = [];
+        if (meta?.address) pieces.push(`<b>Endereço da biblioteca:</b> ${meta.address}`);
+        if (meta?.contact_email) pieces.push(`<b>Contato da biblioteca:</b> ${meta.contact_email}`);
+        if (meta?.reply_to_email && meta.reply_to_email !== meta.contact_email) {
+          pieces.push(`<b>Responder para:</b> ${meta.reply_to_email}`);
+        }
+        if (meta?.is_test_mode) {
+          pieces.push(`<b>Modo de teste:</b> os dados desta biblioteca estão em preparação e o envio de e-mails reais deve permanecer desativado.`);
+        }
+        if (pieces.length) {
+          addrNotice.innerHTML = pieces.join(" · ");
+          addrNotice.style.display = "block";
+        } else {
+          addrNotice.innerHTML = "";
+          addrNotice.style.display = "none";
+        }
+      }
+    }
 
     const brandLogo = document.getElementById("brandLogo");
     const brandTitle = document.getElementById("brandTitle");
     const brandSubtitle = document.getElementById("brandSubtitle");
+    const publicIdBox = document.getElementById("publicIdBox");
+    const publicIdValue = document.getElementById("publicIdValue");
+    const currentLibraryMeta = inferCurrentLibraryMeta();
+
+    applyIdentityNotice(currentLibraryMeta);
 
     if (brandLogo) brandLogo.src = ANARBIB_LOGO_URL;
     if (brandTitle) brandTitle.textContent = "AnarBib";
@@ -670,8 +900,6 @@
     const form = document.getElementById("cadastroForm");
     const msg = document.getElementById("msg");
     const requiredMsg = document.getElementById("requiredMsg");
-    const publicIdNotice = document.getElementById("publicIdNotice");
-    const publicIdValue = document.getElementById("publicIdValue");
 
     const consent = document.getElementById("consent");
     const acceptRules = document.getElementById("acceptRules");
@@ -689,14 +917,14 @@
 
     function setPublicIdNotice(publicId = "") {
       const value = String(publicId || "").trim();
-      if (!publicIdNotice || !publicIdValue) return;
+      if (!publicIdBox || !publicIdValue) return;
       if (!value) {
-        publicIdNotice.style.display = "none";
-        publicIdValue.textContent = "";
+        publicIdBox.style.display = "none";
+        publicIdValue.textContent = "—";
         return;
       }
       publicIdValue.textContent = value;
-      publicIdNotice.style.display = "block";
+      publicIdBox.style.display = "block";
     }
 
     function mapRegisterError(data, status) {
@@ -758,7 +986,6 @@
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       setMsg("");
-      setPublicIdNotice("");
       requiredMsg.style.display = "none";
 
       if (!validateCheckboxes()) {
@@ -772,6 +999,7 @@
       }
 
       submitBtn.disabled = true;
+      setPublicIdNotice("");
 
       const bairro = document.getElementById("bairro").value.trim();
       const complemento = document.getElementById("addr2").value.trim();
@@ -793,7 +1021,19 @@
         state: document.getElementById("state").value,
         country: document.getElementById("country").value,
         consent_email: true,
-        accept_rules: true
+        accept_rules: true,
+        library_slug: currentLibraryMeta.slug || "",
+        library_name: currentLibraryMeta.name || "",
+        library_contact_email: currentLibraryMeta.contact_email || "",
+        library_reply_to_email: currentLibraryMeta.reply_to_email || "",
+        library_address: currentLibraryMeta.address || "",
+        library_logo_url: currentLibraryMeta.logo_url || "",
+        library_logo_file_key: currentLibraryMeta.logo_file_key || "",
+        anarbib_logo_url: ANARBIB_LOGO_URL,
+        anarbib_admin_email: currentLibraryMeta.admin_email || "ccl-amazonia@riseup.net",
+        library_email_delivery_mode: currentLibraryMeta.email_delivery_mode || "normal",
+        library_is_test_mode: currentLibraryMeta.is_test_mode === true,
+        preferred_login_identifier: "public_id"
       };
 
       try {
@@ -812,21 +1052,14 @@
           return;
         }
 
-        const createdPublicId = String(data?.public_id || "").trim();
-        setPublicIdNotice(createdPublicId);
-
         if (data.email_usuaria_enviado === false) {
           setMsg(
-            createdPublicId
-              ? `Cadastro concluído. Seu ID público é ${createdPublicId}. Houve um problema ao enviar o e-mail automaticamente. Entre em contato com a biblioteca para receber sua senha.`
-              : "Cadastro concluído, mas houve um problema ao enviar o e-mail automaticamente. Entre em contato com a biblioteca para receber sua senha.",
+            "Cadastro concluído, mas houve um problema ao enviar o e-mail automaticamente. Entre em contato com a biblioteca para receber sua senha. Depois do primeiro acesso, altere sua senha na Conta.",
             "warn"
           );
         } else {
           setMsg(
-            createdPublicId
-              ? `Cadastro enviado com sucesso. Seu ID público é ${createdPublicId}. Verifique seu e-mail (e Spam/Lixo eletrônico) para receber sua senha provisória. Nos próximos acessos, entre com seu ID público e sua senha.`
-              : "Cadastro enviado com sucesso. Verifique seu e-mail (e Spam/Lixo eletrônico) para receber sua senha provisória. Nos próximos acessos, entre com seu ID público e sua senha.",
+            "Cadastro enviado com sucesso. Verifique seu e-mail (e Spam/Lixo eletrônico) para receber sua senha. Depois do primeiro acesso, altere sua senha na Conta.",
             "ok"
           );
         }
