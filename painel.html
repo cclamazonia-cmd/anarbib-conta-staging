@@ -711,7 +711,7 @@
               <div class="section-head">
                 <div>
                   <h2>Tema visual da biblioteca</h2>
-                  <div class="mini">Imagem de fundo, paleta e presets tipográficos da biblioteca, dentro de opções controladas.</div>
+                  <div class="mini">Imagem de fundo, paleta e conjunto tipográfico da biblioteca, dentro de opções controladas.</div>
                 </div>
               </div>
               <div class="row" style="margin-top:12px">
@@ -733,27 +733,27 @@
                 <div>
                   <label for="libraryThemeFontPack">Conjunto tipográfico (preset)</label>
                   <select class="select" id="libraryThemeFontPack">
-                    <option value="preset_base_rede">Base da rede — Noto Sans + Noto Sans + Roboto Mono</option>
-                    <option value="preset_biblioteca_acolhedora">Biblioteca acolhedora — Open Sans + Open Sans + Roboto Mono</option>
-                    <option value="preset_moderna_clara">Moderna e clara — Inter + Source Sans 3 + Geist Mono</option>
-                    <option value="preset_identidade_local">Identidade local — Instrument Sans + Noto Sans + Roboto Mono</option>
-                    <option value="preset_editorial_serio">Editorial sério — PT Serif + Noto Sans + Roboto Mono</option>
-                    <option value="preset_serif_moderna">Serif moderna — Roboto Serif + Inter + Geist Mono</option>
-                    <option value="preset_amigavel_contemporanea">Amigável contemporânea — DM Sans + DM Sans + Roboto Mono</option>
-                    <option value="preset_assinatura_leve">Assinatura leve — Sora + Noto Sans + Geist Mono</option>
-                    <option value="preset_sistema">Sistema — fontes do dispositivo</option>
+                    <option value="default">Base da rede — Noto Sans + Noto Sans + Roboto Mono</option>
+                    <option value="biblioteca_acolhedora">Biblioteca acolhedora — Open Sans + Open Sans + Roboto Mono</option>
+                    <option value="moderna_clara">Moderna e clara — Inter + Source Sans 3 + Geist Mono</option>
+                    <option value="identidade_local">Identidade local — Instrument Sans + Noto Sans + Roboto Mono</option>
+                    <option value="editorial_serio">Editorial sério — PT Serif + Noto Sans + Roboto Mono</option>
+                    <option value="serif_moderna">Serif moderna — Roboto Serif + Inter + Geist Mono</option>
+                    <option value="amigavel_contemporanea">Amigável contemporânea — DM Sans + DM Sans + Roboto Mono</option>
+                    <option value="assinatura_leve">Assinatura leve — Sora + Noto Sans + Geist Mono</option>
+                    <option value="system">Sistema — fontes do dispositivo</option>
                   </select>
                 </div>
                 <div>
                   <label for="libraryThemePreviewNote">Pré-visualização</label>
-                  <input class="input" id="libraryThemePreviewNote" type="text" value="Base pronta para presets tipográficos. Seletores avançados de título, interface e destaque virão depois." readonly>
+                  <input class="input" id="libraryThemePreviewNote" type="text" value="Tema será salvo na configuração da biblioteca." readonly>
                 </div>
               </div>
               <div class="actions">
-                <button class="btn" id="btnSaveLibraryTheme" type="button" disabled>Salvar tema</button>
-                <button class="btn" id="btnResetLibraryTheme" type="button" disabled>Restaurar tema padrão</button>
+                <button class="btn" id="btnSaveLibraryTheme" type="button">Salvar tema</button>
+                <button class="btn" id="btnResetLibraryTheme" type="button">Restaurar tema padrão</button>
               </div>
-              <div class="status" id="libraryThemeMsg">Bloco preparado para ligação futura ao backend.</div>
+              <div class="status" id="libraryThemeMsg">Tema ligado à configuração da biblioteca.</div>
             </div>
           </div>
         </section>
@@ -1851,6 +1851,121 @@
       $('btnSaveServiceState')?.addEventListener('click', saveLibraryServiceState);
     }
 
+    const THEME_FONT_PACK_PRESETS = {
+      default: 'Base da rede — Noto Sans + Noto Sans + Roboto Mono',
+      biblioteca_acolhedora: 'Biblioteca acolhedora — Open Sans + Open Sans + Roboto Mono',
+      moderna_clara: 'Moderna e clara — Inter + Source Sans 3 + Geist Mono',
+      identidade_local: 'Identidade local — Instrument Sans + Noto Sans + Roboto Mono',
+      editorial_serio: 'Editorial sério — PT Serif + Noto Sans + Roboto Mono',
+      serif_moderna: 'Serif moderna — Roboto Serif + Inter + Geist Mono',
+      amigavel_contemporanea: 'Amigável contemporânea — DM Sans + DM Sans + Roboto Mono',
+      assinatura_leve: 'Assinatura leve — Sora + Noto Sans + Geist Mono',
+      system: 'Sistema — fontes do dispositivo'
+    };
+
+    const THEME_PALETTE_PRESETS = {
+      default: 'Padrão AnarBib',
+      contraste_suave: 'Contraste suave',
+      vermelho_escuro: 'Vermelho escuro',
+      cinza_vermelho: 'Cinza e vermelho'
+    };
+
+    function getLibraryThemeScope(){
+      const ctx = window.AnarBibLibraryContext?.get?.() || {};
+      return {
+        librarySlug: String(ctx.librarySlug || document.documentElement.dataset.librarySlug || 'default').trim().toLowerCase() || 'default',
+        libraryName: String(ctx.libraryName || document.documentElement.dataset.libraryName || 'AnarBib').trim() || 'AnarBib'
+      };
+    }
+
+    function updateLibraryThemePreviewNote(){
+      const paletteId = $('libraryThemePalette')?.value || 'default';
+      const fontPackId = $('libraryThemeFontPack')?.value || 'default';
+      const backgroundUrl = $('libraryThemeBackground')?.value.trim() || '';
+      const paletteLabel = THEME_PALETTE_PRESETS[paletteId] || 'Padrão AnarBib';
+      const fontLabel = THEME_FONT_PACK_PRESETS[fontPackId] || THEME_FONT_PACK_PRESETS.default;
+      $('libraryThemePreviewNote').value = `${paletteLabel} · ${fontLabel}${backgroundUrl ? ' · com imagem personalizada' : ''}`;
+    }
+
+    function normalizeThemeConfigPayload(row){
+      return {
+        library_slug: String(row?.library_slug || getLibraryThemeScope().librarySlug || 'default').trim().toLowerCase() || 'default',
+        background_url: String(row?.background_url || '').trim(),
+        palette_preset: String(row?.palette_preset || 'default').trim() || 'default',
+        font_pack: String(row?.font_pack || 'default').trim() || 'default'
+      };
+    }
+
+    async function loadLibraryThemeConfig(){
+      clearStatus('libraryThemeMsg');
+      try {
+        const scope = getLibraryThemeScope();
+        const { data, error } = await supabase.rpc('get_library_theme_config', {
+          p_library_slug: scope.librarySlug
+        });
+        if (error) throw error;
+        const row = normalizeThemeConfigPayload(data || { library_slug: scope.librarySlug });
+        $('libraryThemeBackground').value = row.background_url || '';
+        $('libraryThemePalette').value = THEME_PALETTE_PRESETS[row.palette_preset] ? row.palette_preset : 'default';
+        $('libraryThemeFontPack').value = THEME_FONT_PACK_PRESETS[row.font_pack] ? row.font_pack : 'default';
+        updateLibraryThemePreviewNote();
+        setStatus('libraryThemeMsg', `Tema carregado para ${scope.libraryName}.`, 'ok', true);
+      } catch (e) {
+        $('libraryThemeBackground').value = '';
+        $('libraryThemePalette').value = 'default';
+        $('libraryThemeFontPack').value = 'default';
+        updateLibraryThemePreviewNote();
+        setStatus('libraryThemeMsg', 'Não consegui carregar o tema da biblioteca: ' + (e.message || String(e)), 'bad', false);
+      }
+    }
+
+    async function saveLibraryThemeConfig(){
+      clearStatus('libraryThemeMsg');
+      const btn = $('btnSaveLibraryTheme');
+      btn.disabled = true;
+      try {
+        const scope = getLibraryThemeScope();
+        const payload = {
+          p_library_slug: scope.librarySlug,
+          p_background_url: $('libraryThemeBackground').value.trim() || null,
+          p_palette_preset: $('libraryThemePalette').value || 'default',
+          p_font_pack: $('libraryThemeFontPack').value || 'default'
+        };
+        const { data, error } = await supabase.rpc('set_library_theme_config', payload);
+        if (error) throw error;
+        const row = normalizeThemeConfigPayload(data || payload);
+        $('libraryThemeBackground').value = row.background_url || '';
+        $('libraryThemePalette').value = THEME_PALETTE_PRESETS[row.palette_preset] ? row.palette_preset : 'default';
+        $('libraryThemeFontPack').value = THEME_FONT_PACK_PRESETS[row.font_pack] ? row.font_pack : 'default';
+        updateLibraryThemePreviewNote();
+        setStatus('libraryThemeMsg', 'Tema da biblioteca salvo.', 'ok');
+        if (window.AnarBibThemeLoader?.load) {
+          try { await window.AnarBibThemeLoader.load(); } catch (_) {}
+        }
+      } catch (e) {
+        setStatus('libraryThemeMsg', 'Não consegui salvar o tema da biblioteca: ' + (e.message || String(e)), 'bad', false);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function resetLibraryThemeConfig(){
+      $('libraryThemeBackground').value = '';
+      $('libraryThemePalette').value = 'default';
+      $('libraryThemeFontPack').value = 'default';
+      updateLibraryThemePreviewNote();
+      await saveLibraryThemeConfig();
+    }
+
+    function setupLibraryThemeActions(){
+      ['libraryThemeBackground','libraryThemePalette','libraryThemeFontPack'].forEach((id) => {
+        $(id)?.addEventListener('input', updateLibraryThemePreviewNote);
+        $(id)?.addEventListener('change', updateLibraryThemePreviewNote);
+      });
+      $('btnSaveLibraryTheme')?.addEventListener('click', saveLibraryThemeConfig);
+      $('btnResetLibraryTheme')?.addEventListener('click', resetLibraryThemeConfig);
+      updateLibraryThemePreviewNote();
+    }
 
     function belemNowParts(){
       const d = new Date();
@@ -4713,6 +4828,8 @@
       isLibrarian = await requireBibliotecaOrRedirect();
       if (isLibrarian){
         await fillHeader();
+        setupLibraryThemeActions();
+        await loadLibraryThemeConfig();
         await loadLibraryServiceState();
         await loadInternalTaskLibrarians();
         await loadInternalTasks({ silent:true });
