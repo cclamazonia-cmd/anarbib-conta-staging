@@ -275,12 +275,23 @@
       <p id="pageHeroSubtitle">Abertura de conta (leitor/a/e)</p>
     </div>
 
+
+    <div class="notice" role="group" aria-label="Biblioteca de referência">
+      <label for="librarySelect">Selecionar biblioteca de referência <span class="reqMark">*</span></label>
+      <select id="librarySelect" required>
+        <option value="">— selecione —</option>
+        <option value="blmf">Biblioteca Libertária Maxwell Ferreira — Belém do Pará</option>
+        <option value="btl">Biblioteca Terra Livre — São Paulo</option>
+      </select>
+      <small>A biblioteca escolhida definirá a identidade visual do cadastro, os dados de contato e o conteúdo do e-mail de boas-vindas.</small>
+    </div>
+
 <div class="notice" role="note" aria-label="Aviso de segurança">
       <div class="identity-strip">
         <div class="identity-logos" aria-label="Identidade visual do cadastro">
-          <img id="identityAnarbibLogo" class="identity-logo" src="./logo-anarbib.svg" alt="AnarBib" />
+          <img id="identityAnarbibLogo" class="identity-logo" src="./assets/img/libraries/anarbib/logo-anarbib.png" alt="AnarBib" />
           <span class="identity-plus" aria-hidden="true">+</span>
-          <img id="identityLibraryLogo" class="identity-logo" src="./logo_blmf.svg" alt="Biblioteca escolhida" />
+          <img id="identityLibraryLogo" class="identity-logo" src="./assets/img/libraries/blmf/logo-blmf.png" alt="Biblioteca escolhida" />
         </div>
       </div>
       <b>Importante (segurança):</b>
@@ -705,9 +716,9 @@
     // Detrompeurs de logos : chaque bibliothèque doit avoir un identifiant stable
     // et un fichier dédié pour éviter les confusions de nom.
     const LOGO_ASSETS = Object.freeze({
-      anarbib: "./logo-anarbib.svg",
-      blmf: "./logo_blmf.svg",
-      btl: "./logo_btl.svg"
+      anarbib: "./assets/img/libraries/anarbib/logo-anarbib.png",
+      blmf: "./assets/img/libraries/blmf/logo-blmf.png",
+      btl: "./assets/img/libraries/btl/logo-btl.png"
     });
 
     const LIBRARY_DIRECTORY = Object.freeze({
@@ -788,7 +799,7 @@
       return LIBRARY_DIRECTORY.default;
     }
 
-    function inferCurrentLibraryMeta() {
+    function inferCurrentLibraryMeta(selectedSlug = "") {
       const html = document.documentElement;
       const params = new URLSearchParams(window.location.search);
 
@@ -797,19 +808,20 @@
       const querySlug = String(params.get("library") || params.get("library_slug") || "").trim();
       const queryName = String(params.get("library_name") || "").trim();
 
-      const baseMeta = findLibraryMetaBySlugOrName(querySlug || datasetSlug, queryName || datasetName);
+      const effectiveSlug = String(selectedSlug || querySlug || datasetSlug || "").trim();
+      const baseMeta = findLibraryMetaBySlugOrName(effectiveSlug, queryName || datasetName);
 
       return {
         ...baseMeta,
-        slug: String(querySlug || datasetSlug || baseMeta.slug || "default").trim().toLowerCase(),
+        slug: String(effectiveSlug || baseMeta.slug || "default").trim().toLowerCase(),
         name: String(datasetName || queryName || baseMeta.display_name || "AnarBib").trim(),
-        logo_url: String(html?.dataset?.libraryLogo || params.get("library_logo") || baseMeta.logo_url || "").trim(),
-        contact_email: String(html?.dataset?.libraryContactEmail || params.get("library_contact_email") || baseMeta.contact_email || "").trim(),
-        reply_to_email: String(html?.dataset?.libraryReplyToEmail || params.get("library_reply_to_email") || baseMeta.reply_to_email || "").trim(),
-        address: String(html?.dataset?.libraryAddress || params.get("library_address") || baseMeta.postal_address || "").trim(),
-        admin_email: String(html?.dataset?.anarbibAdminEmail || params.get("anarbib_admin_email") || baseMeta.admin_email || "ccl-amazonia@riseup.net").trim(),
-        email_delivery_mode: String(params.get("email_delivery_mode") || baseMeta.email_delivery_mode || "normal").trim(),
-        is_test_mode: String(params.get("library_test_mode") || "") === "true" ? true : Boolean(baseMeta.is_test_mode),
+        logo_url: String(baseMeta.logo_url || "").trim(),
+        contact_email: String(baseMeta.contact_email || "").trim(),
+        reply_to_email: String(baseMeta.reply_to_email || "").trim(),
+        address: String(baseMeta.postal_address || "").trim(),
+        admin_email: String(baseMeta.admin_email || "ccl-amazonia@riseup.net").trim(),
+        email_delivery_mode: String(baseMeta.email_delivery_mode || "normal").trim(),
+        is_test_mode: Boolean(baseMeta.is_test_mode),
         logo_file_key: baseMeta.logo_file_key || ""
       };
     }
@@ -873,7 +885,17 @@
     const brandSubtitle = document.getElementById("brandSubtitle");
     const publicIdBox = document.getElementById("publicIdBox");
     const publicIdValue = document.getElementById("publicIdValue");
-    const currentLibraryMeta = inferCurrentLibraryMeta();
+    const librarySelect = document.getElementById("librarySelect");
+    let currentLibraryMeta = inferCurrentLibraryMeta();
+
+    if (librarySelect) {
+      const initialValue = currentLibraryMeta?.slug && currentLibraryMeta.slug !== "default" ? currentLibraryMeta.slug : "";
+      librarySelect.value = initialValue;
+      librarySelect.addEventListener("change", () => {
+        currentLibraryMeta = inferCurrentLibraryMeta(librarySelect.value);
+        applyIdentityNotice(currentLibraryMeta);
+      });
+    }
 
     applyIdentityNotice(currentLibraryMeta);
 
@@ -979,6 +1001,15 @@
     }
 
 
+    if (librarySelect) {
+      librarySelect.addEventListener("invalid", () => {
+        librarySelect.setCustomValidity("Selecione a biblioteca de referência.");
+      });
+      librarySelect.addEventListener("change", () => {
+        librarySelect.setCustomValidity("");
+      });
+    }
+
     document.getElementById("back").addEventListener("click", () => {
       window.location.href = CONFIG.ROUTES.cadastro;
     });
@@ -991,6 +1022,13 @@
       if (!validateCheckboxes()) {
         requiredMsg.style.display = "block";
         (!acceptRules.checked ? acceptRules : consent).focus();
+        return;
+      }
+      if (librarySelect && !librarySelect.value) {
+        setMsg("Selecione a biblioteca de referência.", "bad");
+        librarySelect.setCustomValidity("Selecione a biblioteca de referência.");
+        librarySelect.reportValidity();
+        librarySelect.focus();
         return;
       }
       if (!form.checkValidity()) {
@@ -1052,19 +1090,26 @@
           return;
         }
 
+        if (data.public_id) {
+          setPublicIdNotice(data.public_id);
+        }
+
         if (data.email_usuaria_enviado === false) {
           setMsg(
-            "Cadastro concluído, mas houve um problema ao enviar o e-mail automaticamente. Entre em contato com a biblioteca para receber sua senha. Depois do primeiro acesso, altere sua senha na Conta.",
+            "Cadastro concluído, mas houve um problema ao enviar o e-mail automaticamente. Entre em contato com a biblioteca para receber sua senha provisória e seu ID público. Depois do primeiro acesso, altere sua senha na Conta.",
             "warn"
           );
         } else {
           setMsg(
-            "Cadastro enviado com sucesso. Verifique seu e-mail (e Spam/Lixo eletrônico) para receber sua senha. Depois do primeiro acesso, altere sua senha na Conta.",
+            "Cadastro enviado com sucesso. Verifique seu e-mail (e Spam/Lixo eletrônico) para receber sua senha provisória e seu ID público definitivo. Depois do primeiro acesso, altere sua senha na Conta.",
             "ok"
           );
         }
 
         form.reset();
+        if (librarySelect) librarySelect.value = "";
+        currentLibraryMeta = inferCurrentLibraryMeta("");
+        applyIdentityNotice(currentLibraryMeta);
       } catch (err) {
         setMsg("Falha de rede ao enviar o cadastro. Tente novamente.", "bad");
       } finally {
