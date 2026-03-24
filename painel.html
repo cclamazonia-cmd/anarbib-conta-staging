@@ -1428,7 +1428,6 @@
     let refreshTimer = null;
     let refreshSerial = 0;
     let libraryServiceState = null;
-    let currentAccessRow = null;
     let reservationFollowUpFilter = 'all';
     let manualInternalTasks = [];
     const INTERNAL_TASKS_TABLE = 'painel_internal_tasks';
@@ -1630,15 +1629,9 @@
 
     async function loadLibraryServiceState({silent=false} = {}){
       try {
-        const libraryId = await resolveActiveLibraryId();
-        if (!libraryId) throw new Error('Biblioteca ativa não identificada para carregar o funcionamento.');
-        const { data, error } = await supabase
-          .from('library_service_state')
-          .select('*')
-          .eq('library_id', libraryId)
-          .maybeSingle();
+        const { data, error } = await supabase.rpc('get_library_service_state');
         if (error) throw error;
-        const row = data || null;
+        const row = Array.isArray(data) ? data[0] : data;
         libraryServiceState = row || null;
         renderLibraryServiceState(libraryServiceState || {
           service_mode: 'em_organizacao',
@@ -1666,23 +1659,16 @@
       const btn = $('btnSaveServiceState');
       btn.disabled = true;
       try {
-        const libraryId = await resolveActiveLibraryId();
-        if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar o funcionamento.');
         const payload = {
-          library_id: libraryId,
-          service_mode: $('serviceModeSelect').value,
-          allow_reservations: !!$('allowReservationsToggle').checked,
-          public_message: $('publicServiceMessage').value.trim(),
-          internal_message: $('internalServiceMessage').value.trim()
+          p_service_mode: $('serviceModeSelect').value,
+          p_allow_reservations: !!$('allowReservationsToggle').checked,
+          p_public_message: $('publicServiceMessage').value.trim(),
+          p_internal_message: $('internalServiceMessage').value.trim()
         };
-        const { data, error } = await supabase
-          .from('library_service_state')
-          .upsert(payload, { onConflict: 'library_id' })
-          .select()
-          .maybeSingle();
+        const { data, error } = await supabase.rpc('set_library_service_state', payload);
         if (error) throw error;
-        const row = data || null;
-        libraryServiceState = row || payload;
+        const row = Array.isArray(data) ? data[0] : data;
+        libraryServiceState = row || null;
         renderLibraryServiceState(libraryServiceState || payload);
         setStatus('serviceStateMsg', 'Modo de funcionamento atualizado.', 'ok');
       } catch (e) {
@@ -1792,6 +1778,7 @@
     async function loadInternalTaskLibrarians(){
       try {
         const { data, error } = await supabase
+          .schema('api')
           .from('profiles')
           .select('*')
           .eq('is_librarian', true)
@@ -2342,14 +2329,7 @@
 
     async function requireSession(){
       for (let i = 0; i < 12; i += 1) {
-        try {
-          const { data: userData } = await supabase.auth.getUser();
-          if (userData?.user?.id) {
-            const { data: { session: sess } } = await supabase.auth.getSession();
-            if (sess?.user?.id) return sess;
-          }
-        } catch (_e) {}
-        const { data: { session: sess } = { session: null } } = await supabase.auth.getSession();
+        const { data: { session: sess } } = await supabase.auth.getSession();
         if (sess?.user?.id) return sess;
         const hydrated = await hydrateSessionFromBrowserStorage();
         if (hydrated?.user?.id) return hydrated;
@@ -2358,119 +2338,24 @@
       location.assign(ROUTES.CADASTRO);
       return null;
     }
-    async function fetchPrimaryMembership(userId){
-      const { data, error } = await supabase
-        .from('user_library_memberships')
-        .select('user_id, library_id, role, status, is_primary')
-        .eq('user_id', userId)
-        .eq('role', 'librarian')
-        .eq('status', 'active')
-        .order('is_primary', { ascending:false })
-        .limit(1);
-      if (error) throw error;
-      return Array.isArray(data) && data.length ? data[0] : null;
-    }
-
-    async function fetchLibraryById(libraryId){
-      if (!libraryId) return null;
-      const { data, error } = await supabase
-        .from('libraries')
-        .select('id, name, slug')
-        .eq('id', libraryId)
-        .maybeSingle();
-      if (error) throw error;
-      return data || null;
-    }
-
     async function fetchMyAccessRow(userId){
       let lastError = null;
-      let profile = null;
-
-      try {
-        const { data, error } = await supabase
-          .from('my_access')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
-        if (!error && data) {
-          currentAccessRow = data;
-          return { data, error: null };
-        }
-        if (error) lastError = error;
-      } catch (error) {
-        lastError = error;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, email, public_id, nome, is_librarian, is_restricted')
-          .eq('id', userId)
-          .maybeSingle();
-        if (error) {
+      const attempts = [
+        () => supabase.schema('api').from('my_access').select('id, email, is_librarian, is_restricted').maybeSingle(),
+        () => supabase.schema('api').from('profiles').select('id, email, is_librarian, is_restricted').eq('id', userId).maybeSingle(),
+        () => supabase.from('profiles').select('id, email, is_librarian, is_restricted').eq('id', userId).maybeSingle()
+      ];
+      for (const run of attempts) {
+        try {
+          const res = await run();
+          if (!res?.error) return { data: res?.data || null, error: null };
+          lastError = res.error;
+        } catch (error) {
           lastError = error;
-        } else {
-          profile = data || null;
         }
-      } catch (error) {
-        lastError = error;
       }
-
-      try {
-        const membership = await fetchPrimaryMembership(userId);
-        if (membership) {
-          const library = await fetchLibraryById(membership.library_id);
-          const row = {
-            id: userId,
-            email: profile?.email || session?.user?.email || '',
-            public_id: profile?.public_id || null,
-            nome: profile?.nome || null,
-            is_librarian: true,
-            is_restricted: profile?.is_restricted === true,
-            library_id: membership.library_id,
-            role: membership.role,
-            status: membership.status,
-            is_primary: membership.is_primary === true,
-            library_name: library?.name || '',
-            library_slug: library?.slug || ''
-          };
-          currentAccessRow = row;
-          return { data: row, error: null };
-        }
-      } catch (error) {
-        lastError = error;
-      }
-
-      if (profile) {
-        const row = {
-          ...profile,
-          email: profile?.email || session?.user?.email || '',
-          library_id: null,
-          role: profile?.is_librarian ? 'librarian' : null,
-          status: null,
-          is_primary: false,
-          library_name: '',
-          library_slug: ''
-        };
-        currentAccessRow = row;
-        return { data: row, error: null };
-      }
-
-      currentAccessRow = null;
       return { data: null, error: lastError };
     }
-
-    function getActiveLibraryId(){
-      return String(currentAccessRow?.library_id || '').trim();
-    }
-
-    async function resolveActiveLibraryId(){
-      const current = getActiveLibraryId();
-      if (current) return current;
-      const accessRead = await fetchMyAccessRow(session?.user?.id);
-      return String(accessRead?.data?.library_id || '').trim();
-    }
-
     async function requireBibliotecaOrRedirect(){
       const accessRead = await fetchMyAccessRow(session.user.id);
       const accessRow = accessRead?.data || null;
@@ -2489,13 +2374,8 @@
       return true;
     }
     async function fillHeader(){
-      const email = String(currentAccessRow?.email || session?.user?.email || '—').trim() || '—';
-      const libraryName = String(currentAccessRow?.library_name || '').trim();
-      setChip('chipEmail', 'E-mail: ' + email);
-      setChip('chipFuncao', 'Função: bibliotecári@');
-      if ($('chipBiblioteca') && libraryName) {
-        setChip('chipBiblioteca', 'Biblioteca: ' + libraryName);
-      }
+      setChip('chipEmail', 'E-mail: ' + (session?.user?.email || '—'));
+      setChip('chipFuncao', 'Função: bibliotecário(a/e) e leitor(a/e)');
       $('helloLine').textContent = '';
       $('btnModoLeitor').classList.toggle('hidden', !isLibrarian);
     }
@@ -2503,7 +2383,7 @@
     async function loadProfilesByIds(userIds){
       const ids = Array.from(new Set((userIds || []).map((v) => String(v || '').trim()).filter(Boolean)));
       if (!ids.length) return new Map();
-      const { data, error } = await supabase.from('profiles').select('*').in('id', ids);
+      const { data, error } = await supabase.schema('api').from('profiles').select('*').in('id', ids);
       if (error) throw error;
       return new Map((data || []).map((row) => [String(row.id), row]));
     }
@@ -2511,7 +2391,7 @@
     async function loadBooksByBibRefs(refs){
       const clean = Array.from(new Set((refs || []).map((r) => String(r || '').trim()).filter(Boolean)));
       if (!clean.length) return new Map();
-      const { data, error } = await supabase.from('books_public').select('id,bib_ref,titulo,autor,editora,ano,loanable').in('bib_ref', clean);
+      const { data, error } = await supabase.schema('api').from('books_public').select('id,bib_ref,titulo,autor,editora,ano,loanable').in('bib_ref', clean);
       if (error) throw error;
       return new Map((data || []).map((row) => [String(row.bib_ref), row]));
     }
@@ -2621,6 +2501,7 @@
 
       // fallback ancien modèle
       const { data, error } = await supabase
+        .schema('api')
         .from('reservas')
         .select('id,bib_ref,user_id,created_at,status,fulfilled_at,fulfilled_loan_id,fulfilled_by,cancelled_at,cancelled_by,reserva_em,cancelled_by_role,cancelled_reason')
         .eq('status', 'pending')
@@ -2762,6 +2643,7 @@
       let data = null;
       let error = null;
       const q = await supabase
+        .schema('api')
         .from('loans_detalhes')
         .select('id,user_id,book_id,checkout_date,due_date,returned_date,created_at,batch_id,batch_size,extended_once,extended_at,reminder_sent_at,books')
         .is('returned_date', null)
@@ -3541,7 +3423,7 @@
       const normalized = normalizeEmail(email);
       let lastError = null;
       const attempts = [
-        () => supabase.from('profiles').select(select).ilike('email', normalized).limit(2),
+        () => supabase.schema('api').from('profiles').select(select).ilike('email', normalized).limit(2),
         () => supabase.from('profiles').select(select).ilike('email', normalized).limit(2),
       ];
       for (const run of attempts){
@@ -3572,7 +3454,7 @@
       if (!normalizedId) return null;
       let lastError = null;
       const attempts = [
-        () => supabase.from('profiles').select(select).eq('id', normalizedId).maybeSingle(),
+        () => supabase.schema('api').from('profiles').select(select).eq('id', normalizedId).maybeSingle(),
         () => supabase.from('profiles').select(select).eq('id', normalizedId).maybeSingle(),
       ];
       for (const run of attempts){
@@ -3680,6 +3562,7 @@
       const clean = Array.from(new Set((refs || []).map((r) => String(r || '').trim()).filter(Boolean)));
       if (!clean.length) throw new Error('Nenhum livro informado para o empréstimo.');
       const { data, error } = await supabase
+        .schema('api')
         .from('books_public')
         .select('id,bib_ref,titulo,loanable')
         .in('bib_ref', clean);
@@ -3697,6 +3580,7 @@
       const ids = Array.from(new Set((bookIds || []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0)));
       if (!ids.length) return;
       const { data, error } = await supabase
+        .schema('api')
         .from('loans')
         .select('id,book_id,user_id')
         .in('book_id', ids)
@@ -3712,6 +3596,7 @@
 
     async function countOpenLoansForUser(userId){
       const { count, error } = await supabase
+        .schema('api')
         .from('loans')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId)
@@ -3766,6 +3651,7 @@
           : Promise.resolve({ data: [], error: null }),
         ids.length
           ? supabase
+              .schema('api')
               .from('loans')
               .select('id,book_id')
               .in('book_id', ids)
@@ -3798,6 +3684,7 @@
           .eq('user_id', userId)
           .eq('item_status', 'aberto'),
         supabase
+          .schema('api')
           .from('loans')
           .select('id', { count: 'exact', head: true })
           .eq('user_id', userId)
@@ -3859,6 +3746,7 @@
       if (!isMissingFunctionError(rpcRes.error)) throw rpcRes.error;
 
       const { data: reserva, error: reservaError } = await supabase
+        .schema('api')
         .from('reservas')
         .select('id,bib_ref,user_id,status,fulfilled_at,cancelled_at')
         .eq('id', reservaId)
