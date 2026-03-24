@@ -711,7 +711,7 @@
               <div class="section-head">
                 <div>
                   <h2>Tema visual da biblioteca</h2>
-                  <div class="mini">Imagem de fundo, paleta e conjunto tipográfico da biblioteca, dentro de opções controladas.</div>
+                  <div class="mini">Imagem de fundo, paleta e presets tipográficos da biblioteca, dentro de opções controladas.</div>
                 </div>
               </div>
               <div class="row" style="margin-top:12px">
@@ -731,17 +731,22 @@
               </div>
               <div class="row" style="margin-top:12px">
                 <div>
-                  <label for="libraryThemeFontPack">Conjunto tipográfico</label>
+                  <label for="libraryThemeFontPack">Conjunto tipográfico (preset)</label>
                   <select class="select" id="libraryThemeFontPack">
-                    <option value="default">Padrão AnarBib</option>
-                    <option value="inter_merriweather">Inter + Merriweather</option>
-                    <option value="inter_source">Inter + Source Serif</option>
-                    <option value="system">Sistema</option>
+                    <option value="preset_base_rede">Base da rede — Noto Sans + Noto Sans + Roboto Mono</option>
+                    <option value="preset_biblioteca_acolhedora">Biblioteca acolhedora — Open Sans + Open Sans + Roboto Mono</option>
+                    <option value="preset_moderna_clara">Moderna e clara — Inter + Source Sans 3 + Geist Mono</option>
+                    <option value="preset_identidade_local">Identidade local — Instrument Sans + Noto Sans + Roboto Mono</option>
+                    <option value="preset_editorial_serio">Editorial sério — PT Serif + Noto Sans + Roboto Mono</option>
+                    <option value="preset_serif_moderna">Serif moderna — Roboto Serif + Inter + Geist Mono</option>
+                    <option value="preset_amigavel_contemporanea">Amigável contemporânea — DM Sans + DM Sans + Roboto Mono</option>
+                    <option value="preset_assinatura_leve">Assinatura leve — Sora + Noto Sans + Geist Mono</option>
+                    <option value="preset_sistema">Sistema — fontes do dispositivo</option>
                   </select>
                 </div>
                 <div>
                   <label for="libraryThemePreviewNote">Pré-visualização</label>
-                  <input class="input" id="libraryThemePreviewNote" type="text" value="Estrutura preparada para preview futuro." readonly>
+                  <input class="input" id="libraryThemePreviewNote" type="text" value="Base pronta para presets tipográficos. Seletores avançados de título, interface e destaque virão depois." readonly>
                 </div>
               </div>
               <div class="actions">
