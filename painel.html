@@ -1779,23 +1779,40 @@
       return isCanonicalServiceDefaultMessage(t) ? '' : t;
     }
 
-    function isMissingLibraryServiceColumn(error, columnName){
-      const msg = String(error?.message || error || '').toLowerCase();
-      return msg.includes(`could not find the '${String(columnName).toLowerCase()}' column of 'library_service_state'`) ||
-             msg.includes(`column "${String(columnName).toLowerCase()}" of relation "library_service_state" does not exist`) ||
-             msg.includes(`library_service_state.${String(columnName).toLowerCase()} does not exist`);
+    function hasOwnKey(obj, key){
+      return !!obj && Object.prototype.hasOwnProperty.call(obj, key);
+    }
+
+    function normalizeUuidLike(value){
+      const t = String(value || '').trim();
+      return t || null;
+    }
+
+    function isMissingColumnError(error, columnName){
+      const message = String(error?.message || error || '');
+      return message.includes(`Could not find the '${columnName}' column`) || message.includes(`column ${columnName} does not exist`);
     }
 
     function renderLibraryServiceState(state){
       const modeText = translateServiceMode(state?.service_mode);
-      const reservationsText = state?.allow_reservations ? 'Reservas públicas: abertas' : 'Reservas públicas: fechadas';
+      const hasAllowReservations = hasOwnKey(state, 'allow_reservations');
+      const hasInternalMessage = hasOwnKey(state, 'internal_message');
+      const reservationsText = hasAllowReservations
+        ? (state?.allow_reservations ? 'Reservas públicas: abertas' : 'Reservas públicas: fechadas')
+        : 'Reservas públicas: —';
       setChip('chipServiceMode', `Modo: ${modeText}`);
       setChip('chipReservationsState', reservationsText);
 
       if ($('serviceModeSelect')) $('serviceModeSelect').value = state?.service_mode || 'em_organizacao';
-      if ($('allowReservationsToggle')) $('allowReservationsToggle').checked = !!state?.allow_reservations;
+      if ($('allowReservationsToggle')) {
+        $('allowReservationsToggle').checked = !!state?.allow_reservations;
+        $('allowReservationsToggle').disabled = !hasAllowReservations;
+      }
       if ($('publicServiceMessage')) $('publicServiceMessage').value = getEditablePublicServiceMessage(state);
-      if ($('internalServiceMessage')) $('internalServiceMessage').value = state?.internal_message || '';
+      if ($('internalServiceMessage')) {
+        $('internalServiceMessage').value = state?.internal_message || '';
+        $('internalServiceMessage').disabled = !hasInternalMessage;
+      }
     }
 
     async function resolveCurrentLibraryIdentity(){
@@ -1803,7 +1820,7 @@
         currentAccessRow?.library_id,
         currentIdentityRow?.library_id,
         libraryServiceState?.library_id,
-      ].map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0);
+      ].map((v) => normalizeUuidLike(v)).filter(Boolean);
       if (candidates.length) return { id: candidates[0], row: null };
 
       const slug = String(
@@ -1821,7 +1838,7 @@
           .eq('slug', slug)
           .maybeSingle();
         if (error) throw error;
-        if (data?.id) return { id: Number(data.id), row: data };
+        if (data?.id) return { id: String(data.id), row: data };
       }
 
       return { id: null, row: null };
@@ -1843,9 +1860,7 @@
         libraryServiceState = data || {
           library_id: libraryId,
           service_mode: 'em_organizacao',
-          allow_reservations: false,
-          public_message: '',
-          internal_message: ''
+          public_message: ''
         };
         renderLibraryServiceState(libraryServiceState);
         if (!silent) clearStatus('serviceStateMsg');
@@ -1853,9 +1868,7 @@
         libraryServiceState = null;
         renderLibraryServiceState({
           service_mode: 'em_organizacao',
-          allow_reservations: false,
-          public_message: '',
-          internal_message: ''
+          public_message: ''
         });
         setChip('chipServiceMode', 'Modo: erro');
         setChip('chipReservationsState', 'Reservas públicas: erro');
@@ -1872,55 +1885,45 @@
         const libraryId = resolved?.id || null;
         if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar o funcionamento.');
 
-        const payload = {
+        const basePayload = {
           library_id: libraryId,
           service_mode: $('serviceModeSelect').value,
-          allow_reservations: !!$('allowReservationsToggle').checked,
-          public_message: $('publicServiceMessage').value.trim(),
-          internal_message: $('internalServiceMessage').value.trim()
+          public_message: $('publicServiceMessage').value.trim()
         };
 
+        const optionalFields = [
+          ['allow_reservations', !!$('allowReservationsToggle')?.checked],
+          ['internal_message', $('internalServiceMessage')?.value.trim() || '']
+        ];
+
+        let payload = { ...basePayload, ...Object.fromEntries(optionalFields) };
         let data = null;
-        let error = null;
-        let ignoredInternalMessage = false;
+        let lastError = null;
 
-        ({ data, error } = await supabase
-          .from('library_service_state')
-          .upsert(payload, { onConflict: 'library_id' })
-          .select('*')
-          .maybeSingle());
-
-        if (error && isMissingLibraryServiceColumn(error, 'internal_message')) {
-          const fallbackPayload = {
-            library_id: payload.library_id,
-            service_mode: payload.service_mode,
-            allow_reservations: payload.allow_reservations,
-            public_message: payload.public_message
-          };
-
-          ({ data, error } = await supabase
+        for (let i = 0; i <= optionalFields.length; i += 1) {
+          const res = await supabase
             .from('library_service_state')
-            .upsert(fallbackPayload, { onConflict: 'library_id' })
+            .upsert(payload, { onConflict: 'library_id' })
             .select('*')
-            .maybeSingle());
+            .maybeSingle();
 
-          ignoredInternalMessage = !error;
+          if (!res?.error) {
+            data = res?.data || null;
+            lastError = null;
+            break;
+          }
+
+          lastError = res.error;
+          const removableField = optionalFields.find(([field]) => hasOwnKey(payload, field) && isMissingColumnError(lastError, field));
+          if (!removableField) break;
+          delete payload[removableField[0]];
         }
 
-        if (error) throw error;
+        if (lastError) throw lastError;
 
-        libraryServiceState = {
-          ...(data || payload),
-          internal_message: ignoredInternalMessage ? '' : payload.internal_message
-        };
+        libraryServiceState = data || payload;
         renderLibraryServiceState(libraryServiceState);
-        setStatus(
-          'serviceStateMsg',
-          ignoredInternalMessage
-            ? 'Modo de funcionamento atualizado. A mensagem interna não foi salva porque esse campo não está ativo neste projeto.'
-            : 'Modo de funcionamento atualizado.',
-          'ok'
-        );
+        setStatus('serviceStateMsg', 'Modo de funcionamento atualizado.', 'ok');
       } catch (e) {
         setStatus('serviceStateMsg', 'Não consegui salvar o modo de funcionamento: ' + (e.message || String(e)), 'bad', false);
       } finally {
@@ -2630,7 +2633,7 @@
         if (!membershipRes?.error) {
           const membershipRows = Array.isArray(membershipRes?.data) ? membershipRes.data : [];
           if (membershipRows.length) {
-            const libraryIds = Array.from(new Set(membershipRows.map((row) => Number(row?.library_id)).filter((v) => Number.isFinite(v) && v > 0)));
+            const libraryIds = Array.from(new Set(membershipRows.map((row) => normalizeUuidLike(row?.library_id)).filter(Boolean)));
             let librariesById = new Map();
             if (libraryIds.length) {
               const librariesRes = await supabase
@@ -2638,14 +2641,14 @@
                 .select('id,slug,name,short_name')
                 .in('id', libraryIds);
               if (!librariesRes?.error) {
-                librariesById = new Map((librariesRes.data || []).map((row) => [Number(row.id), row]));
+                librariesById = new Map((librariesRes.data || []).map((row) => [String(row.id), row]));
               } else {
                 lastError = librariesRes.error;
               }
             }
 
             const mergedRows = membershipRows.map((row) => {
-              const lib = librariesById.get(Number(row?.library_id)) || {};
+              const lib = librariesById.get(String(row?.library_id || '')) || {};
               return {
                 ...(profileRow || {}),
                 ...row,
