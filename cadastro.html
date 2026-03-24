@@ -202,8 +202,16 @@
     <!-- LOGIN -->
     <section id="loginBox">
       <form id="loginForm">
-        <label for="email">E-mail</label>
-        <input type="email" id="email" autocomplete="username" required />
+        <label for="email">E-mail ou ID público</label>
+        <input
+          type="text"
+          id="email"
+          autocomplete="username"
+          inputmode="email"
+          autocapitalize="off"
+          spellcheck="false"
+          required
+        />
 
         <label for="password">Senha</label>
         <input type="password" id="password" autocomplete="current-password" required />
@@ -337,6 +345,64 @@
 
       return "Ocorreu um erro. Tente novamente.";
     }
+    async function resolveLoginIdentity(identifier) {
+      const value = String(identifier || "").trim();
+      if (!value) {
+        throw new Error("Informe seu e-mail ou seu ID público.");
+      }
+
+      const { data, error } = await supabase.rpc("resolve_login_email", {
+        p_identifier: value
+      });
+
+      if (error) {
+        console.error("resolve_login_email error:", error);
+        throw new Error("Não foi possível verificar o identificador informado.");
+      }
+
+      const row = Array.isArray(data) ? data[0] : null;
+      if (!row?.email) {
+        throw new Error("Usuário não encontrado.");
+      }
+
+      return {
+        email: String(row.email || "").trim(),
+        public_id: row.public_id || null,
+        user_id: row.user_id || null
+      };
+    }
+
+    async function signInWithEmailOrPublicId(identifier, password) {
+      const rawIdentifier = String(identifier || "").trim();
+      const pwd = String(password || "");
+
+      if (!rawIdentifier) {
+        throw new Error("Informe seu e-mail ou seu ID público.");
+      }
+
+      if (!pwd) {
+        throw new Error("Informe sua senha.");
+      }
+
+      let emailToUse = rawIdentifier;
+
+      if (!rawIdentifier.includes("@")) {
+        const resolved = await resolveLoginIdentity(rawIdentifier);
+        emailToUse = resolved.email;
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailToUse,
+        password: pwd
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    }
+
 
     const loginPw = document.getElementById("password");
     const toggleLoginPw = document.getElementById("toggleLoginPw");
@@ -465,28 +531,21 @@
       if (!userId) return readLibrarianHintFromSession(signInData);
 
       try {
-        const apiRead = await supabase
+        const { data, error } = await supabase
           .schema("api")
-          .from("profiles")
-          .select("is_librarian")
-          .eq("id", userId)
-          .maybeSingle();
+          .from("my_access")
+          .select("role, status, can_access_painel")
+          .limit(20);
 
-        if (!apiRead.error && apiRead.data) return apiRead.data?.is_librarian === true;
+        if (!error && Array.isArray(data) && data.length) {
+          return data.some((row) =>
+            row?.status === "active" &&
+            row?.role === "librarian" &&
+            row?.can_access_painel === true
+          );
+        }
       } catch (e) {
-        console.warn("api.profiles.is_librarian read exception:", e);
-      }
-
-      try {
-        const publicRead = await supabase
-          .from("profiles")
-          .select("is_librarian")
-          .eq("id", userId)
-          .maybeSingle();
-
-        if (!publicRead.error && publicRead.data) return publicRead.data?.is_librarian === true;
-      } catch (e) {
-        console.warn("public.profiles.is_librarian read exception:", e);
+        console.warn("api.my_access read exception:", e);
       }
 
       return readLibrarianHintFromSession(signInData);
@@ -570,21 +629,41 @@
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const msg = document.getElementById("msg");
+      const submitBtn = e.currentTarget?.querySelector('button[type="submit"]');
+
       setMsg(msg, "");
-
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
-
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        console.error("AnarBib cadastro login error:", error);
-        setMsg(msg, mapAuthError(error, "login"), "bad");
-        return;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Entrando...";
       }
 
-      await persistReturnedSession(data);
-      await ensureCurrentUserProfile();
-      await afterLoginRedirect(data);
+      try {
+        const identifier = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+
+        const data = await signInWithEmailOrPublicId(identifier, password);
+
+        await persistReturnedSession(data);
+        await ensureCurrentUserProfile();
+        await afterLoginRedirect(data);
+      } catch (error) {
+        console.error("AnarBib cadastro login error:", error);
+        const raw = String(error?.message || "");
+        const friendly =
+          raw === "Usuário não encontrado." ||
+          raw === "Informe seu e-mail ou seu ID público." ||
+          raw === "Informe sua senha." ||
+          raw === "Não foi possível verificar o identificador informado."
+            ? raw
+            : mapAuthError(error, "login");
+
+        setMsg(msg, friendly, "bad");
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Entrar";
+        }
+      }
     });
 
     document.getElementById("forgotForm").addEventListener("submit", async (e) => {
