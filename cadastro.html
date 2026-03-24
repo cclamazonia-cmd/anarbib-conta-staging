@@ -526,22 +526,44 @@
     async function fetchIsLibrarian(userId, signInData = null) {
       if (!userId) return readLibrarianHintFromSession(signInData);
 
+      const readableAttempts = [
+        () => supabase.from("my_access").select("role, status, can_access_painel, is_librarian, is_primary").limit(20),
+        () => supabase.from("my_session_context").select("role, status, can_access_painel, is_librarian, is_primary").limit(20),
+      ];
+
+      for (const run of readableAttempts) {
+        try {
+          const { data, error } = await run();
+          if (!error && Array.isArray(data) && data.length) {
+            const activeRows = data.filter((row) => String(row?.status || "active").toLowerCase() === "active");
+            const librarianRows = activeRows.filter((row) => {
+              const role = String(row?.role || "").toLowerCase();
+              return row?.can_access_painel === true || row?.is_librarian === true || role === "librarian";
+            });
+            if (librarianRows.length) {
+              return librarianRows.some((row) => row?.is_primary === true) || true;
+            }
+          }
+        } catch (e) {
+          console.warn("my_access/my_session_context read exception:", e);
+        }
+      }
+
       try {
         const { data, error } = await supabase
-          .schema("api")
-          .from("my_access")
-          .select("role, status, can_access_painel")
-          .limit(20);
+          .from("user_library_memberships")
+          .select("role, status, is_primary")
+          .eq("user_id", userId)
+          .eq("status", "active");
 
         if (!error && Array.isArray(data) && data.length) {
-          return data.some((row) =>
-            row?.status === "active" &&
-            row?.role === "librarian" &&
-            row?.can_access_painel === true
-          );
+          const librarianRows = data.filter((row) => String(row?.role || "").toLowerCase() === "librarian");
+          if (librarianRows.length) {
+            return librarianRows.some((row) => row?.is_primary === true) || true;
+          }
         }
       } catch (e) {
-        console.warn("api.my_access read exception:", e);
+        console.warn("user_library_memberships read exception:", e);
       }
 
       return readLibrarianHintFromSession(signInData);

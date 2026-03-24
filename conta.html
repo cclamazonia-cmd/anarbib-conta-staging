@@ -683,9 +683,9 @@ button[type="submit"] *,
         />
       </div>
       <div class="topbar-actions">
-        <a id="btnCatalogo" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-staging/">Voltar ao catálogo</a>
-        <a id="goPainelBiblio" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html">Painel de gestão</a>
-        <button id="logout" class="logout-btn" type="button" onclick="try{localStorage.removeItem('anarbib_active_tab');sessionStorage.removeItem('anarbib_active_tab');}catch(_e){}window.location.assign('https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html');return false;">Sair</button>
+        <a id="btnCatalogo" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-staging/index.html">Voltar ao catálogo</a>
+        <a id="goPainelBiblio" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html" hidden style="display:none">Painel de gestão</a>
+        <button id="logout" class="logout-btn" type="button">Sair</button>
       </div>
     </div>
 
@@ -1173,6 +1173,44 @@ button[type="submit"] *,
       PAINEL: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html",
     };
 
+    const AUTH_STORAGE_KEY = "sb-asptfmokzykwzlshsncw-auth-token";
+
+    function normalizeStoredSession(payload) {
+      if (payload?.access_token && payload?.refresh_token) {
+        return { access_token: payload.access_token, refresh_token: payload.refresh_token };
+      }
+      if (payload?.currentSession?.access_token && payload?.currentSession?.refresh_token) {
+        return { access_token: payload.currentSession.access_token, refresh_token: payload.currentSession.refresh_token };
+      }
+      return null;
+    }
+
+    function readStoredSessionCandidate() {
+      const stores = [window.localStorage, window.sessionStorage];
+      for (const store of stores) {
+        try {
+          const raw = store?.getItem?.(AUTH_STORAGE_KEY);
+          if (!raw) continue;
+          const parsed = JSON.parse(raw);
+          const normalized = normalizeStoredSession(parsed);
+          if (normalized?.access_token && normalized?.refresh_token) return normalized;
+        } catch (_) {}
+      }
+      return null;
+    }
+
+    async function hydrateSessionFromBrowserStorage() {
+      const stored = readStoredSessionCandidate();
+      if (!stored) return null;
+      try {
+        const { data, error } = await supabase.auth.setSession(stored);
+        if (error) return null;
+        return data?.session || null;
+      } catch (_) {
+        return null;
+      }
+    }
+
     const $ = (id) => document.getElementById(id);
     $("btnCatalogo")?.addEventListener("click", (e) => {
       e.preventDefault();
@@ -1181,13 +1219,20 @@ button[type="submit"] *,
 
     $("logout")?.addEventListener("click", async () => {
       try {
+        window.localStorage.removeItem("anarbib_active_tab");
+        window.sessionStorage.removeItem("anarbib_active_tab");
+      } catch (_) {}
+      try {
         await supabase.auth.signOut();
       } catch (_) {}
       window.location.assign(ROUTES.CADASTRO);
     });
 
     const { data: sessData } = await supabase.auth.getSession();
-    const session = sessData?.session || null;
+    let session = sessData?.session || null;
+    if (!session) {
+      session = await hydrateSessionFromBrowserStorage();
+    }
     if (!session) {
       window.location.href = buildAuthRedirectTarget("conta.html");
       throw new Error("No session");
@@ -1306,11 +1351,23 @@ button[type="submit"] *,
       if (el) el.innerHTML = `<p>${escapeHtml(msg)}</p>`;
     }
 
+    function getAllowsNewReservations(row) {
+      if (!row || typeof row !== "object") return false;
+      if (row.allows_new_reservations === true || row.allows_new_reservations === false) {
+        return row.allows_new_reservations === true;
+      }
+      if (row.allow_reservations === true || row.allow_reservations === false) {
+        return row.allow_reservations === true;
+      }
+      return false;
+    }
+
     function normalizeServiceState(row) {
       if (!row || typeof row !== "object") return null;
       return {
+        library_id: String(row.library_id || "").trim() || null,
         service_mode: String(row.service_mode || "").trim() || null,
-        allow_reservations: row.allow_reservations === true,
+        allows_new_reservations: getAllowsNewReservations(row),
         public_message: String(row.public_message || "").trim(),
         updated_at: row.updated_at || null
       };
@@ -1329,7 +1386,7 @@ button[type="submit"] *,
         serviceStateNotice.style.display = "block";
         serviceStateNotice.innerHTML = `<b>Funcionamento: ${escapeHtml(modeLabel)}</b><div class="small">${escapeHtml(message)}</div>`;
       }
-      const reservationsClosed = publicServiceState ? publicServiceState.allow_reservations === false : false;
+      const reservationsClosed = publicServiceState ? publicServiceState.allows_new_reservations === false : false;
       if (reserveServiceNotice) {
         if (reservationsClosed) {
           reserveServiceNotice.style.display = "block";
@@ -1347,12 +1404,149 @@ button[type="submit"] *,
       }
     }
 
+    function normalizeLibraryId(value) {
+      const v = String(value || "").trim();
+      return v || null;
+    }
+
+    function normalizeContaAccessRow(row) {
+      if (!row || typeof row !== "object") return null;
+      return {
+        ...row,
+        library_id: normalizeLibraryId(row.library_id),
+        library_slug: String(row.library_slug || row.slug || "").trim() || "",
+        library_name: String(row.library_name || row.name || "").trim() || "",
+        role: String(row.role || "").trim() || "",
+        status: String(row.status || "active").trim() || "active",
+      };
+    }
+
+    function pickPrimaryContaAccess(rows) {
+      const normalized = (Array.isArray(rows) ? rows : []).map(normalizeContaAccessRow).filter(Boolean);
+      const activeRows = normalized.filter((row) => String(row.status || "active").toLowerCase() === "active");
+      return activeRows.find((row) => row.is_primary === true) || activeRows[0] || null;
+    }
+
+    async function fetchContaAccessRows(userId) {
+      let lastError = null;
+      const directAttempts = [
+        () => supabase.from("my_access").select("*"),
+        () => supabase.from("my_session_context").select("*").limit(20),
+      ];
+
+      for (const run of directAttempts) {
+        try {
+          const res = await run();
+          if (!res?.error) {
+            const rows = Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []);
+            if (rows.length) return { data: rows.map(normalizeContaAccessRow).filter(Boolean), error: null };
+          } else {
+            lastError = res.error;
+          }
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      try {
+        const membershipRes = await supabase
+          .from("user_library_memberships")
+          .select("user_id,library_id,role,status,is_primary")
+          .eq("user_id", userId)
+          .eq("status", "active");
+
+        if (!membershipRes?.error) {
+          const membershipRows = Array.isArray(membershipRes?.data) ? membershipRes.data : [];
+          if (membershipRows.length) {
+            const libraryIds = Array.from(new Set(membershipRows.map((row) => normalizeLibraryId(row?.library_id)).filter(Boolean)));
+            let librariesById = new Map();
+            if (libraryIds.length) {
+              const librariesRes = await supabase
+                .from("libraries")
+                .select("id,slug,name,short_name")
+                .in("id", libraryIds);
+              if (!librariesRes?.error) {
+                librariesById = new Map((librariesRes.data || []).map((row) => [normalizeLibraryId(row.id), row]));
+              } else {
+                lastError = librariesRes.error;
+              }
+            }
+
+            const mergedRows = membershipRows.map((row) => {
+              const lib = librariesById.get(normalizeLibraryId(row?.library_id)) || {};
+              return normalizeContaAccessRow({
+                ...row,
+                library_name: lib?.name || "",
+                library_slug: lib?.slug || "",
+                library_short_name: lib?.short_name || "",
+              });
+            }).filter(Boolean);
+
+            if (mergedRows.length) return { data: mergedRows, error: null };
+          }
+        } else {
+          lastError = membershipRes.error;
+        }
+      } catch (error) {
+        lastError = error;
+      }
+
+      return { data: [], error: lastError };
+    }
+
+    async function resolveContaLibraryIdentity() {
+      const accessRead = await fetchContaAccessRows(session.user.id);
+      const accessRows = accessRead?.data || [];
+      const picked = pickPrimaryContaAccess(accessRows);
+      if (picked?.library_id) return picked;
+
+      const docSlug = String(document.documentElement?.dataset?.librarySlug || "").trim();
+      if (docSlug && docSlug !== "default") {
+        try {
+          const { data, error } = await supabase
+            .from("libraries")
+            .select("id,slug,name,short_name")
+            .eq("slug", docSlug)
+            .maybeSingle();
+          if (!error && data?.id) {
+            return normalizeContaAccessRow({
+              library_id: data.id,
+              library_slug: data.slug,
+              library_name: data.name,
+              library_short_name: data.short_name,
+              status: "active",
+            });
+          }
+        } catch (_) {}
+      }
+
+      return null;
+    }
+
     async function loadPublicServiceState() {
-      const { data, error } = await supabase
-        .from("v_library_service_public")
-        .select("*")
-        .limit(1)
-        .maybeSingle();
+      let data = null;
+      let error = null;
+      const libraryIdentity = await resolveContaLibraryIdentity();
+
+      if (libraryIdentity?.library_id) {
+        const filtered = await supabase
+          .from("v_library_service_public")
+          .select("*")
+          .eq("library_id", libraryIdentity.library_id)
+          .maybeSingle();
+        data = filtered?.data || null;
+        error = filtered?.error || null;
+      }
+
+      if (!data && !error) {
+        const fallback = await supabase
+          .from("v_library_service_public")
+          .select("*")
+          .limit(1)
+          .maybeSingle();
+        data = fallback?.data || null;
+        error = fallback?.error || null;
+      }
 
       if (error) {
         console.warn("loadPublicServiceState error:", error);
@@ -1712,12 +1906,18 @@ button[type="submit"] *,
         if (Array.isArray(value)) return value.map((v) => String(v).toLowerCase()).includes("librarian");
         return ["true", "librarian", "bibliotecario", "bibliotecária", "bibliotecaire"].includes(String(value || "").trim().toLowerCase());
       });
-      isLibrarian = (data?.is_librarian === true) || metaIsLibrarian;
+      const accessRead = await fetchContaAccessRows(session.user.id);
+      const accessRows = accessRead?.data || [];
+      const accessIsLibrarian = accessRows.some((row) => {
+        const role = String(row?.role || "").toLowerCase();
+        return String(row?.status || "active").toLowerCase() === "active" && (role === "librarian" || row?.is_librarian === true || row?.can_access_painel === true);
+      });
+      isLibrarian = (data?.is_librarian === true) || metaIsLibrarian || accessIsLibrarian;
       const go = $("goPainelBiblio");
       if (go) {
         go.href = ROUTES.PAINEL;
-        go.hidden = false;
-        go.style.display = "inline-flex";
+        go.hidden = !isLibrarian;
+        go.style.display = isLibrarian ? "inline-flex" : "none";
       }
     }
 
@@ -2736,7 +2936,7 @@ button[type="submit"] *,
     $("reserveForm")?.addEventListener("submit", async (e) => {
       e.preventDefault();
       reserveMsg.textContent = "";
-      if (publicServiceState && publicServiceState.allow_reservations === false) {
+      if (publicServiceState && publicServiceState.allows_new_reservations === false) {
         reserveMsg.textContent = "As reservas públicas estão temporariamente fechadas. Consulte os canais do CCLA para atualizações e orientações.";
         return;
       }
