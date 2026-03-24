@@ -1791,12 +1791,17 @@
       if ($('internalServiceMessage')) $('internalServiceMessage').value = state?.internal_message || '';
     }
 
+    function normalizeLibraryId(value){
+      const normalized = String(value ?? '').trim();
+      return normalized || null;
+    }
+
     async function resolveCurrentLibraryIdentity(){
       const candidates = [
         currentAccessRow?.library_id,
         currentIdentityRow?.library_id,
         libraryServiceState?.library_id,
-      ].map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0);
+      ].map((v) => normalizeLibraryId(v)).filter(Boolean);
       if (candidates.length) return { id: candidates[0], row: null };
 
       const slug = String(
@@ -1814,7 +1819,7 @@
           .eq('slug', slug)
           .maybeSingle();
         if (error) throw error;
-        if (data?.id) return { id: Number(data.id), row: data };
+        if (data?.id) return { id: normalizeLibraryId(data.id), row: data };
       }
 
       return { id: null, row: null };
@@ -2591,7 +2596,11 @@
         if (!membershipRes?.error) {
           const membershipRows = Array.isArray(membershipRes?.data) ? membershipRes.data : [];
           if (membershipRows.length) {
-            const libraryIds = Array.from(new Set(membershipRows.map((row) => Number(row?.library_id)).filter((v) => Number.isFinite(v) && v > 0)));
+            const libraryIds = Array.from(new Set(
+              membershipRows
+                .map((row) => normalizeLibraryId(row?.library_id))
+                .filter(Boolean)
+            ));
             let librariesById = new Map();
             if (libraryIds.length) {
               const librariesRes = await supabase
@@ -2599,14 +2608,14 @@
                 .select('id,slug,name,short_name')
                 .in('id', libraryIds);
               if (!librariesRes?.error) {
-                librariesById = new Map((librariesRes.data || []).map((row) => [Number(row.id), row]));
+                librariesById = new Map((librariesRes.data || []).map((row) => [normalizeLibraryId(row.id), row]));
               } else {
                 lastError = librariesRes.error;
               }
             }
 
             const mergedRows = membershipRows.map((row) => {
-              const lib = librariesById.get(Number(row?.library_id)) || {};
+              const lib = librariesById.get(normalizeLibraryId(row?.library_id)) || {};
               return {
                 ...(profileRow || {}),
                 ...row,
