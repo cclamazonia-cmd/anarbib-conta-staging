@@ -506,8 +506,8 @@
     <div class="tabs-layout">
       <nav class="tabs-nav" role="tablist" aria-label="Seções do painel">
         <button class="tab-btn active" type="button" data-tab="funcionamento" role="tab" aria-selected="true" aria-controls="tab-funcionamento">
-          Biblioteca
-          <span class="hint">Funcionamento, horários, regras locais e tema</span>
+          Funcionamento
+          <span class="hint">Modo global e reservas públicas</span>
         </button>
         <button class="tab-btn" type="button" data-tab="acoes" role="tab" aria-selected="false" aria-controls="tab-acoes">
           Ações
@@ -547,19 +547,7 @@
             <div class="card">
               <div class="section-head">
                 <div>
-                  <h2>Biblioteca</h2>
-                  <div class="mini">Configuração local da biblioteca: funcionamento, horários, regras de circulação, identidade e tema visual.</div>
-                </div>
-              </div>
-              <div class="muted-box" style="margin-top:12px">
-                <div class="mini">Neste primeiro patch, apenas o bloco “Estado do serviço” está ligado ao backend atual. Os outros blocos já ficam preparados no painel, sem alterar o restante do sistema.</div>
-              </div>
-            </div>
-
-            <div class="card">
-              <div class="section-head">
-                <div>
-                  <h2>Estado do serviço</h2>
+                  <h2>Modo de funcionamento da biblioteca</h2>
                   <div class="mini">Fonte única de verdade para a mensagem pública e a abertura de novas reservas.</div>
                 </div>
               </div>
@@ -591,170 +579,9 @@
                 <textarea class="textarea" id="internalServiceMessage" placeholder="Observação interna para a equipe da biblioteca."></textarea>
               </div>
               <div class="actions">
-                <button class="btn primary" id="btnSaveServiceState" type="button">Salvar funcionamento</button>
+                <button class="btn primary" id="btnSaveServiceState" type="button">Salvar modo de funcionamento</button>
               </div>
               <div class="status" id="serviceStateMsg"></div>
-            </div>
-
-            <div class="card">
-              <div class="section-head">
-                <div>
-                  <h2>Horários e permanências</h2>
-                  <div class="mini">Estrutura preparada para os horários semanais, permanências fixas e fechamentos excepcionais.</div>
-                </div>
-              </div>
-              <div class="row3" style="margin-top:12px">
-                <div>
-                  <label for="libraryOpenMonday">Segunda-feira</label>
-                  <input class="input" id="libraryOpenMonday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
-                </div>
-                <div>
-                  <label for="libraryOpenTuesday">Terça-feira</label>
-                  <input class="input" id="libraryOpenTuesday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
-                </div>
-                <div>
-                  <label for="libraryOpenWednesday">Quarta-feira</label>
-                  <input class="input" id="libraryOpenWednesday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
-                </div>
-              </div>
-              <div class="row3" style="margin-top:12px">
-                <div>
-                  <label for="libraryOpenThursday">Quinta-feira</label>
-                  <input class="input" id="libraryOpenThursday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
-                </div>
-                <div>
-                  <label for="libraryOpenFriday">Sexta-feira</label>
-                  <input class="input" id="libraryOpenFriday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
-                </div>
-                <div>
-                  <label for="libraryOpenWeekend">Fim de semana</label>
-                  <input class="input" id="libraryOpenWeekend" type="text" placeholder="Ex.: somente em plantões / fechado">
-                </div>
-              </div>
-              <div style="margin-top:12px">
-                <label for="libraryFixedOpenings">Permanências fixas</label>
-                <textarea class="textarea" id="libraryFixedOpenings" placeholder="Ex.: toda terça, das 15h às 18h, no espaço da biblioteca."></textarea>
-              </div>
-              <div style="margin-top:12px">
-                <label for="libraryExceptionalClosures">Fechamentos ou suspensões temporárias</label>
-                <textarea class="textarea" id="libraryExceptionalClosures" placeholder="Ex.: fechado no feriado, mutirão interno, reforma do espaço, pausa temporária etc."></textarea>
-              </div>
-              <div class="actions">
-                <button class="btn" id="btnSaveLibrarySchedule" type="button" disabled>Salvar horários</button>
-              </div>
-              <div class="status" id="libraryScheduleMsg">Bloco preparado para ligação futura ao backend.</div>
-            </div>
-
-            <div class="card">
-              <div class="section-head">
-                <div>
-                  <h2>Regras locais de circulação</h2>
-                  <div class="mini">Parâmetros locais para reservas e empréstimos de pessoas não inscritas nesta biblioteca.</div>
-                </div>
-              </div>
-              <div class="row" style="margin-top:12px">
-                <div>
-                  <label for="nonMemberReservationPolicy">Reservas para não inscritas/os</label>
-                  <select class="select" id="nonMemberReservationPolicy">
-                    <option value="nao_permitir">Não permitir</option>
-                    <option value="sob_analise">Permitir sob análise</option>
-                    <option value="permitir">Permitir</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="nonMemberLoanPolicy">Empréstimos para não inscritas/os</label>
-                  <select class="select" id="nonMemberLoanPolicy">
-                    <option value="nao_permitir">Não permitir</option>
-                    <option value="sob_analise">Permitir sob análise</option>
-                    <option value="permitir">Permitir</option>
-                  </select>
-                </div>
-              </div>
-              <div style="margin-top:12px">
-                <label for="nonMemberPublicNote">Texto público explicativo</label>
-                <textarea class="textarea" id="nonMemberPublicNote" placeholder="Ex.: leitoras/es de outras bibliotecas podem reservar, mas a retirada depende de análise local da equipe."></textarea>
-              </div>
-              <div class="actions">
-                <button class="btn" id="btnSaveLocalRules" type="button" disabled>Salvar regras locais</button>
-              </div>
-              <div class="status" id="localRulesMsg">Bloco preparado para ligação futura ao backend.</div>
-            </div>
-
-            <div class="card">
-              <div class="section-head">
-                <div>
-                  <h2>Identidade da biblioteca</h2>
-                  <div class="mini">Nome público, forma abreviada e identificador curto da biblioteca.</div>
-                </div>
-              </div>
-              <div class="row3" style="margin-top:12px">
-                <div>
-                  <label for="libraryFullName">Nome completo</label>
-                  <input class="input" id="libraryFullName" type="text" placeholder="Ex.: Biblioteca Libertária Maxwell Ferreira">
-                </div>
-                <div>
-                  <label for="libraryShortName">Nome abreviado</label>
-                  <input class="input" id="libraryShortName" type="text" placeholder="Ex.: BLMF">
-                </div>
-                <div>
-                  <label for="librarySlug">Slug / identificador curto</label>
-                  <input class="input mono" id="librarySlug" type="text" placeholder="Ex.: blmf">
-                </div>
-              </div>
-              <div class="actions">
-                <button class="btn" id="btnSaveLibraryIdentity" type="button" disabled>Salvar identidade</button>
-              </div>
-              <div class="status" id="libraryIdentityMsg">Bloco preparado para ligação futura ao backend.</div>
-            </div>
-
-            <div class="card">
-              <div class="section-head">
-                <div>
-                  <h2>Tema visual da biblioteca</h2>
-                  <div class="mini">Imagem de fundo, paleta e conjunto tipográfico da biblioteca, dentro de opções controladas.</div>
-                </div>
-              </div>
-              <div class="row" style="margin-top:12px">
-                <div>
-                  <label for="libraryThemeBackground">Imagem de fundo (1920 × 1080 recomendado)</label>
-                  <input class="input" id="libraryThemeBackground" type="text" placeholder="URL pública da imagem de fundo">
-                </div>
-                <div>
-                  <label for="libraryThemePalette">Paleta</label>
-                  <select class="select" id="libraryThemePalette">
-                    <option value="default">Padrão AnarBib</option>
-                    <option value="contraste_suave">Contraste suave</option>
-                    <option value="vermelho_escuro">Vermelho escuro</option>
-                    <option value="cinza_vermelho">Cinza e vermelho</option>
-                  </select>
-                </div>
-              </div>
-              <div class="row" style="margin-top:12px">
-                <div>
-                  <label for="libraryThemeFontPack">Conjunto tipográfico</label>
-                  <select class="select" id="libraryThemeFontPack">
-                    <option value="default">Padrão AnarBib</option>
-                    <option value="base_da_rede">Base da rede</option>
-                    <option value="biblioteca_acolhedora">Biblioteca acolhedora</option>
-                    <option value="moderna_e_clara">Moderna e clara</option>
-                    <option value="identidade_local">Identidade local</option>
-                    <option value="editorial_serio">Editorial sério</option>
-                    <option value="serif_moderna">Serif moderna</option>
-                    <option value="amigavel_contemporanea">Amigável contemporânea</option>
-                    <option value="assinatura_leve">Assinatura leve</option>
-                    <option value="system">Sistema</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="libraryThemePreviewNote">Pré-visualização</label>
-                  <input class="input" id="libraryThemePreviewNote" type="text" value="Tema padrão AnarBib." readonly>
-                </div>
-              </div>
-              <div class="actions">
-                <button class="btn" id="btnSaveLibraryTheme" type="button">Salvar tema</button>
-                <button class="btn" id="btnResetLibraryTheme" type="button">Restaurar tema padrão</button>
-              </div>
-              <div class="status" id="libraryThemeMsg"></div>
             </div>
           </div>
         </section>
@@ -1476,11 +1303,11 @@
   </div>
 
   <script type="module">
-    import { supabase } from "./js/blmf-supabase.js";
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
     const FALLBACK_CONFIG = {
-      SUPABASE_URL: "https://asptfmokzykwzlshsncw.supabase.co",
-      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzcHRmbW9renlrd3psc2hzbmN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MzcxNzcsImV4cCI6MjA4ODExMzE3N30.JkMLHPCV2AH5ELZV_1RfcoW250QEofLGvnDKSDpkcn0.",
+      SUPABASE_URL: "https://uflwmikiyjfnikiphtcp.supabase.co",
+      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmbHdtaWtpeWpmbmlraXBodGNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MzIyNDUsImV4cCI6MjA4OTQwODI0NX0.kCs7nPg08ofjb9CWwRH9xVN6BjanrAC5pj418line1o",
       ROUTES: {
         blog: "https://cclamazonia.noblogs.org/",
         catalogo: "https://cclamazonia-cmd.github.io/anarbib-staging/index.html",
@@ -1544,11 +1371,10 @@
 
     const SUPABASE_URL = CONFIG.SUPABASE_URL;
     const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
-    const AUTH_STORAGE_KEY = 'sb-asptfmokzykwzlshsncw-auth-token';
-
-    window.ANARBIB_SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
-    window.__ANARBIB_CONFIG = { ...(window.__ANARBIB_CONFIG || {}), SUPABASE_ANON_KEY };
-    document.documentElement.dataset.supabaseAnonKey = SUPABASE_ANON_KEY;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { storage: window.localStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    });
+    const AUTH_STORAGE_KEY = 'sb-uflwmikiyjfnikiphtcp-auth-token';
 
     function normalizeStoredSession(payload){
       if (payload?.access_token && payload?.refresh_token) {
@@ -1592,6 +1418,7 @@
     const statusTimers = new Map();
     let session = null;
     let isLibrarian = false;
+    let currentAccessRow = null;
     let activeReservations = [];
     let activeLoans = [];
     let activeBatches = [];
@@ -1602,7 +1429,6 @@
     let refreshTimer = null;
     let refreshSerial = 0;
     let libraryServiceState = null;
-    let libraryThemeState = null;
     let reservationFollowUpFilter = 'all';
     let manualInternalTasks = [];
     const INTERNAL_TASKS_TABLE = 'painel_internal_tasks';
@@ -1802,27 +1628,58 @@
       if ($('internalServiceMessage')) $('internalServiceMessage').value = state?.internal_message || '';
     }
 
+    function getCurrentAccessField(candidates, fallback = null){
+      if (!currentAccessRow) return fallback;
+      const key = firstExistingKey(currentAccessRow, candidates);
+      return key ? currentAccessRow[key] : fallback;
+    }
+
+    function getCurrentLibraryId(){
+      return getCurrentAccessField(['library_id', 'libraryId'], null);
+    }
+
+    function getCurrentLibrarySlug(){
+      return String(getCurrentAccessField(['library_slug', 'librarySlug', 'slug'], '') || '').trim().toLowerCase();
+    }
+
+    function getCurrentLibraryName(){
+      const value = getCurrentAccessField(['library_name', 'library_display_name', 'display_name', 'name'], '');
+      return String(value || '').trim();
+    }
+
+    function baseLibraryServiceState(){
+      return {
+        library_id: getCurrentLibraryId(),
+        service_mode: 'em_organizacao',
+        allow_reservations: false,
+        public_message: '',
+        internal_message: ''
+      };
+    }
+
     async function loadLibraryServiceState({silent=false} = {}){
+      const libraryId = getCurrentLibraryId();
+      if (!libraryId) {
+        libraryServiceState = null;
+        renderLibraryServiceState(baseLibraryServiceState());
+        setChip('chipServiceMode', 'Modo: erro');
+        setChip('chipReservationsState', 'Reservas públicas: erro');
+        if (!silent) setStatus('serviceStateMsg', 'Não consegui identificar a biblioteca ativa.', 'bad', false);
+        return;
+      }
       try {
-        const { data, error } = await supabase.rpc('get_library_service_state');
+        const { data, error } = await supabase
+          .from('library_service_state')
+          .select('*')
+          .eq('library_id', libraryId)
+          .maybeSingle();
         if (error) throw error;
-        const row = Array.isArray(data) ? data[0] : data;
-        libraryServiceState = row || null;
-        renderLibraryServiceState(libraryServiceState || {
-          service_mode: 'em_organizacao',
-          allow_reservations: false,
-          public_message: '',
-          internal_message: ''
-        });
+        libraryServiceState = data || null;
+        renderLibraryServiceState(libraryServiceState || baseLibraryServiceState());
         if (!silent) clearStatus('serviceStateMsg');
       } catch (e) {
         libraryServiceState = null;
-        renderLibraryServiceState({
-          service_mode: 'em_organizacao',
-          allow_reservations: false,
-          public_message: '',
-          internal_message: ''
-        });
+        renderLibraryServiceState(baseLibraryServiceState());
         setChip('chipServiceMode', 'Modo: erro');
         setChip('chipReservationsState', 'Reservas públicas: erro');
         if (!silent) setStatus('serviceStateMsg', 'Não consegui carregar o modo de funcionamento: ' + (e.message || String(e)), 'bad', false);
@@ -1833,17 +1690,26 @@
       clearStatus('serviceStateMsg');
       const btn = $('btnSaveServiceState');
       btn.disabled = true;
+      const libraryId = getCurrentLibraryId();
+      if (!libraryId) {
+        btn.disabled = false;
+        return setStatus('serviceStateMsg', 'Não consegui identificar a biblioteca ativa.', 'bad', false);
+      }
       try {
         const payload = {
-          p_service_mode: $('serviceModeSelect').value,
-          p_allow_reservations: !!$('allowReservationsToggle').checked,
-          p_public_message: $('publicServiceMessage').value.trim(),
-          p_internal_message: $('internalServiceMessage').value.trim()
+          library_id: libraryId,
+          service_mode: $('serviceModeSelect').value,
+          allow_reservations: !!$('allowReservationsToggle').checked,
+          public_message: $('publicServiceMessage').value.trim(),
+          internal_message: $('internalServiceMessage').value.trim()
         };
-        const { data, error } = await supabase.rpc('set_library_service_state', payload);
+        const { data, error } = await supabase
+          .from('library_service_state')
+          .upsert(payload, { onConflict: 'library_id' })
+          .select('*')
+          .maybeSingle();
         if (error) throw error;
-        const row = Array.isArray(data) ? data[0] : data;
-        libraryServiceState = row || null;
+        libraryServiceState = data || payload;
         renderLibraryServiceState(libraryServiceState || payload);
         setStatus('serviceStateMsg', 'Modo de funcionamento atualizado.', 'ok');
       } catch (e) {
@@ -1855,271 +1721,6 @@
 
     function setupServiceStateActions(){
       $('btnSaveServiceState')?.addEventListener('click', saveLibraryServiceState);
-    }
-
-    const LIBRARY_THEME_DEFAULTS = {
-      background_url: '',
-      palette_preset: 'default',
-      font_pack: 'default'
-    };
-
-    function currentLibraryThemeSlug(){
-      const ctx = window.AnarBibLibraryContext?.get?.() || {};
-      return String(
-        $('librarySlug')?.value ||
-        ctx.librarySlug ||
-        document.documentElement.dataset.librarySlug ||
-        document.documentElement.dataset.themeSlug ||
-        ''
-      ).trim().toLowerCase();
-    }
-
-    function ensureThemeConfigMeta(){
-      let meta = document.querySelector('meta[name="anarbib-supabase-anon-key"]');
-      if (!meta) {
-        meta = document.createElement('meta');
-        meta.name = 'anarbib-supabase-anon-key';
-        document.head.appendChild(meta);
-      }
-      meta.content = SUPABASE_ANON_KEY;
-    }
-
-    function ensureInlineThemeConfigNode(){
-      let node = document.getElementById('anarbib-library-theme-config');
-      if (!node) {
-        node = document.createElement('script');
-        node.id = 'anarbib-library-theme-config';
-        node.type = 'application/json';
-        document.body.appendChild(node);
-      }
-      return node;
-    }
-
-    function paletteLabel(value){
-      return $('libraryThemePalette')?.querySelector(`option[value="${String(value || '').replace(/"/g, '\"')}"]`)?.textContent || 'Padrão AnarBib';
-    }
-
-    function fontPackLabel(value){
-      return $('libraryThemeFontPack')?.querySelector(`option[value="${String(value || '').replace(/"/g, '\"')}"]`)?.textContent || 'Padrão AnarBib';
-    }
-
-    function normalizeLibraryThemeState(raw){
-      const row = Array.isArray(raw) ? raw[0] : raw;
-      const source = row?.config || row?.theme_config || row?.theme || row || {};
-      return {
-        library_slug: String(row?.library_slug || source?.library_slug || currentLibraryThemeSlug() || '').trim().toLowerCase(),
-        background_url: String(source?.background_url || source?.backgroundUrl || source?.background || '').trim(),
-        palette_preset: String(source?.palette_preset || source?.palettePreset || source?.palette || 'default').trim() || 'default',
-        font_pack: String(source?.font_pack || source?.fontPack || source?.font_preset || source?.fontPreset || 'default').trim() || 'default'
-      };
-    }
-
-    function buildLibraryThemePayload(overrides = {}){
-      const next = {
-        ...LIBRARY_THEME_DEFAULTS,
-        ...(libraryThemeState || {}),
-        ...overrides
-      };
-      return {
-        library_slug: String(next.library_slug || currentLibraryThemeSlug() || '').trim().toLowerCase(),
-        background_url: String(next.background_url || '').trim(),
-        palette_preset: String(next.palette_preset || 'default').trim() || 'default',
-        font_pack: String(next.font_pack || 'default').trim() || 'default'
-      };
-    }
-
-    function renderLibraryThemePreview(){
-      const payload = buildLibraryThemePayload({
-        background_url: $('libraryThemeBackground')?.value || '',
-        palette_preset: $('libraryThemePalette')?.value || 'default',
-        font_pack: $('libraryThemeFontPack')?.value || 'default'
-      });
-      const fundo = payload.background_url ? 'fundo personalizado' : 'fundo padrão';
-      if ($('libraryThemePreviewNote')) {
-        $('libraryThemePreviewNote').value = `${paletteLabel(payload.palette_preset)} · ${fontPackLabel(payload.font_pack)} · ${fundo}`;
-      }
-    }
-
-    function renderLibraryThemeState(raw){
-      const state = normalizeLibraryThemeState(raw || LIBRARY_THEME_DEFAULTS);
-      libraryThemeState = { ...LIBRARY_THEME_DEFAULTS, ...state };
-      if ($('libraryThemeBackground')) $('libraryThemeBackground').value = libraryThemeState.background_url || '';
-      if ($('libraryThemePalette')) $('libraryThemePalette').value = libraryThemeState.palette_preset || 'default';
-      if ($('libraryThemeFontPack')) $('libraryThemeFontPack').value = libraryThemeState.font_pack || 'default';
-      renderLibraryThemePreview();
-    }
-
-    function applyLibraryThemeInline(raw){
-      ensureThemeConfigMeta();
-      const payload = buildLibraryThemePayload(raw || {});
-      const node = ensureInlineThemeConfigNode();
-      node.textContent = JSON.stringify({
-        library_slug: payload.library_slug,
-        background_url: payload.background_url,
-        palette_preset: payload.palette_preset,
-        font_pack: payload.font_pack
-      });
-      return payload;
-    }
-
-    async function reloadActiveTheme(raw){
-      const payload = applyLibraryThemeInline(raw);
-      if (window.AnarBibThemeLoader?.load) {
-        try {
-          await window.AnarBibThemeLoader.load();
-        } catch (error) {
-          console.warn('[AnarBib] Theme reload failed.', error);
-        }
-      }
-      return payload;
-    }
-
-    async function tryLoadLibraryThemeState(){
-      const slug = currentLibraryThemeSlug();
-      const rpcAttempts = [
-        () => supabase.rpc('get_library_theme_config'),
-        () => supabase.rpc('get_library_theme_config', { p_library_slug: slug }),
-        () => supabase.rpc('get_library_theme_config', { library_slug: slug }),
-        () => supabase.rpc('get_library_theme_config', { p_slug: slug }),
-        () => supabase.rpc('get_library_theme_config', { slug })
-      ];
-
-      let lastError = null;
-      for (const run of rpcAttempts) {
-        try {
-          const res = await run();
-          if (!res?.error) return res?.data || null;
-          lastError = res.error;
-        } catch (error) {
-          lastError = error;
-        }
-      }
-
-      const readAttempts = [
-        () => slug ? supabase.schema('api').from('library_theme_public').select('*').eq('library_slug', slug).maybeSingle() : Promise.resolve({ data: null, error: null }),
-        () => slug ? supabase.schema('api').from('library_theme_public').select('*').eq('slug', slug).maybeSingle() : Promise.resolve({ data: null, error: null }),
-        () => slug ? supabase.from('library_theme_configs').select('*').eq('library_slug', slug).maybeSingle() : Promise.resolve({ data: null, error: null })
-      ];
-
-      for (const run of readAttempts) {
-        try {
-          const res = await run();
-          if (!res?.error) return res?.data || null;
-          lastError = res.error;
-        } catch (error) {
-          lastError = error;
-        }
-      }
-
-      if (lastError) throw lastError;
-      return null;
-    }
-
-    async function loadLibraryThemeState({silent=false} = {}){
-      try {
-        const data = await tryLoadLibraryThemeState();
-        renderLibraryThemeState(data || LIBRARY_THEME_DEFAULTS);
-        await reloadActiveTheme(libraryThemeState);
-        if (!silent) clearStatus('libraryThemeMsg');
-      } catch (e) {
-        renderLibraryThemeState(LIBRARY_THEME_DEFAULTS);
-        await reloadActiveTheme(libraryThemeState);
-        if (!silent) setStatus('libraryThemeMsg', 'Não consegui carregar o tema visual: ' + (e.message || String(e)), 'bad', false);
-      }
-    }
-
-    async function trySaveLibraryThemeState(payload){
-      const slug = String(payload?.library_slug || currentLibraryThemeSlug() || '').trim().toLowerCase();
-      const bg = payload?.background_url ? String(payload.background_url).trim() : null;
-      const palette = String(payload?.palette_preset || 'default').trim() || 'default';
-      const font = String(payload?.font_pack || 'default').trim() || 'default';
-      const config = {
-        background_url: bg || '',
-        palette_preset: palette,
-        font_pack: font
-      };
-
-      const rpcAttempts = [
-        { p_background_url: bg, p_palette_preset: palette, p_font_pack: font },
-        { p_library_slug: slug, p_background_url: bg, p_palette_preset: palette, p_font_pack: font },
-        { background_url: bg, palette_preset: palette, font_pack: font },
-        { library_slug: slug, background_url: bg, palette_preset: palette, font_pack: font },
-        { p_library_slug: slug, p_background: bg, p_palette: palette, p_font_pack: font },
-        { p_library_slug: slug, p_theme_config: config },
-        { library_slug: slug, theme_config: config }
-      ];
-
-      let lastError = null;
-      for (const args of rpcAttempts) {
-        try {
-          const res = await supabase.rpc('set_library_theme_config', args);
-          if (!res?.error) return res?.data || config;
-          lastError = res.error;
-        } catch (error) {
-          lastError = error;
-        }
-      }
-
-      const upsertAttempts = [
-        () => slug ? supabase.from('library_theme_configs').upsert({ library_slug: slug, background_url: bg, palette_preset: palette, font_pack: font }, { onConflict: 'library_slug' }).select().maybeSingle() : Promise.resolve({ data: null, error: new Error('Slug da biblioteca indisponível.') }),
-        () => slug ? supabase.from('library_theme_configs').upsert({ slug, background_url: bg, palette_preset: palette, font_pack: font }, { onConflict: 'slug' }).select().maybeSingle() : Promise.resolve({ data: null, error: new Error('Slug da biblioteca indisponível.') })
-      ];
-
-      for (const run of upsertAttempts) {
-        try {
-          const res = await run();
-          if (!res?.error) return res?.data || config;
-          lastError = res.error;
-        } catch (error) {
-          lastError = error;
-        }
-      }
-
-      if (lastError) throw lastError;
-      return config;
-    }
-
-    async function saveLibraryThemeState(overrides = {}, successMessage = 'Tema visual atualizado.'){
-      clearStatus('libraryThemeMsg');
-      const saveBtn = $('btnSaveLibraryTheme');
-      const resetBtn = $('btnResetLibraryTheme');
-      if (saveBtn) saveBtn.disabled = true;
-      if (resetBtn) resetBtn.disabled = true;
-      try {
-        const payload = buildLibraryThemePayload({
-          background_url: $('libraryThemeBackground')?.value || '',
-          palette_preset: $('libraryThemePalette')?.value || 'default',
-          font_pack: $('libraryThemeFontPack')?.value || 'default',
-          ...overrides
-        });
-        const data = await trySaveLibraryThemeState(payload);
-        renderLibraryThemeState(data || payload);
-        await reloadActiveTheme(libraryThemeState);
-        setStatus('libraryThemeMsg', successMessage, 'ok');
-      } catch (e) {
-        setStatus('libraryThemeMsg', 'Não consegui salvar o tema visual: ' + (e.message || String(e)), 'bad', false);
-      } finally {
-        if (saveBtn) saveBtn.disabled = false;
-        if (resetBtn) resetBtn.disabled = false;
-      }
-    }
-
-    async function resetLibraryThemeState(){
-      await saveLibraryThemeState({
-        background_url: '',
-        palette_preset: 'default',
-        font_pack: 'default'
-      }, 'Tema padrão restaurado.');
-    }
-
-    function setupLibraryThemeActions(){
-      $('btnSaveLibraryTheme')?.addEventListener('click', () => saveLibraryThemeState());
-      $('btnResetLibraryTheme')?.addEventListener('click', resetLibraryThemeState);
-      $('libraryThemeBackground')?.addEventListener('input', renderLibraryThemePreview);
-      $('libraryThemePalette')?.addEventListener('change', renderLibraryThemePreview);
-      $('libraryThemeFontPack')?.addEventListener('change', renderLibraryThemePreview);
-      ensureThemeConfigMeta();
-      renderLibraryThemePreview();
     }
 
 
@@ -2764,42 +2365,52 @@
     const activateProfileTab = setupProfileTabs();
     setupMainTabs();
     setupServiceStateActions();
-    setupLibraryThemeActions();
     bindResScheduleAtParts();
     setupReturnScheduleEditor();
 
     async function requireSession(){
       for (let i = 0; i < 12; i += 1) {
-        const { data: { session: sess } } = await supabase.auth.getSession();
-        if (sess?.user?.id) return sess;
+        const userRead = await supabase.auth.getUser();
+        if (!userRead?.error && userRead?.data?.user?.id) {
+          const { data: { session: sess } } = await supabase.auth.getSession();
+          if (sess?.user?.id) return sess;
+        }
         const hydrated = await hydrateSessionFromBrowserStorage();
-        if (hydrated?.user?.id) return hydrated;
+        if (hydrated?.user?.id) {
+          const userAfterHydration = await supabase.auth.getUser();
+          if (!userAfterHydration?.error && userAfterHydration?.data?.user?.id) {
+            const { data: { session: sess } } = await supabase.auth.getSession();
+            if (sess?.user?.id) return sess;
+          }
+          return hydrated;
+        }
         await new Promise((resolve) => setTimeout(resolve, 120));
       }
       location.assign(ROUTES.CADASTRO);
       return null;
     }
-    async function fetchMyAccessRow(userId){
+    async function fetchMyAccessRows(){
       let lastError = null;
-      const attempts = [
-        () => supabase.schema('api').from('my_access').select('id, email, is_librarian, is_restricted').maybeSingle(),
-        () => supabase.schema('api').from('profiles').select('id, email, is_librarian, is_restricted').eq('id', userId).maybeSingle(),
-        () => supabase.from('profiles').select('id, email, is_librarian, is_restricted').eq('id', userId).maybeSingle()
-      ];
-      for (const run of attempts) {
-        try {
-          const res = await run();
-          if (!res?.error) return { data: res?.data || null, error: null };
-          lastError = res.error;
-        } catch (error) {
-          lastError = error;
-        }
+      try {
+        const res = await supabase.schema('api').from('my_access').select('*');
+        if (!res?.error) return { data: Array.isArray(res?.data) ? res.data : [], error: null };
+        lastError = res.error;
+      } catch (error) {
+        lastError = error;
       }
-      return { data: null, error: lastError };
+      return { data: [], error: lastError };
     }
+
+    function pickCurrentLibrarianAccess(rows){
+      const accessRows = Array.isArray(rows) ? rows : [];
+      const activeRows = accessRows.filter((row) => String(row?.status || 'active').toLowerCase() === 'active');
+      const librarianRows = activeRows.filter((row) => row?.is_librarian === true || String(row?.role || '').toLowerCase() === 'librarian');
+      return librarianRows.find((row) => row?.is_primary === true) || librarianRows[0] || null;
+    }
+
     async function requireBibliotecaOrRedirect(){
-      const accessRead = await fetchMyAccessRow(session.user.id);
-      const accessRow = accessRead?.data || null;
+      const accessRead = await fetchMyAccessRows();
+      const accessRow = pickCurrentLibrarianAccess(accessRead?.data || []);
       const lastErrorMessage = accessRead?.error?.message || '';
 
       if (!accessRow) {
@@ -2807,7 +2418,9 @@
         return false;
       }
 
-      if (accessRow.is_librarian !== true){
+      currentAccessRow = accessRow;
+
+      if (accessRow?.is_librarian !== true && String(accessRow?.role || '').toLowerCase() !== 'librarian'){
         location.assign(ROUTES.CONTA);
         return false;
       }
@@ -2815,10 +2428,15 @@
       return true;
     }
     async function fillHeader(){
+      const libraryName = getCurrentLibraryName();
+      const librarySlug = getCurrentLibrarySlug();
       setChip('chipEmail', 'E-mail: ' + (session?.user?.email || '—'));
       setChip('chipFuncao', 'Função: bibliotecário(a/e) e leitor(a/e)');
-      $('helloLine').textContent = '';
+      $('helloLine').textContent = libraryName ? `Biblioteca ativa: ${libraryName}` : '';
       $('btnModoLeitor').classList.toggle('hidden', !isLibrarian);
+      if ($('libraryFullName') && libraryName) $('libraryFullName').value = libraryName;
+      if ($('libraryShortName') && libraryName && !$('libraryShortName').value) $('libraryShortName').value = libraryName;
+      if ($('librarySlug') && librarySlug) $('librarySlug').value = librarySlug;
     }
 
     async function loadProfilesByIds(userIds){
@@ -4974,10 +4592,10 @@
 
     function setupRefreshHooks(){
       if (refreshTimer) clearInterval(refreshTimer);
-      refreshTimer = setInterval(() => { refreshCollections({silent:true}); loadLibraryServiceState({silent:true}); loadLibraryThemeState({silent:true}); }, 30000);
-      document.addEventListener('visibilitychange', () => { if (!document.hidden) { refreshCollections({silent:true}); loadLibraryServiceState({silent:true}); loadLibraryThemeState({silent:true}); } });
-      window.addEventListener('focus', () => { refreshCollections({silent:true}); loadLibraryServiceState({silent:true}); loadLibraryThemeState({silent:true}); });
-      window.addEventListener('pageshow', () => { refreshCollections({silent:true}); loadLibraryServiceState({silent:true}); loadLibraryThemeState({silent:true}); });
+      refreshTimer = setInterval(() => { refreshCollections({silent:true}); loadLibraryServiceState({silent:true}); }, 30000);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) { refreshCollections({silent:true}); loadLibraryServiceState({silent:true}); } });
+      window.addEventListener('focus', () => { refreshCollections({silent:true}); loadLibraryServiceState({silent:true}); });
+      window.addEventListener('pageshow', () => { refreshCollections({silent:true}); loadLibraryServiceState({silent:true}); });
     }
 
     session = await requireSession();
@@ -4986,7 +4604,6 @@
       if (isLibrarian){
         await fillHeader();
         await loadLibraryServiceState();
-        await loadLibraryThemeState();
         await loadInternalTaskLibrarians();
         await loadInternalTasks({ silent:true });
         await refreshCollections();
