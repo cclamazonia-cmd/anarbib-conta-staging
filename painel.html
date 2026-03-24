@@ -1473,8 +1473,8 @@
     import { supabase } from "./js/blmf-supabase.js";
 
     const FALLBACK_CONFIG = {
-      SUPABASE_URL: "https://asptfmokzykwzlshsncw.supabase.co",
-      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzcHRmbW9renlrd3psc2hzbmN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MzcxNzcsImV4cCI6MjA4ODExMzE3N30.JkMLHPCV2AH5ELZV_1RfcoW250QEofLGvnDKSDpkcn0.",
+      SUPABASE_URL: "https://uflwmikiyjfnikiphtcp.supabase.co",
+      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmbHdtaWtpeWpmbmlraXBodGNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MzIyNDUsImV4cCI6MjA4OTQwODI0NX0.kCs7nPg08ofjb9CWwRH9xVN6BjanrAC5pj418line1o",
       ROUTES: {
         blog: "https://cclamazonia.noblogs.org/",
         catalogo: "https://cclamazonia-cmd.github.io/anarbib-staging/index.html",
@@ -1538,7 +1538,8 @@
 
     const SUPABASE_URL = CONFIG.SUPABASE_URL;
     const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
-    const AUTH_STORAGE_KEY = 'sb-asptfmokzykwzlshsncw-auth-token';
+    const AUTH_STORAGE_KEY = 'sb-uflwmikiyjfnikiphtcp-auth-token';
+    const LEGACY_AUTH_STORAGE_KEYS = ['sb-asptfmokzykwzlshsncw-auth-token'];
 
     function normalizeStoredSession(payload){
       if (payload?.access_token && payload?.refresh_token) {
@@ -1552,7 +1553,7 @@
 
     function readStoredSessionCandidate(){
       const stores = [window.localStorage, window.sessionStorage];
-      const keys = [AUTH_STORAGE_KEY];
+      const keys = [AUTH_STORAGE_KEY, ...LEGACY_AUTH_STORAGE_KEYS];
       for (const store of stores){
         for (const key of keys){
           try {
@@ -1784,15 +1785,21 @@
       return v || null;
     }
 
+    function hasBooleanField(row, key){
+      return !!row && typeof row === 'object' && (row[key] === true || row[key] === false);
+    }
+
     function getAllowsNewReservations(row){
       if (!row || typeof row !== 'object') return false;
-      if (row.allows_new_reservations === true || row.allows_new_reservations === false) {
-        return row.allows_new_reservations === true;
-      }
-      if (row.allow_reservations === true || row.allow_reservations === false) {
-        return row.allow_reservations === true;
-      }
+      if (hasBooleanField(row, 'allows_new_reservations')) return row.allows_new_reservations === true;
+      if (hasBooleanField(row, 'allow_reservations')) return row.allow_reservations === true;
       return false;
+    }
+
+    function getAllowsNewLoans(row){
+      if (!row || typeof row !== 'object') return true;
+      if (hasBooleanField(row, 'allows_new_loans')) return row.allows_new_loans === true;
+      return true;
     }
 
     function normalizeLibraryServiceState(row, fallbackLibraryId=null){
@@ -1801,8 +1808,10 @@
           library_id: normalizeLibraryId(fallbackLibraryId),
           service_mode: 'em_organizacao',
           allows_new_reservations: false,
+          allows_new_loans: true,
           public_message: '',
-          internal_message: ''
+          internal_message: '',
+          has_internal_message_column: false
         };
       }
       return {
@@ -1810,8 +1819,10 @@
         library_id: normalizeLibraryId(row.library_id || fallbackLibraryId),
         service_mode: String(row.service_mode || 'em_organizacao').trim() || 'em_organizacao',
         allows_new_reservations: getAllowsNewReservations(row),
+        allows_new_loans: getAllowsNewLoans(row),
         public_message: String(row.public_message || '').trim(),
         internal_message: String(row.internal_message || '').trim(),
+        has_internal_message_column: Object.prototype.hasOwnProperty.call(row, 'internal_message')
       };
     }
 
@@ -1825,7 +1836,16 @@
       if ($('serviceModeSelect')) $('serviceModeSelect').value = normalizedState?.service_mode || 'em_organizacao';
       if ($('allowReservationsToggle')) $('allowReservationsToggle').checked = !!normalizedState?.allows_new_reservations;
       if ($('publicServiceMessage')) $('publicServiceMessage').value = getEditablePublicServiceMessage(normalizedState);
-      if ($('internalServiceMessage')) $('internalServiceMessage').value = normalizedState?.internal_message || '';
+      if ($('internalServiceMessage')) {
+        $('internalServiceMessage').value = normalizedState?.has_internal_message_column ? (normalizedState?.internal_message || '') : '';
+        $('internalServiceMessage').disabled = !normalizedState?.has_internal_message_column;
+        $('internalServiceMessage').placeholder = normalizedState?.has_internal_message_column
+          ? 'Observação interna para a equipe da biblioteca.'
+          : 'Campo indisponível nesta versão do banco staging.';
+        $('internalServiceMessage').title = normalizedState?.has_internal_message_column
+          ? ''
+          : 'A coluna internal_message não existe neste projeto de staging.';
+      }
     }
 
     async function resolveCurrentLibraryIdentity(){
@@ -1877,7 +1897,7 @@
 
         const { data, error } = await supabase
           .from('library_service_state')
-          .select('*')
+          .select('library_id,service_mode,public_message,allows_new_reservations,allows_new_loans,updated_at')
           .eq('library_id', libraryId)
           .maybeSingle();
         if (error) throw error;
@@ -1890,8 +1910,8 @@
         renderLibraryServiceState({
           service_mode: 'em_organizacao',
           allows_new_reservations: false,
-          public_message: '',
-          internal_message: ''
+          allows_new_loans: true,
+          public_message: ''
         });
         setChip('chipServiceMode', 'Modo: erro');
         setChip('chipReservationsState', 'Reservas públicas: erro');
@@ -1912,17 +1932,17 @@
           library_id: libraryId,
           service_mode: $('serviceModeSelect').value,
           allows_new_reservations: !!$('allowReservationsToggle').checked,
-          public_message: $('publicServiceMessage').value.trim(),
-          internal_message: $('internalServiceMessage').value.trim()
+          public_message: $('publicServiceMessage').value.trim()
         };
+
         const { data, error } = await supabase
           .from('library_service_state')
           .upsert(payload, { onConflict: 'library_id' })
-          .select('*')
+          .select('library_id,service_mode,public_message,allows_new_reservations,allows_new_loans,updated_at')
           .maybeSingle();
         if (error) throw error;
 
-        libraryServiceState = normalizeLibraryServiceState(data || payload, libraryId);
+        libraryServiceState = normalizeLibraryServiceState(data || { ...payload, allows_new_loans: libraryServiceState?.allows_new_loans }, libraryId);
         renderLibraryServiceState(libraryServiceState);
         setStatus('serviceStateMsg', 'Modo de funcionamento atualizado.', 'ok');
       } catch (e) {
