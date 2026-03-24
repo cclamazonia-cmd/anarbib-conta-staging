@@ -1628,14 +1628,10 @@
       if ($('internalServiceMessage')) $('internalServiceMessage').value = state?.internal_message || '';
     }
 
-    function getActiveLibraryId(){
-      return String(currentAccessRow?.library_id || '').trim() || null;
-    }
-
     async function loadLibraryServiceState({silent=false} = {}){
       try {
-        const libraryId = getActiveLibraryId();
-        if (!libraryId) throw new Error('Biblioteca ativa não identificada.');
+        const libraryId = await resolveActiveLibraryId();
+        if (!libraryId) throw new Error('Biblioteca ativa não identificada para carregar o funcionamento.');
         const { data, error } = await supabase
           .from('library_service_state')
           .select('*')
@@ -1670,7 +1666,7 @@
       const btn = $('btnSaveServiceState');
       btn.disabled = true;
       try {
-        const libraryId = getActiveLibraryId();
+        const libraryId = await resolveActiveLibraryId();
         if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar o funcionamento.');
         const payload = {
           library_id: libraryId,
@@ -1682,7 +1678,7 @@
         const { data, error } = await supabase
           .from('library_service_state')
           .upsert(payload, { onConflict: 'library_id' })
-          .select('*')
+          .select()
           .maybeSingle();
         if (error) throw error;
         const row = data || null;
@@ -2346,7 +2342,14 @@
 
     async function requireSession(){
       for (let i = 0; i < 12; i += 1) {
-        const { data: { session: sess } } = await supabase.auth.getSession();
+        try {
+          const { data: userData } = await supabase.auth.getUser();
+          if (userData?.user?.id) {
+            const { data: { session: sess } } = await supabase.auth.getSession();
+            if (sess?.user?.id) return sess;
+          }
+        } catch (_e) {}
+        const { data: { session: sess } = { session: null } } = await supabase.auth.getSession();
         if (sess?.user?.id) return sess;
         const hydrated = await hydrateSessionFromBrowserStorage();
         if (hydrated?.user?.id) return hydrated;
@@ -2355,102 +2358,130 @@
       location.assign(ROUTES.CADASTRO);
       return null;
     }
+    async function fetchPrimaryMembership(userId){
+      const { data, error } = await supabase
+        .from('user_library_memberships')
+        .select('user_id, library_id, role, status, is_primary')
+        .eq('user_id', userId)
+        .eq('role', 'librarian')
+        .eq('status', 'active')
+        .order('is_primary', { ascending:false })
+        .limit(1);
+      if (error) throw error;
+      return Array.isArray(data) && data.length ? data[0] : null;
+    }
+
+    async function fetchLibraryById(libraryId){
+      if (!libraryId) return null;
+      const { data, error } = await supabase
+        .from('libraries')
+        .select('id, name, slug')
+        .eq('id', libraryId)
+        .maybeSingle();
+      if (error) throw error;
+      return data || null;
+    }
+
     async function fetchMyAccessRow(userId){
       let lastError = null;
-      let accessRow = null;
-      let profileRow = null;
+      let profile = null;
 
-      const readAttempts = [
-        () => supabase.from('my_access').select('*').maybeSingle(),
-        () => supabase.from('profiles').select('id, email, is_librarian, is_restricted, public_id, first_name, last_name').eq('id', userId).maybeSingle()
-      ];
-
-      for (const run of readAttempts) {
-        try {
-          const res = await run();
-          if (!res?.error && res?.data) {
-            if (!accessRow) accessRow = res.data;
-            if (!profileRow && String(res.data?.id || '') === String(userId || '')) profileRow = res.data;
-          } else if (res?.error) {
-            lastError = res.error;
-          }
-        } catch (error) {
-          lastError = error;
-        }
-      }
-
-      let membershipRow = null;
-      let libraryRow = null;
       try {
         const { data, error } = await supabase
-          .from('user_library_memberships')
-          .select('user_id, library_id, role, status, is_primary')
-          .eq('user_id', userId)
-          .eq('status', 'active')
-          .order('is_primary', { ascending:false });
+          .from('my_access')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+        if (!error && data) {
+          currentAccessRow = data;
+          return { data, error: null };
+        }
+        if (error) lastError = error;
+      } catch (error) {
+        lastError = error;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, email, public_id, nome, is_librarian, is_restricted')
+          .eq('id', userId)
+          .maybeSingle();
         if (error) {
           lastError = error;
         } else {
-          const rows = Array.isArray(data) ? data : [];
-          membershipRow = rows.find((row) => String(row?.role || '').toLowerCase() === 'librarian') || rows[0] || null;
+          profile = data || null;
         }
       } catch (error) {
         lastError = error;
       }
 
-      const activeLibraryId = String(
-        membershipRow?.library_id ||
-        accessRow?.library_id ||
-        ''
-      ).trim();
-
-      if (activeLibraryId) {
-        try {
-          const { data, error } = await supabase
-            .from('libraries')
-            .select('id, name, slug')
-            .eq('id', activeLibraryId)
-            .maybeSingle();
-          if (error) {
-            lastError = error;
-          } else {
-            libraryRow = data || null;
-          }
-        } catch (error) {
-          lastError = error;
+      try {
+        const membership = await fetchPrimaryMembership(userId);
+        if (membership) {
+          const library = await fetchLibraryById(membership.library_id);
+          const row = {
+            id: userId,
+            email: profile?.email || session?.user?.email || '',
+            public_id: profile?.public_id || null,
+            nome: profile?.nome || null,
+            is_librarian: true,
+            is_restricted: profile?.is_restricted === true,
+            library_id: membership.library_id,
+            role: membership.role,
+            status: membership.status,
+            is_primary: membership.is_primary === true,
+            library_name: library?.name || '',
+            library_slug: library?.slug || ''
+          };
+          currentAccessRow = row;
+          return { data: row, error: null };
         }
+      } catch (error) {
+        lastError = error;
       }
 
-      const merged = {
-        ...(profileRow || {}),
-        ...(accessRow || {}),
-        ...(membershipRow || {}),
-      };
+      if (profile) {
+        const row = {
+          ...profile,
+          email: profile?.email || session?.user?.email || '',
+          library_id: null,
+          role: profile?.is_librarian ? 'librarian' : null,
+          status: null,
+          is_primary: false,
+          library_name: '',
+          library_slug: ''
+        };
+        currentAccessRow = row;
+        return { data: row, error: null };
+      }
 
-      if (libraryRow?.id) merged.library_id = libraryRow.id;
-      else if (membershipRow?.library_id) merged.library_id = membershipRow.library_id;
-      if (libraryRow?.name) merged.library_name = libraryRow.name;
-      if (libraryRow?.slug) merged.library_slug = libraryRow.slug;
-      if (membershipRow?.role && !merged.role) merged.role = membershipRow.role;
-      if (membershipRow?.status && !merged.status) merged.status = membershipRow.status;
-      if (membershipRow?.is_primary != null && merged.is_primary == null) merged.is_primary = membershipRow.is_primary;
-      if (membershipRow?.role === 'librarian') merged.is_librarian = true;
-
-      if (Object.keys(merged).length) return { data: merged, error: null };
+      currentAccessRow = null;
       return { data: null, error: lastError };
     }
+
+    function getActiveLibraryId(){
+      return String(currentAccessRow?.library_id || '').trim();
+    }
+
+    async function resolveActiveLibraryId(){
+      const current = getActiveLibraryId();
+      if (current) return current;
+      const accessRead = await fetchMyAccessRow(session?.user?.id);
+      return String(accessRead?.data?.library_id || '').trim();
+    }
+
     async function requireBibliotecaOrRedirect(){
       const accessRead = await fetchMyAccessRow(session.user.id);
       const accessRow = accessRead?.data || null;
       const lastErrorMessage = accessRead?.error?.message || '';
-      currentAccessRow = accessRow || null;
 
       if (!accessRow) {
         setStatus('statusLoans', 'Não consegui verificar o acesso da biblioteca' + (lastErrorMessage ? ': ' + lastErrorMessage : '.'), 'bad', false);
         return false;
       }
 
-      if (accessRow.is_librarian !== true && String(accessRow.role || '').toLowerCase() !== 'librarian'){
+      if (accessRow.is_librarian !== true){
         location.assign(ROUTES.CONTA);
         return false;
       }
@@ -2458,27 +2489,14 @@
       return true;
     }
     async function fillHeader(){
-      const access = currentAccessRow || {};
-      const accessEmail = String(access?.email || session?.user?.email || '').trim();
-      const accessPublicId = String(access?.public_id || '').trim();
-      const firstName = String(access?.first_name || '').trim();
-      const lastName = String(access?.last_name || '').trim();
-      const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
-      const libraryLabel = String(access?.library_name || access?.library_slug || '').trim();
-      const roleLabel = (access?.is_librarian === true || String(access?.role || '').toLowerCase() === 'librarian')
-        ? 'bibliotecário(a/e) e leitor(a/e)'
-        : '—';
-
-      setChip('chipEmail', 'E-mail: ' + (accessEmail || '—'));
-      setChip('chipFuncao', 'Função: ' + roleLabel);
-      if ($('chipPublicId')) setChip('chipPublicId', 'ID público: ' + (accessPublicId || '—'));
-      if ($('chipBiblioteca')) setChip('chipBiblioteca', 'Biblioteca: ' + (libraryLabel || '—'));
-      const helloParts = [];
-      if (fullName) helloParts.push(fullName);
-      if (accessPublicId) helloParts.push('ID ' + accessPublicId);
-      if (libraryLabel) helloParts.push(libraryLabel);
-      if (!helloParts.length && accessEmail) helloParts.push(accessEmail);
-      $('helloLine').textContent = helloParts.length ? ('Conectad@: ' + helloParts.join(' · ')) : '';
+      const email = String(currentAccessRow?.email || session?.user?.email || '—').trim() || '—';
+      const libraryName = String(currentAccessRow?.library_name || '').trim();
+      setChip('chipEmail', 'E-mail: ' + email);
+      setChip('chipFuncao', 'Função: bibliotecári@');
+      if ($('chipBiblioteca') && libraryName) {
+        setChip('chipBiblioteca', 'Biblioteca: ' + libraryName);
+      }
+      $('helloLine').textContent = '';
       $('btnModoLeitor').classList.toggle('hidden', !isLibrarian);
     }
 
