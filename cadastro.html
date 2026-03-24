@@ -202,8 +202,16 @@
     <!-- LOGIN -->
     <section id="loginBox">
       <form id="loginForm">
-        <label for="email">E-mail</label>
-        <input type="email" id="email" autocomplete="username" required />
+        <label for="email">E-mail ou ID público</label>
+        <input
+          type="text"
+          id="email"
+          autocomplete="username"
+          inputmode="email"
+          autocapitalize="off"
+          spellcheck="false"
+          required
+        />
 
         <label for="password">Senha</label>
         <input type="password" id="password" autocomplete="current-password" required />
