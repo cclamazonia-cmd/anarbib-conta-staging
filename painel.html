@@ -2288,9 +2288,13 @@
     setupReturnScheduleEditor();
 
     async function requireSession(){
-      const { data: { session: sess } } = await supabase.auth.getSession();
-      if (!sess){ location.assign(ROUTES.CADASTRO); return null; }
-      return sess;
+      for (let i = 0; i < 12; i += 1) {
+        const { data: { session: sess } } = await supabase.auth.getSession();
+        if (sess?.user?.id) return sess;
+        await new Promise((resolve) => setTimeout(resolve, 120));
+      }
+      location.assign(ROUTES.CADASTRO);
+      return null;
     }
     async function fetchMyAccessRow(userId){
       let lastError = null;
