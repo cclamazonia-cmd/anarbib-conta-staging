@@ -1779,52 +1779,64 @@
       return isCanonicalServiceDefaultMessage(t) ? '' : t;
     }
 
+    function normalizeLibraryId(value){
+      return String(value || '').trim();
+    }
+
+    async function resolveActiveLibraryContext(){
+      let libraryId = normalizeLibraryId(currentAccessRow?.library_id || currentIdentityRow?.library_id);
+      let libraryName = String(currentAccessRow?.library_name || currentIdentityRow?.library_name || '').trim();
+      let librarySlug = String(currentAccessRow?.library_slug || currentIdentityRow?.library_slug || '').trim();
+
+      if (!libraryId && session?.user?.id) {
+        const accessRead = await fetchMyAccessRows(session.user.id);
+        const accessRows = accessRead?.data || [];
+        if (!currentIdentityRow) {
+          currentIdentityRow = accessRows.find((row) => String(row?.id || row?.user_id || '') === String(session?.user?.id || '')) || accessRows[0] || null;
+        }
+        if (!currentAccessRow) {
+          currentAccessRow = pickCurrentLibrarianAccess(accessRows);
+        }
+        libraryId = normalizeLibraryId(currentAccessRow?.library_id || currentIdentityRow?.library_id);
+        libraryName = String(currentAccessRow?.library_name || currentIdentityRow?.library_name || '').trim();
+        librarySlug = String(currentAccessRow?.library_slug || currentIdentityRow?.library_slug || '').trim();
+      }
+
+      return { libraryId, libraryName, librarySlug };
+    }
+
     function renderLibraryServiceState(state){
       const modeText = translateServiceMode(state?.service_mode);
-      const allowsNewReservations = !!(state?.allows_new_reservations ?? state?.allow_reservations);
-      const reservationsText = allowsNewReservations ? 'Reservas públicas: abertas' : 'Reservas públicas: fechadas';
+      const allowsReservations = !!(state?.allows_new_reservations ?? state?.allow_reservations);
+      const reservationsText = allowsReservations ? 'Reservas públicas: abertas' : 'Reservas públicas: fechadas';
       setChip('chipServiceMode', `Modo: ${modeText}`);
       setChip('chipReservationsState', reservationsText);
 
       if ($('serviceModeSelect')) $('serviceModeSelect').value = state?.service_mode || 'em_organizacao';
-      if ($('allowReservationsToggle')) $('allowReservationsToggle').checked = allowsNewReservations;
+      if ($('allowReservationsToggle')) $('allowReservationsToggle').checked = allowsReservations;
       if ($('publicServiceMessage')) $('publicServiceMessage').value = getEditablePublicServiceMessage(state);
       if ($('internalServiceMessage')) $('internalServiceMessage').value = state?.internal_message || '';
     }
 
-    function getActiveLibraryId(){
-      const candidates = [
-        currentAccessRow?.library_id,
-        currentAccessRow?.default_library_id,
-        currentIdentityRow?.library_id,
-        currentIdentityRow?.default_library_id
-      ];
-      for (const raw of candidates){
-        const n = Number(raw);
-        if (Number.isFinite(n) && n > 0) return n;
-      }
-      return null;
-    }
-
     async function loadLibraryServiceState({silent=false} = {}){
       try {
-        const activeLibraryId = getActiveLibraryId();
-        if (!activeLibraryId) throw new Error('Biblioteca ativa não identificada para carregar o funcionamento.');
+        const { libraryId } = await resolveActiveLibraryContext();
+        if (!libraryId) throw new Error('Biblioteca ativa não identificada para carregar o funcionamento.');
         const { data, error } = await supabase
           .from('library_service_state')
-          .select('library_id,service_mode,allow_reservations,public_message,internal_message,updated_at')
-          .eq('library_id', activeLibraryId)
+          .select('library_id, service_mode, allows_new_reservations, public_message, internal_message')
+          .eq('library_id', libraryId)
           .maybeSingle();
         if (error) throw error;
-        const row = data || {
-          library_id: activeLibraryId,
+        const row = data || null;
+        libraryServiceState = row || null;
+        renderLibraryServiceState(libraryServiceState || {
+          library_id: libraryId,
           service_mode: 'em_organizacao',
-          allow_reservations: false,
+          allows_new_reservations: false,
           public_message: '',
           internal_message: ''
-        };
-        libraryServiceState = row;
-        renderLibraryServiceState(row);
+        });
         if (!silent) clearStatus('serviceStateMsg');
       } catch (e) {
         libraryServiceState = null;
@@ -1845,10 +1857,10 @@
       const btn = $('btnSaveServiceState');
       btn.disabled = true;
       try {
-        const activeLibraryId = getActiveLibraryId();
-        if (!activeLibraryId) throw new Error('Biblioteca ativa não identificada para salvar o funcionamento.');
+        const { libraryId } = await resolveActiveLibraryContext();
+        if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar o funcionamento.');
         const payload = {
-          library_id: activeLibraryId,
+          library_id: libraryId,
           service_mode: $('serviceModeSelect').value,
           allows_new_reservations: !!$('allowReservationsToggle').checked,
           public_message: $('publicServiceMessage').value.trim(),
@@ -1857,11 +1869,11 @@
         const { data, error } = await supabase
           .from('library_service_state')
           .upsert(payload, { onConflict: 'library_id' })
-          .select('library_id,service_mode,allow_reservations,public_message,internal_message,updated_at')
-          .single();
+          .select('library_id, service_mode, allows_new_reservations, public_message, internal_message')
+          .maybeSingle();
         if (error) throw error;
         libraryServiceState = data || payload;
-        renderLibraryServiceState(libraryServiceState);
+        renderLibraryServiceState(libraryServiceState || payload);
         setStatus('serviceStateMsg', 'Modo de funcionamento atualizado.', 'ok');
       } catch (e) {
         setStatus('serviceStateMsg', 'Não consegui salvar o modo de funcionamento: ' + (e.message || String(e)), 'bad', false);
@@ -1970,6 +1982,7 @@
     async function loadInternalTaskLibrarians(){
       try {
         const { data, error } = await supabase
+          .schema('api')
           .from('profiles')
           .select('*')
           .eq('is_librarian', true)
@@ -2533,97 +2546,72 @@
     let currentIdentityRow = null;
     async function fetchMyAccessRows(userId){
       let lastError = null;
-
       const directAttempts = [
         () => supabase.from('my_access').select('*'),
-        () => supabase.from('my_session_context').select('*').limit(1)
+        () => supabase.from('my_session_context').select('*').limit(1),
+        () => supabase.from('profiles').select('id,email,is_librarian,is_restricted,public_id,first_name,last_name').eq('id', userId).limit(1)
       ];
-
       for (const run of directAttempts) {
         try {
           const res = await run();
           if (!res?.error) {
             const rows = Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []);
             if (rows.length) return { data: rows, error: null };
-          } else {
-            lastError = res.error;
           }
+          lastError = res?.error || lastError;
         } catch (error) {
           lastError = error;
         }
       }
 
-      let profile = null;
       try {
-        const res = await supabase
+        const profileRes = await supabase
           .from('profiles')
-          .select('id,email,is_librarian,is_restricted,public_id,first_name,last_name,default_library_id,default_library_name,default_library_slug')
+          .select('id,email,is_librarian,is_restricted,public_id,first_name,last_name')
           .eq('id', userId)
           .maybeSingle();
-        if (!res?.error) {
-          profile = res.data || null;
-        } else {
-          lastError = res.error;
-        }
-      } catch (error) {
-        lastError = error;
-      }
+        if (profileRes?.error) throw profileRes.error;
+        const profileRow = profileRes?.data || null;
 
-      let memberships = [];
-      try {
-        const res = await supabase
+        const membershipRes = await supabase
           .from('user_library_memberships')
           .select('user_id,library_id,role,status,is_primary')
           .eq('user_id', userId)
-          .eq('status', 'active')
-          .order('is_primary', { ascending: false })
-          .limit(20);
-        if (!res?.error) {
-          memberships = Array.isArray(res.data) ? res.data : [];
-        } else {
-          lastError = res.error;
-        }
-      } catch (error) {
-        lastError = error;
-      }
+          .eq('status', 'active');
+        if (membershipRes?.error) throw membershipRes.error;
+        const memberships = Array.isArray(membershipRes?.data) ? membershipRes.data : [];
 
-      let librariesById = new Map();
-      try {
-        const libraryIds = Array.from(new Set(memberships.map((row) => Number(row?.library_id)).filter((v) => Number.isFinite(v) && v > 0)));
+        const libraryIds = [...new Set(memberships.map((row) => normalizeLibraryId(row?.library_id)).filter(Boolean))];
+        let librariesById = new Map();
         if (libraryIds.length) {
-          const res = await supabase
+          const libraryRes = await supabase
             .from('libraries')
             .select('id,name,slug')
             .in('id', libraryIds);
-          if (!res?.error) {
-            librariesById = new Map((res.data || []).map((row) => [Number(row.id), row]));
-          } else {
-            lastError = res.error;
-          }
+          if (libraryRes?.error) throw libraryRes.error;
+          librariesById = new Map((libraryRes?.data || []).map((row) => [normalizeLibraryId(row?.id), row]));
         }
+
+        const rows = memberships.map((membership) => {
+          const libraryId = normalizeLibraryId(membership?.library_id);
+          const libraryRow = librariesById.get(libraryId) || {};
+          return {
+            ...(profileRow || {}),
+            ...membership,
+            id: profileRow?.id || membership?.user_id || userId,
+            user_id: membership?.user_id || userId,
+            library_id: libraryId,
+            library_name: libraryRow?.name || '',
+            library_slug: libraryRow?.slug || ''
+          };
+        });
+
+        if (rows.length) return { data: rows, error: null };
+        if (profileRow) return { data: [profileRow], error: null };
       } catch (error) {
         lastError = error;
       }
 
-      const rows = memberships.map((membership) => {
-        const libraryId = Number(membership?.library_id);
-        const library = librariesById.get(libraryId) || null;
-        return {
-          ...(profile || {}),
-          user_id: membership?.user_id || profile?.id || userId,
-          id: profile?.id || membership?.user_id || userId,
-          library_id: Number.isFinite(libraryId) && libraryId > 0 ? libraryId : (profile?.default_library_id || null),
-          library_name: library?.name || profile?.default_library_name || null,
-          library_slug: library?.slug || profile?.default_library_slug || null,
-          role: membership?.role || (profile?.is_librarian ? 'librarian' : null),
-          status: membership?.status || 'active',
-          is_primary: membership?.is_primary === true,
-          can_access_painel: String(membership?.role || '').toLowerCase() === 'librarian' || profile?.is_librarian === true
-        };
-      });
-
-      if (rows.length) return { data: rows, error: null };
-      if (profile) return { data: [profile], error: null };
       return { data: [], error: lastError };
     }
     function pickCurrentLibrarianAccess(rows){
@@ -2682,7 +2670,7 @@
     async function loadProfilesByIds(userIds){
       const ids = Array.from(new Set((userIds || []).map((v) => String(v || '').trim()).filter(Boolean)));
       if (!ids.length) return new Map();
-      const { data, error } = await supabase.from('profiles').select('*').in('id', ids);
+      const { data, error } = await supabase.schema('api').from('profiles').select('*').in('id', ids);
       if (error) throw error;
       return new Map((data || []).map((row) => [String(row.id), row]));
     }
@@ -2690,7 +2678,7 @@
     async function loadBooksByBibRefs(refs){
       const clean = Array.from(new Set((refs || []).map((r) => String(r || '').trim()).filter(Boolean)));
       if (!clean.length) return new Map();
-      const { data, error } = await supabase.from('books_public').select('id,bib_ref,titulo,autor,editora,ano,loanable').in('bib_ref', clean);
+      const { data, error } = await supabase.schema('api').from('books_public').select('id,bib_ref,titulo,autor,editora,ano,loanable').in('bib_ref', clean);
       if (error) throw error;
       return new Map((data || []).map((row) => [String(row.bib_ref), row]));
     }
@@ -2800,6 +2788,7 @@
 
       // fallback ancien modèle
       const { data, error } = await supabase
+        .schema('api')
         .from('reservas')
         .select('id,bib_ref,user_id,created_at,status,fulfilled_at,fulfilled_loan_id,fulfilled_by,cancelled_at,cancelled_by,reserva_em,cancelled_by_role,cancelled_reason')
         .eq('status', 'pending')
@@ -2941,6 +2930,7 @@
       let data = null;
       let error = null;
       const q = await supabase
+        .schema('api')
         .from('loans_detalhes')
         .select('id,user_id,book_id,checkout_date,due_date,returned_date,created_at,batch_id,batch_size,extended_once,extended_at,reminder_sent_at,books')
         .is('returned_date', null)
@@ -3720,7 +3710,7 @@
       const normalized = normalizeEmail(email);
       let lastError = null;
       const attempts = [
-        () => supabase.from('profiles').select(select).ilike('email', normalized).limit(2),
+        () => supabase.schema('api').from('profiles').select(select).ilike('email', normalized).limit(2),
         () => supabase.from('profiles').select(select).ilike('email', normalized).limit(2),
       ];
       for (const run of attempts){
@@ -3751,7 +3741,7 @@
       if (!normalizedId) return null;
       let lastError = null;
       const attempts = [
-        () => supabase.from('profiles').select(select).eq('id', normalizedId).maybeSingle(),
+        () => supabase.schema('api').from('profiles').select(select).eq('id', normalizedId).maybeSingle(),
         () => supabase.from('profiles').select(select).eq('id', normalizedId).maybeSingle(),
       ];
       for (const run of attempts){
@@ -3859,6 +3849,7 @@
       const clean = Array.from(new Set((refs || []).map((r) => String(r || '').trim()).filter(Boolean)));
       if (!clean.length) throw new Error('Nenhum livro informado para o empréstimo.');
       const { data, error } = await supabase
+        .schema('api')
         .from('books_public')
         .select('id,bib_ref,titulo,loanable')
         .in('bib_ref', clean);
@@ -3876,6 +3867,7 @@
       const ids = Array.from(new Set((bookIds || []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0)));
       if (!ids.length) return;
       const { data, error } = await supabase
+        .schema('api')
         .from('loans')
         .select('id,book_id,user_id')
         .in('book_id', ids)
@@ -3891,6 +3883,7 @@
 
     async function countOpenLoansForUser(userId){
       const { count, error } = await supabase
+        .schema('api')
         .from('loans')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId)
@@ -3945,6 +3938,7 @@
           : Promise.resolve({ data: [], error: null }),
         ids.length
           ? supabase
+              .schema('api')
               .from('loans')
               .select('id,book_id')
               .in('book_id', ids)
@@ -3977,6 +3971,7 @@
           .eq('user_id', userId)
           .eq('item_status', 'aberto'),
         supabase
+          .schema('api')
           .from('loans')
           .select('id', { count: 'exact', head: true })
           .eq('user_id', userId)
@@ -4038,6 +4033,7 @@
       if (!isMissingFunctionError(rpcRes.error)) throw rpcRes.error;
 
       const { data: reserva, error: reservaError } = await supabase
+        .schema('api')
         .from('reservas')
         .select('id,bib_ref,user_id,status,fulfilled_at,cancelled_at')
         .eq('id', reservaId)
