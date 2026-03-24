@@ -1539,7 +1539,6 @@
     const SUPABASE_URL = CONFIG.SUPABASE_URL;
     const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
     const AUTH_STORAGE_KEY = 'sb-uflwmikiyjfnikiphtcp-auth-token';
-    const LEGACY_AUTH_STORAGE_KEYS = ['sb-asptfmokzykwzlshsncw-auth-token'];
 
     function normalizeStoredSession(payload){
       if (payload?.access_token && payload?.refresh_token) {
@@ -1553,7 +1552,7 @@
 
     function readStoredSessionCandidate(){
       const stores = [window.localStorage, window.sessionStorage];
-      const keys = [AUTH_STORAGE_KEY, ...LEGACY_AUTH_STORAGE_KEYS];
+      const keys = [AUTH_STORAGE_KEY, 'sb-asptfmokzykwzlshsncw-auth-token'];
       for (const store of stores){
         for (const key of keys){
           try {
@@ -1785,21 +1784,27 @@
       return v || null;
     }
 
-    function hasBooleanField(row, key){
-      return !!row && typeof row === 'object' && (row[key] === true || row[key] === false);
+    function getAllowedServiceModeValues(){
+      const select = $('serviceModeSelect');
+      const values = Array.from(select?.options || []).map((opt) => String(opt?.value || '').trim()).filter(Boolean);
+      return values.length ? values : ['em_organizacao', 'atendimento_eventual', 'atendimento_semanal', 'fechado_temporariamente'];
+    }
+
+    function normalizeServiceMode(value){
+      const raw = String(value || '').trim();
+      const allowed = getAllowedServiceModeValues();
+      return allowed.includes(raw) ? raw : 'em_organizacao';
     }
 
     function getAllowsNewReservations(row){
       if (!row || typeof row !== 'object') return false;
-      if (hasBooleanField(row, 'allows_new_reservations')) return row.allows_new_reservations === true;
-      if (hasBooleanField(row, 'allow_reservations')) return row.allow_reservations === true;
+      if (row.allows_new_reservations === true || row.allows_new_reservations === false) {
+        return row.allows_new_reservations === true;
+      }
+      if (row.allow_reservations === true || row.allow_reservations === false) {
+        return row.allow_reservations === true;
+      }
       return false;
-    }
-
-    function getAllowsNewLoans(row){
-      if (!row || typeof row !== 'object') return true;
-      if (hasBooleanField(row, 'allows_new_loans')) return row.allows_new_loans === true;
-      return true;
     }
 
     function normalizeLibraryServiceState(row, fallbackLibraryId=null){
@@ -1808,21 +1813,18 @@
           library_id: normalizeLibraryId(fallbackLibraryId),
           service_mode: 'em_organizacao',
           allows_new_reservations: false,
-          allows_new_loans: true,
           public_message: '',
-          internal_message: '',
-          has_internal_message_column: false
+          internal_message: ''
         };
       }
       return {
         ...row,
         library_id: normalizeLibraryId(row.library_id || fallbackLibraryId),
-        service_mode: String(row.service_mode || 'em_organizacao').trim() || 'em_organizacao',
+        service_mode: normalizeServiceMode(row.service_mode),
         allows_new_reservations: getAllowsNewReservations(row),
-        allows_new_loans: getAllowsNewLoans(row),
+        allows_new_loans: (row.allows_new_loans === true || row.allows_new_loans === false) ? row.allows_new_loans === true : true,
         public_message: String(row.public_message || '').trim(),
         internal_message: String(row.internal_message || '').trim(),
-        has_internal_message_column: Object.prototype.hasOwnProperty.call(row, 'internal_message')
       };
     }
 
@@ -1833,18 +1835,13 @@
       setChip('chipServiceMode', `Modo: ${modeText}`);
       setChip('chipReservationsState', reservationsText);
 
-      if ($('serviceModeSelect')) $('serviceModeSelect').value = normalizedState?.service_mode || 'em_organizacao';
+      if ($('serviceModeSelect')) $('serviceModeSelect').value = normalizeServiceMode(normalizedState?.service_mode);
       if ($('allowReservationsToggle')) $('allowReservationsToggle').checked = !!normalizedState?.allows_new_reservations;
       if ($('publicServiceMessage')) $('publicServiceMessage').value = getEditablePublicServiceMessage(normalizedState);
       if ($('internalServiceMessage')) {
-        $('internalServiceMessage').value = normalizedState?.has_internal_message_column ? (normalizedState?.internal_message || '') : '';
-        $('internalServiceMessage').disabled = !normalizedState?.has_internal_message_column;
-        $('internalServiceMessage').placeholder = normalizedState?.has_internal_message_column
-          ? 'Observação interna para a equipe da biblioteca.'
-          : 'Campo indisponível nesta versão do banco staging.';
-        $('internalServiceMessage').title = normalizedState?.has_internal_message_column
-          ? ''
-          : 'A coluna internal_message não existe neste projeto de staging.';
+        $('internalServiceMessage').value = '';
+        $('internalServiceMessage').disabled = true;
+        $('internalServiceMessage').placeholder = 'Campo não utilizado nesta versão do staging.';
       }
     }
 
@@ -1911,7 +1908,8 @@
           service_mode: 'em_organizacao',
           allows_new_reservations: false,
           allows_new_loans: true,
-          public_message: ''
+          public_message: '',
+          internal_message: ''
         });
         setChip('chipServiceMode', 'Modo: erro');
         setChip('chipReservationsState', 'Reservas públicas: erro');
@@ -1930,19 +1928,31 @@
 
         const payload = {
           library_id: libraryId,
-          service_mode: $('serviceModeSelect').value,
-          allows_new_reservations: !!$('allowReservationsToggle').checked,
-          public_message: $('publicServiceMessage').value.trim()
+          service_mode: normalizeServiceMode($('serviceModeSelect')?.value),
+          allows_new_reservations: !!$('allowReservationsToggle')?.checked,
+          public_message: $('publicServiceMessage')?.value.trim() || ''
         };
-
-        const { data, error } = await supabase
+        if (libraryServiceState && (libraryServiceState.allows_new_loans === true || libraryServiceState.allows_new_loans === false)) {
+          payload.allows_new_loans = !!libraryServiceState.allows_new_loans;
+        }
+        let { data, error } = await supabase
           .from('library_service_state')
           .upsert(payload, { onConflict: 'library_id' })
           .select('library_id,service_mode,public_message,allows_new_reservations,allows_new_loans,updated_at')
           .maybeSingle();
+        if (error && /service_mode/i.test(String(error.message || ''))) {
+          const fallbackPayload = { ...payload, service_mode: 'em_organizacao' };
+          const retry = await supabase
+            .from('library_service_state')
+            .upsert(fallbackPayload, { onConflict: 'library_id' })
+            .select('library_id,service_mode,public_message,allows_new_reservations,allows_new_loans,updated_at')
+            .maybeSingle();
+          data = retry.data;
+          error = retry.error;
+        }
         if (error) throw error;
 
-        libraryServiceState = normalizeLibraryServiceState(data || { ...payload, allows_new_loans: libraryServiceState?.allows_new_loans }, libraryId);
+        libraryServiceState = normalizeLibraryServiceState(data || payload, libraryId);
         renderLibraryServiceState(libraryServiceState);
         setStatus('serviceStateMsg', 'Modo de funcionamento atualizado.', 'ok');
       } catch (e) {
@@ -4899,6 +4909,8 @@
         await supabase.auth.signOut();
         try { window.localStorage.removeItem(AUTH_STORAGE_KEY); } catch (_e) {}
         try { window.sessionStorage.removeItem(AUTH_STORAGE_KEY); } catch (_e) {}
+        try { window.localStorage.removeItem('sb-asptfmokzykwzlshsncw-auth-token'); } catch (_e) {}
+        try { window.sessionStorage.removeItem('sb-asptfmokzykwzlshsncw-auth-token'); } catch (_e) {}
         try { window.localStorage.removeItem('anarbib_is_librarian_hint'); } catch (_e) {}
         try { window.sessionStorage.removeItem('anarbib_is_librarian_hint'); } catch (_e) {}
         location.assign(ROUTES.CADASTRO);
