@@ -1374,6 +1374,46 @@
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: { storage: window.localStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
     });
+    const AUTH_STORAGE_KEY = 'sb-asptfmokzykwzlshsncw-auth-token';
+
+    function normalizeStoredSession(payload){
+      if (payload?.access_token && payload?.refresh_token) {
+        return { access_token: payload.access_token, refresh_token: payload.refresh_token };
+      }
+      if (payload?.currentSession?.access_token && payload?.currentSession?.refresh_token) {
+        return { access_token: payload.currentSession.access_token, refresh_token: payload.currentSession.refresh_token };
+      }
+      return null;
+    }
+
+    function readStoredSessionCandidate(){
+      const stores = [window.localStorage, window.sessionStorage];
+      const keys = [AUTH_STORAGE_KEY];
+      for (const store of stores){
+        for (const key of keys){
+          try {
+            const raw = store?.getItem?.(key);
+            if (!raw) continue;
+            const parsed = JSON.parse(raw);
+            const normalized = normalizeStoredSession(parsed);
+            if (normalized?.access_token && normalized?.refresh_token) return normalized;
+          } catch (_e) {}
+        }
+      }
+      return null;
+    }
+
+    async function hydrateSessionFromBrowserStorage(){
+      const stored = readStoredSessionCandidate();
+      if (!stored) return null;
+      try {
+        const { data, error } = await supabase.auth.setSession(stored);
+        if (error) return null;
+        return data?.session || null;
+      } catch (_e) {
+        return null;
+      }
+    }
 
     const statusTimers = new Map();
     let session = null;
@@ -2291,6 +2331,8 @@
       for (let i = 0; i < 12; i += 1) {
         const { data: { session: sess } } = await supabase.auth.getSession();
         if (sess?.user?.id) return sess;
+        const hydrated = await hydrateSessionFromBrowserStorage();
+        if (hydrated?.user?.id) return hydrated;
         await new Promise((resolve) => setTimeout(resolve, 120));
       }
       location.assign(ROUTES.CADASTRO);
