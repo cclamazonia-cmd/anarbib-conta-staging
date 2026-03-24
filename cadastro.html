@@ -475,9 +475,9 @@
         throw new Error("Informe seu e-mail ou seu ID público.");
       }
 
-      const { data, error } = await supabase
-        .schema("api")
-        .rpc("resolve_login_email", { p_identifier: value });
+      const { data, error } = await supabase.rpc("resolve_login_email", {
+        p_identifier: value
+      });
 
       if (error) {
         console.error("api.resolve_login_email error:", error);
