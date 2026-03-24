@@ -495,8 +495,6 @@
       <div class="chips">
         <span class="chip" id="chipFuncao">Função: —</span>
         <span class="chip" id="chipEmail">E-mail: —</span>
-        <span class="chip" id="chipPublicId">ID público: —</span>
-        <span class="chip" id="chipBiblioteca">Biblioteca: —</span>
         <span class="chip" id="chipResCount">Reservas ativas: —</span>
         <span class="chip" id="chipLoanCount">Empréstimos ativos: —</span>
         <span class="chip" id="chipBatchCount">Empréstimos agrupados: —</span>
@@ -742,24 +740,15 @@
                   </select>
                 </div>
                 <div>
-                  <label for="libraryThemeLayoutPreset">Preset de layout</label>
-                  <select class="select" id="libraryThemeLayoutPreset">
-                    <option value="default">Padrão AnarBib</option>
-                    <option value="hero_destacado">Hero destacado</option>
-                    <option value="painel_compacto">Painel compacto</option>
-                    <option value="tabelas_respiradas">Tabelas mais arejadas</option>
-                  </select>
+                  <label for="libraryThemePreviewNote">Pré-visualização</label>
+                  <input class="input" id="libraryThemePreviewNote" type="text" value="Estrutura preparada para preview futuro." readonly>
                 </div>
               </div>
-              <div style="margin-top:12px">
-                <label for="libraryThemePreviewNote">Pré-visualização</label>
-                <input class="input" id="libraryThemePreviewNote" type="text" value="Presets visuais restaurados neste formulário local. Pré-visualização completa ainda pendente." readonly>
-              </div>
               <div class="actions">
-                <button class="btn primary" id="btnSaveLibraryTheme" type="button">Salvar tema</button>
-                <button class="btn" id="btnResetLibraryTheme" type="button">Restaurar tema padrão</button>
+                <button class="btn" id="btnSaveLibraryTheme" type="button" disabled>Salvar tema</button>
+                <button class="btn" id="btnResetLibraryTheme" type="button" disabled>Restaurar tema padrão</button>
               </div>
-              <div class="status" id="libraryThemeMsg"></div>
+              <div class="status" id="libraryThemeMsg">Bloco preparado para ligação futura ao backend.</div>
             </div>
           </div>
         </section>
@@ -1855,20 +1844,6 @@
 
     function setupServiceStateActions(){
       $('btnSaveServiceState')?.addEventListener('click', saveLibraryServiceState);
-      $('btnSaveLibraryTheme')?.addEventListener('click', () => {
-        const palette = $('libraryThemePalette')?.value || 'default';
-        const fontPack = $('libraryThemeFontPack')?.value || 'default';
-        const layoutPreset = $('libraryThemeLayoutPreset')?.value || 'default';
-        const bg = $('libraryThemeBackground')?.value?.trim() || 'sem imagem personalizada';
-        setStatus('libraryThemeMsg', `Presets visuais restaurados no formulário local. Paleta: ${palette} · Tipografia: ${fontPack} · Layout: ${layoutPreset} · Fundo: ${bg}.`, 'ok');
-      });
-      $('btnResetLibraryTheme')?.addEventListener('click', () => {
-        if ($('libraryThemeBackground')) $('libraryThemeBackground').value = '';
-        if ($('libraryThemePalette')) $('libraryThemePalette').value = 'default';
-        if ($('libraryThemeFontPack')) $('libraryThemeFontPack').value = 'default';
-        if ($('libraryThemeLayoutPreset')) $('libraryThemeLayoutPreset').value = 'default';
-        setStatus('libraryThemeMsg', 'Presets visuais restaurados para o padrão AnarBib neste formulário local.', 'ok');
-      });
     }
 
 
@@ -2528,16 +2503,21 @@
       return null;
     }
     let currentAccessRow = null;
-    async function fetchMyAccessRows(){
+    let currentIdentityRow = null;
+    async function fetchMyAccessRows(userId){
       let lastError = null;
       const attempts = [
         () => supabase.schema('api').from('my_access').select('*'),
-        () => supabase.schema('api').from('profiles').select('id,email,is_librarian,is_restricted,public_id,first_name,last_name').eq('id', session?.user?.id || '').limit(1)
+        () => supabase.schema('api').from('my_session_context').select('*').limit(1),
+        () => supabase.schema('api').from('profiles').select('id,email,is_librarian,is_restricted,public_id,first_name,last_name,default_library_name,default_library_slug').eq('id', userId).limit(1),
+        () => supabase.from('profiles').select('id,email,is_librarian,is_restricted,public_id,first_name,last_name').eq('id', userId).limit(1)
       ];
       for (const run of attempts) {
         try {
           const res = await run();
-          if (!res?.error) return { data: Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []), error: null };
+          if (!res?.error) {
+            return { data: Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []), error: null };
+          }
           lastError = res.error;
         } catch (error) {
           lastError = error;
@@ -2555,38 +2535,44 @@
       return librarianRows.find((row) => row?.is_primary === true) || librarianRows[0] || null;
     }
     async function requireBibliotecaOrRedirect(){
-      const accessRead = await fetchMyAccessRows();
+      const accessRead = await fetchMyAccessRows(session.user.id);
+      const accessRows = accessRead?.data || [];
       const lastErrorMessage = accessRead?.error?.message || '';
-      currentAccessRow = pickCurrentLibrarianAccess(accessRead?.data || []);
+      currentIdentityRow = accessRows.find((row) => String(row?.id || row?.user_id || '') === String(session?.user?.id || '')) || accessRows[0] || null;
+      currentAccessRow = pickCurrentLibrarianAccess(accessRows);
+
+      if (!currentAccessRow && currentIdentityRow?.is_librarian === true && currentIdentityRow?.is_restricted !== true) {
+        currentAccessRow = {
+          ...currentIdentityRow,
+          role: 'librarian',
+          status: 'active',
+          can_access_painel: true
+        };
+      }
 
       if (!currentAccessRow) {
-        if (lastErrorMessage) {
-          setStatus('statusLoans', 'Não consegui verificar o acesso da biblioteca: ' + lastErrorMessage, 'bad', false);
-          return false;
-        }
-        location.assign(ROUTES.CONTA);
+        setStatus('statusLoans', 'Não consegui verificar o acesso da biblioteca' + (lastErrorMessage ? ': ' + lastErrorMessage : '.'), 'bad', false);
         return false;
       }
 
       return true;
     }
     async function fillHeader(){
-      const accessEmail = String(currentAccessRow?.email || session?.user?.email || '').trim();
-      const accessPublicId = String(currentAccessRow?.public_id || '').trim();
-      const firstName = String(currentAccessRow?.first_name || '').trim();
-      const lastName = String(currentAccessRow?.last_name || '').trim();
+      const identity = { ...(currentIdentityRow || {}), ...(currentAccessRow || {}) };
+      const accessEmail = String(identity?.email || session?.user?.email || '').trim();
+      const accessPublicId = String(identity?.public_id || '').trim();
+      const firstName = String(identity?.first_name || '').trim();
+      const lastName = String(identity?.last_name || '').trim();
       const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
-      const role = String(currentAccessRow?.role || '').toLowerCase();
-      const roleLabel = role === 'librarian' || currentAccessRow?.is_librarian === true ? 'bibliotecário(a/e)' : '—';
-      const libraryLabel = String(currentAccessRow?.library_name || currentAccessRow?.default_library_name || currentAccessRow?.library_slug || currentAccessRow?.default_library_slug || '—').trim();
+      const libraryLabel = String(identity?.library_name || identity?.default_library_name || identity?.library_slug || identity?.default_library_slug || '').trim();
+      const isLibraryUser = identity?.is_librarian === true || String(identity?.role || '').toLowerCase() === 'librarian';
 
       setChip('chipEmail', 'E-mail: ' + (accessEmail || '—'));
-      setChip('chipPublicId', 'ID público: ' + (accessPublicId || '—'));
-      setChip('chipBiblioteca', 'Biblioteca: ' + (libraryLabel || '—'));
-      setChip('chipFuncao', 'Função: ' + roleLabel);
+      setChip('chipFuncao', 'Função: ' + (isLibraryUser ? 'bibliotecário(a/e)' : '—'));
       const helloParts = [];
       if (fullName) helloParts.push(fullName);
       if (accessPublicId) helloParts.push('ID ' + accessPublicId);
+      if (libraryLabel) helloParts.push(libraryLabel);
       if (!helloParts.length && accessEmail) helloParts.push(accessEmail);
       $('helloLine').textContent = helloParts.length ? ('Conectad@: ' + helloParts.join(' · ')) : '';
       $('btnModoLeitor').classList.toggle('hidden', !isLibrarian);
@@ -4738,8 +4724,11 @@
         await supabase.auth.signOut();
         try { window.localStorage.removeItem(AUTH_STORAGE_KEY); } catch (_e) {}
         try { window.sessionStorage.removeItem(AUTH_STORAGE_KEY); } catch (_e) {}
+        try { window.localStorage.removeItem('anarbib_is_librarian_hint'); } catch (_e) {}
+        try { window.sessionStorage.removeItem('anarbib_is_librarian_hint'); } catch (_e) {}
         location.assign(ROUTES.CADASTRO);
-      } finally { $('btnSair').disabled = false; }
+      }
+      finally { $('btnSair').disabled = false; }
     });
 
     renderInternalTasks();
