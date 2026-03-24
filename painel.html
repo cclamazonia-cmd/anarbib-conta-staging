@@ -508,8 +508,8 @@
     <div class="tabs-layout">
       <nav class="tabs-nav" role="tablist" aria-label="Seções do painel">
         <button class="tab-btn active" type="button" data-tab="funcionamento" role="tab" aria-selected="true" aria-controls="tab-funcionamento">
-          Funcionamento
-          <span class="hint">Modo global e reservas públicas</span>
+          Biblioteca
+          <span class="hint">Funcionamento, horários, regras locais e tema</span>
         </button>
         <button class="tab-btn" type="button" data-tab="acoes" role="tab" aria-selected="false" aria-controls="tab-acoes">
           Ações
@@ -543,12 +543,25 @@
         </button>
       </nav>
 
-      <div class="tabs-panels">        <section id="tab-funcionamento" class="tab-panel active" data-tab="funcionamento" role="tabpanel">
+      <div class="tabs-panels">
+        <section id="tab-funcionamento" class="tab-panel active" data-tab="funcionamento" role="tabpanel">
           <div class="grid">
             <div class="card">
               <div class="section-head">
                 <div>
-                  <h2>Modo de funcionamento da biblioteca</h2>
+                  <h2>Biblioteca</h2>
+                  <div class="mini">Configuração local da biblioteca: funcionamento, horários, regras de circulação, identidade e tema visual.</div>
+                </div>
+              </div>
+              <div class="muted-box" style="margin-top:12px">
+                <div class="mini">Neste primeiro patch, apenas o bloco “Estado do serviço” está ligado ao backend atual. Os outros blocos já ficam preparados no painel, sem alterar o restante do sistema.</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h2>Estado do serviço</h2>
                   <div class="mini">Fonte única de verdade para a mensagem pública e a abertura de novas reservas.</div>
                 </div>
               </div>
@@ -580,7 +593,7 @@
                 <textarea class="textarea" id="internalServiceMessage" placeholder="Observação interna para a equipe da biblioteca."></textarea>
               </div>
               <div class="actions">
-                <button class="btn primary" id="btnSaveServiceState" type="button">Salvar modo de funcionamento</button>
+                <button class="btn primary" id="btnSaveServiceState" type="button">Salvar funcionamento</button>
               </div>
               <div class="status" id="serviceStateMsg"></div>
             </div>
@@ -592,48 +605,46 @@
                   <div class="mini">Estrutura preparada para os horários semanais, permanências fixas e fechamentos excepcionais.</div>
                 </div>
               </div>
-              <div class="row" style="margin-top:12px">
+              <div class="row3" style="margin-top:12px">
                 <div>
-                  <label for="scheduleMonday">Segunda-feira</label>
-                  <input class="input" id="scheduleMonday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
+                  <label for="libraryOpenMonday">Segunda-feira</label>
+                  <input class="input" id="libraryOpenMonday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
                 </div>
                 <div>
-                  <label for="scheduleTuesday">Terça-feira</label>
-                  <input class="input" id="scheduleTuesday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
-                </div>
-              </div>
-              <div class="row" style="margin-top:12px">
-                <div>
-                  <label for="scheduleWednesday">Quarta-feira</label>
-                  <input class="input" id="scheduleWednesday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
+                  <label for="libraryOpenTuesday">Terça-feira</label>
+                  <input class="input" id="libraryOpenTuesday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
                 </div>
                 <div>
-                  <label for="scheduleThursday">Quinta-feira</label>
-                  <input class="input" id="scheduleThursday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
+                  <label for="libraryOpenWednesday">Quarta-feira</label>
+                  <input class="input" id="libraryOpenWednesday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
                 </div>
               </div>
-              <div class="row" style="margin-top:12px">
+              <div class="row3" style="margin-top:12px">
                 <div>
-                  <label for="scheduleFriday">Sexta-feira</label>
-                  <input class="input" id="scheduleFriday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
+                  <label for="libraryOpenThursday">Quinta-feira</label>
+                  <input class="input" id="libraryOpenThursday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
                 </div>
                 <div>
-                  <label for="scheduleWeekend">Fim de semana</label>
-                  <input class="input" id="scheduleWeekend" type="text" placeholder="Ex.: somente em plantões / fechado">
+                  <label for="libraryOpenFriday">Sexta-feira</label>
+                  <input class="input" id="libraryOpenFriday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
+                </div>
+                <div>
+                  <label for="libraryOpenWeekend">Fim de semana</label>
+                  <input class="input" id="libraryOpenWeekend" type="text" placeholder="Ex.: somente em plantões / fechado">
                 </div>
               </div>
               <div style="margin-top:12px">
-                <label for="fixedAttendance">Permanências fixas</label>
-                <textarea class="textarea" id="fixedAttendance" placeholder="Ex.: toda terça, das 15h às 18h, no espaço da biblioteca."></textarea>
+                <label for="libraryFixedOpenings">Permanências fixas</label>
+                <textarea class="textarea" id="libraryFixedOpenings" placeholder="Ex.: toda terça, das 15h às 18h, no espaço da biblioteca."></textarea>
               </div>
               <div style="margin-top:12px">
-                <label for="temporaryClosures">Fechamentos ou suspensões temporárias</label>
-                <textarea class="textarea" id="temporaryClosures" placeholder="Ex.: fechado no feriado, mutirão interno, reforma do espaço, pausa temporária etc."></textarea>
+                <label for="libraryExceptionalClosures">Fechamentos ou suspensões temporárias</label>
+                <textarea class="textarea" id="libraryExceptionalClosures" placeholder="Ex.: fechado no feriado, mutirão interno, reforma do espaço, pausa temporária etc."></textarea>
               </div>
               <div class="actions">
-                <button class="btn primary" id="btnSaveWeeklySchedule" type="button">Salvar horários</button>
+                <button class="btn" id="btnSaveLibrarySchedule" type="button" disabled>Salvar horários</button>
               </div>
-              <div class="status" id="weeklyScheduleMsg">Bloco preparado para ligação futura ao backend.</div>
+              <div class="status" id="libraryScheduleMsg">Bloco preparado para ligação futura ao backend.</div>
             </div>
 
             <div class="card">
@@ -645,30 +656,30 @@
               </div>
               <div class="row" style="margin-top:12px">
                 <div>
-                  <label for="externalReservationsRule">Reservas para não inscritas/os</label>
-                  <select class="select" id="externalReservationsRule">
+                  <label for="nonMemberReservationPolicy">Reservas para não inscritas/os</label>
+                  <select class="select" id="nonMemberReservationPolicy">
                     <option value="nao_permitir">Não permitir</option>
-                    <option value="analisar_localmente">Analisar localmente</option>
+                    <option value="sob_analise">Permitir sob análise</option>
                     <option value="permitir">Permitir</option>
                   </select>
                 </div>
                 <div>
-                  <label for="externalLoansRule">Empréstimos para não inscritas/os</label>
-                  <select class="select" id="externalLoansRule">
+                  <label for="nonMemberLoanPolicy">Empréstimos para não inscritas/os</label>
+                  <select class="select" id="nonMemberLoanPolicy">
                     <option value="nao_permitir">Não permitir</option>
-                    <option value="analisar_localmente">Analisar localmente</option>
+                    <option value="sob_analise">Permitir sob análise</option>
                     <option value="permitir">Permitir</option>
                   </select>
                 </div>
               </div>
               <div style="margin-top:12px">
-                <label for="externalCirculationPublicText">Texto público explicativo</label>
-                <textarea class="textarea" id="externalCirculationPublicText" placeholder="Ex.: leitoras/es de outras bibliotecas podem reservar, mas a retirada depende de análise local da equipe."></textarea>
+                <label for="nonMemberPublicNote">Texto público explicativo</label>
+                <textarea class="textarea" id="nonMemberPublicNote" placeholder="Ex.: leitoras/es de outras bibliotecas podem reservar, mas a retirada depende de análise local da equipe."></textarea>
               </div>
               <div class="actions">
-                <button class="btn primary" id="btnSaveLocalCirculationRules" type="button">Salvar regras locais</button>
+                <button class="btn" id="btnSaveLocalRules" type="button" disabled>Salvar regras locais</button>
               </div>
-              <div class="status" id="localCirculationRulesMsg">Bloco preparado para ligação futura ao backend.</div>
+              <div class="status" id="localRulesMsg">Bloco preparado para ligação futura ao backend.</div>
             </div>
 
             <div class="card">
@@ -678,7 +689,7 @@
                   <div class="mini">Nome público, forma abreviada e identificador curto da biblioteca.</div>
                 </div>
               </div>
-              <div class="row" style="margin-top:12px">
+              <div class="row3" style="margin-top:12px">
                 <div>
                   <label for="libraryFullName">Nome completo</label>
                   <input class="input" id="libraryFullName" type="text" placeholder="Ex.: Biblioteca Libertária Maxwell Ferreira">
@@ -687,13 +698,13 @@
                   <label for="libraryShortName">Nome abreviado</label>
                   <input class="input" id="libraryShortName" type="text" placeholder="Ex.: BLMF">
                 </div>
-              </div>
-              <div style="margin-top:12px">
-                <label for="librarySlugValue">Slug / identificador curto</label>
-                <input class="input" id="librarySlugValue" type="text" placeholder="Ex.: blmf">
+                <div>
+                  <label for="librarySlug">Slug / identificador curto</label>
+                  <input class="input mono" id="librarySlug" type="text" placeholder="Ex.: blmf">
+                </div>
               </div>
               <div class="actions">
-                <button class="btn primary" id="btnSaveLibraryIdentity" type="button">Salvar identidade</button>
+                <button class="btn" id="btnSaveLibraryIdentity" type="button" disabled>Salvar identidade</button>
               </div>
               <div class="status" id="libraryIdentityMsg">Bloco preparado para ligação futura ao backend.</div>
             </div>
@@ -705,38 +716,55 @@
                   <div class="mini">Imagem de fundo, paleta e conjunto tipográfico da biblioteca, dentro de opções controladas.</div>
                 </div>
               </div>
-              <div style="margin-top:12px">
-                <label for="libraryThemeBackgroundUrl">Imagem de fundo (1920 × 1080 recomendado)</label>
-                <input class="input" id="libraryThemeBackgroundUrl" type="url" placeholder="URL pública da imagem de fundo">
-              </div>
               <div class="row" style="margin-top:12px">
+                <div>
+                  <label for="libraryThemeBackground">Imagem de fundo (1920 × 1080 recomendado)</label>
+                  <input class="input" id="libraryThemeBackground" type="text" placeholder="URL pública da imagem de fundo">
+                </div>
                 <div>
                   <label for="libraryThemePalette">Paleta</label>
                   <select class="select" id="libraryThemePalette">
-                    <option value="anarbib_default">Padrão AnarBib</option>
+                    <option value="default">Padrão AnarBib</option>
+                    <option value="contraste_suave">Contraste suave</option>
+                    <option value="vermelho_escuro">Vermelho escuro</option>
+                    <option value="cinza_vermelho">Cinza e vermelho</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row" style="margin-top:12px">
+                <div>
+                  <label for="libraryThemeFontPack">Conjunto tipográfico</label>
+                  <select class="select" id="libraryThemeFontPack">
+                    <option value="default">Padrão AnarBib</option>
+                    <option value="inter_merriweather">Inter + Merriweather</option>
+                    <option value="inter_source">Inter + Source Serif</option>
+                    <option value="system">Sistema</option>
                   </select>
                 </div>
                 <div>
-                  <label for="libraryThemeTypography">Conjunto tipográfico</label>
-                  <select class="select" id="libraryThemeTypography">
-                    <option value="anarbib_default">Padrão AnarBib</option>
+                  <label for="libraryThemeLayoutPreset">Preset de layout</label>
+                  <select class="select" id="libraryThemeLayoutPreset">
+                    <option value="default">Padrão AnarBib</option>
+                    <option value="hero_destacado">Hero destacado</option>
+                    <option value="painel_compacto">Painel compacto</option>
+                    <option value="tabelas_respiradas">Tabelas mais arejadas</option>
                   </select>
                 </div>
               </div>
               <div style="margin-top:12px">
-                <label>Pré-visualização</label>
-                <div class="hint">Estrutura preparada para preview futuro.</div>
+                <label for="libraryThemePreviewNote">Pré-visualização</label>
+                <input class="input" id="libraryThemePreviewNote" type="text" value="Presets visuais restaurados neste formulário local. Pré-visualização completa ainda pendente." readonly>
               </div>
               <div class="actions">
                 <button class="btn primary" id="btnSaveLibraryTheme" type="button">Salvar tema</button>
-                <button class="btn ghost" id="btnRestoreDefaultLibraryTheme" type="button">Restaurar tema padrão</button>
+                <button class="btn" id="btnResetLibraryTheme" type="button">Restaurar tema padrão</button>
               </div>
-              <div class="status" id="libraryThemeMsg">Bloco preparado para ligação futura ao backend.</div>
+              <div class="status" id="libraryThemeMsg"></div>
             </div>
           </div>
         </section>
 
-<section id="tab-acoes" class="tab-panel" data-tab="acoes" role="tabpanel">
+        <section id="tab-acoes" class="tab-panel" data-tab="acoes" role="tabpanel">
           <div class="grid">
             <div class="card">
               <div class="section-head">
@@ -1453,11 +1481,11 @@
   </div>
 
   <script type="module">
-    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+    import { supabase } from "./js/blmf-supabase.js";
 
     const FALLBACK_CONFIG = {
-      SUPABASE_URL: "https://uflwmikiyjfnikiphtcp.supabase.co",
-      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmbHdtaWtpeWpmbmlraXBodGNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MzIyNDUsImV4cCI6MjA4OTQwODI0NX0.kCs7nPg08ofjb9CWwRH9xVN6BjanrAC5pj418line1o",
+      SUPABASE_URL: "https://asptfmokzykwzlshsncw.supabase.co",
+      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzcHRmbW9renlrd3psc2hzbmN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MzcxNzcsImV4cCI6MjA4ODExMzE3N30.JkMLHPCV2AH5ELZV_1RfcoW250QEofLGvnDKSDpkcn0.",
       ROUTES: {
         blog: "https://cclamazonia.noblogs.org/",
         catalogo: "https://cclamazonia-cmd.github.io/anarbib-staging/index.html",
@@ -1521,10 +1549,7 @@
 
     const SUPABASE_URL = CONFIG.SUPABASE_URL;
     const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { storage: window.localStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
-    });
-    const AUTH_STORAGE_KEY = 'sb-uflwmikiyjfnikiphtcp-auth-token';
+    const AUTH_STORAGE_KEY = 'sb-asptfmokzykwzlshsncw-auth-token';
 
     function normalizeStoredSession(payload){
       if (payload?.access_token && payload?.refresh_token) {
@@ -1578,7 +1603,6 @@
     let refreshTimer = null;
     let refreshSerial = 0;
     let libraryServiceState = null;
-    let currentAccessRow = null;
     let reservationFollowUpFilter = 'all';
     let manualInternalTasks = [];
     const INTERNAL_TASKS_TABLE = 'painel_internal_tasks';
@@ -1778,60 +1802,18 @@
       if ($('internalServiceMessage')) $('internalServiceMessage').value = state?.internal_message || '';
     }
 
-    function getActiveLibraryId(){
-      return currentAccessRow?.library_id || null;
-    }
-
-    function getCurrentLibraryLabel(){
-      return (
-        currentAccessRow?.library_name ||
-        currentAccessRow?.library_display_name ||
-        currentAccessRow?.library_short_name ||
-        currentAccessRow?.library_slug ||
-        'Biblioteca ativa'
-      );
-    }
-
-    function syncLibraryManagementPlaceholders(){
-      const fullName = String(
-        currentAccessRow?.library_name ||
-        currentAccessRow?.library_display_name ||
-        ''
-      ).trim();
-      const shortName = String(
-        currentAccessRow?.library_short_name ||
-        currentAccessRow?.library_code ||
-        currentAccessRow?.library_slug ||
-        ''
-      ).trim();
-      const slug = String(currentAccessRow?.library_slug || '').trim();
-
-      if ($('libraryFullName') && !$('libraryFullName').value) $('libraryFullName').value = fullName;
-      if ($('libraryShortName') && !$('libraryShortName').value) $('libraryShortName').value = shortName ? shortName.toUpperCase() : '';
-      if ($('librarySlugValue') && !$('librarySlugValue').value) $('librarySlugValue').value = slug;
-    }
-
     async function loadLibraryServiceState({silent=false} = {}){
       try {
-        const libraryId = getActiveLibraryId();
-        if (!libraryId) throw new Error('Biblioteca ativa não identificada.');
-
-        const { data, error } = await supabase
-          .from('library_service_state')
-          .select('*')
-          .eq('library_id', libraryId)
-          .maybeSingle();
-
+        const { data, error } = await supabase.rpc('get_library_service_state');
         if (error) throw error;
-
-        libraryServiceState = data || null;
+        const row = Array.isArray(data) ? data[0] : data;
+        libraryServiceState = row || null;
         renderLibraryServiceState(libraryServiceState || {
           service_mode: 'em_organizacao',
           allow_reservations: false,
           public_message: '',
           internal_message: ''
         });
-        syncLibraryManagementPlaceholders();
         if (!silent) clearStatus('serviceStateMsg');
       } catch (e) {
         libraryServiceState = null;
@@ -1843,7 +1825,6 @@
         });
         setChip('chipServiceMode', 'Modo: erro');
         setChip('chipReservationsState', 'Reservas públicas: erro');
-        syncLibraryManagementPlaceholders();
         if (!silent) setStatus('serviceStateMsg', 'Não consegui carregar o modo de funcionamento: ' + (e.message || String(e)), 'bad', false);
       }
     }
@@ -1853,25 +1834,17 @@
       const btn = $('btnSaveServiceState');
       btn.disabled = true;
       try {
-        const libraryId = getActiveLibraryId();
-        if (!libraryId) throw new Error('Biblioteca ativa não identificada.');
-
         const payload = {
-          library_id: libraryId,
-          service_mode: $('serviceModeSelect').value,
-          allow_reservations: !!$('allowReservationsToggle').checked,
-          public_message: $('publicServiceMessage').value.trim(),
-          internal_message: $('internalServiceMessage').value.trim()
+          p_service_mode: $('serviceModeSelect').value,
+          p_allow_reservations: !!$('allowReservationsToggle').checked,
+          p_public_message: $('publicServiceMessage').value.trim(),
+          p_internal_message: $('internalServiceMessage').value.trim()
         };
-
-        const { error } = await supabase
-          .from('library_service_state')
-          .upsert(payload, { onConflict: 'library_id' });
-
+        const { data, error } = await supabase.rpc('set_library_service_state', payload);
         if (error) throw error;
-
-        libraryServiceState = payload;
-        renderLibraryServiceState(libraryServiceState);
+        const row = Array.isArray(data) ? data[0] : data;
+        libraryServiceState = row || null;
+        renderLibraryServiceState(libraryServiceState || payload);
         setStatus('serviceStateMsg', 'Modo de funcionamento atualizado.', 'ok');
       } catch (e) {
         setStatus('serviceStateMsg', 'Não consegui salvar o modo de funcionamento: ' + (e.message || String(e)), 'bad', false);
@@ -1882,28 +1855,19 @@
 
     function setupServiceStateActions(){
       $('btnSaveServiceState')?.addEventListener('click', saveLibraryServiceState);
-
-      $('btnSaveWeeklySchedule')?.addEventListener('click', () => {
-        setStatus('weeklyScheduleMsg', 'Estrutura preservada. Ligação ao backend ainda pendente nesta fase.', 'ok');
-      });
-
-      $('btnSaveLocalCirculationRules')?.addEventListener('click', () => {
-        setStatus('localCirculationRulesMsg', 'Estrutura preservada. Ligação ao backend ainda pendente nesta fase.', 'ok');
-      });
-
-      $('btnSaveLibraryIdentity')?.addEventListener('click', () => {
-        setStatus('libraryIdentityMsg', 'Estrutura preservada. Ligação ao backend ainda pendente nesta fase.', 'ok');
-      });
-
       $('btnSaveLibraryTheme')?.addEventListener('click', () => {
-        setStatus('libraryThemeMsg', 'Estrutura preservada. Ligação ao backend ainda pendente nesta fase.', 'ok');
+        const palette = $('libraryThemePalette')?.value || 'default';
+        const fontPack = $('libraryThemeFontPack')?.value || 'default';
+        const layoutPreset = $('libraryThemeLayoutPreset')?.value || 'default';
+        const bg = $('libraryThemeBackground')?.value?.trim() || 'sem imagem personalizada';
+        setStatus('libraryThemeMsg', `Presets visuais restaurados no formulário local. Paleta: ${palette} · Tipografia: ${fontPack} · Layout: ${layoutPreset} · Fundo: ${bg}.`, 'ok');
       });
-
-      $('btnRestoreDefaultLibraryTheme')?.addEventListener('click', () => {
-        if ($('libraryThemeBackgroundUrl')) $('libraryThemeBackgroundUrl').value = '';
-        if ($('libraryThemePalette')) $('libraryThemePalette').value = 'anarbib_default';
-        if ($('libraryThemeTypography')) $('libraryThemeTypography').value = 'anarbib_default';
-        setStatus('libraryThemeMsg', 'Tema padrão restaurado apenas neste formulário local.', 'ok');
+      $('btnResetLibraryTheme')?.addEventListener('click', () => {
+        if ($('libraryThemeBackground')) $('libraryThemeBackground').value = '';
+        if ($('libraryThemePalette')) $('libraryThemePalette').value = 'default';
+        if ($('libraryThemeFontPack')) $('libraryThemeFontPack').value = 'default';
+        if ($('libraryThemeLayoutPreset')) $('libraryThemeLayoutPreset').value = 'default';
+        setStatus('libraryThemeMsg', 'Presets visuais restaurados para o padrão AnarBib neste formulário local.', 'ok');
       });
     }
 
@@ -2554,107 +2518,78 @@
 
     async function requireSession(){
       for (let i = 0; i < 12; i += 1) {
-        const userRes = await supabase.auth.getUser();
-        if (userRes?.data?.user?.id) {
-          const sessionRes = await supabase.auth.getSession();
-          if (sessionRes?.data?.session?.user?.id) return sessionRes.data.session;
-        }
-
+        const { data: { session: sess } } = await supabase.auth.getSession();
+        if (sess?.user?.id) return sess;
         const hydrated = await hydrateSessionFromBrowserStorage();
-        if (hydrated?.user?.id) {
-          const refreshedUserRes = await supabase.auth.getUser();
-          if (refreshedUserRes?.data?.user?.id) {
-            const refreshedSessionRes = await supabase.auth.getSession();
-            if (refreshedSessionRes?.data?.session?.user?.id) return refreshedSessionRes.data.session;
-          }
-        }
-
+        if (hydrated?.user?.id) return hydrated;
         await new Promise((resolve) => setTimeout(resolve, 120));
       }
       location.assign(ROUTES.CADASTRO);
       return null;
     }
-
+    let currentAccessRow = null;
     async function fetchMyAccessRows(){
-      try {
-        const { data, error } = await supabase
-          .schema('api')
-          .from('my_access')
-          .select('*');
-
-        if (error) throw error;
-        return { data: Array.isArray(data) ? data : [], error: null };
-      } catch (error) {
-        return { data: [], error };
+      let lastError = null;
+      const attempts = [
+        () => supabase.schema('api').from('my_access').select('*'),
+        () => supabase.schema('api').from('profiles').select('id,email,is_librarian,is_restricted,public_id,first_name,last_name').eq('id', session?.user?.id || '').limit(1)
+      ];
+      for (const run of attempts) {
+        try {
+          const res = await run();
+          if (!res?.error) return { data: Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []), error: null };
+          lastError = res.error;
+        } catch (error) {
+          lastError = error;
+        }
       }
+      return { data: [], error: lastError };
     }
-
     function pickCurrentLibrarianAccess(rows){
-      const activeRows = (rows || []).filter((row) => String(row?.status || '').toLowerCase() === 'active');
+      const normalized = Array.isArray(rows) ? rows : [];
+      const activeRows = normalized.filter((row) => String(row?.status || 'active').toLowerCase() === 'active');
       const librarianRows = activeRows.filter((row) => {
         const role = String(row?.role || '').toLowerCase();
-        return (
-          role === 'librarian' &&
-          row?.can_access_painel === true &&
-          row?.is_restricted !== true
-        );
+        return (role === 'librarian' || row?.is_librarian === true) && row?.is_restricted !== true && row?.can_access_painel !== false;
       });
-      if (!librarianRows.length) return null;
-      return librarianRows.find((row) => row?.is_primary === true) || librarianRows[0];
+      return librarianRows.find((row) => row?.is_primary === true) || librarianRows[0] || null;
     }
-
     async function requireBibliotecaOrRedirect(){
       const accessRead = await fetchMyAccessRows();
-      const accessRows = accessRead?.data || [];
       const lastErrorMessage = accessRead?.error?.message || '';
-      currentAccessRow = pickCurrentLibrarianAccess(accessRows);
+      currentAccessRow = pickCurrentLibrarianAccess(accessRead?.data || []);
 
       if (!currentAccessRow) {
         if (lastErrorMessage) {
           setStatus('statusLoans', 'Não consegui verificar o acesso da biblioteca: ' + lastErrorMessage, 'bad', false);
-        } else {
-          location.assign(ROUTES.CONTA);
+          return false;
         }
+        location.assign(ROUTES.CONTA);
         return false;
       }
 
       return true;
     }
-
     async function fillHeader(){
-      const accessEmail = String(
-        currentAccessRow?.email ||
-        session?.user?.email ||
-        ''
-      ).trim();
-
-      const accessPublicId = String(
-        currentAccessRow?.public_id ||
-        ''
-      ).trim();
-
+      const accessEmail = String(currentAccessRow?.email || session?.user?.email || '').trim();
+      const accessPublicId = String(currentAccessRow?.public_id || '').trim();
       const firstName = String(currentAccessRow?.first_name || '').trim();
       const lastName = String(currentAccessRow?.last_name || '').trim();
       const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
-
       const role = String(currentAccessRow?.role || '').toLowerCase();
-      const roleLabel = role === 'librarian'
-        ? 'bibliotecário(a/e)'
-        : (role ? role : '—');
+      const roleLabel = role === 'librarian' || currentAccessRow?.is_librarian === true ? 'bibliotecário(a/e)' : '—';
+      const libraryLabel = String(currentAccessRow?.library_name || currentAccessRow?.default_library_name || currentAccessRow?.library_slug || currentAccessRow?.default_library_slug || '—').trim();
 
       setChip('chipEmail', 'E-mail: ' + (accessEmail || '—'));
       setChip('chipPublicId', 'ID público: ' + (accessPublicId || '—'));
+      setChip('chipBiblioteca', 'Biblioteca: ' + (libraryLabel || '—'));
       setChip('chipFuncao', 'Função: ' + roleLabel);
-      setChip('chipBiblioteca', 'Biblioteca: ' + getCurrentLibraryLabel());
-
       const helloParts = [];
       if (fullName) helloParts.push(fullName);
       if (accessPublicId) helloParts.push('ID ' + accessPublicId);
       if (!helloParts.length && accessEmail) helloParts.push(accessEmail);
       $('helloLine').textContent = helloParts.length ? ('Conectad@: ' + helloParts.join(' · ')) : '';
-
       $('btnModoLeitor').classList.toggle('hidden', !isLibrarian);
-      syncLibraryManagementPlaceholders();
     }
 
     async function loadProfilesByIds(userIds){
@@ -4803,11 +4738,8 @@
         await supabase.auth.signOut();
         try { window.localStorage.removeItem(AUTH_STORAGE_KEY); } catch (_e) {}
         try { window.sessionStorage.removeItem(AUTH_STORAGE_KEY); } catch (_e) {}
-        try { window.localStorage.removeItem('anarbib_is_librarian_hint'); } catch (_e) {}
-        try { window.sessionStorage.removeItem('anarbib_is_librarian_hint'); } catch (_e) {}
         location.assign(ROUTES.CADASTRO);
-      }
-      finally { $('btnSair').disabled = false; }
+      } finally { $('btnSair').disabled = false; }
     });
 
     renderInternalTasks();
