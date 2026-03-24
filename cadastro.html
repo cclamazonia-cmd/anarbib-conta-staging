@@ -202,12 +202,12 @@
     <!-- LOGIN -->
     <section id="loginBox">
       <form id="loginForm">
-        <label for="email">E-mail (primeiro acesso) ou ID público (acessos sucessivos)</label>
+        <label for="email">ID público</label>
         <input
           type="text"
           id="email"
           autocomplete="username"
-          inputmode="email"
+          inputmode="text"
           autocapitalize="off"
           spellcheck="false"
           required
@@ -472,7 +472,7 @@
     async function resolveLoginIdentity(identifier) {
       const value = String(identifier || "").trim();
       if (!value) {
-        throw new Error("Informe seu e-mail ou seu ID público.");
+        throw new Error("Informe seu ID público.");
       }
 
       const { data, error } = await supabase.rpc("resolve_login_email", {
@@ -496,27 +496,26 @@
       };
     }
 
-    async function signInWithEmailOrPublicId(identifier, password) {
+    async function signInWithPublicId(identifier, password) {
       const rawIdentifier = String(identifier || "").trim();
       const pwd = String(password || "");
 
       if (!rawIdentifier) {
-        throw new Error("Informe seu e-mail ou seu ID público.");
+        throw new Error("Informe seu ID público.");
+      }
+
+      if (rawIdentifier.includes("@")) {
+        throw new Error("Nesta página, entre com seu ID público. Para criar a conta, use o e-mail em “Criar conta”.");
       }
 
       if (!pwd) {
         throw new Error("Informe sua senha.");
       }
 
-      let emailToUse = rawIdentifier;
-
-      if (!rawIdentifier.includes("@")) {
-        const resolved = await resolveLoginIdentity(rawIdentifier);
-        emailToUse = resolved.email;
-      }
+      const resolved = await resolveLoginIdentity(rawIdentifier);
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: emailToUse,
+        email: resolved.email,
         password: pwd
       });
 
@@ -638,7 +637,7 @@
         const identifier = document.getElementById("email").value.trim();
         const password = document.getElementById("password").value;
 
-        const data = await signInWithEmailOrPublicId(identifier, password);
+        const data = await signInWithPublicId(identifier, password);
 
         await persistReturnedSession(data);
         await ensureCurrentUserProfile();
@@ -648,7 +647,8 @@
         const raw = String(error?.message || "");
         const friendly =
           raw === "Usuário não encontrado." ||
-          raw === "Informe seu e-mail ou seu ID público." ||
+          raw === "Informe seu ID público." ||
+          raw === "Nesta página, entre com seu ID público. Para criar a conta, use o e-mail em “Criar conta”." ||
           raw === "Informe sua senha." ||
           raw === "Não foi possível verificar o identificador informado."
             ? raw

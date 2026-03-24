@@ -573,6 +573,12 @@
       <button type="submit">Enviar cadastro</button>
       <button type="button" class="btn" id="back">Voltar</button>
 
+      <div id="publicIdNotice" class="notice" style="display:none; margin-top:12px;" aria-live="polite">
+        <b>Seu ID público</b>
+        <div class="small" style="margin-top:8px;">Guarde este identificador. Nos próximos acessos, entre em <b>Cadastro</b> com seu <b>ID público</b> e sua senha.</div>
+        <div id="publicIdValue" style="margin-top:10px; font-size:1.05rem; font-weight:900; letter-spacing:.04em;"></div>
+      </div>
+
       <p id="msg" class="msg" aria-live="polite"></p>
     </form>
   </main>
@@ -664,6 +670,8 @@
     const form = document.getElementById("cadastroForm");
     const msg = document.getElementById("msg");
     const requiredMsg = document.getElementById("requiredMsg");
+    const publicIdNotice = document.getElementById("publicIdNotice");
+    const publicIdValue = document.getElementById("publicIdValue");
 
     const consent = document.getElementById("consent");
     const acceptRules = document.getElementById("acceptRules");
@@ -677,6 +685,18 @@
     function setMsg(text = "", kind = "") {
       msg.textContent = text;
       msg.className = kind ? `msg ${kind}` : "msg";
+    }
+
+    function setPublicIdNotice(publicId = "") {
+      const value = String(publicId || "").trim();
+      if (!publicIdNotice || !publicIdValue) return;
+      if (!value) {
+        publicIdNotice.style.display = "none";
+        publicIdValue.textContent = "";
+        return;
+      }
+      publicIdValue.textContent = value;
+      publicIdNotice.style.display = "block";
     }
 
     function mapRegisterError(data, status) {
@@ -738,6 +758,7 @@
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       setMsg("");
+      setPublicIdNotice("");
       requiredMsg.style.display = "none";
 
       if (!validateCheckboxes()) {
@@ -791,14 +812,21 @@
           return;
         }
 
+        const createdPublicId = String(data?.public_id || "").trim();
+        setPublicIdNotice(createdPublicId);
+
         if (data.email_usuaria_enviado === false) {
           setMsg(
-            "Cadastro concluído, mas houve um problema ao enviar o e-mail automaticamente. Entre em contato com a biblioteca para receber sua senha. Depois do primeiro acesso, altere sua senha na Conta.",
+            createdPublicId
+              ? `Cadastro concluído. Seu ID público é ${createdPublicId}. Houve um problema ao enviar o e-mail automaticamente. Entre em contato com a biblioteca para receber sua senha.`
+              : "Cadastro concluído, mas houve um problema ao enviar o e-mail automaticamente. Entre em contato com a biblioteca para receber sua senha.",
             "warn"
           );
         } else {
           setMsg(
-            "Cadastro enviado com sucesso. Verifique seu e-mail (e Spam/Lixo eletrônico) para receber sua senha. Depois do primeiro acesso, altere sua senha na Conta.",
+            createdPublicId
+              ? `Cadastro enviado com sucesso. Seu ID público é ${createdPublicId}. Verifique seu e-mail (e Spam/Lixo eletrônico) para receber sua senha provisória. Nos próximos acessos, entre com seu ID público e sua senha.`
+              : "Cadastro enviado com sucesso. Verifique seu e-mail (e Spam/Lixo eletrônico) para receber sua senha provisória. Nos próximos acessos, entre com seu ID público e sua senha.",
             "ok"
           );
         }
