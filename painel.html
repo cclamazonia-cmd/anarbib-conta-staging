@@ -506,8 +506,8 @@
     <div class="tabs-layout">
       <nav class="tabs-nav" role="tablist" aria-label="Seções do painel">
         <button class="tab-btn active" type="button" data-tab="funcionamento" role="tab" aria-selected="true" aria-controls="tab-funcionamento">
-          Funcionamento
-          <span class="hint">Modo global e reservas públicas</span>
+          Biblioteca
+          <span class="hint">Funcionamento, horários, regras locais e tema</span>
         </button>
         <button class="tab-btn" type="button" data-tab="acoes" role="tab" aria-selected="false" aria-controls="tab-acoes">
           Ações
@@ -547,7 +547,19 @@
             <div class="card">
               <div class="section-head">
                 <div>
-                  <h2>Modo de funcionamento da biblioteca</h2>
+                  <h2>Biblioteca</h2>
+                  <div class="mini">Configuração local da biblioteca: funcionamento, horários, regras de circulação, identidade e tema visual.</div>
+                </div>
+              </div>
+              <div class="muted-box" style="margin-top:12px">
+                <div class="mini">Neste primeiro patch, apenas o bloco “Estado do serviço” está ligado ao backend atual. Os outros blocos já ficam preparados no painel, sem alterar o restante do sistema.</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h2>Estado do serviço</h2>
                   <div class="mini">Fonte única de verdade para a mensagem pública e a abertura de novas reservas.</div>
                 </div>
               </div>
@@ -579,9 +591,164 @@
                 <textarea class="textarea" id="internalServiceMessage" placeholder="Observação interna para a equipe da biblioteca."></textarea>
               </div>
               <div class="actions">
-                <button class="btn primary" id="btnSaveServiceState" type="button">Salvar modo de funcionamento</button>
+                <button class="btn primary" id="btnSaveServiceState" type="button">Salvar funcionamento</button>
               </div>
               <div class="status" id="serviceStateMsg"></div>
+            </div>
+
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h2>Horários e permanências</h2>
+                  <div class="mini">Estrutura preparada para os horários semanais, permanências fixas e fechamentos excepcionais.</div>
+                </div>
+              </div>
+              <div class="row3" style="margin-top:12px">
+                <div>
+                  <label for="libraryOpenMonday">Segunda-feira</label>
+                  <input class="input" id="libraryOpenMonday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
+                </div>
+                <div>
+                  <label for="libraryOpenTuesday">Terça-feira</label>
+                  <input class="input" id="libraryOpenTuesday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
+                </div>
+                <div>
+                  <label for="libraryOpenWednesday">Quarta-feira</label>
+                  <input class="input" id="libraryOpenWednesday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
+                </div>
+              </div>
+              <div class="row3" style="margin-top:12px">
+                <div>
+                  <label for="libraryOpenThursday">Quinta-feira</label>
+                  <input class="input" id="libraryOpenThursday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
+                </div>
+                <div>
+                  <label for="libraryOpenFriday">Sexta-feira</label>
+                  <input class="input" id="libraryOpenFriday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
+                </div>
+                <div>
+                  <label for="libraryOpenWeekend">Fim de semana</label>
+                  <input class="input" id="libraryOpenWeekend" type="text" placeholder="Ex.: somente em plantões / fechado">
+                </div>
+              </div>
+              <div style="margin-top:12px">
+                <label for="libraryFixedOpenings">Permanências fixas</label>
+                <textarea class="textarea" id="libraryFixedOpenings" placeholder="Ex.: toda terça, das 15h às 18h, no espaço da biblioteca."></textarea>
+              </div>
+              <div style="margin-top:12px">
+                <label for="libraryExceptionalClosures">Fechamentos ou suspensões temporárias</label>
+                <textarea class="textarea" id="libraryExceptionalClosures" placeholder="Ex.: fechado no feriado, mutirão interno, reforma do espaço, pausa temporária etc."></textarea>
+              </div>
+              <div class="actions">
+                <button class="btn" id="btnSaveLibrarySchedule" type="button" disabled>Salvar horários</button>
+              </div>
+              <div class="status" id="libraryScheduleMsg">Bloco preparado para ligação futura ao backend.</div>
+            </div>
+
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h2>Regras locais de circulação</h2>
+                  <div class="mini">Parâmetros locais para reservas e empréstimos de pessoas não inscritas nesta biblioteca.</div>
+                </div>
+              </div>
+              <div class="row" style="margin-top:12px">
+                <div>
+                  <label for="nonMemberReservationPolicy">Reservas para não inscritas/os</label>
+                  <select class="select" id="nonMemberReservationPolicy">
+                    <option value="nao_permitir">Não permitir</option>
+                    <option value="sob_analise">Permitir sob análise</option>
+                    <option value="permitir">Permitir</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="nonMemberLoanPolicy">Empréstimos para não inscritas/os</label>
+                  <select class="select" id="nonMemberLoanPolicy">
+                    <option value="nao_permitir">Não permitir</option>
+                    <option value="sob_analise">Permitir sob análise</option>
+                    <option value="permitir">Permitir</option>
+                  </select>
+                </div>
+              </div>
+              <div style="margin-top:12px">
+                <label for="nonMemberPublicNote">Texto público explicativo</label>
+                <textarea class="textarea" id="nonMemberPublicNote" placeholder="Ex.: leitoras/es de outras bibliotecas podem reservar, mas a retirada depende de análise local da equipe."></textarea>
+              </div>
+              <div class="actions">
+                <button class="btn" id="btnSaveLocalRules" type="button" disabled>Salvar regras locais</button>
+              </div>
+              <div class="status" id="localRulesMsg">Bloco preparado para ligação futura ao backend.</div>
+            </div>
+
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h2>Identidade da biblioteca</h2>
+                  <div class="mini">Nome público, forma abreviada e identificador curto da biblioteca.</div>
+                </div>
+              </div>
+              <div class="row3" style="margin-top:12px">
+                <div>
+                  <label for="libraryFullName">Nome completo</label>
+                  <input class="input" id="libraryFullName" type="text" placeholder="Ex.: Biblioteca Libertária Maxwell Ferreira">
+                </div>
+                <div>
+                  <label for="libraryShortName">Nome abreviado</label>
+                  <input class="input" id="libraryShortName" type="text" placeholder="Ex.: BLMF">
+                </div>
+                <div>
+                  <label for="librarySlug">Slug / identificador curto</label>
+                  <input class="input mono" id="librarySlug" type="text" placeholder="Ex.: blmf">
+                </div>
+              </div>
+              <div class="actions">
+                <button class="btn" id="btnSaveLibraryIdentity" type="button" disabled>Salvar identidade</button>
+              </div>
+              <div class="status" id="libraryIdentityMsg">Bloco preparado para ligação futura ao backend.</div>
+            </div>
+
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h2>Tema visual da biblioteca</h2>
+                  <div class="mini">Imagem de fundo, paleta e conjunto tipográfico da biblioteca, dentro de opções controladas.</div>
+                </div>
+              </div>
+              <div class="row" style="margin-top:12px">
+                <div>
+                  <label for="libraryThemeBackground">Imagem de fundo (1920 × 1080 recomendado)</label>
+                  <input class="input" id="libraryThemeBackground" type="text" placeholder="URL pública da imagem de fundo">
+                </div>
+                <div>
+                  <label for="libraryThemePalette">Paleta</label>
+                  <select class="select" id="libraryThemePalette">
+                    <option value="default">Padrão AnarBib</option>
+                    <option value="contraste_suave">Contraste suave</option>
+                    <option value="vermelho_escuro">Vermelho escuro</option>
+                    <option value="cinza_vermelho">Cinza e vermelho</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row" style="margin-top:12px">
+                <div>
+                  <label for="libraryThemeFontPack">Conjunto tipográfico</label>
+                  <select class="select" id="libraryThemeFontPack">
+                    <option value="default">Padrão AnarBib</option>
+                    <option value="inter_merriweather">Inter + Merriweather</option>
+                    <option value="inter_source">Inter + Source Serif</option>
+                    <option value="system">Sistema</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="libraryThemePreviewNote">Pré-visualização</label>
+                  <input class="input" id="libraryThemePreviewNote" type="text" value="Estrutura preparada para preview futuro." readonly>
+                </div>
+              </div>
+              <div class="actions">
+                <button class="btn" id="btnSaveLibraryTheme" type="button" disabled>Salvar tema</button>
+                <button class="btn" id="btnResetLibraryTheme" type="button" disabled>Restaurar tema padrão</button>
+              </div>
+              <div class="status" id="libraryThemeMsg">Bloco preparado para ligação futura ao backend.</div>
             </div>
           </div>
         </section>
