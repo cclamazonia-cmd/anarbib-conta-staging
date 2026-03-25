@@ -1239,10 +1239,28 @@ button[type="submit"] *,
       el.textContent = `${label}: ${value ?? "—"}`;
     }
 
+
+    function normalizeBibRefValue(value) {
+      return String(value || "").trim();
+    }
+
+    function setActiveReservationBibRefs(rowsData) {
+      activeReservationBibRefs = new Set(
+        (Array.isArray(rowsData) ? rowsData : [])
+          .map((row) => normalizeBibRefValue(row?.bib_ref))
+          .filter(Boolean)
+      );
+    }
+
+    function findAlreadyReservedRefs(refs) {
+      return refs.filter((ref) => activeReservationBibRefs.has(normalizeBibRefValue(ref)));
+    }
+
     let mustChangePassword = false;
     let userIsRestricted = false;
     let isLibrarian = false;
     let publicServiceState = null;
+    let activeReservationBibRefs = new Set();
 
     const SERVICE_MODE_LABELS = {
       funcionamento_normal: "Funcionamento normal",
@@ -1904,6 +1922,7 @@ button[type="submit"] *,
 
       if (!currentQ.error) {
         const rowsData = currentQ.data || [];
+        setActiveReservationBibRefs(rowsData);
         if (!rowsData.length) {
           setChipText(chipContaReservas, "Reservas ativas", "0");
           return showEmpty(activeReservationsEl, "Você não tem reservas ativas no momento.");
@@ -1971,6 +1990,7 @@ button[type="submit"] *,
         .order("line_no", { ascending: true });
 
       if (!v2.error && (v2.data || []).length) {
+        setActiveReservationBibRefs(v2.data || []);
         setChipText(chipContaReservas, "Reservas ativas", String((v2.data || []).length));
         const rotulosMap = await fetchRotulosMapByBibRefs((v2.data || []).map((r) => r.bib_ref));
         const rows = v2.data.map((r) => {
@@ -2892,8 +2912,17 @@ button[type="submit"] *,
         return;
       }
 
+      const alreadyReservedRefs = findAlreadyReservedRefs(refs);
+      if (alreadyReservedRefs.length) {
+        reserveMsg.textContent = alreadyReservedRefs.length === 1
+          ? `Este livro já está reservado na sua conta: ${alreadyReservedRefs[0]}.`
+          : `Estes livros já estão reservados na sua conta: ${alreadyReservedRefs.join(", ")}.`;
+        return;
+      }
+
       const resV2 = await createReservaV2(refs);
       if (!resV2.error) {
+        refs.forEach((ref) => activeReservationBibRefs.add(normalizeBibRefValue(ref)));
         reserveMsg.textContent = `Reserva registrada com sucesso para ${refs.length} livro(s).`;
         $("bibRef").value = "";
         await renderActiveReservations();
