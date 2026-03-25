@@ -569,7 +569,7 @@
                   <select class="select" id="serviceModeSelect">
                     <option value="funcionamento_normal">Funcionamento normal</option>
                     <option value="somente_consulta">Somente consulta</option>
-                    <option value="pausada">Fechada ao público</option>
+                    <option value="pausada">Pausada</option>
                   </select>
                 </div>
                 <div>
@@ -1537,46 +1537,6 @@
 
     const SUPABASE_URL = CONFIG.SUPABASE_URL;
     const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
-    const AUTH_STORAGE_KEY = 'sb-uflwmikiyjfnikiphtcp-auth-token';
-
-    function normalizeStoredSession(payload){
-      if (payload?.access_token && payload?.refresh_token) {
-        return { access_token: payload.access_token, refresh_token: payload.refresh_token };
-      }
-      if (payload?.currentSession?.access_token && payload?.currentSession?.refresh_token) {
-        return { access_token: payload.currentSession.access_token, refresh_token: payload.currentSession.refresh_token };
-      }
-      return null;
-    }
-
-    function readStoredSessionCandidate(){
-      const stores = [window.localStorage, window.sessionStorage];
-      const keys = [AUTH_STORAGE_KEY, 'sb-asptfmokzykwzlshsncw-auth-token'];
-      for (const store of stores){
-        for (const key of keys){
-          try {
-            const raw = store?.getItem?.(key);
-            if (!raw) continue;
-            const parsed = JSON.parse(raw);
-            const normalized = normalizeStoredSession(parsed);
-            if (normalized?.access_token && normalized?.refresh_token) return normalized;
-          } catch (_e) {}
-        }
-      }
-      return null;
-    }
-
-    async function hydrateSessionFromBrowserStorage(){
-      const stored = readStoredSessionCandidate();
-      if (!stored) return null;
-      try {
-        const { data, error } = await supabase.auth.setSession(stored);
-        if (error) return null;
-        return data?.session || null;
-      } catch (_e) {
-        return null;
-      }
-    }
 
     const statusTimers = new Map();
     let session = null;
@@ -1744,7 +1704,7 @@
       return ({
         funcionamento_normal: 'Funcionamento normal',
         somente_consulta: 'Somente consulta',
-        pausada: 'Fechada ao público'
+        pausada: 'Pausada'
       })[String(mode || '').trim()] || '—';
     }
 
@@ -1752,7 +1712,7 @@
       return ({
         funcionamento_normal: 'A biblioteca está em funcionamento normal.',
         somente_consulta: 'A biblioteca está funcionando apenas para consulta local no momento.',
-        pausada: 'A biblioteca está sem atendimento ao público no momento.'
+        pausada: 'A biblioteca está com o atendimento pausado no momento.'
       })[String(mode || '').trim()] || '';
     }
 
@@ -2582,8 +2542,6 @@ function belemNowParts(){
       for (let i = 0; i < 12; i += 1) {
         const { data: { session: sess } } = await supabase.auth.getSession();
         if (sess?.user?.id) return sess;
-        const hydrated = await hydrateSessionFromBrowserStorage();
-        if (hydrated?.user?.id) return hydrated;
         await new Promise((resolve) => setTimeout(resolve, 120));
       }
       location.assign(ROUTES.CADASTRO);
@@ -4773,10 +4731,6 @@ async function fetchActiveLoans(){
       $('btnSair').disabled = true;
       try {
         await supabase.auth.signOut();
-        try { window.localStorage.removeItem(AUTH_STORAGE_KEY); } catch (_e) {}
-        try { window.sessionStorage.removeItem(AUTH_STORAGE_KEY); } catch (_e) {}
-        try { window.localStorage.removeItem('anarbib_is_librarian_hint'); } catch (_e) {}
-        try { window.sessionStorage.removeItem('anarbib_is_librarian_hint'); } catch (_e) {}
         location.assign(ROUTES.CADASTRO);
       }
       finally { $('btnSair').disabled = false; }
