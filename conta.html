@@ -685,7 +685,7 @@ button[type="submit"] *,
       <div class="topbar-actions">
         <a id="btnCatalogo" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-staging/">Voltar ao catálogo</a>
         <a id="goPainelBiblio" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html">Painel de gestão</a>
-        <button id="logout" class="logout-btn" type="button" onclick="try{localStorage.removeItem('anarbib_active_tab');sessionStorage.removeItem('anarbib_active_tab');}catch(_e){}window.location.assign('https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html');return false;">Sair</button>
+        <button id="logout" class="logout-btn" type="button">Sair</button>
       </div>
     </div>
 
@@ -1183,6 +1183,10 @@ button[type="submit"] *,
       try {
         await supabase.auth.signOut();
       } catch (_) {}
+      try {
+        localStorage.removeItem("anarbib_active_tab");
+        sessionStorage.removeItem("anarbib_active_tab");
+      } catch (_e) {}
       window.location.assign(ROUTES.CADASTRO);
     });
 
