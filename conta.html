@@ -1264,26 +1264,19 @@ button[type="submit"] *,
     let userIsRestricted = false;
     let isLibrarian = false;
     let publicServiceState = null;
+    let currentContaIdentity = null;
     let activeReservationBibRefs = new Set();
 
     const SERVICE_MODE_LABELS = {
       funcionamento_normal: "Funcionamento normal",
-      somente_consulta: "Somente consulta local",
-      pausada: "Fechada ao público",
-      em_organizacao: "Em organização",
-      atendimento_eventual: "Atendimento eventual",
-      atendimento_semanal: "Atendimento semanal",
-      fechado_temporariamente: "Fechado temporariamente"
+      somente_consulta: "Somente consulta",
+      pausada: "Pausada"
     };
 
     const SERVICE_MODE_MESSAGES = {
       funcionamento_normal: "A biblioteca está em funcionamento normal.",
-      somente_consulta: "A biblioteca está aberta somente para consulta local.",
-      pausada: "A biblioteca está fechada ao público no momento. Consulte os canais da biblioteca para atualizações.",
-      em_organizacao: "A biblioteca está em organização. O atendimento ocorre conforme a capacidade operacional atual.",
-      atendimento_eventual: "A biblioteca funciona com atendimento eventual. Consulte os canais da biblioteca para informações atualizadas.",
-      atendimento_semanal: "A biblioteca funciona com atendimento semanal em ritmo regular. Consulte os canais da biblioteca para os horários e orientações vigentes.",
-      fechado_temporariamente: "A biblioteca está temporariamente fechada para atendimento presencial. Consulte os canais da biblioteca para atualizações e orientações."
+      somente_consulta: "A biblioteca está funcionando apenas para consulta local no momento.",
+      pausada: "A biblioteca está com o atendimento pausado no momento."
     };
 
     function escapeHtml(v) {
@@ -1339,15 +1332,34 @@ button[type="submit"] *,
       return msg.includes("schema cache") || msg.includes("could not find the table") || msg.includes("relation") && msg.includes("does not exist");
     }
 
-    function normalizeServiceState(row) {
+    function normalizeLibraryId(value) {
+      const v = String(value || "").trim();
+      return v || null;
+    }
+
+    function getAllowedServiceModes() {
+      return ["funcionamento_normal", "somente_consulta", "pausada"];
+    }
+
+    function normalizeServiceMode(value) {
+      const v = String(value || "").trim();
+      return getAllowedServiceModes().includes(v) ? v : "funcionamento_normal";
+    }
+
+    function getAllowsNewReservations(row) {
+      if (!row || typeof row !== "object") return false;
+      if (row.allows_new_reservations === true || row.allows_new_reservations === false) return row.allows_new_reservations === true;
+      if (row.allow_reservations === true || row.allow_reservations === false) return row.allow_reservations === true;
+      return false;
+    }
+
+    function normalizeServiceState(row, fallbackLibraryId = null) {
       if (!row || typeof row !== "object") return null;
-      const hasAllowReservations = typeof row.allow_reservations === "boolean";
-      const hasAllowsNewReservations = typeof row.allows_new_reservations === "boolean";
       return {
-        service_mode: String(row.service_mode || "").trim() || null,
-        allow_reservations: hasAllowReservations
-          ? row.allow_reservations
-          : (hasAllowsNewReservations ? row.allows_new_reservations : null),
+        ...row,
+        library_id: normalizeLibraryId(row.library_id || fallbackLibraryId),
+        service_mode: normalizeServiceMode(row.service_mode),
+        allow_reservations: getAllowsNewReservations(row),
         public_message: String(row.public_message || "").trim(),
         updated_at: row.updated_at || null
       };
@@ -1395,37 +1407,138 @@ button[type="submit"] *,
       }
     }
 
+    async function resolveContaLibraryIdentity() {
+      const sessionMeta = {
+        ...(session?.user?.user_metadata || {}),
+        ...(session?.user?.app_metadata || {})
+      };
+
+      const candidateIds = [
+        currentContaIdentity?.library_id,
+        currentContaIdentity?.default_library_id,
+        sessionMeta.library_id,
+        sessionMeta.default_library_id
+      ].map(normalizeLibraryId).filter(Boolean);
+
+      if (candidateIds.length) return { id: candidateIds[0], row: null };
+
+      const candidateSlug = String(
+        currentContaIdentity?.library_slug ||
+        currentContaIdentity?.default_library_slug ||
+        sessionMeta.library_slug ||
+        sessionMeta.default_library_slug ||
+        ""
+      ).trim();
+
+      if (candidateSlug) {
+        const { data, error } = await supabase
+          .from("libraries")
+          .select("id,slug,name,short_name")
+          .eq("slug", candidateSlug)
+          .maybeSingle();
+        if (error) throw error;
+        if (data?.id) return { id: normalizeLibraryId(data.id), row: data };
+      }
+
+      const contextAttempts = [
+        () => supabase.from("my_session_context").select("*").limit(1).maybeSingle(),
+        () => supabase.from("my_access").select("*").limit(1).maybeSingle(),
+        () => supabase.from("profiles").select("*").eq("id", session.user.id).maybeSingle()
+      ];
+
+      for (const run of contextAttempts) {
+        try {
+          const res = await run();
+          if (res?.error || !res?.data) continue;
+          currentContaIdentity = { ...(currentContaIdentity || {}), ...(res.data || {}) };
+          const resolvedId = normalizeLibraryId(currentContaIdentity?.library_id || currentContaIdentity?.default_library_id);
+          if (resolvedId) return { id: resolvedId, row: res.data };
+
+          const resolvedSlug = String(currentContaIdentity?.library_slug || currentContaIdentity?.default_library_slug || "").trim();
+          if (resolvedSlug) {
+            const libRes = await supabase
+              .from("libraries")
+              .select("id,slug,name,short_name")
+              .eq("slug", resolvedSlug)
+              .maybeSingle();
+            if (!libRes?.error && libRes?.data?.id) {
+              return { id: normalizeLibraryId(libRes.data.id), row: libRes.data };
+            }
+          }
+        } catch (_err) {}
+      }
+
+      try {
+        const membershipRes = await supabase
+          .from("user_library_memberships")
+          .select("library_id,is_primary,status")
+          .eq("user_id", session.user.id)
+          .eq("status", "active")
+          .order("is_primary", { ascending: false })
+          .limit(1);
+        const membershipRow = membershipRes?.data?.[0] || null;
+        const membershipLibraryId = normalizeLibraryId(membershipRow?.library_id);
+        if (!membershipRes?.error && membershipLibraryId) {
+          return { id: membershipLibraryId, row: membershipRow };
+        }
+      } catch (_err) {}
+
+      return { id: null, row: null };
+    }
+
     async function loadPublicServiceState() {
       let data = null;
       let error = null;
+      let resolvedLibraryId = null;
+
+      try {
+        const resolved = await resolveContaLibraryIdentity();
+        resolvedLibraryId = normalizeLibraryId(resolved?.id);
+        if (resolvedLibraryId) {
+          const stateRes = await supabase
+            .from("library_service_state")
+            .select("library_id,service_mode,public_message,allows_new_reservations,updated_at")
+            .eq("library_id", resolvedLibraryId)
+            .maybeSingle();
+          if (!stateRes?.error && stateRes?.data) {
+            data = stateRes.data;
+          } else if (stateRes?.error) {
+            error = stateRes.error;
+          }
+        }
+      } catch (err) {
+        error = err;
+      }
 
       const attempts = [
         () => supabase.schema("api").from("library_service_public").select("*").limit(1).maybeSingle(),
         () => supabase.from("v_library_service_public").select("*").limit(1).maybeSingle()
       ];
 
-      for (const run of attempts) {
-        try {
-          const res = await run();
-          if (!res?.error) {
-            data = res?.data || null;
-            error = null;
-            break;
+      if (!data) {
+        for (const run of attempts) {
+          try {
+            const res = await run();
+            if (!res?.error && res?.data) {
+              data = res.data;
+              error = null;
+              break;
+            }
+            if (res?.error) error = res.error;
+          } catch (err) {
+            error = err;
           }
-          error = res.error;
-        } catch (err) {
-          error = err;
         }
       }
 
-      if (error) {
+      if (error && !data) {
         console.warn("loadPublicServiceState error:", error);
         publicServiceState = null;
         renderPublicServiceState();
         return;
       }
 
-      publicServiceState = normalizeServiceState(data);
+      publicServiceState = normalizeServiceState(data, resolvedLibraryId);
       renderPublicServiceState();
     }
 
@@ -1753,6 +1866,13 @@ button[type="submit"] *,
       $("phone").value = data.phone || "";
       $("gender").value = data.gender || "";
       loadAddressFields(data.address || "");
+
+      currentContaIdentity = {
+        ...(currentContaIdentity || {}),
+        ...(data || {}),
+        library_id: normalizeLibraryId(data?.library_id || data?.default_library_id || currentContaIdentity?.library_id || currentContaIdentity?.default_library_id),
+        library_slug: String(data?.library_slug || data?.default_library_slug || currentContaIdentity?.library_slug || currentContaIdentity?.default_library_slug || "").trim() || null
+      };
 
       if (typeof data.must_change_password === "boolean") enforcePasswordChangeUI(data.must_change_password);
       if (typeof data.is_restricted === "boolean") enforceRestrictionUI(data.is_restricted, data.restricted_reason);
