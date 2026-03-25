@@ -408,8 +408,6 @@
       }
     }
 
-    const AUTH_STORAGE_KEY = "sb-asptfmokzykwzlshsncw-auth-token";
-
     function readBooleanHints(source) {
       if (!source || typeof source !== "object") return null;
       const candidates = [
@@ -438,26 +436,11 @@
       return hint === true;
     }
 
-    function persistSessionToBrowserStorages(signInData, isLib = null) {
-      const session = signInData?.session || null;
-      if (!session) return;
-      const serialized = JSON.stringify(session);
-      try { window.localStorage.setItem(AUTH_STORAGE_KEY, serialized); } catch (e) { console.warn("localStorage auth persist failed:", e); }
-      try { window.sessionStorage.setItem(AUTH_STORAGE_KEY, serialized); } catch (e) { console.warn("sessionStorage auth persist failed:", e); }
-      if (isLib === true || isLib === false) {
-        try { window.sessionStorage.setItem("anarbib_is_librarian_hint", String(isLib)); } catch {}
-        try { window.localStorage.setItem("anarbib_is_librarian_hint", String(isLib)); } catch {}
-      }
-    }
-
     async function waitForSharedSession(signInData) {
-      persistSessionToBrowserStorages(signInData);
-
       for (let i = 0; i < 12; i += 1) {
         try {
           const { data } = await supabase.auth.getSession();
           if (data?.session?.user?.id) {
-            persistSessionToBrowserStorages({ session: data.session });
             return data.session;
           }
         } catch (e) {
@@ -596,17 +579,6 @@
       }
     }
 
-    async function persistReturnedSession(signInData) {
-      const access_token = signInData?.session?.access_token;
-      const refresh_token = signInData?.session?.refresh_token;
-      if (!access_token || !refresh_token) return;
-      try {
-        await supabase.auth.setSession({ access_token, refresh_token });
-      } catch (e) {
-        console.warn("persistReturnedSession failed:", e);
-      }
-    }
-
     async function ensureCurrentUserProfile() {
       try {
         const { error } = await supabase.rpc("fn_ensure_current_user_profile");
@@ -630,7 +602,6 @@
       }
 
       const isLib = await fetchIsLibrarian(userId, signInData);
-      persistSessionToBrowserStorages(signInData, isLib);
 
       try { window.sessionStorage.setItem("anarbib_last_login_target", isLib ? ROUTES.PAINEL : ROUTES.CONTA); } catch {}
       try { window.localStorage.setItem("anarbib_last_login_target", isLib ? ROUTES.PAINEL : ROUTES.CONTA); } catch {}
@@ -661,7 +632,6 @@
 
         const data = await signInWithPublicId(identifier, password);
 
-        await persistReturnedSession(data);
         await ensureCurrentUserProfile();
         await afterLoginRedirect(data);
       } catch (error) {
