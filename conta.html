@@ -685,7 +685,7 @@ button[type="submit"] *,
       <div class="topbar-actions">
         <a id="btnCatalogo" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-staging/">Voltar ao catálogo</a>
         <a id="goPainelBiblio" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html">Painel de gestão</a>
-        <button id="logout" class="logout-btn" type="button">Sair</button>
+        <button id="logout" class="logout-btn" type="button">Logout</button>
       </div>
     </div>
 
@@ -1173,6 +1173,10 @@ button[type="submit"] *,
       PAINEL: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html",
     };
 
+    const LIBRARY_REGIMENTO_URLS = {
+      blmf: "https://cclamazonia.noblogs.org/files/2026/03/Regimento-BLMF-v2.3.pdf"
+    };
+
     const $ = (id) => document.getElementById(id);
     $("btnCatalogo")?.addEventListener("click", (e) => {
       e.preventDefault();
@@ -1243,6 +1247,56 @@ button[type="submit"] *,
       el.textContent = `${label}: ${value ?? "—"}`;
     }
 
+    function resolveLibraryRegimentoUrl(identity) {
+      const values = [
+        identity?.library_slug,
+        identity?.default_library_slug,
+        identity?.short_name,
+        identity?.library_short_name,
+        identity?.library_code,
+        identity?.name,
+        identity?.library_name
+      ]
+        .map((value) => String(value || "").trim().toLowerCase())
+        .filter(Boolean);
+
+      if (values.some((value) => value === "blmf" || value.includes("maxwell ferreira"))) {
+        return LIBRARY_REGIMENTO_URLS.blmf;
+      }
+
+      return null;
+    }
+
+    function updateContaTopbarAction() {
+      const go = $("goPainelBiblio");
+      if (!go) return;
+
+      if (isLibrarian) {
+        go.textContent = "Painel de gestão";
+        go.href = ROUTES.PAINEL;
+        go.hidden = false;
+        go.style.display = "inline-flex";
+        go.removeAttribute("target");
+        go.removeAttribute("rel");
+        return;
+      }
+
+      const regimentoUrl = resolveLibraryRegimentoUrl(currentContaIdentity);
+      if (regimentoUrl) {
+        go.textContent = "Regimento da biblioteca";
+        go.href = regimentoUrl;
+        go.hidden = false;
+        go.style.display = "inline-flex";
+        go.target = "_blank";
+        go.rel = "noopener noreferrer";
+        return;
+      }
+
+      go.hidden = true;
+      go.style.display = "none";
+      go.removeAttribute("target");
+      go.removeAttribute("rel");
+    }
 
     function normalizeBibRefValue(value) {
       return String(value || "").trim();
@@ -1420,7 +1474,21 @@ button[type="submit"] *,
         sessionMeta.default_library_id
       ].map(normalizeLibraryId).filter(Boolean);
 
-      if (candidateIds.length) return { id: candidateIds[0], row: null };
+      if (candidateIds.length) {
+        const directId = candidateIds[0];
+        try {
+          const libRes = await supabase
+            .from("libraries")
+            .select("id,slug,name,short_name")
+            .eq("id", directId)
+            .maybeSingle();
+          if (!libRes?.error && libRes?.data?.id) {
+            currentContaIdentity = { ...(currentContaIdentity || {}), ...(libRes.data || {}) };
+            return { id: directId, row: currentContaIdentity };
+          }
+        } catch (_err) {}
+        return { id: directId, row: currentContaIdentity || null };
+      }
 
       const candidateSlug = String(
         currentContaIdentity?.library_slug ||
@@ -1437,7 +1505,10 @@ button[type="submit"] *,
           .eq("slug", candidateSlug)
           .maybeSingle();
         if (error) throw error;
-        if (data?.id) return { id: normalizeLibraryId(data.id), row: data };
+        if (data?.id) {
+          currentContaIdentity = { ...(currentContaIdentity || {}), ...(data || {}) };
+          return { id: normalizeLibraryId(data.id), row: currentContaIdentity };
+        }
       }
 
       const contextAttempts = [
@@ -1462,7 +1533,8 @@ button[type="submit"] *,
               .eq("slug", resolvedSlug)
               .maybeSingle();
             if (!libRes?.error && libRes?.data?.id) {
-              return { id: normalizeLibraryId(libRes.data.id), row: libRes.data };
+              currentContaIdentity = { ...(currentContaIdentity || {}), ...(libRes.data || {}) };
+              return { id: normalizeLibraryId(libRes.data.id), row: currentContaIdentity };
             }
           }
         } catch (_err) {}
@@ -1479,7 +1551,19 @@ button[type="submit"] *,
         const membershipRow = membershipRes?.data?.[0] || null;
         const membershipLibraryId = normalizeLibraryId(membershipRow?.library_id);
         if (!membershipRes?.error && membershipLibraryId) {
-          return { id: membershipLibraryId, row: membershipRow };
+          try {
+            const libRes = await supabase
+              .from("libraries")
+              .select("id,slug,name,short_name")
+              .eq("id", membershipLibraryId)
+              .maybeSingle();
+            if (!libRes?.error && libRes?.data?.id) {
+              currentContaIdentity = { ...(currentContaIdentity || {}), ...(membershipRow || {}), ...(libRes.data || {}) };
+              return { id: membershipLibraryId, row: currentContaIdentity };
+            }
+          } catch (_err) {}
+          currentContaIdentity = { ...(currentContaIdentity || {}), ...(membershipRow || {}) };
+          return { id: membershipLibraryId, row: currentContaIdentity };
         }
       } catch (_err) {}
 
@@ -1493,6 +1577,9 @@ button[type="submit"] *,
 
       try {
         const resolved = await resolveContaLibraryIdentity();
+        if (resolved?.row) {
+          currentContaIdentity = { ...(currentContaIdentity || {}), ...(resolved.row || {}) };
+        }
         resolvedLibraryId = normalizeLibraryId(resolved?.id);
         if (resolvedLibraryId) {
           const stateRes = await supabase
@@ -1540,6 +1627,7 @@ button[type="submit"] *,
 
       publicServiceState = normalizeServiceState(data, resolvedLibraryId);
       renderPublicServiceState();
+      updateContaTopbarAction();
     }
 
     function normalizeOneRef(input) {
@@ -1897,12 +1985,7 @@ button[type="submit"] *,
         return ["true", "librarian", "bibliotecario", "bibliotecária", "bibliotecaire"].includes(String(value || "").trim().toLowerCase());
       });
       isLibrarian = (data?.is_librarian === true) || metaIsLibrarian;
-      const go = $("goPainelBiblio");
-      if (go) {
-        go.href = ROUTES.PAINEL;
-        go.hidden = false;
-        go.style.display = "inline-flex";
-      }
+      updateContaTopbarAction();
     }
 
     async function createReservaV2(bibRefs) {
