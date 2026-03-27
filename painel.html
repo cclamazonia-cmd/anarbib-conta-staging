@@ -3022,7 +3022,7 @@
         const missing = isMissingInterlibraryBackendError(e);
         const msg = missing
           ? 'Ainda não encontrei o backend de decisão interbibliotecas. Aplica primeiro o mini-lote SQL desta etapa.'
-          : 'Não consegui registrar a decisão interbibliotecas: ' + (e.message || String(e));
+          : 'Não consegui responder à solicitação: ' + (e.message || String(e));
         setStatus('interlibRequestsMsg', msg, missing ? 'warn' : 'bad', false);
       } finally {
         renderSelectedPendingIncomingInterlibraryRequest();
