@@ -2763,8 +2763,7 @@
       if (normalized.contact_alternate) lines.push(`Canal alternativo: ${normalized.contact_alternate}`);
       if (normalized.postal_address) lines.push(`Endereço: ${normalized.postal_address}`);
       if (!lines.length) lines.push('A biblioteca parceira ainda não salvou canais diretos neste espaço.');
-      return lines.join('
-');
+      __PLACEHOLDER__
     }
 
     function renderInterlibraryPartnerContact(contact){
@@ -2787,8 +2786,7 @@
         const objectRef = normalized.object_ref ? ` · ref.: ${normalized.object_ref}` : '';
         return `${moment} · ${shortLibraryLabel(otherLibrary)} · ${action} (${objectLabel}) · ${interlibraryStatusLabel(normalized.status)}${objectRef}`;
       });
-      $('interlibRecentRequests').value = lines.length ? lines.join('
-') : 'Nenhuma solicitação interbibliotecas registrada ainda para esta biblioteca.';
+      $('interlibRecentRequests').value = lines.length ? lines.join('\n') : 'Nenhuma solicitação interbibliotecas registrada ainda para esta biblioteca.';
     }
 
     async function fetchInterlibraryActiveLibraries(){
@@ -4852,14 +4850,39 @@ function belemNowParts(){
       activate('Dados');
       return activate;
     }
-    const activateProfileTab = setupProfileTabs();
-    setupMainTabs();
-    setupServiceStateActions();
-    setupLibraryIdentityActions();
-    setupLibraryThemeActions();
-    setupDocGovernanceActions();
-    bindResScheduleAtParts();
-    setupReturnScheduleEditor();
+    let activateProfileTab = () => {};
+    let painelUiInitialized = false;
+
+    function safePainelUiInit(label, fn){
+      try {
+        return fn();
+      } catch (error) {
+        console.error(`Falha ao inicializar ${label} no painel.`, error);
+        return null;
+      }
+    }
+
+    function initializePainelUiOnce(){
+      if (painelUiInitialized) return;
+      painelUiInitialized = true;
+      const profileActivator = safePainelUiInit('abas internas do perfil', () => setupProfileTabs());
+      if (typeof profileActivator === 'function') activateProfileTab = profileActivator;
+      safePainelUiInit('abas principais', () => setupMainTabs());
+      safePainelUiInit('ações de funcionamento', () => setupServiceStateActions());
+      safePainelUiInit('identidade da biblioteca', () => setupLibraryIdentityActions());
+      safePainelUiInit('tema da biblioteca', () => setupLibraryThemeActions());
+      safePainelUiInit('governança documental', () => setupDocGovernanceActions());
+      safePainelUiInit('agendamento de reservas', () => bindResScheduleAtParts());
+      safePainelUiInit('editor de devolução', () => setupReturnScheduleEditor());
+      safePainelUiInit('tarefas internas', () => renderInternalTasks());
+      safePainelUiInit('seleção de reservas', () => bindReservationSelection());
+      safePainelUiInit('ações dinâmicas', () => bindDynamicActions());
+      safePainelUiInit('sugestões de responsáveis', () => bindInternalTaskOwnerSuggestions());
+      safePainelUiInit('horários da biblioteca', () => setupLibraryScheduleActions());
+      safePainelUiInit('regras locais', () => setupLocalRulesActions());
+      safePainelUiInit('regimento da biblioteca', () => setupLibraryRegimentoActions());
+      safePainelUiInit('solicitações interbibliotecas', () => setupInterlibraryRequestActions());
+    }
 
     async function requireSession({ attempts = 40, delayMs = 150 } = {}){
       for (let i = 0; i < attempts; i += 1) {
@@ -7140,15 +7163,6 @@ async function fetchActiveLoans(){
       }
     });
 
-    renderInternalTasks();
-    bindReservationSelection();
-    bindDynamicActions();
-    bindInternalTaskOwnerSuggestions();
-    setupLibraryScheduleActions();
-    setupLocalRulesActions();
-    setupLibraryRegimentoActions();
-    setupInterlibraryRequestActions();
-
     function setupRefreshHooks(){
       if (refreshTimer) clearInterval(refreshTimer);
       refreshTimer = setInterval(() => { refreshCollections({silent:true}); loadLibraryServiceState({silent:true}); }, 30000);
@@ -7207,17 +7221,19 @@ async function fetchActiveLoans(){
       }
     }
 
+    session = await requireSession({ attempts: 40, delayMs: 150 });
+    painelAuthBootstrapping = false;
+    await syncPainelAuthState(session, { reloadData: !!session?.user?.id, allowAnonymousReset: false });
+    initializePainelUiOnce();
+
     supabase.auth.onAuthStateChange(async (event, nextSession) => {
       const eventName = String(event || '').trim().toUpperCase();
       if (painelAuthBootstrapping && eventName === 'INITIAL_SESSION' && !nextSession?.user?.id) return;
       const shouldReload = eventName === 'SIGNED_IN' || eventName === 'USER_UPDATED' || eventName === 'INITIAL_SESSION';
       const allowAnonymousReset = eventName === 'SIGNED_OUT';
       await syncPainelAuthState(nextSession, { reloadData: shouldReload, allowAnonymousReset });
+      initializePainelUiOnce();
     });
-
-    session = await requireSession({ attempts: 40, delayMs: 150 });
-    painelAuthBootstrapping = false;
-    await syncPainelAuthState(session, { reloadData: !!session?.user?.id, allowAnonymousReset: false });
 
     if (!session?.user?.id) {
       setTimeout(async () => {
@@ -7225,6 +7241,7 @@ async function fetchActiveLoans(){
         if (lateSession?.user?.id) {
           await syncPainelAuthState(lateSession, { reloadData: true, allowAnonymousReset: false });
         }
+        initializePainelUiOnce();
       }, 700);
     }
   </script>
