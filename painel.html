@@ -2373,6 +2373,37 @@
       btn.title = isLoggedIn ? 'Encerrar sessão e voltar ao cadastro' : 'Ir para o cadastro / login';
     }
 
+    function applyActiveLibraryLogoCandidate(index=0){
+      const el = $('activeLibraryLogo');
+      if (!el) return;
+      const candidates = safeJsonArray(el.dataset.candidates || '[]');
+      if (!Array.isArray(candidates) || index >= candidates.length) {
+        hideActiveLibraryLogo();
+        return;
+      }
+      el.dataset.candidateIndex = String(index);
+      el.classList.remove('hidden');
+      el.src = String(candidates[index] || '').trim();
+    }
+
+    function renderActiveLibraryLogo(row){
+      const el = $('activeLibraryLogo');
+      if (!el) return;
+      const candidates = getLibraryLogoCandidates(row);
+      const libraryName = String(row?.short_name || row?.library_short_name || row?.name || row?.library_name || row?.slug || row?.library_slug || 'biblioteca ativa').trim();
+      el.alt = `Logo de ${libraryName}`;
+      el.dataset.candidates = JSON.stringify(candidates);
+      el.onerror = () => {
+        const nextIndex = Number(el.dataset.candidateIndex || '0') + 1;
+        applyActiveLibraryLogoCandidate(nextIndex);
+      };
+      if (!candidates.length) {
+        hideActiveLibraryLogo();
+        return;
+      }
+      applyActiveLibraryLogoCandidate(0);
+    }
+
     function resetPainelAuthChrome(){
       session = null;
       isLibrarian = false;
@@ -2430,38 +2461,7 @@
       }
     }
 
-    function applyActiveLibraryLogoCandidate(index=0){
-      const el = $('activeLibraryLogo');
-      if (!el) return;
-      const candidates = safeJsonArray(el.dataset.candidates || '[]');
-      if (!Array.isArray(candidates) || index >= candidates.length) {
-        hideActiveLibraryLogo();
-        return;
-      }
-      el.dataset.candidateIndex = String(index);
-      el.classList.remove('hidden');
-      el.src = String(candidates[index] || '').trim();
-    }
-
-    function renderActiveLibraryLogo(row){
-      const el = $('activeLibraryLogo');
-      if (!el) return;
-      const candidates = getLibraryLogoCandidates(row);
-      const libraryName = String(row?.short_name || row?.library_short_name || row?.name || row?.library_name || row?.slug || row?.library_slug || 'biblioteca ativa').trim();
-      el.alt = `Logo de ${libraryName}`;
-      el.dataset.candidates = JSON.stringify(candidates);
-      el.onerror = () => {
-        const nextIndex = Number(el.dataset.candidateIndex || '0') + 1;
-        applyActiveLibraryLogoCandidate(nextIndex);
-      };
-      if (!candidates.length) {
-        hideActiveLibraryLogo();
-        return;
-      }
-      applyActiveLibraryLogoCandidate(0);
-    }
-
-    function patchCachedLibraryIdentity(updatedRow){
+        function patchCachedLibraryIdentity(updatedRow){
       if (!updatedRow || typeof updatedRow !== 'object') return;
       currentLibraryRow = { ...(currentLibraryRow || {}), ...updatedRow };
       if (currentAccessRow) {
@@ -2808,8 +2808,7 @@
       if (normalized.contact_alternate) lines.push(`Canal alternativo: ${normalized.contact_alternate}`);
       if (normalized.postal_address) lines.push(`Endereço: ${normalized.postal_address}`);
       if (!lines.length) lines.push('A biblioteca parceira ainda não salvou canais diretos neste espaço.');
-      return lines.join('
-');
+      return lines.join('\n');
     }
 
     function renderInterlibraryPartnerContact(contact){
@@ -2832,8 +2831,7 @@
         const objectRef = normalized.object_ref ? ` · ref.: ${normalized.object_ref}` : '';
         return `${moment} · ${shortLibraryLabel(otherLibrary)} · ${action} (${objectLabel}) · ${interlibraryStatusLabel(normalized.status)}${objectRef}`;
       });
-      $('interlibRecentRequests').value = lines.length ? lines.join('
-') : 'Nenhuma solicitação interbibliotecas registrada ainda para esta biblioteca.';
+      $('interlibRecentRequests').value = lines.length ? lines.join('\n') : 'Nenhuma solicitação interbibliotecas registrada ainda para esta biblioteca.';
     }
 
     async function fetchInterlibraryActiveLibraries(){
@@ -7162,19 +7160,24 @@ async function fetchActiveLoans(){
     $('btnSair').addEventListener('click', async (event) => {
       const btn = $('btnSair');
       const targetHref = String(btn?.dataset?.authHref || resolveCadastroHref()).trim() || resolveCadastroHref();
-      const authMode = String(btn?.dataset?.authMode || 'login').trim().toLowerCase();
-      if (authMode === 'login') {
-        event.preventDefault();
+      const authMode = String(btn?.dataset?.authMode || '').trim().toLowerCase();
+      const shouldLogout = authMode === 'logout' || (!!session?.user?.id && authMode !== 'login');
+
+      if (!shouldLogout) {
         window.location.href = targetHref;
         return;
       }
+
+      event.preventDefault();
       btn.disabled = true;
       try {
         await supabase.auth.signOut();
       } catch (error) {
-        console.warn('Não consegui encerrar a sessão do painel.', error);
+        console.warn('Falha ao encerrar a sessão no painel; seguindo para o cadastro mesmo assim.', error);
       } finally {
-        resetPainelAuthChrome();
+        session = null;
+        isLibrarian = false;
+        updateTopbarAuthButton(false);
         btn.disabled = false;
         window.location.href = targetHref;
       }
