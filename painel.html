@@ -478,6 +478,7 @@
     <div class="topbar">
       <div class="brand">
         <img id="brandLogo" data-brand-logo class="logo" src="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png" alt="AnarBib">
+        <img id="activeLibraryLogo" class="logo hidden" src="" alt="Logo da biblioteca ativa">
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
           <a class="btn" id="btnCatalogo" href="https://cclamazonia-cmd.github.io/anarbib-staging/index.html">Voltar ao catálogo</a>
@@ -674,7 +675,7 @@
                 <textarea class="textarea" id="nonMemberPublicNote" placeholder="Ex.: leitoras/es de outras bibliotecas podem reservar, mas a retirada depende de análise local da equipe."></textarea>
               </div>
               <div class="actions">
-                <button class="btn" id="btnSaveLocalRules" type="button" disabled>Salvar regras locais</button>
+                <button class="btn" id="btnSaveLocalRules" type="button">Salvar regras locais</button>
               </div>
               <div class="status" id="localRulesMsg"></div>
             </div>
@@ -1991,6 +1992,91 @@
       $('libraryThemePreviewNote').value = previewBits.join(' · ');
     }
 
+
+    function getKnownLibraryLogoCandidatesBySlug(slug){
+      const normalized = String(slug || '').trim().toLowerCase();
+      if (!normalized) return [];
+      const localPath = `./assets/img/libraries/${normalized}/logo-${normalized}.png`;
+      const bySlug = {
+        anarbib: [localPath, 'https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png'],
+        blmf: [localPath, 'https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png'],
+        btl: [localPath, 'https://cclamazonia.noblogs.org/files/2026/03/logo-btl.png']
+      };
+      return Array.isArray(bySlug[normalized]) ? bySlug[normalized] : [localPath];
+    }
+
+    function safeJsonArray(value){
+      if (!value) return [];
+      if (Array.isArray(value)) return value;
+      if (typeof value !== 'string') return [];
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function getLibraryLogoCandidates(row){
+      const config = safeJsonObject(row?.theme_config || row?.ui_theme_config || row?.theme || row?.ui_theme);
+      const direct = [
+        row?.logo_url,
+        row?.public_logo_url,
+        row?.logo_public_url,
+        row?.brand_logo_url,
+        row?.header_logo_url,
+        row?.theme_logo_url,
+        row?.ui_logo_url,
+        config?.logo_url,
+        config?.public_logo_url,
+        config?.brand_logo_url,
+        config?.header_logo_url,
+        config?.theme_logo_url,
+      ].map((value) => String(value || '').trim()).filter(Boolean);
+      const slugCandidates = getKnownLibraryLogoCandidatesBySlug(row?.slug || row?.library_slug || row?.default_library_slug || '');
+      return Array.from(new Set([...direct, ...slugCandidates])).filter(Boolean);
+    }
+
+    function hideActiveLibraryLogo(){
+      const el = $('activeLibraryLogo');
+      if (!el) return;
+      el.classList.add('hidden');
+      el.removeAttribute('src');
+      el.dataset.candidates = '[]';
+      el.dataset.candidateIndex = '0';
+    }
+
+    function applyActiveLibraryLogoCandidate(index=0){
+      const el = $('activeLibraryLogo');
+      if (!el) return;
+      const candidates = safeJsonArray(el.dataset.candidates || '[]');
+      if (!Array.isArray(candidates) || index >= candidates.length) {
+        hideActiveLibraryLogo();
+        return;
+      }
+      el.dataset.candidateIndex = String(index);
+      el.classList.remove('hidden');
+      el.src = String(candidates[index] || '').trim();
+    }
+
+    function renderActiveLibraryLogo(row){
+      const el = $('activeLibraryLogo');
+      if (!el) return;
+      const candidates = getLibraryLogoCandidates(row);
+      const libraryName = String(row?.short_name || row?.library_short_name || row?.name || row?.library_name || row?.slug || row?.library_slug || 'biblioteca ativa').trim();
+      el.alt = `Logo de ${libraryName}`;
+      el.dataset.candidates = JSON.stringify(candidates);
+      el.onerror = () => {
+        const nextIndex = Number(el.dataset.candidateIndex || '0') + 1;
+        applyActiveLibraryLogoCandidate(nextIndex);
+      };
+      if (!candidates.length) {
+        hideActiveLibraryLogo();
+        return;
+      }
+      applyActiveLibraryLogoCandidate(0);
+    }
+
     function patchCachedLibraryIdentity(updatedRow){
       if (!updatedRow || typeof updatedRow !== 'object') return;
       currentLibraryRow = { ...(currentLibraryRow || {}), ...updatedRow };
@@ -2035,10 +2121,12 @@
         const row = await fetchCurrentLibraryRow();
         patchCachedLibraryIdentity(row);
         renderLibraryIdentity(row);
+        renderActiveLibraryLogo(row);
         await fillHeader();
         clearStatus('libraryIdentityMsg');
       } catch (e) {
         renderLibraryIdentity({});
+        hideActiveLibraryLogo();
         setStatus('libraryIdentityMsg', 'Não consegui carregar a identidade da biblioteca: ' + (e.message || String(e)), 'bad', false);
       }
     }
@@ -2074,6 +2162,7 @@
 
         patchCachedLibraryIdentity(data || { id: libraryId, ...payload });
         renderLibraryIdentity(currentLibraryRow || data || payload);
+        renderActiveLibraryLogo(currentLibraryRow || data || payload);
         await fillHeader();
         setStatus('libraryIdentityMsg', 'Identidade da biblioteca atualizada.', 'ok');
       } catch (e) {
@@ -2399,6 +2488,256 @@
 
     function setupLibraryScheduleActions(){
       $('btnSaveLibrarySchedule')?.addEventListener('click', saveLibrarySchedule);
+    }
+
+    let currentLibraryLocalRulesBinding = null;
+    let currentLibraryLocalRulesStateRow = null;
+
+    function getEmptyLocalRules(){
+      return {
+        reservation_policy: 'nao_permitir',
+        loan_policy: 'nao_permitir',
+        public_note: ''
+      };
+    }
+
+    function normalizeLocalPolicyValue(value){
+      const normalized = String(value || '').trim().toLowerCase();
+      return ['nao_permitir', 'sob_analise', 'permitir'].includes(normalized) ? normalized : 'nao_permitir';
+    }
+
+    function normalizeLocalRules(input){
+      const source = input && typeof input === 'object' ? input : {};
+      return {
+        reservation_policy: normalizeLocalPolicyValue(
+          source.reservation_policy || source.non_member_reservation_policy || source.reservas_nao_inscritos || source.reservation || ''
+        ),
+        loan_policy: normalizeLocalPolicyValue(
+          source.loan_policy || source.non_member_loan_policy || source.emprestimos_nao_inscritos || source.loan || ''
+        ),
+        public_note: String(
+          source.public_note || source.non_member_public_note || source.nota_publica || source.note || ''
+        ).trim()
+      };
+    }
+
+    function renderLocalRules(input){
+      const rules = normalizeLocalRules(input);
+      $('nonMemberReservationPolicy').value = rules.reservation_policy;
+      $('nonMemberLoanPolicy').value = rules.loan_policy;
+      $('nonMemberPublicNote').value = rules.public_note;
+    }
+
+    function collectLocalRulesFromForm(){
+      return normalizeLocalRules({
+        reservation_policy: $('nonMemberReservationPolicy')?.value,
+        loan_policy: $('nonMemberLoanPolicy')?.value,
+        public_note: $('nonMemberPublicNote')?.value,
+      });
+    }
+
+    function extractLocalRulesFromObject(obj){
+      if (!obj || typeof obj !== 'object') return null;
+      const rules = normalizeLocalRules(obj);
+      const hasAny = Boolean(
+        String(obj.reservation_policy || obj.non_member_reservation_policy || obj.reservas_nao_inscritos || obj.reservation || '').trim() ||
+        String(obj.loan_policy || obj.non_member_loan_policy || obj.emprestimos_nao_inscritos || obj.loan || '').trim() ||
+        String(obj.public_note || obj.non_member_public_note || obj.nota_publica || obj.note || '').trim()
+      );
+      return hasAny ? rules : null;
+    }
+
+    function extractLocalRulesBinding(tableName, row){
+      if (!row || typeof row !== 'object') return null;
+      const textCandidates = [
+        {
+          reservation_policy: 'non_member_reservation_policy',
+          loan_policy: 'non_member_loan_policy',
+          public_note: 'non_member_public_note'
+        },
+        {
+          reservation_policy: 'reservation_policy',
+          loan_policy: 'loan_policy',
+          public_note: 'public_note'
+        },
+        {
+          reservation_policy: 'outsider_reservation_policy',
+          loan_policy: 'outsider_loan_policy',
+          public_note: 'outsider_public_note'
+        }
+      ];
+      for (const fields of textCandidates) {
+        if (Object.values(fields).every((field) => Object.prototype.hasOwnProperty.call(row, field))) {
+          return { table: tableName, source: { type: 'text-fields', fields } };
+        }
+      }
+
+      const directJsonFields = [
+        'local_circulation_rules',
+        'circulation_rules',
+        'local_rules',
+        'circulation_policy',
+        'circulation_config'
+      ];
+      for (const field of directJsonFields) {
+        if (!Object.prototype.hasOwnProperty.call(row, field)) continue;
+        const parsed = safeJsonObject(row[field]);
+        if (extractLocalRulesFromObject(parsed || row[field])) {
+          return { table: tableName, source: { type: 'direct-json', field } };
+        }
+        if (parsed && typeof parsed === 'object') {
+          return { table: tableName, source: { type: 'direct-json', field } };
+        }
+      }
+
+      const containerFields = ['settings', 'config', 'library_config', 'service_config', 'ui_config', 'metadata', 'extra', 'policy_config'];
+      const subkeys = ['local_circulation_rules', 'circulation_rules', 'non_member_rules', 'local_rules'];
+      for (const field of containerFields) {
+        if (!Object.prototype.hasOwnProperty.call(row, field)) continue;
+        const container = safeJsonObject(row[field]);
+        if (!container || typeof container !== 'object') continue;
+        for (const subkey of subkeys) {
+          if (extractLocalRulesFromObject(container[subkey])) {
+            return { table: tableName, source: { type: 'json-container', field, subkey } };
+          }
+        }
+        return { table: tableName, source: { type: 'json-container', field, subkey: 'local_circulation_rules' } };
+      }
+      return null;
+    }
+
+    function detectFallbackLocalRulesBinding(){
+      const serviceRow = currentLibraryLocalRulesStateRow || currentLibraryScheduleStateRow || null;
+      const libraryRow = currentLibraryRow || null;
+      return extractLocalRulesBinding('library_service_state', serviceRow) || extractLocalRulesBinding('libraries', libraryRow) || null;
+    }
+
+    function readLocalRulesFromBinding(binding, baseRow){
+      const source = binding?.source || {};
+      if (!baseRow || typeof baseRow !== 'object' || !binding) return getEmptyLocalRules();
+      if (source.type === 'text-fields') {
+        const fields = source.fields || {};
+        return normalizeLocalRules({
+          reservation_policy: baseRow[fields.reservation_policy],
+          loan_policy: baseRow[fields.loan_policy],
+          public_note: baseRow[fields.public_note],
+        });
+      }
+      if (source.type === 'direct-json') {
+        return normalizeLocalRules(safeJsonObject(baseRow[source.field]));
+      }
+      if (source.type === 'json-container') {
+        const container = safeJsonObject(baseRow[source.field]);
+        return normalizeLocalRules(container?.[source.subkey]);
+      }
+      return getEmptyLocalRules();
+    }
+
+    function buildLocalRulesPayload(binding, rules, baseRow){
+      const source = binding?.source || {};
+      if (source.type === 'text-fields') {
+        const payload = {};
+        payload[source.fields.reservation_policy] = rules.reservation_policy;
+        payload[source.fields.loan_policy] = rules.loan_policy;
+        payload[source.fields.public_note] = rules.public_note;
+        return payload;
+      }
+      if (source.type === 'direct-json') {
+        return {
+          [source.field]: {
+            reservation_policy: rules.reservation_policy,
+            loan_policy: rules.loan_policy,
+            public_note: rules.public_note,
+          }
+        };
+      }
+      if (source.type === 'json-container') {
+        const container = safeJsonObject(baseRow?.[source.field]);
+        return {
+          [source.field]: {
+            ...container,
+            [source.subkey || 'local_circulation_rules']: {
+              reservation_policy: rules.reservation_policy,
+              loan_policy: rules.loan_policy,
+              public_note: rules.public_note,
+            }
+          }
+        };
+      }
+      throw new Error('Não encontrei uma estrutura segura para salvar as regras locais desta biblioteca.');
+    }
+
+    async function loadLocalRules(){
+      try {
+        const serviceRow = await fetchCurrentLibraryServiceStateRow();
+        currentLibraryLocalRulesStateRow = serviceRow;
+        const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const binding = extractLocalRulesBinding('library_service_state', serviceRow)
+          || extractLocalRulesBinding('libraries', libraryRow)
+          || detectFallbackLocalRulesBinding();
+        currentLibraryLocalRulesBinding = binding;
+        const sourceRow = binding?.table === 'library_service_state' ? serviceRow : libraryRow;
+        renderLocalRules(readLocalRulesFromBinding(binding, sourceRow));
+        clearStatus('localRulesMsg');
+      } catch (e) {
+        renderLocalRules(getEmptyLocalRules());
+        setStatus('localRulesMsg', 'Não consegui carregar as regras locais: ' + (e.message || String(e)), 'bad', false);
+      }
+    }
+
+    async function saveLocalRules(){
+      clearStatus('localRulesMsg');
+      const btn = $('btnSaveLocalRules');
+      btn.disabled = true;
+      try {
+        const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const serviceRow = currentLibraryLocalRulesStateRow?.library_id ? currentLibraryLocalRulesStateRow : await fetchCurrentLibraryServiceStateRow();
+        currentLibraryLocalRulesStateRow = serviceRow;
+        const binding = currentLibraryLocalRulesBinding
+          || extractLocalRulesBinding('library_service_state', serviceRow)
+          || extractLocalRulesBinding('libraries', libraryRow)
+          || detectFallbackLocalRulesBinding();
+        if (!binding) throw new Error('Não encontrei ainda um campo de persistência para as regras locais desta biblioteca.');
+
+        const libraryId = normalizeLibraryId(libraryRow?.id || serviceRow?.library_id);
+        if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar as regras locais.');
+        const rules = collectLocalRulesFromForm();
+
+        if (binding.table === 'library_service_state') {
+          const payload = buildLocalRulesPayload(binding, rules, serviceRow);
+          const { data, error } = await supabase
+            .from('library_service_state')
+            .upsert({ library_id: libraryId, ...payload }, { onConflict: 'library_id' })
+            .select('*')
+            .maybeSingle();
+          if (error) throw error;
+          currentLibraryLocalRulesStateRow = { ...(data || {}), library_id: libraryId };
+          currentLibraryScheduleStateRow = currentLibraryLocalRulesStateRow;
+        } else if (binding.table === 'libraries') {
+          const payload = buildLocalRulesPayload(binding, rules, libraryRow);
+          const { data, error } = await supabase
+            .from('libraries')
+            .update(payload)
+            .eq('id', libraryId)
+            .select('*')
+            .maybeSingle();
+          if (error) throw error;
+          currentLibraryRow = { ...(currentLibraryRow || {}), ...(data || {}), id: libraryId };
+        } else {
+          throw new Error('Destino de gravação não reconhecido para as regras locais.');
+        }
+
+        await loadLocalRules();
+        setStatus('localRulesMsg', 'Regras locais atualizadas.', 'ok');
+      } catch (e) {
+        setStatus('localRulesMsg', 'Não consegui salvar as regras locais: ' + (e.message || String(e)), 'bad', false);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function setupLocalRulesActions(){
+      $('btnSaveLocalRules')?.addEventListener('click', saveLocalRules);
     }
 
 
@@ -3190,6 +3529,7 @@ function belemNowParts(){
       if (!helloParts.length && accessEmail) helloParts.push(accessEmail);
       $('helloLine').textContent = helloParts.length ? ('Conectad@: ' + helloParts.join(' · ')) : '';
       $('btnModoLeitor').classList.toggle('hidden', !isLibrarian);
+      renderActiveLibraryLogo(currentLibraryRow || identity || {});
     }
 
     async function loadProfilesByIds(userIds){
@@ -5250,6 +5590,7 @@ async function fetchActiveLoans(){
     bindDynamicActions();
     bindInternalTaskOwnerSuggestions();
     setupLibraryScheduleActions();
+    setupLocalRulesActions();
 
     function setupRefreshHooks(){
       if (refreshTimer) clearInterval(refreshTimer);
@@ -5268,6 +5609,7 @@ async function fetchActiveLoans(){
         await loadLibraryIdentity();
         await loadLibraryTheme();
         await loadLibrarySchedule();
+        await loadLocalRules();
         await loadInternalTaskLibrarians();
         await loadInternalTasks({ silent:true });
         await refreshCollections();
