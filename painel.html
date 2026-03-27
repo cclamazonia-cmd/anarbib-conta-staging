@@ -2422,9 +2422,14 @@
     let painelAuthBootstrapping = true;
     async function syncPainelAuthState(nextSession, { reloadData=false, allowAnonymousReset=true } = {}){
       const syncId = ++authSyncSerial;
+      const previousSession = session;
       session = nextSession || null;
       if (!session?.user?.id) {
-        session = await getConfirmedCurrentSession({ attempts: allowAnonymousReset ? 3 : 1, delayMs: 120 });
+        session = await getConfirmedCurrentSession({ attempts: allowAnonymousReset ? 3 : 6, delayMs: 120 });
+      }
+      if (!session?.user?.id && !allowAnonymousReset && previousSession?.user?.id) {
+        session = previousSession;
+        return true;
       }
       updateTopbarAuthButton(!!session?.user?.id);
 
@@ -7204,7 +7209,7 @@ async function fetchActiveLoans(){
       const eventName = String(event || '').trim().toUpperCase();
       if (painelAuthBootstrapping && eventName === 'INITIAL_SESSION' && !nextSession?.user?.id) return;
       const shouldReload = eventName === 'SIGNED_IN' || eventName === 'USER_UPDATED' || eventName === 'INITIAL_SESSION';
-      const allowAnonymousReset = eventName === 'SIGNED_OUT' || !painelAuthBootstrapping;
+      const allowAnonymousReset = eventName === 'SIGNED_OUT';
       await syncPainelAuthState(nextSession, { reloadData: shouldReload, allowAnonymousReset });
     });
 
