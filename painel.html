@@ -711,7 +711,7 @@
                   <select class="select" id="docGovLocalRepriseMode">
                     <option value="nao_permitir">Não permitir</option>
                     <option value="rascunho_local">Criar rascunho local sem mexer na original</option>
-                    <option value="reprise_local">Permitir criação de cópia local</option>
+                    <option value="copia_local">Permitir criação de cópia local</option>
                   </select>
                 </div>
                 <div>
@@ -3531,7 +3531,7 @@
           obj.document_local_reprise_mode,
           obj.local_takeover_mode,
           ''
-        ), ['nao_permitir', 'rascunho_local', 'reprise_local'], base.local_reprise_mode),
+        ), ['nao_permitir', 'rascunho_local', 'copia_local', 'reprise_local'], base.local_reprise_mode).replace('reprise_local','copia_local'),
         digital_link_mode: normalizeDocGovSelect(firstFilledValue(
           obj.digital_link_mode,
           obj.document_digital_link_mode,
@@ -3640,7 +3640,7 @@
       const localCopy = ({
         nao_permitir: 'sem criação de cópia local',
         rascunho_local: 'criação de cópia local via rascunho',
-        reprise_local: 'criação de cópia local imediata'
+        copia_local: 'criação de cópia local imediata'
       })[governance.local_reprise_mode] || 'sem regra de cópia local';
       const mutual = ({
         local: 'novas notices locais por padrão',
