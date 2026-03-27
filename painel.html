@@ -485,7 +485,7 @@
         <a class="btn" id="btnCatalogacao" href="https://cclamazonia-cmd.github.io/anarbib-staging/catalogacao.html">Catalogação</a>
         <a class="btn" id="btnManual" href="https://cclamazonia-cmd.github.io/anarbib-staging/Manual_do_AnarBib.pdf" target="_blank" rel="noopener noreferrer">Manual do AnarBib</a>
         <a class="btn" id="btnModoLeitor" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html">Ir para modo leitor</a>
-        <button class="btn primary" id="btnSair" type="button">Sair</button>
+        <button class="btn primary" id="btnSair" type="button">Login</button>
       </div>
     </div>
 
@@ -2353,6 +2353,14 @@
       el.removeAttribute('src');
       el.dataset.candidates = '[]';
       el.dataset.candidateIndex = '0';
+    }
+
+    function updateTopbarAuthButton(isLoggedIn){
+      const btn = $('btnSair');
+      if (!btn) return;
+      btn.textContent = isLoggedIn ? 'Logout' : 'Login';
+      btn.setAttribute('aria-label', isLoggedIn ? 'Logout' : 'Login');
+      btn.title = isLoggedIn ? 'Encerrar sessão e voltar ao cadastro' : 'Ir para o cadastro / login';
     }
 
     function applyActiveLibraryLogoCandidate(index=0){
@@ -4837,7 +4845,6 @@ function belemNowParts(){
         if (sess?.user?.id) return sess;
         await new Promise((resolve) => setTimeout(resolve, 120));
       }
-      location.assign(ROUTES.CADASTRO);
       return null;
     }
     let currentAccessRow = null;
@@ -4974,6 +4981,7 @@ function belemNowParts(){
       if (!helloParts.length && accessEmail) helloParts.push(accessEmail);
       $('helloLine').textContent = helloParts.length ? ('Conectad@: ' + helloParts.join(' · ')) : '';
       $('btnModoLeitor').classList.toggle('hidden', !isLibrarian);
+      updateTopbarAuthButton(!!session?.user?.id);
       renderActiveLibraryLogo(currentLibraryRow || identity || {});
     }
 
@@ -7022,12 +7030,20 @@ async function fetchActiveLoans(){
       }
     });
     $('btnSair').addEventListener('click', async () => {
-      $('btnSair').disabled = true;
+      const btn = $('btnSair');
+      btn.disabled = true;
       try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        if (!currentSession?.user?.id) {
+          location.assign(ROUTES.CADASTRO);
+          return;
+        }
         await supabase.auth.signOut();
+        session = null;
+        isLibrarian = false;
         location.assign(ROUTES.CADASTRO);
       }
-      finally { $('btnSair').disabled = false; }
+      finally { btn.disabled = false; }
     });
 
     renderInternalTasks();
@@ -7048,6 +7064,11 @@ async function fetchActiveLoans(){
     }
 
     session = await requireSession();
+    updateTopbarAuthButton(!!session?.user?.id);
+    if (!session?.user?.id) {
+      hideActiveLibraryLogo();
+      $('btnModoLeitor').classList.add('hidden');
+    }
     if (session){
       isLibrarian = await requireBibliotecaOrRedirect();
       if (isLibrarian){
