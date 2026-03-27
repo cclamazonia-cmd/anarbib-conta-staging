@@ -755,7 +755,7 @@
               <div class="section-head">
                 <div>
                   <h2>Regimento da biblioteca</h2>
-                  <div class="mini">Carrega, publica, substitui ou despublica o regimento ativo desta biblioteca.</div>
+                  <div class="mini">Mantém um rascunho privado e, quando quiseres, publica uma cópia pública do regimento ativo desta biblioteca.</div>
                 </div>
               </div>
               <div class="row" style="margin-top:12px">
@@ -770,21 +770,22 @@
               </div>
               <div class="row" style="margin-top:12px">
                 <div>
-                  <label for="libraryRegimentoCurrent">Arquivo atual</label>
-                  <input class="input mono" id="libraryRegimentoCurrent" type="text" value="" placeholder="Nenhum arquivo ativo." readonly>
+                  <label for="libraryRegimentoCurrent">Rascunho privado atual</label>
+                  <input class="input mono" id="libraryRegimentoCurrent" type="text" value="" placeholder="Nenhum rascunho privado salvo." readonly>
                 </div>
                 <div>
-                  <label for="libraryRegimentoPublicUrl">URL pública resolvida</label>
-                  <input class="input mono" id="libraryRegimentoPublicUrl" type="text" value="" placeholder="Será resolvida automaticamente quando houver arquivo." readonly>
+                  <label for="libraryRegimentoPublicUrl">URL pública publicada</label>
+                  <input class="input mono" id="libraryRegimentoPublicUrl" type="text" value="" placeholder="Será resolvida automaticamente quando houver versão publicada." readonly>
                 </div>
               </div>
               <div style="margin-top:12px">
                 <label for="libraryRegimentoStateNote">Situação atual</label>
                 <input class="input" id="libraryRegimentoStateNote" type="text" value="" placeholder="Sem regimento publicado." readonly>
-                <div class="help" style="margin-top:6px">Nesta etapa, cada biblioteca mantém um único regimento ativo. O arquivo fica no bucket e a publicação é controlada por metadados da própria biblioteca.</div>
+                <div class="help" style="margin-top:6px">Fluxo leve: salvar rascunho no bucket privado, publicar cópia no bucket público e despublicar sem apagar o rascunho privado.</div>
               </div>
               <div class="actions">
-                <button class="btn" id="btnOpenLibraryRegimento" type="button">Abrir regimento atual</button>
+                <button class="btn" id="btnOpenLibraryRegimento" type="button">Abrir regimento</button>
+                <button class="btn" id="btnSaveLibraryRegimentoDraft" type="button">Salvar rascunho</button>
                 <button class="btn primary" id="btnPublishLibraryRegimento" type="button">Publicar regimento</button>
                 <button class="btn" id="btnDepublishLibraryRegimento" type="button">Despublicar regimento</button>
               </div>
@@ -2782,48 +2783,79 @@
     function setupLocalRulesActions(){
       $('btnSaveLocalRules')?.addEventListener('click', saveLocalRules);
     }
-
-
+    const LIBRARY_REGIMENTO_DRAFT_BUCKET = 'library-regimentos-private';
+    const LIBRARY_REGIMENTO_PUBLIC_BUCKET = 'library-regimentos-public';
+    const LIBRARY_REGIMENTO_SIGNED_TTL = 3600;
 
     function getEmptyLibraryRegimento(){
       return {
-        bucket: LIBRARY_REGIMENTO_BUCKET,
-        object_path: '',
-        public_url: '',
         title: 'Regimento da biblioteca',
         version_label: '',
+        mime_type: 'application/pdf',
+        filename: '',
+        draft_bucket: LIBRARY_REGIMENTO_DRAFT_BUCKET,
+        draft_object_path: '',
+        draft_filename: '',
+        draft_updated_at: null,
+        published_bucket: LIBRARY_REGIMENTO_PUBLIC_BUCKET,
+        published_object_path: '',
+        published_filename: '',
+        public_url: '',
         is_published: false,
         published_at: null,
         updated_at: null,
-        mime_type: 'application/pdf',
-        filename: ''
       };
     }
 
     function normalizeLibraryRegimento(value){
       const obj = safeJsonObject(value);
       const base = getEmptyLibraryRegimento();
+      const legacyPublished = String(firstFilledValue(obj.object_path, obj.path, obj.regimento_object_path, obj.library_regimento_object_path, '') || '').trim();
+      const legacyPublicUrl = String(firstFilledValue(obj.public_url, obj.url, obj.regimento_public_url, obj.library_regimento_public_url, '') || '').trim();
+      const legacyBucket = String(firstFilledValue(obj.bucket, obj.regimento_bucket, obj.library_regimento_bucket, '') || '').trim();
+      const legacyIsPublished = toBool(firstFilledValue(obj.is_published, obj.published, obj.regimento_is_published, obj.library_regimento_is_published, false));
+      const draftObjectPath = String(firstFilledValue(
+        obj.draft_object_path,
+        obj.regimento_draft_object_path,
+        obj.library_regimento_draft_object_path,
+        (!legacyIsPublished && legacyPublished && !legacyPublicUrl) ? legacyPublished : '',
+        ''
+      ) || '').trim();
+      const publishedObjectPath = String(firstFilledValue(
+        obj.published_object_path,
+        obj.regimento_published_object_path,
+        obj.library_regimento_published_object_path,
+        legacyPublished,
+        ''
+      ) || '').trim();
       return {
-        bucket: String(firstFilledValue(obj.bucket, obj.regimento_bucket, obj.library_regimento_bucket, base.bucket) || base.bucket).trim() || base.bucket,
-        object_path: String(firstFilledValue(obj.object_path, obj.path, obj.regimento_object_path, obj.library_regimento_object_path, '') || '').trim(),
-        public_url: String(firstFilledValue(obj.public_url, obj.url, obj.regimento_public_url, obj.library_regimento_public_url, '') || '').trim(),
         title: String(firstFilledValue(obj.title, obj.regimento_title, obj.library_regimento_title, base.title) || base.title).trim() || base.title,
         version_label: String(firstFilledValue(obj.version_label, obj.version, obj.regimento_version_label, obj.library_regimento_version_label, '') || '').trim(),
-        is_published: toBool(firstFilledValue(obj.is_published, obj.published, obj.regimento_is_published, obj.library_regimento_is_published, false)),
-        published_at: firstFilledValue(obj.published_at, obj.regimento_published_at, obj.library_regimento_published_at, null) || null,
-        updated_at: firstFilledValue(obj.updated_at, obj.regimento_updated_at, obj.library_regimento_updated_at, null) || null,
         mime_type: String(firstFilledValue(obj.mime_type, obj.regimento_mime_type, obj.library_regimento_mime_type, base.mime_type) || base.mime_type).trim() || base.mime_type,
         filename: String(firstFilledValue(obj.filename, obj.name, obj.regimento_filename, obj.library_regimento_filename, '') || '').trim(),
+        draft_bucket: String(firstFilledValue(obj.draft_bucket, obj.regimento_draft_bucket, obj.library_regimento_draft_bucket, (!legacyIsPublished && legacyBucket) ? legacyBucket : '', base.draft_bucket) || base.draft_bucket).trim() || base.draft_bucket,
+        draft_object_path: draftObjectPath,
+        draft_filename: String(firstFilledValue(obj.draft_filename, obj.regimento_draft_filename, obj.library_regimento_draft_filename, (!legacyIsPublished && !legacyPublicUrl) ? firstFilledValue(obj.filename, obj.regimento_filename, obj.library_regimento_filename, '') : '', '') || '').trim(),
+        draft_updated_at: firstFilledValue(obj.draft_updated_at, obj.regimento_draft_updated_at, obj.library_regimento_draft_updated_at, (!legacyIsPublished && !legacyPublicUrl) ? firstFilledValue(obj.updated_at, obj.regimento_updated_at, obj.library_regimento_updated_at, null) : null, null) || null,
+        published_bucket: String(firstFilledValue(obj.published_bucket, obj.regimento_published_bucket, obj.library_regimento_published_bucket, legacyBucket, base.published_bucket) || base.published_bucket).trim() || base.published_bucket,
+        published_object_path: publishedObjectPath,
+        published_filename: String(firstFilledValue(obj.published_filename, obj.regimento_published_filename, obj.library_regimento_published_filename, legacyIsPublished ? firstFilledValue(obj.filename, obj.regimento_filename, obj.library_regimento_filename, '') : '', '') || '').trim(),
+        public_url: String(firstFilledValue(obj.public_url, obj.url, obj.regimento_public_url, obj.library_regimento_public_url, legacyPublicUrl, '') || '').trim(),
+        is_published: toBool(firstFilledValue(obj.is_published, obj.published, obj.regimento_is_published, obj.library_regimento_is_published, legacyIsPublished)),
+        published_at: firstFilledValue(obj.published_at, obj.regimento_published_at, obj.library_regimento_published_at, null) || null,
+        updated_at: firstFilledValue(obj.updated_at, obj.regimento_updated_at, obj.library_regimento_updated_at, null) || null,
       };
     }
 
     function extractLibraryRegimentoFromObject(value){
       const regimento = normalizeLibraryRegimento(value);
       const hasAny = !!(
-        regimento.object_path ||
+        regimento.draft_object_path ||
+        regimento.published_object_path ||
         regimento.public_url ||
         regimento.version_label ||
-        regimento.filename ||
+        regimento.draft_filename ||
+        regimento.published_filename ||
         regimento.is_published
       );
       return hasAny ? regimento : null;
@@ -2833,28 +2865,36 @@
       if (!row || typeof row !== 'object') return null;
       const directFieldSets = [
         {
-          bucket: 'regimento_bucket',
-          object_path: 'regimento_object_path',
-          public_url: 'regimento_public_url',
           title: 'regimento_title',
           version_label: 'regimento_version_label',
+          mime_type: 'regimento_mime_type',
+          draft_bucket: 'regimento_draft_bucket',
+          draft_object_path: 'regimento_draft_object_path',
+          draft_filename: 'regimento_draft_filename',
+          draft_updated_at: 'regimento_draft_updated_at',
+          published_bucket: 'regimento_published_bucket',
+          published_object_path: 'regimento_published_object_path',
+          published_filename: 'regimento_published_filename',
+          public_url: 'regimento_public_url',
           is_published: 'regimento_is_published',
           published_at: 'regimento_published_at',
           updated_at: 'regimento_updated_at',
-          mime_type: 'regimento_mime_type',
-          filename: 'regimento_filename'
         },
         {
-          bucket: 'library_regimento_bucket',
-          object_path: 'library_regimento_object_path',
-          public_url: 'library_regimento_public_url',
           title: 'library_regimento_title',
           version_label: 'library_regimento_version_label',
+          mime_type: 'library_regimento_mime_type',
+          draft_bucket: 'library_regimento_draft_bucket',
+          draft_object_path: 'library_regimento_draft_object_path',
+          draft_filename: 'library_regimento_draft_filename',
+          draft_updated_at: 'library_regimento_draft_updated_at',
+          published_bucket: 'library_regimento_published_bucket',
+          published_object_path: 'library_regimento_published_object_path',
+          published_filename: 'library_regimento_published_filename',
+          public_url: 'library_regimento_public_url',
           is_published: 'library_regimento_is_published',
           published_at: 'library_regimento_published_at',
           updated_at: 'library_regimento_updated_at',
-          mime_type: 'library_regimento_mime_type',
-          filename: 'library_regimento_filename'
         }
       ];
       for (const fields of directFieldSets) {
@@ -2885,6 +2925,14 @@
       return null;
     }
 
+    function bindingSupportsLibraryRegimentoDraft(binding){
+      const source = binding?.source || {};
+      if (source.type === 'direct-json' || source.type === 'json-container') return true;
+      if (source.type !== 'text-fields') return false;
+      const fields = source.fields || {};
+      return !!(fields.draft_bucket && fields.draft_object_path);
+    }
+
     function readLibraryRegimentoFromBinding(binding, row){
       const source = binding?.source || {};
       if (!binding || !row || typeof row !== 'object') return getEmptyLibraryRegimento();
@@ -2906,46 +2954,39 @@
 
     function buildLibraryRegimentoPayload(binding, regimento, baseRow){
       const source = binding?.source || {};
+      const payloadData = {
+        title: regimento.title,
+        version_label: regimento.version_label,
+        mime_type: regimento.mime_type,
+        draft_bucket: regimento.draft_bucket,
+        draft_object_path: regimento.draft_object_path,
+        draft_filename: regimento.draft_filename,
+        draft_updated_at: regimento.draft_updated_at,
+        published_bucket: regimento.published_bucket,
+        published_object_path: regimento.published_object_path,
+        published_filename: regimento.published_filename,
+        public_url: regimento.public_url,
+        is_published: regimento.is_published,
+        published_at: regimento.published_at,
+        updated_at: regimento.updated_at,
+      };
       if (source.type === 'text-fields') {
         const payload = {};
         Object.entries(source.fields || {}).forEach(([key, field]) => {
-          payload[field] = regimento[key] == null ? null : regimento[key];
+          if (!field) return;
+          payload[field] = Object.prototype.hasOwnProperty.call(payloadData, key) ? payloadData[key] : null;
         });
         return payload;
       }
       if (source.type === 'direct-json') {
-        return {
-          [source.field]: {
-            bucket: regimento.bucket,
-            object_path: regimento.object_path,
-            public_url: regimento.public_url,
-            title: regimento.title,
-            version_label: regimento.version_label,
-            is_published: regimento.is_published,
-            published_at: regimento.published_at,
-            updated_at: regimento.updated_at,
-            mime_type: regimento.mime_type,
-            filename: regimento.filename,
-          }
-        };
+        return { [source.field]: payloadData };
       }
       if (source.type === 'json-container') {
         const container = safeJsonObject(baseRow?.[source.field]);
         return {
           [source.field]: {
             ...container,
-            [source.subkey || 'regimento']: {
-              bucket: regimento.bucket,
-              object_path: regimento.object_path,
-              public_url: regimento.public_url,
-              title: regimento.title,
-              version_label: regimento.version_label,
-              is_published: regimento.is_published,
-              published_at: regimento.published_at,
-              updated_at: regimento.updated_at,
-              mime_type: regimento.mime_type,
-              filename: regimento.filename,
-            }
+            [source.subkey || 'regimento']: payloadData
           }
         };
       }
@@ -2973,147 +3014,246 @@
       }
     }
 
-    function renderLibraryRegimento(regimento){
-      const meta = normalizeLibraryRegimento(regimento || {});
-      const resolvedUrl = meta.public_url || buildLibraryRegimentoPublicUrl(meta.bucket, meta.object_path);
-      $('libraryRegimentoVersion').value = meta.version_label || '';
-      $('libraryRegimentoCurrent').value = meta.filename || meta.object_path || '';
-      $('libraryRegimentoPublicUrl').value = resolvedUrl || '';
-      $('libraryRegimentoStateNote').value = meta.is_published
-        ? `Publicado${meta.published_at ? ' · ' + fmtDateTimeBelem(meta.published_at) : ''}`
-        : (meta.object_path ? 'Arquivo carregado, mas ainda não publicado.' : 'Sem regimento publicado.');
-      $('btnOpenLibraryRegimento').disabled = !resolvedUrl;
-      $('btnDepublishLibraryRegimento').disabled = !meta.object_path && !meta.is_published;
+    async function createLibraryRegimentoSignedUrl(bucket, objectPath){
+      const b = String(bucket || '').trim();
+      const p = String(objectPath || '').trim();
+      if (!b || !p) return '';
+      const { data, error } = await supabase.storage.from(b).createSignedUrl(p, LIBRARY_REGIMENTO_SIGNED_TTL);
+      if (error) throw error;
+      return String(data?.signedUrl || data?.signedURL || '').trim();
     }
 
-    async function uploadLibraryRegimentoFile(libraryId, file){
-      if (!(file instanceof File)) throw new Error('Escolha um arquivo PDF para publicar.');
-      const safeName = sanitizeStorageName(file.name || 'regimento.pdf');
-      const objectPath = `library-${libraryId}/regimentos/${Date.now()}-${safeName}`;
-      const { error } = await supabase.storage
-        .from(LIBRARY_REGIMENTO_BUCKET)
-        .upload(objectPath, file, { contentType: file.type || 'application/pdf', upsert: false });
-      if (error) throw error;
-      return {
-        bucket: LIBRARY_REGIMENTO_BUCKET,
-        object_path: objectPath,
-        public_url: buildLibraryRegimentoPublicUrl(LIBRARY_REGIMENTO_BUCKET, objectPath),
-        mime_type: file.type || 'application/pdf',
-        filename: file.name || safeName,
-      };
+    function getLibrarySlugForAssets(row){
+      const raw = String(firstFilledValue(row?.slug, row?.short_name, row?.name, activeLibrarySlug || 'biblioteca') || 'biblioteca').trim();
+      return sanitizeStorageName(raw.toLowerCase()).replace(/\.[a-z0-9]+$/i, '') || 'biblioteca';
+    }
+
+    function buildLibraryRegimentoObjectPath(kind, row, fileName, versionLabel){
+      const slug = getLibrarySlugForAssets(row);
+      const stamp = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
+      const safeVersion = sanitizeStorageName(String(versionLabel || '').trim().toLowerCase()).replace(/\.[a-z0-9]+$/i, '');
+      const safeName = sanitizeStorageName(fileName || 'regimento.pdf');
+      const base = safeVersion ? `regimento-${safeVersion}-${stamp}` : `regimento-${stamp}`;
+      const extMatch = safeName.match(/(\.[a-z0-9]+)$/i);
+      const ext = extMatch ? extMatch[1] : '.pdf';
+      if (kind === 'draft') return `${slug}/regimentos/drafts/${base}${ext}`;
+      return `${slug}/regimentos/publicados/${base}${ext}`;
+    }
+
+    function renderLibraryRegimento(regimento){
+      const meta = normalizeLibraryRegimento(regimento || {});
+      const publishedUrl = meta.public_url || buildLibraryRegimentoPublicUrl(meta.published_bucket, meta.published_object_path);
+      $('libraryRegimentoVersion').value = meta.version_label || '';
+      $('libraryRegimentoCurrent').value = meta.draft_object_path || meta.draft_filename || '';
+      $('libraryRegimentoPublicUrl').value = meta.is_published ? publishedUrl : '';
+      const bits = [];
+      if (meta.draft_object_path) bits.push(`Rascunho privado salvo${meta.draft_updated_at ? ' em ' + fmtDateTime(meta.draft_updated_at) : ''}.`);
+      else bits.push('Sem rascunho privado salvo.');
+      if (meta.is_published && publishedUrl) bits.push(`Versão pública ativa${meta.published_at ? ' desde ' + fmtDateTime(meta.published_at) : ''}.`);
+      else bits.push('Sem versão pública ativa.');
+      $('libraryRegimentoStateNote').value = bits.join(' ');
+      $('btnOpenLibraryRegimento').disabled = !(meta.draft_object_path || (meta.is_published && publishedUrl));
+      $('btnSaveLibraryRegimentoDraft').disabled = false;
+      $('btnPublishLibraryRegimento').disabled = false;
+      $('btnDepublishLibraryRegimento').disabled = !meta.is_published && !meta.published_object_path;
+      currentLibraryRegimentoState = meta;
     }
 
     async function loadLibraryRegimento(){
       try {
-        const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
-        currentLibraryRegimentoBinding = extractLibraryRegimentoBinding(libraryRow);
-        currentLibraryRegimentoState = readLibraryRegimentoFromBinding(currentLibraryRegimentoBinding, libraryRow);
-        renderLibraryRegimento(currentLibraryRegimentoState);
-        clearStatus('libraryRegimentoMsg');
+        const libraryRow = currentLibraryRow || await getCurrentLibraryRow();
+        const binding = extractLibraryRegimentoBinding(libraryRow);
+        currentLibraryRegimentoBinding = binding;
+        const meta = binding ? readLibraryRegimentoFromBinding(binding, libraryRow) : getEmptyLibraryRegimento();
+        currentLibraryRegimentoState = meta;
+        renderLibraryRegimento(meta);
+        setStatus('libraryRegimentoMsg', binding ? 'Bloco pronto para rascunho privado e publicação pública.' : 'Ainda não encontrei um campo de persistência em libraries para o regimento desta biblioteca.', binding ? 'ok' : 'warn');
       } catch (e) {
-        currentLibraryRegimentoBinding = null;
-        currentLibraryRegimentoState = getEmptyLibraryRegimento();
-        renderLibraryRegimento(currentLibraryRegimentoState);
-        setStatus('libraryRegimentoMsg', 'Não consegui carregar o regimento da biblioteca: ' + (e.message || String(e)), 'bad', false);
+        setStatus('libraryRegimentoMsg', 'Não consegui carregar o regimento desta biblioteca: ' + (e.message || String(e)), 'bad', false);
       }
     }
 
-    async function saveLibraryRegimentoPublish(){
-      clearStatus('libraryRegimentoMsg');
-      const btn = $('btnPublishLibraryRegimento');
-      btn.disabled = true;
+    async function persistLibraryRegimentoState(nextMeta, libraryRow){
+      const libraryId = activeLibraryId || libraryRow?.id;
+      if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar o regimento.');
+      const binding = currentLibraryRegimentoBinding || extractLibraryRegimentoBinding(libraryRow);
+      if (!binding) throw new Error('Não encontrei ainda um campo de persistência em libraries para o regimento desta biblioteca.');
+      const payload = buildLibraryRegimentoPayload(binding, nextMeta, libraryRow);
+      const { data, error } = await supabase
+        .from('libraries')
+        .update(payload)
+        .eq('id', libraryId)
+        .select('*')
+        .maybeSingle();
+      if (error) throw error;
+      currentLibraryRegimentoBinding = binding;
+      currentLibraryRow = { ...(currentLibraryRow || {}), ...(data || {}), id: libraryId };
+      currentLibraryRegimentoState = normalizeLibraryRegimento(nextMeta);
+      return currentLibraryRow;
+    }
+
+    async function uploadLibraryRegimentoDraft(file, libraryRow, currentMeta){
+      const fileName = sanitizeStorageName(file?.name || currentMeta?.draft_filename || currentMeta?.filename || 'regimento.pdf');
+      const objectPath = buildLibraryRegimentoObjectPath('draft', libraryRow, fileName, $('libraryRegimentoVersion')?.value || currentMeta?.version_label || '');
+      const { error } = await supabase.storage
+        .from(LIBRARY_REGIMENTO_DRAFT_BUCKET)
+        .upload(objectPath, file, { upsert: true, contentType: file?.type || 'application/pdf' });
+      if (error) throw error;
+      const nowIso = new Date().toISOString();
+      return {
+        ...normalizeLibraryRegimento(currentMeta || {}),
+        title: 'Regimento da biblioteca',
+        version_label: String($('libraryRegimentoVersion')?.value || currentMeta?.version_label || '').trim(),
+        mime_type: file?.type || 'application/pdf',
+        filename: fileName,
+        draft_bucket: LIBRARY_REGIMENTO_DRAFT_BUCKET,
+        draft_object_path: objectPath,
+        draft_filename: fileName,
+        draft_updated_at: nowIso,
+        updated_at: nowIso,
+      };
+    }
+
+    async function saveLibraryRegimentoDraft(){
+      const btn = $('btnSaveLibraryRegimentoDraft');
+      if (btn) btn.disabled = true;
       try {
-        const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
-        const libraryId = normalizeLibraryId(libraryRow?.id);
-        if (!libraryId) throw new Error('Biblioteca ativa não identificada para publicar o regimento.');
+        const libraryRow = currentLibraryRow || await getCurrentLibraryRow();
         const binding = currentLibraryRegimentoBinding || extractLibraryRegimentoBinding(libraryRow);
         if (!binding) throw new Error('Não encontrei ainda um campo de persistência em libraries para o regimento desta biblioteca.');
+        if (!bindingSupportsLibraryRegimentoDraft(binding)) throw new Error('Esta estrutura ainda não expõe um espaço seguro para guardar metadados separados do rascunho privado.');
+        const file = $('libraryRegimentoFile')?.files?.[0];
+        if (!file) throw new Error('Escolhe um PDF antes de salvar o rascunho.');
+        const nextMeta = await uploadLibraryRegimentoDraft(file, libraryRow, readLibraryRegimentoFromBinding(binding, libraryRow));
+        await persistLibraryRegimentoState(nextMeta, libraryRow);
+        $('libraryRegimentoFile').value = '';
+        await loadLibraryRegimento();
+        setStatus('libraryRegimentoMsg', 'Rascunho privado do regimento salvo.', 'ok');
+      } catch (e) {
+        setStatus('libraryRegimentoMsg', 'Não consegui salvar o rascunho do regimento: ' + (e.message || String(e)), 'bad', false);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
 
+    async function removePublishedLibraryRegimentoObject(meta){
+      const bucket = String(meta?.published_bucket || '').trim();
+      const objectPath = String(meta?.published_object_path || '').trim();
+      if (!bucket || !objectPath) return;
+      const { error } = await supabase.storage.from(bucket).remove([objectPath]);
+      if (error) throw error;
+    }
+
+    async function ensureDraftMetaForPublication(libraryRow, binding, currentMeta){
+      const file = $('libraryRegimentoFile')?.files?.[0];
+      if (file) {
+        if (!bindingSupportsLibraryRegimentoDraft(binding)) throw new Error('Esta estrutura ainda não expõe um espaço seguro para guardar metadados separados do rascunho privado.');
+        return uploadLibraryRegimentoDraft(file, libraryRow, currentMeta);
+      }
+      if (!currentMeta?.draft_object_path) throw new Error('Salva primeiro um rascunho privado ou escolhe um PDF para publicar.');
+      return normalizeLibraryRegimento({
+        ...currentMeta,
+        version_label: String($('libraryRegimentoVersion')?.value || currentMeta?.version_label || '').trim(),
+        updated_at: new Date().toISOString(),
+      });
+    }
+
+    async function saveLibraryRegimentoPublish(){
+      const btn = $('btnPublishLibraryRegimento');
+      if (btn) btn.disabled = true;
+      try {
+        const libraryRow = currentLibraryRow || await getCurrentLibraryRow();
+        const binding = currentLibraryRegimentoBinding || extractLibraryRegimentoBinding(libraryRow);
+        if (!binding) throw new Error('Não encontrei ainda um campo de persistência em libraries para o regimento desta biblioteca.');
         const currentMeta = readLibraryRegimentoFromBinding(binding, libraryRow);
-        const file = $('libraryRegimentoFile')?.files?.[0] || null;
-        const uploaded = file ? await uploadLibraryRegimentoFile(libraryId, file) : {};
-        if (!file && !currentMeta.object_path) throw new Error('Escolha um arquivo PDF antes de publicar o primeiro regimento desta biblioteca.');
-
+        let nextMeta = await ensureDraftMetaForPublication(libraryRow, binding, currentMeta);
+        if (currentMeta?.published_object_path) {
+          await removePublishedLibraryRegimentoObject(currentMeta);
+        }
+        const publishedFileName = nextMeta.draft_filename || nextMeta.filename || 'regimento.pdf';
+        const publishedPath = buildLibraryRegimentoObjectPath('published', libraryRow, publishedFileName, $('libraryRegimentoVersion')?.value || nextMeta.version_label || '');
+        const { error: copyError } = await supabase.storage
+          .from(nextMeta.draft_bucket || LIBRARY_REGIMENTO_DRAFT_BUCKET)
+          .copy(nextMeta.draft_object_path, publishedPath, { destinationBucket: LIBRARY_REGIMENTO_PUBLIC_BUCKET });
+        if (copyError) throw copyError;
         const nowIso = new Date().toISOString();
-        const nextMeta = normalizeLibraryRegimento({
-          ...currentMeta,
-          ...uploaded,
-          title: currentMeta.title || 'Regimento da biblioteca',
-          version_label: String($('libraryRegimentoVersion')?.value || '').trim() || currentMeta.version_label || '',
+        nextMeta = normalizeLibraryRegimento({
+          ...nextMeta,
+          published_bucket: LIBRARY_REGIMENTO_PUBLIC_BUCKET,
+          published_object_path: publishedPath,
+          published_filename: publishedFileName,
+          public_url: buildLibraryRegimentoPublicUrl(LIBRARY_REGIMENTO_PUBLIC_BUCKET, publishedPath),
           is_published: true,
           published_at: nowIso,
           updated_at: nowIso,
         });
-        if (!nextMeta.public_url) nextMeta.public_url = buildLibraryRegimentoPublicUrl(nextMeta.bucket, nextMeta.object_path);
-
-        const payload = buildLibraryRegimentoPayload(binding, nextMeta, libraryRow);
-        const { data, error } = await supabase
-          .from('libraries')
-          .update(payload)
-          .eq('id', libraryId)
-          .select('*')
-          .maybeSingle();
-        if (error) throw error;
-        currentLibraryRow = { ...(currentLibraryRow || {}), ...(data || {}), id: libraryId };
+        await persistLibraryRegimentoState(nextMeta, libraryRow);
         $('libraryRegimentoFile').value = '';
         await loadLibraryRegimento();
-        setStatus('libraryRegimentoMsg', 'Regimento publicado.', 'ok');
+        setStatus('libraryRegimentoMsg', 'Regimento publicado a partir do rascunho privado.', 'ok');
       } catch (e) {
         setStatus('libraryRegimentoMsg', 'Não consegui publicar o regimento: ' + (e.message || String(e)), 'bad', false);
       } finally {
-        btn.disabled = false;
+        if (btn) btn.disabled = false;
       }
     }
 
     async function saveLibraryRegimentoDepublish(){
-      clearStatus('libraryRegimentoMsg');
       const btn = $('btnDepublishLibraryRegimento');
-      btn.disabled = true;
+      if (btn) btn.disabled = true;
       try {
-        const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
-        const libraryId = normalizeLibraryId(libraryRow?.id);
-        if (!libraryId) throw new Error('Biblioteca ativa não identificada para despublicar o regimento.');
+        const libraryRow = currentLibraryRow || await getCurrentLibraryRow();
         const binding = currentLibraryRegimentoBinding || extractLibraryRegimentoBinding(libraryRow);
         if (!binding) throw new Error('Não encontrei ainda um campo de persistência em libraries para o regimento desta biblioteca.');
-
         const currentMeta = readLibraryRegimentoFromBinding(binding, libraryRow);
-        if (!currentMeta.object_path && !currentMeta.is_published) throw new Error('Esta biblioteca ainda não tem um regimento para despublicar.');
+        if (!currentMeta.published_object_path && !currentMeta.is_published) throw new Error('Esta biblioteca ainda não tem um regimento publicado para despublicar.');
+        await removePublishedLibraryRegimentoObject(currentMeta);
         const nowIso = new Date().toISOString();
         const nextMeta = normalizeLibraryRegimento({
           ...currentMeta,
+          published_bucket: LIBRARY_REGIMENTO_PUBLIC_BUCKET,
+          published_object_path: '',
+          published_filename: '',
+          public_url: '',
           is_published: false,
+          published_at: null,
           updated_at: nowIso,
         });
-        const payload = buildLibraryRegimentoPayload(binding, nextMeta, libraryRow);
-        const { data, error } = await supabase
-          .from('libraries')
-          .update(payload)
-          .eq('id', libraryId)
-          .select('*')
-          .maybeSingle();
-        if (error) throw error;
-        currentLibraryRow = { ...(currentLibraryRow || {}), ...(data || {}), id: libraryId };
+        await persistLibraryRegimentoState(nextMeta, libraryRow);
         $('libraryRegimentoFile').value = '';
         await loadLibraryRegimento();
-        setStatus('libraryRegimentoMsg', 'Regimento despublicado.', 'ok');
+        setStatus('libraryRegimentoMsg', 'Versão pública removida. O rascunho privado foi preservado.', 'ok');
       } catch (e) {
         setStatus('libraryRegimentoMsg', 'Não consegui despublicar o regimento: ' + (e.message || String(e)), 'bad', false);
       } finally {
-        btn.disabled = false;
+        if (btn) btn.disabled = false;
       }
     }
 
-    function openLibraryRegimento(){
-      const url = String($('libraryRegimentoPublicUrl')?.value || '').trim();
-      if (!url) return setStatus('libraryRegimentoMsg', 'Ainda não há um regimento disponível para abrir.', 'warn');
-      window.open(url, '_blank', 'noopener');
+    async function openLibraryRegimento(){
+      try {
+        const meta = normalizeLibraryRegimento(currentLibraryRegimentoState || {});
+        if (meta.is_published) {
+          const publicUrl = meta.public_url || buildLibraryRegimentoPublicUrl(meta.published_bucket, meta.published_object_path);
+          if (publicUrl) return window.open(publicUrl, '_blank', 'noopener');
+        }
+        if (meta.draft_object_path) {
+          const signedUrl = await createLibraryRegimentoSignedUrl(meta.draft_bucket || LIBRARY_REGIMENTO_DRAFT_BUCKET, meta.draft_object_path);
+          if (signedUrl) return window.open(signedUrl, '_blank', 'noopener');
+        }
+        setStatus('libraryRegimentoMsg', 'Ainda não há um regimento disponível para abrir.', 'warn');
+      } catch (e) {
+        setStatus('libraryRegimentoMsg', 'Não consegui abrir o regimento: ' + (e.message || String(e)), 'bad', false);
+      }
     }
 
     function setupLibraryRegimentoActions(){
       $('btnOpenLibraryRegimento')?.addEventListener('click', openLibraryRegimento);
+      $('btnSaveLibraryRegimentoDraft')?.addEventListener('click', saveLibraryRegimentoDraft);
       $('btnPublishLibraryRegimento')?.addEventListener('click', saveLibraryRegimentoPublish);
       $('btnDepublishLibraryRegimento')?.addEventListener('click', saveLibraryRegimentoDepublish);
     }
+
 
 function belemNowParts(){
       const d = new Date();
