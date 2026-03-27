@@ -552,7 +552,7 @@
                 </div>
               </div>
               <div class="muted-box" style="margin-top:12px">
-                <div class="mini">Neste primeiro patch, apenas o bloco “Estado do serviço” está ligado ao backend atual. Os outros blocos já ficam preparados no painel, sem alterar o restante do sistema.</div>
+                <div class="mini">Ajustes próprios da biblioteca para funcionamento, circulação, identidade e apresentação pública.</div>
               </div>
             </div>
 
@@ -599,7 +599,7 @@
               <div class="section-head">
                 <div>
                   <h2>Horários e permanências</h2>
-                  <div class="mini">Estrutura preparada para os horários semanais, permanências fixas e fechamentos excepcionais.</div>
+                  <div class="mini">Informe os horários semanais, as permanências fixas e os fechamentos ou suspensões excepcionais.</div>
                 </div>
               </div>
               <div class="row3" style="margin-top:12px">
@@ -639,9 +639,9 @@
                 <textarea class="textarea" id="libraryExceptionalClosures" placeholder="Ex.: fechado no feriado, mutirão interno, reforma do espaço, pausa temporária etc."></textarea>
               </div>
               <div class="actions">
-                <button class="btn" id="btnSaveLibrarySchedule" type="button" disabled>Salvar horários</button>
+                <button class="btn" id="btnSaveLibrarySchedule" type="button">Salvar horários</button>
               </div>
-              <div class="status" id="libraryScheduleMsg">Bloco preparado para ligação futura ao backend.</div>
+              <div class="status" id="libraryScheduleMsg"></div>
             </div>
 
             <div class="card">
@@ -676,7 +676,7 @@
               <div class="actions">
                 <button class="btn" id="btnSaveLocalRules" type="button" disabled>Salvar regras locais</button>
               </div>
-              <div class="status" id="localRulesMsg">Bloco preparado para ligação futura ao backend.</div>
+              <div class="status" id="localRulesMsg"></div>
             </div>
 
             <div class="card">
@@ -703,7 +703,7 @@
               <div class="actions">
                 <button class="btn" id="btnSaveLibraryIdentity" type="button">Salvar identidade</button>
               </div>
-              <div class="status" id="libraryIdentityMsg">Bloco preparado para ligação futura ao backend.</div>
+              <div class="status" id="libraryIdentityMsg"></div>
             </div>
 
             <div class="card">
@@ -740,14 +740,14 @@
                 </div>
                 <div>
                   <label for="libraryThemePreviewNote">Pré-visualização</label>
-                  <input class="input" id="libraryThemePreviewNote" type="text" value="Estrutura preparada para preview futuro." readonly>
+                  <input class="input" id="libraryThemePreviewNote" type="text" value="" placeholder="Resumo do tema atual." readonly>
                 </div>
               </div>
               <div class="actions">
                 <button class="btn" id="btnSaveLibraryTheme" type="button">Salvar tema</button>
                 <button class="btn" id="btnResetLibraryTheme" type="button">Restaurar tema padrão</button>
               </div>
-              <div class="status" id="libraryThemeMsg">Bloco preparado para ligação futura ao backend.</div>
+              <div class="status" id="libraryThemeMsg"></div>
             </div>
           </div>
         </section>
@@ -2154,6 +2154,251 @@
     function setupLibraryThemeActions(){
       $('btnSaveLibraryTheme')?.addEventListener('click', () => saveLibraryTheme());
       $('btnResetLibraryTheme')?.addEventListener('click', () => saveLibraryTheme({ reset: true }));
+    }
+
+    let currentLibraryScheduleBinding = null;
+    let currentLibraryScheduleStateRow = null;
+
+    function getEmptyLibrarySchedule(){
+      return {
+        monday: '',
+        tuesday: '',
+        wednesday: '',
+        thursday: '',
+        friday: '',
+        weekend: '',
+        fixed_openings: '',
+        exceptional_closures: ''
+      };
+    }
+
+    function normalizeLibrarySchedule(input){
+      const base = getEmptyLibrarySchedule();
+      const source = input && typeof input === 'object' ? input : {};
+      return {
+        monday: String(source.monday || source.segunda || '').trim(),
+        tuesday: String(source.tuesday || source.terca || source.terça || '').trim(),
+        wednesday: String(source.wednesday || source.quarta || '').trim(),
+        thursday: String(source.thursday || source.quinta || '').trim(),
+        friday: String(source.friday || source.sexta || '').trim(),
+        weekend: String(source.weekend || source.fim_de_semana || '').trim(),
+        fixed_openings: String(source.fixed_openings || source.permanencias_fixas || source.permanências_fixas || '').trim(),
+        exceptional_closures: String(source.exceptional_closures || source.fechamentos_excepcionais || source.suspensoes_temporarias || source.suspensões_temporárias || '').trim(),
+      };
+    }
+
+    const LIBRARY_SCHEDULE_TEXT_FIELDS = {
+      monday: ['open_monday', 'library_open_monday', 'monday_hours', 'hours_monday', 'schedule_monday'],
+      tuesday: ['open_tuesday', 'library_open_tuesday', 'tuesday_hours', 'hours_tuesday', 'schedule_tuesday'],
+      wednesday: ['open_wednesday', 'library_open_wednesday', 'wednesday_hours', 'hours_wednesday', 'schedule_wednesday'],
+      thursday: ['open_thursday', 'library_open_thursday', 'thursday_hours', 'hours_thursday', 'schedule_thursday'],
+      friday: ['open_friday', 'library_open_friday', 'friday_hours', 'hours_friday', 'schedule_friday'],
+      weekend: ['open_weekend', 'library_open_weekend', 'weekend_hours', 'hours_weekend', 'schedule_weekend'],
+      fixed_openings: ['fixed_openings', 'library_fixed_openings', 'permanencias_fixas', 'permanencias_fixas', 'permanences'],
+      exceptional_closures: ['exceptional_closures', 'library_exceptional_closures', 'fechamentos_excepcionais', 'suspensoes_temporarias', 'closure_notes']
+    };
+
+    const LIBRARY_SCHEDULE_JSON_FIELDS = ['service_schedule', 'opening_hours', 'hours_config', 'schedule_config', 'operating_hours', 'service_hours', 'weekly_schedule'];
+    const LIBRARY_SCHEDULE_CONTAINER_FIELDS = ['config', 'settings', 'metadata', 'public_config', 'library_config', 'service_config', 'extra', 'extra_config', 'ui_config'];
+    const LIBRARY_SCHEDULE_CONTAINER_KEYS = ['service_schedule', 'opening_hours', 'hours', 'schedule', 'operating_hours', 'weekly_schedule'];
+
+    function hasOwn(obj, key){
+      return !!obj && Object.prototype.hasOwnProperty.call(obj, key);
+    }
+
+    function pickExistingField(row, candidates){
+      return (candidates || []).find((field) => hasOwn(row, field)) || null;
+    }
+
+    function extractLibraryScheduleFromTextFields(row){
+      const out = getEmptyLibrarySchedule();
+      const matched = {};
+      let found = 0;
+      for (const [logicalKey, candidates] of Object.entries(LIBRARY_SCHEDULE_TEXT_FIELDS)) {
+        const field = pickExistingField(row, candidates);
+        if (!field) continue;
+        matched[logicalKey] = field;
+        out[logicalKey] = String(row?.[field] || '').trim();
+        found += 1;
+      }
+      if (!found) return null;
+      return { schedule: normalizeLibrarySchedule(out), source: { type: 'text-fields', fields: matched } };
+    }
+
+    function extractLibraryScheduleFromJsonFields(row){
+      for (const field of LIBRARY_SCHEDULE_JSON_FIELDS) {
+        if (!hasOwn(row, field)) continue;
+        const obj = safeJsonObject(row?.[field]);
+        if (Object.keys(obj).length) return { schedule: normalizeLibrarySchedule(obj), source: { type: 'direct-json', field } };
+      }
+      for (const field of LIBRARY_SCHEDULE_CONTAINER_FIELDS) {
+        if (!hasOwn(row, field)) continue;
+        const container = safeJsonObject(row?.[field]);
+        for (const subkey of LIBRARY_SCHEDULE_CONTAINER_KEYS) {
+          const nested = safeJsonObject(container?.[subkey]);
+          if (Object.keys(nested).length) return { schedule: normalizeLibrarySchedule(nested), source: { type: 'json-container', field, subkey } };
+        }
+      }
+      return null;
+    }
+
+    function extractLibraryScheduleBinding(tableName, row){
+      if (!row || typeof row !== 'object') return null;
+      const textBinding = extractLibraryScheduleFromTextFields(row);
+      if (textBinding) return { table: tableName, ...textBinding };
+      const jsonBinding = extractLibraryScheduleFromJsonFields(row);
+      if (jsonBinding) return { table: tableName, ...jsonBinding };
+      return null;
+    }
+
+    function detectFallbackLibraryScheduleBinding(){
+      const serviceRow = currentLibraryScheduleStateRow || {};
+      const libraryRow = currentLibraryRow || {};
+
+      for (const field of LIBRARY_SCHEDULE_JSON_FIELDS) {
+        if (hasOwn(serviceRow, field)) return { table: 'library_service_state', source: { type: 'direct-json', field } };
+      }
+      for (const field of LIBRARY_SCHEDULE_CONTAINER_FIELDS) {
+        if (hasOwn(serviceRow, field)) return { table: 'library_service_state', source: { type: 'json-container', field, subkey: 'service_schedule' } };
+      }
+      for (const field of LIBRARY_SCHEDULE_JSON_FIELDS) {
+        if (hasOwn(libraryRow, field)) return { table: 'libraries', source: { type: 'direct-json', field } };
+      }
+      for (const field of LIBRARY_SCHEDULE_CONTAINER_FIELDS) {
+        if (hasOwn(libraryRow, field)) return { table: 'libraries', source: { type: 'json-container', field, subkey: 'service_schedule' } };
+      }
+      const serviceText = extractLibraryScheduleFromTextFields(serviceRow);
+      if (serviceText?.source) return { table: 'library_service_state', source: serviceText.source };
+      const libraryText = extractLibraryScheduleFromTextFields(libraryRow);
+      if (libraryText?.source) return { table: 'libraries', source: libraryText.source };
+      return null;
+    }
+
+    function renderLibrarySchedule(schedule){
+      const normalized = normalizeLibrarySchedule(schedule);
+      $('libraryOpenMonday').value = normalized.monday;
+      $('libraryOpenTuesday').value = normalized.tuesday;
+      $('libraryOpenWednesday').value = normalized.wednesday;
+      $('libraryOpenThursday').value = normalized.thursday;
+      $('libraryOpenFriday').value = normalized.friday;
+      $('libraryOpenWeekend').value = normalized.weekend;
+      $('libraryFixedOpenings').value = normalized.fixed_openings;
+      $('libraryExceptionalClosures').value = normalized.exceptional_closures;
+    }
+
+    function collectLibraryScheduleFromForm(){
+      return normalizeLibrarySchedule({
+        monday: $('libraryOpenMonday')?.value,
+        tuesday: $('libraryOpenTuesday')?.value,
+        wednesday: $('libraryOpenWednesday')?.value,
+        thursday: $('libraryOpenThursday')?.value,
+        friday: $('libraryOpenFriday')?.value,
+        weekend: $('libraryOpenWeekend')?.value,
+        fixed_openings: $('libraryFixedOpenings')?.value,
+        exceptional_closures: $('libraryExceptionalClosures')?.value,
+      });
+    }
+
+    async function fetchCurrentLibraryServiceStateRow(){
+      const resolved = await resolveCurrentLibraryIdentity();
+      const libraryId = normalizeLibraryId(resolved?.id);
+      if (!libraryId) throw new Error('Biblioteca ativa não identificada para carregar os horários.');
+      const { data, error } = await supabase
+        .from('library_service_state')
+        .select('*')
+        .eq('library_id', libraryId)
+        .maybeSingle();
+      if (error) throw error;
+      currentLibraryScheduleStateRow = { ...(data || {}), library_id: libraryId };
+      return currentLibraryScheduleStateRow;
+    }
+
+    async function loadLibrarySchedule(){
+      try {
+        const serviceRow = await fetchCurrentLibraryServiceStateRow();
+        const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const binding = extractLibraryScheduleBinding('library_service_state', serviceRow)
+          || extractLibraryScheduleBinding('libraries', libraryRow)
+          || detectFallbackLibraryScheduleBinding();
+        currentLibraryScheduleBinding = binding || null;
+        renderLibrarySchedule(binding?.schedule || getEmptyLibrarySchedule());
+        clearStatus('libraryScheduleMsg');
+      } catch (e) {
+        currentLibraryScheduleBinding = null;
+        renderLibrarySchedule(getEmptyLibrarySchedule());
+        setStatus('libraryScheduleMsg', 'Não consegui carregar os horários da biblioteca: ' + (e.message || String(e)), 'bad', false);
+      }
+    }
+
+    function buildLibrarySchedulePayload(binding, schedule, baseRow){
+      const source = binding?.source || {};
+      if (source.type === 'text-fields') {
+        const payload = {};
+        for (const [logicalKey, field] of Object.entries(source.fields || {})) {
+          payload[field] = String(schedule?.[logicalKey] || '').trim();
+        }
+        return payload;
+      }
+      if (source.type === 'direct-json') {
+        return { [source.field]: schedule };
+      }
+      if (source.type === 'json-container') {
+        const field = source.field;
+        const subkey = source.subkey || 'service_schedule';
+        const container = safeJsonObject(baseRow?.[field]);
+        return { [field]: { ...container, [subkey]: schedule } };
+      }
+      throw new Error('Não encontrei uma estrutura segura para salvar os horários desta biblioteca.');
+    }
+
+    async function saveLibrarySchedule(){
+      clearStatus('libraryScheduleMsg');
+      const btn = $('btnSaveLibrarySchedule');
+      btn.disabled = true;
+      try {
+        const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const serviceRow = currentLibraryScheduleStateRow?.library_id ? currentLibraryScheduleStateRow : await fetchCurrentLibraryServiceStateRow();
+        const binding = currentLibraryScheduleBinding || extractLibraryScheduleBinding('library_service_state', serviceRow) || extractLibraryScheduleBinding('libraries', libraryRow) || detectFallbackLibraryScheduleBinding();
+        if (!binding) throw new Error('Não encontrei ainda um campo de persistência para os horários desta biblioteca.');
+
+        const schedule = collectLibraryScheduleFromForm();
+        const libraryId = normalizeLibraryId(libraryRow?.id || serviceRow?.library_id);
+        if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar os horários.');
+
+        if (binding.table === 'library_service_state') {
+          const payload = buildLibrarySchedulePayload(binding, schedule, serviceRow);
+          const { data, error } = await supabase
+            .from('library_service_state')
+            .upsert({ library_id: libraryId, ...payload }, { onConflict: 'library_id' })
+            .select('*')
+            .maybeSingle();
+          if (error) throw error;
+          currentLibraryScheduleStateRow = { ...(data || {}), library_id: libraryId };
+        } else if (binding.table === 'libraries') {
+          const payload = buildLibrarySchedulePayload(binding, schedule, libraryRow);
+          const { data, error } = await supabase
+            .from('libraries')
+            .update(payload)
+            .eq('id', libraryId)
+            .select('*')
+            .maybeSingle();
+          if (error) throw error;
+          currentLibraryRow = { ...(currentLibraryRow || {}), ...(data || {}), id: libraryId };
+        } else {
+          throw new Error('Destino de gravação não reconhecido para os horários.');
+        }
+
+        await loadLibrarySchedule();
+        setStatus('libraryScheduleMsg', 'Horários e permanências atualizados.', 'ok');
+      } catch (e) {
+        setStatus('libraryScheduleMsg', 'Não consegui salvar os horários da biblioteca: ' + (e.message || String(e)), 'bad', false);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function setupLibraryScheduleActions(){
+      $('btnSaveLibrarySchedule')?.addEventListener('click', saveLibrarySchedule);
     }
 
 
@@ -5004,6 +5249,7 @@ async function fetchActiveLoans(){
     bindReservationSelection();
     bindDynamicActions();
     bindInternalTaskOwnerSuggestions();
+    setupLibraryScheduleActions();
 
     function setupRefreshHooks(){
       if (refreshTimer) clearInterval(refreshTimer);
@@ -5021,6 +5267,7 @@ async function fetchActiveLoans(){
         await loadLibraryServiceState();
         await loadLibraryIdentity();
         await loadLibraryTheme();
+        await loadLibrarySchedule();
         await loadInternalTaskLibrarians();
         await loadInternalTasks({ silent:true });
         await refreshCollections();
