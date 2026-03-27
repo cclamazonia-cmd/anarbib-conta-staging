@@ -879,9 +879,27 @@
                 <label for="interlibRecentRequests">Solicitações recentes</label>
                 <textarea class="textarea" id="interlibRecentRequests" placeholder="As solicitações recentes desta biblioteca aparecerão aqui." readonly></textarea>
               </div>
+              <div class="row" style="margin-top:12px">
+                <div>
+                  <label for="interlibPendingIncomingSelect">Solicitações recebidas pendentes</label>
+                  <select class="select" id="interlibPendingIncomingSelect">
+                    <option value="">Nenhuma solicitação pendente para responder</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="interlibPendingIncomingSummary">Resumo da solicitação selecionada</label>
+                  <input class="input" id="interlibPendingIncomingSummary" type="text" value="" placeholder="Escolhe uma solicitação pendente para responder." readonly>
+                </div>
+              </div>
+              <div style="margin-top:12px">
+                <label for="interlibResponseNote">Nota da resposta (opcional)</label>
+                <textarea class="textarea" id="interlibResponseNote" placeholder="Ex.: aceitamos a solicitação, mas pedimos retorno depois da intervenção na notice."></textarea>
+              </div>
               <div class="actions">
                 <button class="btn" id="btnRefreshInterlibRequests" type="button">Atualizar solicitações</button>
                 <button class="btn primary" id="btnSendInterlibRequest" type="button">Enviar solicitação</button>
+                <button class="btn" id="btnAcceptInterlibRequest" type="button">Aceitar solicitação recebida</button>
+                <button class="btn" id="btnRefuseInterlibRequest" type="button">Recusar solicitação recebida</button>
               </div>
               <div class="status" id="interlibRequestsMsg"></div>
             </div>
@@ -2125,6 +2143,7 @@
     const INTERLIB_REQUEST_TABLE = 'document_permission_requests';
     const INTERLIB_REQUEST_RPC = 'create_document_permission_request';
     const INTERLIB_CONTACT_RPC = 'get_library_contact_for_cooperation';
+    const INTERLIB_DECIDE_RPC = 'decide_document_permission_request';
     let currentLibraryRegimentoBinding = null;
     let currentLibraryRegimentoState = null;
     const LIBRARY_REGIMENTO_BUCKET = 'library-regimentos';
@@ -2667,7 +2686,8 @@
       const msg = String(error?.message || error || '').toLowerCase();
       return (msg.includes(INTERLIB_REQUEST_TABLE.toLowerCase()) && (msg.includes('does not exist') || msg.includes('not found') || msg.includes('unknown')))
         || (msg.includes(INTERLIB_REQUEST_RPC.toLowerCase()) && msg.includes('function'))
-        || (msg.includes(INTERLIB_CONTACT_RPC.toLowerCase()) && msg.includes('function'));
+        || (msg.includes(INTERLIB_CONTACT_RPC.toLowerCase()) && msg.includes('function'))
+        || (msg.includes(INTERLIB_DECIDE_RPC.toLowerCase()) && msg.includes('function'));
     }
 
     function interlibraryActionLabel(value){
@@ -2789,6 +2809,45 @@
       $('interlibRecentRequests').value = lines.length ? lines.join('\n') : 'Nenhuma solicitação interbibliotecas registrada ainda para esta biblioteca.';
     }
 
+    function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequests){
+      const currentId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
+      return (items || [])
+        .map(normalizeInterlibraryRequest)
+        .filter((item) => normalizeLibraryId(item.target_library_id) === currentId && item.status === 'pending');
+    }
+
+    function summarizePendingIncomingInterlibraryRequest(item){
+      const normalized = normalizeInterlibraryRequest(item);
+      const requesterLibrary = findKnownLibraryById(normalized.requester_library_id) || { id: normalized.requester_library_id, name: normalized.requester_library_id || 'Biblioteca parceira' };
+      const action = interlibraryActionLabel(normalized.requested_action);
+      const objectLabel = interlibraryObjectLabel(normalized.object_type);
+      const objectRef = normalized.object_ref ? ` · ref.: ${normalized.object_ref}` : '';
+      return `${shortLibraryLabel(requesterLibrary)} · ${action} (${objectLabel})${objectRef}`;
+    }
+
+    function renderSelectedPendingIncomingInterlibraryRequest(){
+      const selectedId = String($('interlibPendingIncomingSelect')?.value || '').trim();
+      const selected = currentInterlibraryRequests.find((item) => String(item?.id || '').trim() === selectedId);
+      $('interlibPendingIncomingSummary').value = selected ? summarizePendingIncomingInterlibraryRequest(selected) : '';
+      const hasSelection = !!selected;
+      if ($('btnAcceptInterlibRequest')) $('btnAcceptInterlibRequest').disabled = !hasSelection;
+      if ($('btnRefuseInterlibRequest')) $('btnRefuseInterlibRequest').disabled = !hasSelection;
+    }
+
+    function renderPendingIncomingInterlibraryRequests(items=currentInterlibraryRequests){
+      const select = $('interlibPendingIncomingSelect');
+      if (!select) return;
+      const pending = getPendingIncomingInterlibraryRequests(items);
+      const currentValue = String(select.value || '').trim();
+      select.innerHTML = '<option value="">Nenhuma solicitação pendente para responder</option>' + pending.map((item) => {
+        const normalized = normalizeInterlibraryRequest(item);
+        return `<option value="${esc(normalized.id)}">${esc(summarizePendingIncomingInterlibraryRequest(normalized))}</option>`;
+      }).join('');
+      const validIds = new Set(pending.map((item) => String(item?.id || '').trim()).filter(Boolean));
+      select.value = validIds.has(currentValue) ? currentValue : '';
+      renderSelectedPendingIncomingInterlibraryRequest();
+    }
+
     async function fetchInterlibraryActiveLibraries(){
       const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
       const currentId = normalizeLibraryId(libraryRow?.id);
@@ -2869,10 +2928,12 @@
         await loadInterlibraryPartnerContact({ silent: true });
         currentInterlibraryRequests = await fetchInterlibraryRequests(libraryId);
         renderInterlibraryRequests(currentInterlibraryRequests);
+        renderPendingIncomingInterlibraryRequests(currentInterlibraryRequests);
         if (!silent) setStatus('interlibRequestsMsg', currentInterlibraryRequests.length ? 'Solicitações interbibliotecas carregadas.' : 'Ainda não há solicitações interbibliotecas desta biblioteca.', currentInterlibraryRequests.length ? 'ok' : 'warn');
       } catch (e) {
         currentInterlibraryRequests = [];
         renderInterlibraryRequests(currentInterlibraryRequests);
+        renderPendingIncomingInterlibraryRequests(currentInterlibraryRequests);
         const missing = isMissingInterlibraryBackendError(e);
         const msg = missing
           ? 'Ainda não encontrei o backend das solicitações interbibliotecas. Aplica primeiro o mini-lote SQL desta etapa.'
@@ -2926,10 +2987,45 @@
       }
     }
 
+    async function saveInterlibraryDecision(decision){
+      const requestId = Number($('interlibPendingIncomingSelect')?.value || 0);
+      if (!requestId) return setStatus('interlibRequestsMsg', 'Escolhe primeiro uma solicitação recebida pendente.', 'warn');
+      const note = String($('interlibResponseNote')?.value || '').trim();
+      const acceptBtn = $('btnAcceptInterlibRequest');
+      const refuseBtn = $('btnRefuseInterlibRequest');
+      if (acceptBtn) acceptBtn.disabled = true;
+      if (refuseBtn) refuseBtn.disabled = true;
+      try {
+        const { data, error } = await supabase.rpc(INTERLIB_DECIDE_RPC, {
+          p_request_id: requestId,
+          p_decision: decision,
+          p_response_note: note || null,
+        });
+        if (error) throw error;
+        const normalized = normalizeInterlibraryRequest(data || {});
+        currentInterlibraryRequests = currentInterlibraryRequests.map((item) => String(item?.id || '') === String(normalized.id || '') ? normalized : item);
+        renderInterlibraryRequests(currentInterlibraryRequests);
+        renderPendingIncomingInterlibraryRequests(currentInterlibraryRequests);
+        $('interlibResponseNote').value = '';
+        setStatus('interlibRequestsMsg', decision === 'accepted' ? 'Solicitação recebida aceita.' : 'Solicitação recebida recusada.', 'ok');
+      } catch (e) {
+        const missing = isMissingInterlibraryBackendError(e);
+        const msg = missing
+          ? 'Ainda não encontrei o backend de decisão interbibliotecas. Aplica primeiro o mini-lote SQL desta etapa.'
+          : 'Não consegui registrar a decisão interbibliotecas: ' + (e.message || String(e));
+        setStatus('interlibRequestsMsg', msg, missing ? 'warn' : 'bad', false);
+      } finally {
+        renderSelectedPendingIncomingInterlibraryRequest();
+      }
+    }
+
     function setupInterlibraryRequestActions(){
       $('interlibPartnerLibrary')?.addEventListener('change', () => { loadInterlibraryPartnerContact(); });
+      $('interlibPendingIncomingSelect')?.addEventListener('change', renderSelectedPendingIncomingInterlibraryRequest);
       $('btnRefreshInterlibRequests')?.addEventListener('click', () => { loadInterlibraryRequests(); });
       $('btnSendInterlibRequest')?.addEventListener('click', saveInterlibraryRequest);
+      $('btnAcceptInterlibRequest')?.addEventListener('click', () => { saveInterlibraryDecision('accepted'); });
+      $('btnRefuseInterlibRequest')?.addEventListener('click', () => { saveInterlibraryDecision('refused'); });
     }
 
     function setupLibraryThemeActions(){
