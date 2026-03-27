@@ -2787,6 +2787,13 @@
     const LIBRARY_REGIMENTO_PUBLIC_BUCKET = 'library-regimentos-public';
     const LIBRARY_REGIMENTO_SIGNED_TTL = 3600;
 
+    function regimentoToBool(value){
+      if (typeof value === 'boolean') return value;
+      if (value == null) return false;
+      const raw = String(value).trim().toLowerCase();
+      return ['1','true','t','yes','y','sim','s','on'].includes(raw);
+    }
+
     function getEmptyLibraryRegimento(){
       return {
         draft_bucket: LIBRARY_REGIMENTO_DRAFT_BUCKET,
@@ -2810,7 +2817,7 @@
       const base = getEmptyLibraryRegimento();
       const legacyPublished = String(firstFilledValue(obj.object_path, obj.path, obj.regimento_object_path, obj.library_regimento_object_path, '') || '').trim();
       const legacyPublishedUrl = String(firstFilledValue(obj.public_url, obj.url, obj.regimento_public_url, obj.library_regimento_public_url, obj.regimento_published_url, '') || '').trim();
-      const legacyIsPublished = toBool(firstFilledValue(obj.is_published, obj.published, obj.regimento_is_published, obj.library_regimento_is_published, false));
+      const legacyIsPublished = regimentoToBool(firstFilledValue(obj.is_published, obj.published, obj.regimento_is_published, obj.library_regimento_is_published, false));
       const draftObjectPath = String(firstFilledValue(
         obj.draft_object_path,
         obj.regimento_draft_object_path,
