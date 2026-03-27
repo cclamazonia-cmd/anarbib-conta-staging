@@ -781,7 +781,7 @@
               <div style="margin-top:12px">
                 <label for="libraryRegimentoStateNote">Situação atual</label>
                 <input class="input" id="libraryRegimentoStateNote" type="text" value="" placeholder="Sem regimento publicado." readonly>
-                <div class="help" style="margin-top:6px">Fluxo leve: salvar rascunho no bucket privado, publicar cópia no bucket público e despublicar sem apagar o rascunho privado.</div>
+                
               </div>
               <div class="actions">
                 <button class="btn" id="btnOpenLibraryRegimento" type="button">Abrir regimento</button>
@@ -3037,7 +3037,15 @@
     }
 
     function getLibrarySlugForAssets(row){
-      const raw = String(firstFilledValue(row?.slug, row?.short_name, row?.name, activeLibrarySlug || 'biblioteca') || 'biblioteca').trim();
+      const fallbackSlug = String(
+        currentLibraryRow?.slug ||
+        currentAccessRow?.library_slug ||
+        currentAccessRow?.default_library_slug ||
+        currentIdentityRow?.library_slug ||
+        currentIdentityRow?.default_library_slug ||
+        'biblioteca'
+      ).trim();
+      const raw = String(firstFilledValue(row?.slug, row?.short_name, row?.name, fallbackSlug || 'biblioteca') || 'biblioteca').trim();
       return sanitizeStorageName(raw.toLowerCase()).replace(/\.[a-z0-9]+$/i, '') || 'biblioteca';
     }
 
@@ -3074,7 +3082,7 @@
 
     async function loadLibraryRegimento(){
       try {
-        const libraryRow = currentLibraryRow || await getCurrentLibraryRow();
+        const libraryRow = currentLibraryRow || await fetchCurrentLibraryRow();
         const binding = extractLibraryRegimentoBinding(libraryRow);
         currentLibraryRegimentoBinding = binding;
         const meta = binding ? readLibraryRegimentoFromBinding(binding, libraryRow) : getEmptyLibraryRegimento();
@@ -3087,7 +3095,7 @@
     }
 
     async function persistLibraryRegimentoState(nextMeta, libraryRow){
-      const libraryId = activeLibraryId || libraryRow?.id;
+      const libraryId = normalizeLibraryId(libraryRow?.id || currentLibraryRow?.id);
       if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar o regimento.');
       const binding = currentLibraryRegimentoBinding || extractLibraryRegimentoBinding(libraryRow);
       if (!binding) throw new Error('Não encontrei ainda um campo de persistência em libraries para o regimento desta biblioteca.');
@@ -3127,7 +3135,7 @@
       const btn = $('btnSaveLibraryRegimentoDraft');
       if (btn) btn.disabled = true;
       try {
-        const libraryRow = currentLibraryRow || await getCurrentLibraryRow();
+        const libraryRow = currentLibraryRow || await fetchCurrentLibraryRow();
         const binding = currentLibraryRegimentoBinding || extractLibraryRegimentoBinding(libraryRow);
         if (!binding) throw new Error('Não encontrei ainda um campo de persistência em libraries para o regimento desta biblioteca.');
         if (!bindingSupportsLibraryRegimentoDraft(binding)) throw new Error('Esta estrutura ainda não expõe um espaço seguro para guardar metadados separados do rascunho privado.');
@@ -3171,7 +3179,7 @@
       const btn = $('btnPublishLibraryRegimento');
       if (btn) btn.disabled = true;
       try {
-        const libraryRow = currentLibraryRow || await getCurrentLibraryRow();
+        const libraryRow = currentLibraryRow || await fetchCurrentLibraryRow();
         const binding = currentLibraryRegimentoBinding || extractLibraryRegimentoBinding(libraryRow);
         if (!binding) throw new Error('Não encontrei ainda um campo de persistência em libraries para o regimento desta biblioteca.');
         const currentMeta = readLibraryRegimentoFromBinding(binding, libraryRow);
@@ -3210,7 +3218,7 @@
       const btn = $('btnDepublishLibraryRegimento');
       if (btn) btn.disabled = true;
       try {
-        const libraryRow = currentLibraryRow || await getCurrentLibraryRow();
+        const libraryRow = currentLibraryRow || await fetchCurrentLibraryRow();
         const binding = currentLibraryRegimentoBinding || extractLibraryRegimentoBinding(libraryRow);
         if (!binding) throw new Error('Não encontrei ainda um campo de persistência em libraries para o regimento desta biblioteca.');
         const currentMeta = readLibraryRegimentoFromBinding(binding, libraryRow);
