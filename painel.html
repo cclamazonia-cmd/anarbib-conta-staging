@@ -485,7 +485,7 @@
         <a class="btn" id="btnCatalogacao" href="https://cclamazonia-cmd.github.io/anarbib-staging/catalogacao.html">Catalogação</a>
         <a class="btn" id="btnManual" href="https://cclamazonia-cmd.github.io/anarbib-staging/Manual_do_AnarBib.pdf" target="_blank" rel="noopener noreferrer">Manual do AnarBib</a>
         <a class="btn" id="btnModoLeitor" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html">Ir para modo leitor</a>
-        <button class="btn primary" id="btnSair" type="button">Login</button>
+        <button class="btn primary" id="btnSair" type="button" data-auth-mode="login" data-auth-href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html" onclick="if ((this.dataset.authMode || 'login') === 'login') { window.location.href = (this.dataset.authHref || 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html'); return false; }">Login</button>
       </div>
     </div>
 
@@ -1755,13 +1755,6 @@
       CONTA: CONFIG.ROUTES.conta,
       MANUAL: CONFIG.ROUTES.manual,
     };
-    const CANONICAL_CADASTRO_URL = 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html';
-
-    function resolveCadastroHref(){
-      const configured = String(ROUTES?.CADASTRO || CONFIG?.ROUTES?.cadastro || '').trim();
-      if (configured && /\/cadastro\.html(?:$|[?#])/i.test(configured)) return configured;
-      return CANONICAL_CADASTRO_URL;
-    }
 
     const SUPABASE_URL = CONFIG.SUPABASE_URL;
     const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
@@ -2360,6 +2353,12 @@
       el.removeAttribute('src');
       el.dataset.candidates = '[]';
       el.dataset.candidateIndex = '0';
+    }
+
+    function resolveCadastroHref(){
+      const fallbackHref = 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html';
+      const candidate = String(ROUTES?.CADASTRO || CONFIG?.ROUTES?.cadastro || FALLBACK_CONFIG?.ROUTES?.cadastro || fallbackHref).trim();
+      return /\/cadastro\.html(?:[?#].*)?$/i.test(candidate) ? candidate : fallbackHref;
     }
 
     function updateTopbarAuthButton(isLoggedIn){
@@ -7040,19 +7039,18 @@ async function fetchActiveLoans(){
         setStatus('statusPerfil', e.message || String(e), 'bad', false);
       }
     });
-    $('btnSair').addEventListener('click', async () => {
+    $('btnSair').addEventListener('click', async (event) => {
       const btn = $('btnSair');
-      const targetHref = resolveCadastroHref();
+      const targetHref = String(btn?.dataset?.authHref || resolveCadastroHref()).trim() || resolveCadastroHref();
       const authMode = String(btn?.dataset?.authMode || '').trim().toLowerCase();
       const shouldLogout = authMode === 'logout' || (!!session?.user?.id && authMode !== 'login');
-
-      btn.dataset.authHref = targetHref;
 
       if (!shouldLogout) {
         window.location.href = targetHref;
         return;
       }
 
+      event.preventDefault();
       btn.disabled = true;
       try {
         await supabase.auth.signOut();
