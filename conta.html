@@ -681,10 +681,19 @@ button[type="submit"] *,
           alt="AnarBib"
           onerror="this.style.display='none'"
         />
+        <img
+          id="libraryLogo"
+          class="logo"
+          src=""
+          alt="Biblioteca de vínculo"
+          style="display:none"
+          onerror="this.style.display='none'"
+        />
       </div>
       <div class="topbar-actions">
-        <a id="btnCatalogo" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-staging/">Voltar ao catálogo</a>
         <a id="goPainelBiblio" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html">Painel de gestão</a>
+        <a id="btnRegimento" class="header-btn" href="#" hidden style="display:none">Regimento</a>
+        <a id="btnCatalogo" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-staging/">Voltar ao catálogo</a>
         <button id="logout" class="logout-btn" type="button">Logout</button>
       </div>
     </div>
@@ -695,7 +704,8 @@ button[type="submit"] *,
         <p id="pageHeroSubtitle">Espaço d@ leitor@</p>
         <div class="chips">
           <span class="chip" id="chipContaEspaco">Espaço: leitor/a/e</span>
-          <span class="chip" id="chipContaEmail">E-mail: —</span>
+          <span class="chip" id="chipContaBiblioteca">Biblioteca de vínculo: —</span>
+          <span class="chip" id="chipContaPublicId">ID público: —</span>
           <span class="chip" id="chipContaCadastro">Cadastro: —</span>
           <span class="chip" id="chipContaReservas">Reservas ativas: —</span>
           <span class="chip" id="chipContaEmprestimos">Empréstimos em curso: —</span>
@@ -1237,7 +1247,8 @@ button[type="submit"] *,
     const reserveFormEl = $("reserveForm");
     const reserveSubmitBtn = $("reserveSubmitBtn");
     const bibRefInput = $("bibRef");
-    const chipContaEmail = $("chipContaEmail");
+    const chipContaBiblioteca = $("chipContaBiblioteca");
+    const chipContaPublicId = $("chipContaPublicId");
     const chipContaCadastro = $("chipContaCadastro");
     const chipContaReservas = $("chipContaReservas");
     const chipContaEmprestimos = $("chipContaEmprestimos");
@@ -1247,15 +1258,133 @@ button[type="submit"] *,
       el.textContent = `${label}: ${value ?? "—"}`;
     }
 
-    function resolveLibraryRegimentoUrl(identity) {
-      const values = [
+    const libraryThemeManifestCache = new Map();
+
+    function normalizeLibrarySlugValue(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+
+    function resolveContaLibrarySlug(identity = currentContaIdentity) {
+      const candidate = [
         identity?.library_slug,
         identity?.default_library_slug,
-        identity?.short_name,
-        identity?.library_short_name,
-        identity?.library_code,
-        identity?.name,
-        identity?.library_name
+        identity?.slug,
+        document.documentElement?.dataset?.librarySlug,
+        window.AnarBibLibraryContext?.get?.()?.librarySlug
+      ].map(normalizeLibrarySlugValue).find(Boolean);
+      return candidate || "";
+    }
+
+    function resolveContaLibraryName(identity = currentContaIdentity) {
+      return String(
+        identity?.library_name ||
+        identity?.name ||
+        identity?.display_name ||
+        identity?.short_name ||
+        identity?.default_library_name ||
+        document.documentElement?.dataset?.libraryName ||
+        ""
+      ).trim();
+    }
+
+    function getThemePublicAsset(path) {
+      if (window.AnarBibThemeLoader?.publicAsset) return window.AnarBibThemeLoader.publicAsset(path);
+      return `${CONFIG.SUPABASE_URL}/storage/v1/object/public/library-ui-assets/${path}`;
+    }
+
+    async function fetchLibraryThemeManifest(librarySlug) {
+      const slug = normalizeLibrarySlugValue(librarySlug);
+      if (!slug || slug === "default") return null;
+      if (libraryThemeManifestCache.has(slug)) return libraryThemeManifestCache.get(slug);
+      try {
+        const res = await fetch(getThemePublicAsset(`themes/${slug}/manifest.json`), { cache: "no-store" });
+        if (!res.ok) throw new Error(`manifest not found for ${slug}`);
+        const manifest = await res.json();
+        libraryThemeManifestCache.set(slug, manifest);
+        return manifest;
+      } catch (_err) {
+        libraryThemeManifestCache.set(slug, null);
+        return null;
+      }
+    }
+
+    async function updateContaLibraryLogo() {
+      const logo = $("libraryLogo");
+      if (!logo) return;
+      const librarySlug = resolveContaLibrarySlug();
+      const libraryName = resolveContaLibraryName() || "Biblioteca de vínculo";
+      if (!librarySlug || librarySlug === "default") {
+        logo.style.display = "none";
+        logo.removeAttribute("src");
+        return;
+      }
+      const manifest = await fetchLibraryThemeManifest(librarySlug);
+      const logoUrl = String(manifest?.assets?.logo || "").trim();
+      if (!logoUrl) {
+        logo.style.display = "none";
+        logo.removeAttribute("src");
+        return;
+      }
+      logo.src = logoUrl;
+      logo.alt = libraryName;
+      logo.title = libraryName;
+      logo.style.display = "block";
+    }
+
+    function getFirstNonEmptyValue(source, keys) {
+      for (const key of keys) {
+        const value = String(source?.[key] || "").trim();
+        if (value) return value;
+      }
+      return "";
+    }
+
+    function getBooleanValue(source, keys) {
+      for (const key of keys) {
+        if (typeof source?.[key] === "boolean") return source[key] === true;
+      }
+      return null;
+    }
+
+    function refreshContaBranding() {
+      setChipText(chipContaBiblioteca, "Biblioteca de vínculo", resolveContaLibraryName() || "—");
+      void updateContaLibraryLogo();
+      updateContaTopbarAction();
+    }
+
+    function resolveLibraryRegimentoUrl() {
+      const sourceCandidates = [publicServiceState, currentContaIdentity].filter(Boolean);
+      const urlKeys = [
+        "regimento_url",
+        "regimento_public_url",
+        "regimento_link",
+        "regulamento_url",
+        "rules_url",
+        "regimento"
+      ];
+      const publishedKeys = [
+        "regimento_published",
+        "has_regimento",
+        "regimento_is_published",
+        "rules_published"
+      ];
+
+      for (const source of sourceCandidates) {
+        const resolvedUrl = getFirstNonEmptyValue(source, urlKeys);
+        const publishedValue = getBooleanValue(source, publishedKeys);
+        if (resolvedUrl && (publishedValue === null || publishedValue === true)) {
+          return resolvedUrl;
+        }
+      }
+
+      const values = [
+        currentContaIdentity?.library_slug,
+        currentContaIdentity?.default_library_slug,
+        currentContaIdentity?.short_name,
+        currentContaIdentity?.library_short_name,
+        currentContaIdentity?.library_code,
+        currentContaIdentity?.name,
+        currentContaIdentity?.library_name
       ]
         .map((value) => String(value || "").trim().toLowerCase())
         .filter(Boolean);
@@ -1269,33 +1398,40 @@ button[type="submit"] *,
 
     function updateContaTopbarAction() {
       const go = $("goPainelBiblio");
-      if (!go) return;
+      const regimentoBtn = $("btnRegimento");
 
-      if (isLibrarian) {
-        go.textContent = "Painel de gestão";
-        go.href = ROUTES.PAINEL;
-        go.hidden = false;
-        go.style.display = "inline-flex";
-        go.removeAttribute("target");
-        go.removeAttribute("rel");
-        return;
+      if (go) {
+        if (isLibrarian) {
+          go.textContent = "Painel de gestão";
+          go.href = ROUTES.PAINEL;
+          go.hidden = false;
+          go.style.display = "inline-flex";
+          go.removeAttribute("target");
+          go.removeAttribute("rel");
+        } else {
+          go.hidden = true;
+          go.style.display = "none";
+          go.removeAttribute("target");
+          go.removeAttribute("rel");
+        }
       }
 
-      const regimentoUrl = resolveLibraryRegimentoUrl(currentContaIdentity);
+      if (!regimentoBtn) return;
+      const regimentoUrl = resolveLibraryRegimentoUrl();
       if (regimentoUrl) {
-        go.textContent = "Regimento da biblioteca";
-        go.href = regimentoUrl;
-        go.hidden = false;
-        go.style.display = "inline-flex";
-        go.target = "_blank";
-        go.rel = "noopener noreferrer";
+        regimentoBtn.textContent = "Regimento";
+        regimentoBtn.href = regimentoUrl;
+        regimentoBtn.hidden = false;
+        regimentoBtn.style.display = "inline-flex";
+        regimentoBtn.target = "_blank";
+        regimentoBtn.rel = "noopener noreferrer";
         return;
       }
 
-      go.hidden = true;
-      go.style.display = "none";
-      go.removeAttribute("target");
-      go.removeAttribute("rel");
+      regimentoBtn.hidden = true;
+      regimentoBtn.style.display = "none";
+      regimentoBtn.removeAttribute("target");
+      regimentoBtn.removeAttribute("rel");
     }
 
     function normalizeBibRefValue(value) {
@@ -1584,7 +1720,7 @@ button[type="submit"] *,
         if (resolvedLibraryId) {
           const stateRes = await supabase
             .from("library_service_state")
-            .select("library_id,service_mode,public_message,allows_new_reservations,updated_at")
+            .select("*")
             .eq("library_id", resolvedLibraryId)
             .maybeSingle();
           if (!stateRes?.error && stateRes?.data) {
@@ -1627,7 +1763,7 @@ button[type="submit"] *,
 
       publicServiceState = normalizeServiceState(data, resolvedLibraryId);
       renderPublicServiceState();
-      updateContaTopbarAction();
+      refreshContaBranding();
     }
 
     function normalizeOneRef(input) {
@@ -1889,8 +2025,8 @@ button[type="submit"] *,
     }
 
     async function fetchMyProfileRow(userId) {
-      const fullSelect = "email, first_name, last_name, phone, address, gender, must_change_password, password_changed_at, is_librarian, is_restricted, restricted_since, restricted_reason";
-      const legacySelect = "email, first_name, last_name, phone, address, gender, must_change_password, password_changed_at, is_librarian";
+      const fullSelect = "public_id, email, first_name, last_name, phone, address, gender, must_change_password, password_changed_at, is_librarian, is_restricted, restricted_since, restricted_reason";
+      const legacySelect = "public_id, email, first_name, last_name, phone, address, gender, must_change_password, password_changed_at, is_librarian";
       let lastError = null;
 
       const attempts = [
@@ -1965,7 +2101,7 @@ button[type="submit"] *,
       if (typeof data.must_change_password === "boolean") enforcePasswordChangeUI(data.must_change_password);
       if (typeof data.is_restricted === "boolean") enforceRestrictionUI(data.is_restricted, data.restricted_reason);
 
-      setChipText(chipContaEmail, "E-mail", data.email || session?.user?.email || "—");
+      setChipText(chipContaPublicId, "ID público", data.public_id || "—");
       const cadastroLabel = data.is_restricted ? "restrito" : (data.must_change_password ? "requer troca de senha" : "regular");
       setChipText(chipContaCadastro, "Cadastro", cadastroLabel);
 
@@ -1985,7 +2121,7 @@ button[type="submit"] *,
         return ["true", "librarian", "bibliotecario", "bibliotecária", "bibliotecaire"].includes(String(value || "").trim().toLowerCase());
       });
       isLibrarian = (data?.is_librarian === true) || metaIsLibrarian;
-      updateContaTopbarAction();
+      refreshContaBranding();
     }
 
     async function createReservaV2(bibRefs) {
