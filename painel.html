@@ -2355,12 +2355,34 @@
       el.dataset.candidateIndex = '0';
     }
 
+    function resolveCadastroHref(){
+      return String(ROUTES?.CADASTRO || CONFIG?.ROUTES?.cadastro || FALLBACK_CONFIG?.ROUTES?.cadastro || 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html').trim() || 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html';
+    }
+
     function updateTopbarAuthButton(isLoggedIn){
       const btn = $('btnSair');
       if (!btn) return;
+      const authMode = isLoggedIn ? 'logout' : 'login';
+      const cadastroHref = resolveCadastroHref();
+      btn.dataset.authMode = authMode;
+      btn.dataset.authHref = cadastroHref;
       btn.textContent = isLoggedIn ? 'Logout' : 'Login';
       btn.setAttribute('aria-label', isLoggedIn ? 'Logout' : 'Login');
       btn.title = isLoggedIn ? 'Encerrar sessão e voltar ao cadastro' : 'Ir para o cadastro / login';
+    }
+
+    function resetPainelAuthChrome(){
+      session = null;
+      isLibrarian = false;
+      currentAccessRow = null;
+      currentIdentityRow = null;
+      currentLibraryRow = null;
+      updateTopbarAuthButton(false);
+      hideActiveLibraryLogo();
+      $('btnModoLeitor')?.classList.add('hidden');
+      $('helloLine').textContent = '';
+      setChip('chipFuncao', 'Função: —');
+      setChip('chipEmail', 'E-mail: —');
     }
 
     function applyActiveLibraryLogoCandidate(index=0){
@@ -4863,7 +4885,7 @@ function belemNowParts(){
       return null;
     }
 
-    async function getConfirmedCurrentSession({ attempts = 6, delayMs = 120 } = {}){
+    async function getConfirmedCurrentSession({ attempts = 6, delayMs = 180 } = {}){
       for (let i = 0; i < attempts; i += 1) {
         try {
           const { data: { session: sess } } = await supabase.auth.getSession();
@@ -4909,6 +4931,7 @@ function belemNowParts(){
           collectedRows.push(row);
         }
       };
+
       const directAttempts = [
         () => supabase.from('my_access').select('*'),
         () => supabase.from('my_session_context').select('*').limit(1),
@@ -4965,15 +4988,14 @@ function belemNowParts(){
 
             const mergedRows = membershipRows.map((row) => {
               const lib = librariesById.get(normalizeLibraryId(row?.library_id)) || {};
-              const role = String(row?.role || '').toLowerCase();
               return {
                 ...(profileRow || {}),
                 ...row,
                 library_name: lib?.name || profileRow?.default_library_name || '',
                 library_slug: lib?.slug || profileRow?.default_library_slug || '',
                 library_short_name: lib?.short_name || '',
-                can_access_painel: ['librarian','admin','owner'].includes(role),
-                is_librarian: ['librarian','admin','owner'].includes(role),
+                can_access_painel: String(row?.role || '').toLowerCase() === 'librarian',
+                is_librarian: String(row?.role || '').toLowerCase() === 'librarian',
                 is_restricted: !!profileRow?.is_restricted,
               };
             });
@@ -4999,12 +5021,12 @@ function belemNowParts(){
       });
       return librarianRows.find((row) => row?.is_primary === true) || librarianRows[0] || null;
     }
-    async function requireBibliotecaOrRedirect(){
-      let accessRead = null;
-      for (let attempt = 0; attempt < 4; attempt += 1) {
-        accessRead = await fetchMyAccessRows(session.user.id);
+    async function requireBibliotecaOrRedirect({ attempts = 8, delayMs = 220 } = {}){
+      let lastErrorMessage = '';
+      for (let i = 0; i < attempts; i += 1) {
+        const accessRead = await fetchMyAccessRows(session.user.id);
         const accessRows = accessRead?.data || [];
-        const lastErrorMessage = accessRead?.error?.message || '';
+        lastErrorMessage = accessRead?.error?.message || '';
         currentIdentityRow = accessRows.find((row) => String(row?.id || row?.user_id || '') === String(session?.user?.id || '')) || accessRows[0] || null;
         currentAccessRow = pickCurrentLibrarianAccess(accessRows);
 
@@ -5018,12 +5040,12 @@ function belemNowParts(){
         }
 
         if (currentAccessRow) return true;
-        if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 180));
-        if (attempt === 3) {
-          setStatus('statusLoans', 'Não consegui verificar o acesso da biblioteca' + (lastErrorMessage ? ': ' + lastErrorMessage : '.'), 'bad', false);
+        if (i < attempts - 1) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
         }
       }
 
+      setStatus('statusLoans', 'Não consegui verificar o acesso da biblioteca' + (lastErrorMessage ? ': ' + lastErrorMessage : '.'), 'bad', false);
       return false;
     }
     async function fillHeader(){
@@ -7093,13 +7115,12 @@ async function fetchActiveLoans(){
         setStatus('statusPerfil', e.message || String(e), 'bad', false);
       }
     });
-    $('btnSair').addEventListener('click', async () => {
+    $('btnSair').addEventListener('click', async (event) => {
       const btn = $('btnSair');
       const targetHref = String(btn?.dataset?.authHref || resolveCadastroHref()).trim() || resolveCadastroHref();
-      const authMode = String(btn?.dataset?.authMode || '').trim().toLowerCase();
-      const shouldLogout = authMode === 'logout' || (!!session?.user?.id && authMode !== 'login');
-
-      if (!shouldLogout) {
+      const authMode = String(btn?.dataset?.authMode || 'login').trim().toLowerCase();
+      if (authMode !== 'logout') {
+        event.preventDefault();
         window.location.href = targetHref;
         return;
       }
@@ -7108,18 +7129,12 @@ async function fetchActiveLoans(){
       try {
         await Promise.race([
           supabase.auth.signOut(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout ao encerrar a sessão.')), 4000))
+          new Promise((resolve) => setTimeout(resolve, 2500))
         ]);
       } catch (error) {
-        console.warn('Falha ao encerrar a sessão no painel; seguindo para o cadastro mesmo assim.', error);
+        console.warn('Não consegui encerrar a sessão do painel; seguindo para o cadastro mesmo assim.', error);
       } finally {
-        session = null;
-        isLibrarian = false;
-        currentAccessRow = null;
-        currentIdentityRow = null;
-        currentLibraryRow = null;
-        updateTopbarAuthButton(false);
-        hideActiveLibraryLogo();
+        resetPainelAuthChrome();
         btn.disabled = false;
         window.location.href = targetHref;
       }
@@ -7142,29 +7157,37 @@ async function fetchActiveLoans(){
       window.addEventListener('pageshow', () => { refreshCollections({silent:true}); loadLibraryServiceState({silent:true}); });
     }
 
-    supabase.auth.onAuthStateChange(async (event, nextSession) => {
-      const eventName = String(event || '').trim().toUpperCase();
-      if (eventName === 'SIGNED_OUT') return;
-      const candidateSession = nextSession?.user?.id ? nextSession : await getConfirmedCurrentSession({ attempts: 6, delayMs: 120 });
-      if (!candidateSession?.user?.id) return;
-      session = candidateSession;
-      updateTopbarAuthButton(true);
-      const canAccessPainel = await requireBibliotecaOrRedirect();
-      if (!canAccessPainel) return;
-      await fillHeader();
-      await loadLibraryIdentity();
-    });
+    let authSyncSerial = 0;
+    let painelAuthBootstrapping = true;
 
-    session = await requireSession({ attempts: 40, delayMs: 150 });
-    updateTopbarAuthButton(!!session?.user?.id);
-    if (!session?.user?.id) {
-      hideActiveLibraryLogo();
-      $('btnModoLeitor').classList.add('hidden');
-    }
-    if (session){
-      isLibrarian = await requireBibliotecaOrRedirect();
-      if (isLibrarian){
+    async function syncPainelAuthState(nextSession, { reloadData=false, allowAnonymousReset=false } = {}){
+      const syncId = ++authSyncSerial;
+      const previousSession = session;
+      session = nextSession || null;
+
+      if (!session?.user?.id) {
+        session = await getConfirmedCurrentSession({ attempts: allowAnonymousReset ? 4 : 8, delayMs: 180 });
+      }
+      if (!session?.user?.id && previousSession?.user?.id && !allowAnonymousReset) {
+        session = previousSession;
+      }
+
+      updateTopbarAuthButton(!!session?.user?.id);
+
+      if (!session?.user?.id) {
+        if (allowAnonymousReset) resetPainelAuthChrome();
+        return false;
+      }
+
+      try {
+        isLibrarian = await requireBibliotecaOrRedirect({ attempts: 8, delayMs: 220 });
+        if (!isLibrarian) {
+          hideActiveLibraryLogo();
+          $('btnModoLeitor')?.classList.add('hidden');
+          return false;
+        }
         await fillHeader();
+        if (!reloadData) return true;
         await loadLibraryServiceState();
         await loadLibraryIdentity();
         await loadLibraryTheme();
@@ -7176,8 +7199,33 @@ async function fetchActiveLoans(){
         await loadInternalTaskLibrarians();
         await loadInternalTasks({ silent:true });
         await refreshCollections();
-        setupRefreshHooks();
+        if (syncId === authSyncSerial) setupRefreshHooks();
+        return true;
+      } catch (error) {
+        console.warn('Não consegui sincronizar a sessão do painel.', error);
+        return false;
       }
+    }
+
+    supabase.auth.onAuthStateChange(async (event, nextSession) => {
+      const eventName = String(event || '').trim().toUpperCase();
+      if (painelAuthBootstrapping && eventName === 'INITIAL_SESSION' && !nextSession?.user?.id) return;
+      const shouldReload = eventName === 'SIGNED_IN' || eventName === 'USER_UPDATED' || eventName === 'INITIAL_SESSION';
+      const allowAnonymousReset = eventName === 'SIGNED_OUT';
+      await syncPainelAuthState(nextSession, { reloadData: shouldReload, allowAnonymousReset });
+    });
+
+    session = await requireSession({ attempts: 40, delayMs: 150 });
+    painelAuthBootstrapping = false;
+    await syncPainelAuthState(session, { reloadData: !!session?.user?.id, allowAnonymousReset: false });
+
+    if (!session?.user?.id) {
+      setTimeout(async () => {
+        const lateSession = await getConfirmedCurrentSession({ attempts: 10, delayMs: 200 });
+        if (lateSession?.user?.id) {
+          await syncPainelAuthState(lateSession, { reloadData: true, allowAnonymousReset: false });
+        }
+      }, 700);
     }
   </script>
 </body>
