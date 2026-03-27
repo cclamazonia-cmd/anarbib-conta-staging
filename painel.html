@@ -879,22 +879,8 @@
                 <label for="interlibRecentRequests">Solicitações recentes</label>
                 <textarea class="textarea" id="interlibRecentRequests" placeholder="As solicitações recentes desta biblioteca aparecerão aqui." readonly></textarea>
               </div>
-              <div class="row" style="margin-top:12px">
-                <div>
-                  <label for="interlibIncomingRequest">Solicitação recebida para responder</label>
-                  <select class="select" id="interlibIncomingRequest">
-                    <option value="">Selecione uma solicitação pendente recebida</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="interlibDecisionNote">Nota da resposta (opcional)</label>
-                  <input class="input" id="interlibDecisionNote" type="text" placeholder="Ex.: aceitamos, mas pedimos conversa direta antes da execução.">
-                </div>
-              </div>
               <div class="actions">
                 <button class="btn" id="btnRefreshInterlibRequests" type="button">Atualizar solicitações</button>
-                <button class="btn" id="btnRefuseInterlibRequest" type="button" disabled>Recusar solicitação recebida</button>
-                <button class="btn" id="btnAcceptInterlibRequest" type="button" disabled>Aceitar solicitação recebida</button>
                 <button class="btn primary" id="btnSendInterlibRequest" type="button">Enviar solicitação</button>
               </div>
               <div class="status" id="interlibRequestsMsg"></div>
@@ -2133,14 +2119,12 @@
     let currentLibraryContactProfile = null;
     let currentInterlibraryPartnerContact = null;
     let currentInterlibraryRequests = [];
-    let currentInterlibraryIncomingRequests = [];
     let currentActiveLibraries = [];
     const LIBRARY_CONTACT_TABLE = 'library_contact_profiles';
     const LIBRARY_CONTACT_RPC = 'upsert_library_contact_profile';
     const INTERLIB_REQUEST_TABLE = 'document_permission_requests';
     const INTERLIB_REQUEST_RPC = 'create_document_permission_request';
     const INTERLIB_CONTACT_RPC = 'get_library_contact_for_cooperation';
-    const INTERLIB_DECIDE_RPC = 'decide_document_permission_request';
     let currentLibraryRegimentoBinding = null;
     let currentLibraryRegimentoState = null;
     const LIBRARY_REGIMENTO_BUCKET = 'library-regimentos';
@@ -2372,21 +2356,60 @@
     }
 
     function resolveCadastroHref(){
-      const fallbackHref = 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html';
-      const candidate = String(ROUTES?.CADASTRO || CONFIG?.ROUTES?.cadastro || FALLBACK_CONFIG?.ROUTES?.cadastro || fallbackHref).trim();
-      return /\/cadastro\.html(?:[?#].*)?$/i.test(candidate) ? candidate : fallbackHref;
+      return String(ROUTES?.CADASTRO || CONFIG?.ROUTES?.cadastro || FALLBACK_CONFIG?.ROUTES?.cadastro || 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html').trim() || 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html';
     }
 
     function updateTopbarAuthButton(isLoggedIn){
       const btn = $('btnSair');
       if (!btn) return;
       const authMode = isLoggedIn ? 'logout' : 'login';
-      const cadastroHref = resolveCadastroHref();
+      const targetHref = resolveCadastroHref();
       btn.dataset.authMode = authMode;
-      btn.dataset.authHref = cadastroHref;
+      btn.dataset.authHref = targetHref;
       btn.textContent = isLoggedIn ? 'Logout' : 'Login';
       btn.setAttribute('aria-label', isLoggedIn ? 'Logout' : 'Login');
       btn.title = isLoggedIn ? 'Encerrar sessão e voltar ao cadastro' : 'Ir para o cadastro / login';
+    }
+
+    function resetPainelAuthChrome(){
+      session = null;
+      isLibrarian = false;
+      currentAccessRow = null;
+      currentIdentityRow = null;
+      currentLibraryRow = null;
+      updateTopbarAuthButton(false);
+      hideActiveLibraryLogo();
+      $('btnModoLeitor')?.classList.add('hidden');
+      $('helloLine').textContent = '';
+      setChip('chipFuncao', 'Função: —');
+      setChip('chipEmail', 'E-mail: —');
+    }
+
+    async function syncAuthChromeFromSession(nextSession, { refreshIdentity=false } = {}){
+      session = nextSession || null;
+      updateTopbarAuthButton(!!session?.user?.id);
+
+      if (!session?.user?.id) {
+        resetPainelAuthChrome();
+        return false;
+      }
+
+      try {
+        isLibrarian = await requireBibliotecaOrRedirect({ attempts: 6, delayMs: 200 });
+        if (!isLibrarian) {
+          hideActiveLibraryLogo();
+          $('btnModoLeitor')?.classList.add('hidden');
+          return false;
+        }
+        await fillHeader();
+        if (isLibrarian && (refreshIdentity || !currentLibraryRow?.id)) {
+          await loadLibraryIdentity();
+        }
+        return true;
+      } catch (error) {
+        console.warn('Não consegui sincronizar o cabeçalho auth do painel.', error);
+        return false;
+      }
     }
 
     function applyActiveLibraryLogoCandidate(index=0){
@@ -2420,64 +2443,7 @@
       applyActiveLibraryLogoCandidate(0);
     }
 
-    function resetPainelAuthChrome(){
-      session = null;
-      isLibrarian = false;
-      currentAccessRow = null;
-      currentIdentityRow = null;
-      currentLibraryRow = null;
-      updateTopbarAuthButton(false);
-      hideActiveLibraryLogo();
-      $('btnModoLeitor')?.classList.add('hidden');
-      $('helloLine').textContent = '';
-      setChip('chipFuncao', 'Função: —');
-      setChip('chipEmail', 'E-mail: —');
-    }
-
-    let authSyncSerial = 0;
-    let painelAuthBootstrapping = true;
-    async function syncPainelAuthState(nextSession, { reloadData=false, allowAnonymousReset=true } = {}){
-      const syncId = ++authSyncSerial;
-      session = nextSession || null;
-      if (!session?.user?.id) {
-        session = await getConfirmedCurrentSession({ attempts: allowAnonymousReset ? 3 : 1, delayMs: 120 });
-      }
-      updateTopbarAuthButton(!!session?.user?.id);
-
-      if (!session?.user?.id) {
-        if (allowAnonymousReset) resetPainelAuthChrome();
-        return false;
-      }
-
-      try {
-        isLibrarian = await requireBibliotecaOrRedirect();
-        if (!isLibrarian) {
-          hideActiveLibraryLogo();
-          $('btnModoLeitor')?.classList.add('hidden');
-          return false;
-        }
-        await fillHeader();
-        if (!reloadData) return true;
-        await loadLibraryServiceState();
-        await loadLibraryIdentity();
-        await loadLibraryTheme();
-        await loadDocGovernance();
-        await loadInterlibraryRequests({ silent:true });
-        await loadLibrarySchedule();
-        await loadLocalRules();
-        await loadLibraryRegimento();
-        await loadInternalTaskLibrarians();
-        await loadInternalTasks({ silent:true });
-        await refreshCollections();
-        if (syncId === authSyncSerial) setupRefreshHooks();
-        return true;
-      } catch (error) {
-        console.warn('Não consegui sincronizar a sessão do painel.', error);
-        return false;
-      }
-    }
-
-        function patchCachedLibraryIdentity(updatedRow){
+    function patchCachedLibraryIdentity(updatedRow){
       if (!updatedRow || typeof updatedRow !== 'object') return;
       currentLibraryRow = { ...(currentLibraryRow || {}), ...updatedRow };
       if (currentAccessRow) {
@@ -2728,8 +2694,7 @@
       const msg = String(error?.message || error || '').toLowerCase();
       return (msg.includes(INTERLIB_REQUEST_TABLE.toLowerCase()) && (msg.includes('does not exist') || msg.includes('not found') || msg.includes('unknown')))
         || (msg.includes(INTERLIB_REQUEST_RPC.toLowerCase()) && msg.includes('function'))
-        || (msg.includes(INTERLIB_CONTACT_RPC.toLowerCase()) && msg.includes('function'))
-        || (msg.includes(INTERLIB_DECIDE_RPC.toLowerCase()) && msg.includes('function'));
+        || (msg.includes(INTERLIB_CONTACT_RPC.toLowerCase()) && msg.includes('function'));
     }
 
     function interlibraryActionLabel(value){
@@ -2825,7 +2790,8 @@
       if (normalized.contact_alternate) lines.push(`Canal alternativo: ${normalized.contact_alternate}`);
       if (normalized.postal_address) lines.push(`Endereço: ${normalized.postal_address}`);
       if (!lines.length) lines.push('A biblioteca parceira ainda não salvou canais diretos neste espaço.');
-      return lines.join('\n');
+      return lines.join('
+');
     }
 
     function renderInterlibraryPartnerContact(contact){
@@ -2846,43 +2812,10 @@
         const action = interlibraryActionLabel(normalized.requested_action);
         const objectLabel = interlibraryObjectLabel(normalized.object_type);
         const objectRef = normalized.object_ref ? ` · ref.: ${normalized.object_ref}` : '';
-        const responseNote = normalized.response_note ? ` · resposta: ${normalized.response_note}` : '';
-        return `${moment} · ${shortLibraryLabel(otherLibrary)} · ${action} (${objectLabel}) · ${interlibraryStatusLabel(normalized.status)}${objectRef}${responseNote}`;
+        return `${moment} · ${shortLibraryLabel(otherLibrary)} · ${action} (${objectLabel}) · ${interlibraryStatusLabel(normalized.status)}${objectRef}`;
       });
-      $('interlibRecentRequests').value = lines.length ? lines.join('\n') : 'Nenhuma solicitação interbibliotecas registrada ainda para esta biblioteca.';
-    }
-
-    function renderInterlibraryIncomingOptions(items){
-      const select = $('interlibIncomingRequest');
-      if (!select) return;
-      const currentId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
-      const normalizedItems = (items || []).map(normalizeInterlibraryRequest).filter((item) =>
-        normalizeLibraryId(item.target_library_id) === currentId && String(item.status || '').trim() === 'pending'
-      );
-      currentInterlibraryIncomingRequests = normalizedItems;
-      const currentValue = String(select.value || '').trim();
-      select.innerHTML = '<option value="">Selecione uma solicitação pendente recebida</option>' + normalizedItems.map((item) => {
-        const fromLibrary = findKnownLibraryById(item.requester_library_id) || { id: item.requester_library_id, name: item.requester_library_id || 'Biblioteca parceira' };
-        const label = `${fmtDateTimeBelem(item.updated_at || item.created_at || nowISO())} · ${shortLibraryLabel(fromLibrary)} · ${interlibraryActionLabel(item.requested_action)}`;
-        return `<option value="${String(item.id || '').trim()}">${label}</option>`;
-      }).join('');
-      const availableIds = new Set(normalizedItems.map((item) => String(item.id || '').trim()).filter(Boolean));
-      select.value = availableIds.has(currentValue) ? currentValue : '';
-      updateInterlibDecisionControls();
-    }
-
-    function getSelectedIncomingInterlibRequest(){
-      const selectedId = String($('interlibIncomingRequest')?.value || '').trim();
-      if (!selectedId) return null;
-      return currentInterlibraryIncomingRequests.find((item) => String(item.id || '').trim() === selectedId) || null;
-    }
-
-    function updateInterlibDecisionControls(){
-      const hasSelection = !!getSelectedIncomingInterlibRequest();
-      const acceptBtn = $('btnAcceptInterlibRequest');
-      const refuseBtn = $('btnRefuseInterlibRequest');
-      if (acceptBtn) acceptBtn.disabled = !hasSelection;
-      if (refuseBtn) refuseBtn.disabled = !hasSelection;
+      $('interlibRecentRequests').value = lines.length ? lines.join('
+') : 'Nenhuma solicitação interbibliotecas registrada ainda para esta biblioteca.';
     }
 
     async function fetchInterlibraryActiveLibraries(){
@@ -2965,13 +2898,10 @@
         await loadInterlibraryPartnerContact({ silent: true });
         currentInterlibraryRequests = await fetchInterlibraryRequests(libraryId);
         renderInterlibraryRequests(currentInterlibraryRequests);
-        renderInterlibraryIncomingOptions(currentInterlibraryRequests);
         if (!silent) setStatus('interlibRequestsMsg', currentInterlibraryRequests.length ? 'Solicitações interbibliotecas carregadas.' : 'Ainda não há solicitações interbibliotecas desta biblioteca.', currentInterlibraryRequests.length ? 'ok' : 'warn');
       } catch (e) {
         currentInterlibraryRequests = [];
-        currentInterlibraryIncomingRequests = [];
         renderInterlibraryRequests(currentInterlibraryRequests);
-        renderInterlibraryIncomingOptions(currentInterlibraryRequests);
         const missing = isMissingInterlibraryBackendError(e);
         const msg = missing
           ? 'Ainda não encontrei o backend das solicitações interbibliotecas. Aplica primeiro o mini-lote SQL desta etapa.'
@@ -3010,7 +2940,6 @@
         const normalized = normalizeInterlibraryRequest(data || requestPayload);
         currentInterlibraryRequests = [normalized, ...currentInterlibraryRequests].slice(0, 8);
         renderInterlibraryRequests(currentInterlibraryRequests);
-        renderInterlibraryIncomingOptions(currentInterlibraryRequests);
         $('interlibObjectRef').value = '';
         $('interlibRequestMessage').value = '';
         setStatus('interlibRequestsMsg', 'Solicitação interbibliotecas enviada. Se preferirem, conversem diretamente e registrem depois a resposta no sistema.', 'ok');
@@ -3026,44 +2955,10 @@
       }
     }
 
-    async function decideInterlibraryRequest(decision){
-      const normalizedDecision = String(decision || '').trim().toLowerCase();
-      const requestRow = getSelectedIncomingInterlibRequest();
-      const acceptBtn = $('btnAcceptInterlibRequest');
-      const refuseBtn = $('btnRefuseInterlibRequest');
-      if (acceptBtn) acceptBtn.disabled = true;
-      if (refuseBtn) refuseBtn.disabled = true;
-      try {
-        if (!requestRow?.id) throw new Error('Selecione primeiro uma solicitação pendente recebida.');
-        if (!['accepted', 'refused'].includes(normalizedDecision)) throw new Error('Decisão interbibliotecas inválida.');
-        const responseNote = String($('interlibDecisionNote')?.value || '').trim();
-        const { error } = await supabase.rpc(INTERLIB_DECIDE_RPC, {
-          p_request_id: Number(requestRow.id),
-          p_decision: normalizedDecision,
-          p_response_note: responseNote || null
-        });
-        if (error) throw error;
-        $('interlibDecisionNote').value = '';
-        setStatus('interlibRequestsMsg', normalizedDecision === 'accepted' ? 'Solicitação interbibliotecas aceita.' : 'Solicitação interbibliotecas recusada.', 'ok');
-        await loadInterlibraryRequests({ silent: true });
-      } catch (e) {
-        const missing = isMissingInterlibraryBackendError(e);
-        const msg = missing
-          ? 'Ainda não encontrei o backend de resposta às solicitações interbibliotecas. Aplica primeiro o mini-lote SQL desta etapa.'
-          : 'Não consegui registrar a resposta da solicitação interbibliotecas: ' + (e.message || String(e));
-        setStatus('interlibRequestsMsg', msg, missing ? 'warn' : 'bad', false);
-      } finally {
-        updateInterlibDecisionControls();
-      }
-    }
-
     function setupInterlibraryRequestActions(){
       $('interlibPartnerLibrary')?.addEventListener('change', () => { loadInterlibraryPartnerContact(); });
-      $('interlibIncomingRequest')?.addEventListener('change', updateInterlibDecisionControls);
       $('btnRefreshInterlibRequests')?.addEventListener('click', () => { loadInterlibraryRequests(); });
       $('btnSendInterlibRequest')?.addEventListener('click', saveInterlibraryRequest);
-      $('btnAcceptInterlibRequest')?.addEventListener('click', () => { decideInterlibraryRequest('accepted'); });
-      $('btnRefuseInterlibRequest')?.addEventListener('click', () => { decideInterlibraryRequest('refused'); });
     }
 
     function setupLibraryThemeActions(){
@@ -4995,49 +4890,16 @@ function belemNowParts(){
 
     async function requireSession({ attempts = 40, delayMs = 150 } = {}){
       for (let i = 0; i < attempts; i += 1) {
+        const { data: { session: sess } } = await supabase.auth.getSession();
+        if (sess?.user?.id) return sess;
         try {
-          const { data: { session: sess } } = await supabase.auth.getSession();
-          if (sess?.user?.id) return sess;
-        } catch (error) {
-          console.warn('getSession falhou durante o bootstrap do painel.', error);
-        }
-
-        try {
-          const { data } = await supabase.auth.getUser();
-          if (data?.user?.id) {
-            const { data: { session: recoveredSession } } = await supabase.auth.getSession();
-            if (recoveredSession?.user?.id) return recoveredSession;
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user?.id) {
+            const refreshed = await supabase.auth.getSession();
+            if (refreshed?.data?.session?.user?.id) return refreshed.data.session;
           }
-        } catch (error) {
-          console.warn('getUser falhou durante o bootstrap do painel.', error);
-        }
-
+        } catch (_) {}
         await new Promise((resolve) => setTimeout(resolve, delayMs));
-      }
-      return null;
-    }
-    async function getConfirmedCurrentSession({ attempts = 3, delayMs = 120 } = {}){
-      for (let i = 0; i < attempts; i += 1) {
-        try {
-          const { data: { session: sess } } = await supabase.auth.getSession();
-          if (sess?.user?.id) return sess;
-        } catch (error) {
-          console.warn('getSession falhou ao confirmar a sessão do painel.', error);
-        }
-
-        try {
-          const { data } = await supabase.auth.getUser();
-          if (data?.user?.id) {
-            const { data: { session: recoveredSession } } = await supabase.auth.getSession();
-            if (recoveredSession?.user?.id) return recoveredSession;
-          }
-        } catch (error) {
-          console.warn('getUser falhou ao confirmar a sessão do painel.', error);
-        }
-
-        if (i < attempts - 1) {
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
-        }
       }
       return null;
     }
@@ -5046,19 +4908,13 @@ function belemNowParts(){
     async function fetchMyAccessRows(userId){
       let lastError = null;
       const collectedRows = [];
-      const seenKeys = new Set();
+      const seen = new Set();
       const pushRows = (rows) => {
-        const normalizedRows = Array.isArray(rows) ? rows : (rows ? [rows] : []);
-        for (const row of normalizedRows) {
+        for (const row of (Array.isArray(rows) ? rows : [])) {
           if (!row || typeof row !== 'object') continue;
-          const key = JSON.stringify([
-            String(row?.user_id || row?.id || userId || '').trim(),
-            String(row?.library_id || row?.library_slug || row?.default_library_slug || '').trim(),
-            String(row?.role || '').trim(),
-            String(row?.status || '').trim(),
-          ]);
-          if (seenKeys.has(key)) continue;
-          seenKeys.add(key);
+          const key = JSON.stringify(row);
+          if (seen.has(key)) continue;
+          seen.add(key);
           collectedRows.push(row);
         }
       };
@@ -7249,24 +7105,23 @@ async function fetchActiveLoans(){
     $('btnSair').addEventListener('click', async (event) => {
       const btn = $('btnSair');
       const targetHref = String(btn?.dataset?.authHref || resolveCadastroHref()).trim() || resolveCadastroHref();
-      const authMode = String(btn?.dataset?.authMode || '').trim().toLowerCase();
-      const shouldLogout = authMode === 'logout' || (!!session?.user?.id && authMode !== 'login');
-
-      if (!shouldLogout) {
+      const authMode = String(btn?.dataset?.authMode || 'login').trim().toLowerCase();
+      if (authMode === 'login') {
+        event.preventDefault();
         window.location.href = targetHref;
         return;
       }
-
       event.preventDefault();
       btn.disabled = true;
       try {
-        await supabase.auth.signOut();
+        await Promise.race([
+          supabase.auth.signOut(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('logout-timeout')), 1800))
+        ]);
       } catch (error) {
-        console.warn('Falha ao encerrar a sessão no painel; seguindo para o cadastro mesmo assim.', error);
+        console.warn('Não consegui encerrar a sessão do painel.', error);
       } finally {
-        session = null;
-        isLibrarian = false;
-        updateTopbarAuthButton(false);
+        resetPainelAuthChrome();
         btn.disabled = false;
         window.location.href = targetHref;
       }
@@ -7289,17 +7144,32 @@ async function fetchActiveLoans(){
       window.addEventListener('pageshow', () => { refreshCollections({silent:true}); loadLibraryServiceState({silent:true}); });
     }
 
+    let painelAuthBootstrapping = true;
     supabase.auth.onAuthStateChange(async (event, nextSession) => {
       const eventName = String(event || '').trim().toUpperCase();
       if (painelAuthBootstrapping && eventName === 'INITIAL_SESSION' && !nextSession?.user?.id) return;
-      const shouldReload = eventName === 'SIGNED_IN' || eventName === 'USER_UPDATED' || eventName === 'INITIAL_SESSION';
-      const allowAnonymousReset = eventName === 'SIGNED_OUT' || !painelAuthBootstrapping;
-      await syncPainelAuthState(nextSession, { reloadData: shouldReload, allowAnonymousReset });
+      const refreshIdentity = eventName === 'SIGNED_IN' || eventName === 'USER_UPDATED' || eventName === 'INITIAL_SESSION';
+      if (!nextSession?.user?.id && eventName !== 'SIGNED_OUT') return;
+      await syncAuthChromeFromSession(nextSession, { refreshIdentity });
     });
 
     session = await requireSession({ attempts: 40, delayMs: 150 });
     painelAuthBootstrapping = false;
-    await syncPainelAuthState(session, { reloadData: !!session?.user?.id, allowAnonymousReset: true });
+    const painelReady = await syncAuthChromeFromSession(session, { refreshIdentity: !!session?.user?.id });
+    if (painelReady && session?.user?.id && isLibrarian) {
+      await loadLibraryServiceState();
+      await loadLibraryIdentity();
+      await loadLibraryTheme();
+      await loadDocGovernance();
+      await loadInterlibraryRequests({ silent:true });
+      await loadLibrarySchedule();
+      await loadLocalRules();
+      await loadLibraryRegimento();
+      await loadInternalTaskLibrarians();
+      await loadInternalTasks({ silent:true });
+      await refreshCollections();
+      setupRefreshHooks();
+    }
   </script>
 </body>
 </html>
