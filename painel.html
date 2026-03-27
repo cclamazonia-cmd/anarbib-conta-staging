@@ -2952,6 +2952,9 @@
       };
     }
 
+    const DOC_GOV_TABLE = 'library_document_governance';
+    const DOC_GOV_RPC = 'upsert_library_document_governance';
+
     function extractDocGovernanceBinding(row){
       if (!row || typeof row !== 'object') return null;
       const directJsonFields = ['document_governance_config', 'documentary_governance_config', 'governance_config', 'document_governance'];
@@ -2961,7 +2964,6 @@
         }
       }
       const containerFields = ['settings', 'config', 'library_config', 'metadata', 'extra'];
-      const subkeys = ['document_governance', 'documentary_governance', 'governance'];
       for (const field of containerFields) {
         if (!Object.prototype.hasOwnProperty.call(row, field)) continue;
         return { table: 'libraries', source: { type: 'json-container', field, subkey: 'document_governance' } };
@@ -2972,6 +2974,9 @@
     function readDocGovernanceFromBinding(binding, row){
       const source = binding?.source || {};
       if (!binding || !row || typeof row !== 'object') return getEmptyDocGovernance();
+      if (source.type === 'dedicated-table') {
+        return normalizeDocGovernance(row?.config);
+      }
       if (source.type === 'direct-json') {
         return normalizeDocGovernance(row[source.field]);
       }
@@ -2982,8 +2987,8 @@
       return getEmptyDocGovernance();
     }
 
-    function buildDocGovernancePayload(binding, governance, baseRow){
-      const payloadData = {
+    function getDocGovernancePayloadData(governance){
+      return {
         direct_edit_mode: governance.direct_edit_mode,
         correction_mode: governance.correction_mode,
         local_reprise_mode: governance.local_reprise_mode,
@@ -2993,6 +2998,10 @@
         authorized_partners: parseDocGovPartners(governance.authorized_partners),
         internal_note: String(governance.internal_note || '').trim(),
       };
+    }
+
+    function buildDocGovernancePayload(binding, governance, baseRow){
+      const payloadData = getDocGovernancePayloadData(governance);
       const source = binding?.source || {};
       if (source.type === 'direct-json') {
         return { [source.field]: payloadData };
@@ -3006,7 +3015,7 @@
           }
         };
       }
-      throw new Error('Não encontrei ainda um campo de persistência em libraries para a governança documental.');
+      throw new Error('Não encontrei ainda um campo de persistência para a governança documental.');
     }
 
     function buildDocGovernanceSummary(governance){
@@ -3015,11 +3024,11 @@
         permitir_com_parceiros: 'edição direta só com parceiras autorizadas',
         permitir_todas: 'edição direta liberada para notices compartilhadas'
       })[governance.direct_edit_mode] || 'sem regra definida';
-      const reprise = ({
-        nao_permitir: 'sem retomada local',
-        rascunho_local: 'retomada via rascunho local',
-        reprise_local: 'retomada local assumida'
-      })[governance.local_reprise_mode] || 'sem regra de retomada';
+      const localCopy = ({
+        nao_permitir: 'sem criação de cópia local',
+        rascunho_local: 'criação de cópia local via rascunho',
+        reprise_local: 'criação de cópia local imediata'
+      })[governance.local_reprise_mode] || 'sem regra de cópia local';
       const mutual = ({
         local: 'novas notices locais por padrão',
         mutualizavel: 'novas notices mutualizáveis por padrão',
@@ -3027,7 +3036,7 @@
         emprestimo_interbib: 'novas notices com empréstimo inter-bibs por padrão'
       })[governance.default_mutualization] || 'mutualização sem regra';
       const partners = governance.authorized_partners.length ? `parceiras: ${governance.authorized_partners.join(', ')}` : 'sem parceiras autorizadas';
-      return [direct, reprise, mutual, partners].join(' · ');
+      return [direct, localCopy, mutual, partners].join(' · ');
     }
 
     function renderDocGovernance(governance){
@@ -3057,13 +3066,45 @@
       });
     }
 
+    function isMissingDocGovernanceBackendError(error){
+      const raw = String(error?.message || error?.details || error?.hint || error || '').toLowerCase();
+      return raw.includes('could not find')
+        || raw.includes('does not exist')
+        || raw.includes('relation')
+        || raw.includes('function')
+        || raw.includes('schema cache');
+    }
+
+    async function fetchDedicatedDocGovernanceRow(libraryId){
+      const { data, error } = await supabase
+        .from(DOC_GOV_TABLE)
+        .select('library_id,config,updated_at,updated_by')
+        .eq('library_id', libraryId)
+        .maybeSingle();
+      if (error) throw error;
+      return data || null;
+    }
+
     async function loadDocGovernance(){
       try {
         const libraryRow = currentLibraryRow || await fetchCurrentLibraryRow();
+        const libraryId = normalizeLibraryId(libraryRow?.id);
+        if (!libraryId) throw new Error('Biblioteca ativa não identificada para carregar a governança documental.');
+
+        try {
+          const dedicatedRow = await fetchDedicatedDocGovernanceRow(libraryId);
+          currentDocGovernanceBinding = { table: DOC_GOV_TABLE, source: { type: 'dedicated-table' } };
+          renderDocGovernance(dedicatedRow?.config || getEmptyDocGovernance());
+          setStatus('docGovernanceMsg', dedicatedRow ? 'Governança documental carregada.' : 'Ainda não há regras salvas para esta biblioteca.', dedicatedRow ? 'ok' : 'warn');
+          return;
+        } catch (error) {
+          if (!isMissingDocGovernanceBackendError(error)) throw error;
+        }
+
         const binding = extractDocGovernanceBinding(libraryRow);
         currentDocGovernanceBinding = binding;
         renderDocGovernance(binding ? readDocGovernanceFromBinding(binding, libraryRow) : getEmptyDocGovernance());
-        setStatus('docGovernanceMsg', binding ? 'Governança documental carregada.' : 'Ainda não encontrei um campo de persistência em libraries para a governança documental.', binding ? 'ok' : 'warn');
+        setStatus('docGovernanceMsg', binding ? 'Governança documental carregada a partir do backend legado.' : 'Ainda não encontrei um backend persistente para a governança documental.', binding ? 'warn' : 'warn');
       } catch (e) {
         renderDocGovernance(getEmptyDocGovernance());
         setStatus('docGovernanceMsg', 'Não consegui carregar a governança documental: ' + (e.message || String(e)), 'bad', false);
@@ -3076,11 +3117,27 @@
       if (btn) btn.disabled = true;
       try {
         const libraryRow = currentLibraryRow || await fetchCurrentLibraryRow();
-        const binding = currentDocGovernanceBinding || extractDocGovernanceBinding(libraryRow);
-        if (!binding) throw new Error('Não encontrei ainda um campo de persistência em libraries para a governança documental.');
         const libraryId = normalizeLibraryId(libraryRow?.id);
         if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar a governança documental.');
         const governance = collectDocGovernanceFromForm();
+        const payloadData = getDocGovernancePayloadData(governance);
+
+        try {
+          const { data, error } = await supabase.rpc(DOC_GOV_RPC, {
+            p_library_id: libraryId,
+            p_config: payloadData,
+          });
+          if (error) throw error;
+          currentDocGovernanceBinding = { table: DOC_GOV_TABLE, source: { type: 'dedicated-table' } };
+          renderDocGovernance((data && data.config) ? data.config : governance);
+          setStatus('docGovernanceMsg', 'Governança documental atualizada.', 'ok');
+          return;
+        } catch (error) {
+          if (!isMissingDocGovernanceBackendError(error)) throw error;
+        }
+
+        const binding = currentDocGovernanceBinding || extractDocGovernanceBinding(libraryRow);
+        if (!binding) throw new Error('Não encontrei ainda um campo de persistência para a governança documental.');
         const payload = buildDocGovernancePayload(binding, governance, libraryRow);
         const { data, error } = await supabase
           .from('libraries')
@@ -3092,7 +3149,7 @@
         currentLibraryRow = { ...(currentLibraryRow || {}), ...(data || {}), id: libraryId };
         currentDocGovernanceBinding = binding;
         renderDocGovernance(governance);
-        setStatus('docGovernanceMsg', 'Governança documental atualizada.', 'ok');
+        setStatus('docGovernanceMsg', 'Governança documental atualizada no backend legado.', 'warn');
       } catch (e) {
         setStatus('docGovernanceMsg', 'Não consegui salvar a governança documental: ' + (e.message || String(e)), 'bad', false);
       } finally {
