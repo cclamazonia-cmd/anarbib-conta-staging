@@ -2404,6 +2404,34 @@
       applyActiveLibraryLogoCandidate(0);
     }
 
+    async function syncAuthChromeFromSession(nextSession, { refreshIdentity=false } = {}){
+      session = nextSession || null;
+      updateTopbarAuthButton(!!session?.user?.id);
+
+      if (!session?.user?.id) {
+        isLibrarian = false;
+        currentAccessRow = null;
+        currentIdentityRow = null;
+        currentLibraryRow = null;
+        hideActiveLibraryLogo();
+        $('btnModoLeitor')?.classList.add('hidden');
+        $('helloLine').textContent = '';
+        setChip('chipFuncao', 'Função: —');
+        setChip('chipEmail', 'E-mail: —');
+        return;
+      }
+
+      try {
+        isLibrarian = await requireBibliotecaOrRedirect();
+        await fillHeader();
+        if (isLibrarian && (refreshIdentity || !currentLibraryRow?.id)) {
+          await loadLibraryIdentity();
+        }
+      } catch (error) {
+        console.warn('Não consegui sincronizar o cabeçalho auth do painel.', error);
+      }
+    }
+
     function patchCachedLibraryIdentity(updatedRow){
       if (!updatedRow || typeof updatedRow !== 'object') return;
       currentLibraryRow = { ...(currentLibraryRow || {}), ...updatedRow };
@@ -7082,16 +7110,14 @@ async function fetchActiveLoans(){
       window.addEventListener('pageshow', () => { refreshCollections({silent:true}); loadLibraryServiceState({silent:true}); });
     }
 
+    supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+      await syncAuthChromeFromSession(nextSession, { refreshIdentity:true });
+    });
+
     session = await requireSession();
-    updateTopbarAuthButton(!!session?.user?.id);
-    if (!session?.user?.id) {
-      hideActiveLibraryLogo();
-      $('btnModoLeitor').classList.add('hidden');
-    }
+    await syncAuthChromeFromSession(session, { refreshIdentity:true });
     if (session){
-      isLibrarian = await requireBibliotecaOrRedirect();
       if (isLibrarian){
-        await fillHeader();
         await loadLibraryServiceState();
         await loadLibraryIdentity();
         await loadLibraryTheme();
