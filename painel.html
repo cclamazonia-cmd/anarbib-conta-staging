@@ -781,6 +781,39 @@
                   <input class="input mono" id="librarySlug" type="text" placeholder="Ex.: blmf">
                 </div>
               </div>
+              <div class="row3" style="margin-top:12px">
+                <div>
+                  <label for="libraryContactName">Pessoa ou coletivo de contato</label>
+                  <input class="input" id="libraryContactName" type="text" placeholder="Ex.: Equipe de coordenação da biblioteca">
+                </div>
+                <div>
+                  <label for="libraryContactRole">Função ou responsabilidade</label>
+                  <input class="input" id="libraryContactRole" type="text" placeholder="Ex.: Biblioteca / coordenação / circulação">
+                </div>
+                <div>
+                  <label for="libraryContactEmail">E-mail de contato</label>
+                  <input class="input" id="libraryContactEmail" type="email" placeholder="Ex.: contato@biblioteca.org">
+                </div>
+              </div>
+              <div class="row3" style="margin-top:12px">
+                <div>
+                  <label for="libraryContactPhone">Telefone</label>
+                  <input class="input" id="libraryContactPhone" type="text" placeholder="Ex.: +55 91 99999-9999">
+                </div>
+                <div>
+                  <label for="libraryContactWhatsapp">WhatsApp</label>
+                  <input class="input" id="libraryContactWhatsapp" type="text" placeholder="Ex.: +55 91 99999-9999">
+                </div>
+                <div>
+                  <label for="libraryContactAlternate">Canal alternativo</label>
+                  <input class="input" id="libraryContactAlternate" type="text" placeholder="Ex.: Signal / Telegram / outro canal acordado">
+                </div>
+              </div>
+              <div style="margin-top:12px">
+                <label for="libraryPostalAddress">Endereço postal</label>
+                <textarea class="textarea" id="libraryPostalAddress" placeholder="Ex.: Rua..., número..., bairro, cidade, estado, CEP, país"></textarea>
+                <div class="hint">Esses dados servem para contato institucional e para a cooperação direta entre bibliotecas parceiras.</div>
+              </div>
               <div class="actions">
                 <button class="btn" id="btnSaveLibraryIdentity" type="button">Salvar identidade</button>
               </div>
@@ -2017,6 +2050,9 @@
     }
 
     let currentLibraryRow = null;
+    let currentLibraryContactProfile = null;
+    const LIBRARY_CONTACT_TABLE = 'library_contact_profiles';
+    const LIBRARY_CONTACT_RPC = 'upsert_library_contact_profile';
     let currentLibraryRegimentoBinding = null;
     let currentLibraryRegimentoState = null;
     const LIBRARY_REGIMENTO_BUCKET = 'library-regimentos';
@@ -2098,10 +2134,87 @@
       };
     }
 
-    function renderLibraryIdentity(row){
+    function getEmptyLibraryContactProfile(libraryId=''){
+      return {
+        library_id: String(libraryId || '').trim(),
+        contact_name: '',
+        contact_role: '',
+        contact_email: '',
+        contact_phone: '',
+        contact_whatsapp: '',
+        contact_alternate: '',
+        postal_address: '',
+        created_at: null,
+        created_by: null,
+        updated_at: null,
+        updated_by: null,
+      };
+    }
+
+    function normalizeLibraryContactProfile(row, libraryId=''){
+      const base = getEmptyLibraryContactProfile(libraryId || row?.library_id || '');
+      if (!row || typeof row !== 'object') return base;
+      return {
+        ...base,
+        library_id: String(row?.library_id || base.library_id || '').trim(),
+        contact_name: String(row?.contact_name || '').trim(),
+        contact_role: String(row?.contact_role || '').trim(),
+        contact_email: String(row?.contact_email || '').trim(),
+        contact_phone: String(row?.contact_phone || '').trim(),
+        contact_whatsapp: String(row?.contact_whatsapp || '').trim(),
+        contact_alternate: String(row?.contact_alternate || '').trim(),
+        postal_address: String(row?.postal_address || '').trim(),
+        created_at: row?.created_at || null,
+        created_by: row?.created_by || null,
+        updated_at: row?.updated_at || null,
+        updated_by: row?.updated_by || null,
+      };
+    }
+
+    function isMissingLibraryContactBackendError(error){
+      const raw = String(error?.message || error?.details || error?.hint || error || '').toLowerCase();
+      return raw.includes('could not find')
+        || raw.includes('does not exist')
+        || raw.includes('relation')
+        || raw.includes('function')
+        || raw.includes('schema cache');
+    }
+
+    async function fetchLibraryContactProfile(libraryId){
+      const { data, error } = await supabase
+        .from(LIBRARY_CONTACT_TABLE)
+        .select('library_id,contact_name,contact_role,contact_email,contact_phone,contact_whatsapp,contact_alternate,postal_address,created_at,created_by,updated_at,updated_by')
+        .eq('library_id', libraryId)
+        .maybeSingle();
+      if (error) throw error;
+      return normalizeLibraryContactProfile(data || { library_id: libraryId }, libraryId);
+    }
+
+    function buildLibraryContactProfilePayload(libraryId){
+      return {
+        library_id: libraryId,
+        contact_name: String($('libraryContactName')?.value || '').trim() || null,
+        contact_role: String($('libraryContactRole')?.value || '').trim() || null,
+        contact_email: String($('libraryContactEmail')?.value || '').trim() || null,
+        contact_phone: String($('libraryContactPhone')?.value || '').trim() || null,
+        contact_whatsapp: String($('libraryContactWhatsapp')?.value || '').trim() || null,
+        contact_alternate: String($('libraryContactAlternate')?.value || '').trim() || null,
+        postal_address: String($('libraryPostalAddress')?.value || '').trim() || null,
+      };
+    }
+
+    function renderLibraryIdentity(row, profile=currentLibraryContactProfile){
+      const normalizedProfile = normalizeLibraryContactProfile(profile || {}, row?.id || row?.library_id || currentLibraryRow?.id || '');
       $('libraryFullName').value = String(row?.name || '').trim();
       $('libraryShortName').value = String(row?.short_name || '').trim();
       $('librarySlug').value = String(row?.slug || '').trim();
+      $('libraryContactName').value = normalizedProfile.contact_name;
+      $('libraryContactRole').value = normalizedProfile.contact_role;
+      $('libraryContactEmail').value = normalizedProfile.contact_email;
+      $('libraryContactPhone').value = normalizedProfile.contact_phone;
+      $('libraryContactWhatsapp').value = normalizedProfile.contact_whatsapp;
+      $('libraryContactAlternate').value = normalizedProfile.contact_alternate;
+      $('libraryPostalAddress').value = normalizedProfile.postal_address;
     }
 
     function renderLibraryTheme(row){
@@ -2244,12 +2357,19 @@
       try {
         const row = await fetchCurrentLibraryRow();
         patchCachedLibraryIdentity(row);
-        renderLibraryIdentity(row);
+        try {
+          currentLibraryContactProfile = await fetchLibraryContactProfile(row?.id);
+        } catch (contactError) {
+          if (!isMissingLibraryContactBackendError(contactError)) throw contactError;
+          currentLibraryContactProfile = getEmptyLibraryContactProfile(row?.id);
+        }
+        renderLibraryIdentity(row, currentLibraryContactProfile);
         renderActiveLibraryLogo(row);
         await fillHeader();
         clearStatus('libraryIdentityMsg');
       } catch (e) {
-        renderLibraryIdentity({});
+        currentLibraryContactProfile = getEmptyLibraryContactProfile('');
+        renderLibraryIdentity({}, currentLibraryContactProfile);
         hideActiveLibraryLogo();
         setStatus('libraryIdentityMsg', 'Não consegui carregar a identidade da biblioteca: ' + (e.message || String(e)), 'bad', false);
       }
@@ -2285,10 +2405,32 @@
         if (error) throw error;
 
         patchCachedLibraryIdentity(data || { id: libraryId, ...payload });
-        renderLibraryIdentity(currentLibraryRow || data || payload);
+
+        const contactPayload = buildLibraryContactProfilePayload(libraryId);
+        let contactBackendMissing = false;
+        try {
+          const { data: contactData, error: contactError } = await supabase.rpc(LIBRARY_CONTACT_RPC, {
+            p_library_id: libraryId,
+            p_profile: contactPayload,
+          });
+          if (contactError) throw contactError;
+          currentLibraryContactProfile = normalizeLibraryContactProfile(contactData || contactPayload, libraryId);
+        } catch (contactError) {
+          if (!isMissingLibraryContactBackendError(contactError)) throw contactError;
+          contactBackendMissing = true;
+          currentLibraryContactProfile = normalizeLibraryContactProfile(contactPayload, libraryId);
+        }
+
+        renderLibraryIdentity(currentLibraryRow || data || payload, currentLibraryContactProfile);
         renderActiveLibraryLogo(currentLibraryRow || data || payload);
         await fillHeader();
-        setStatus('libraryIdentityMsg', 'Identidade da biblioteca atualizada.', 'ok');
+        setStatus(
+          'libraryIdentityMsg',
+          contactBackendMissing
+            ? 'Identidade atualizada. Os canais de contato desta biblioteca ainda precisam do backend dedicado para ficarem salvos.'
+            : 'Identidade e canais de contato da biblioteca atualizados.',
+          contactBackendMissing ? 'warn' : 'ok'
+        );
       } catch (e) {
         setStatus('libraryIdentityMsg', 'Não consegui salvar a identidade da biblioteca: ' + (e.message || String(e)), 'bad', false);
       } finally {
