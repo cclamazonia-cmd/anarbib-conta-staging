@@ -2954,15 +2954,17 @@
     async function saveInterlibraryRequest(){
       const btn = $('btnSendInterlibRequest');
       if (btn) btn.disabled = true;
+      clearStatus('interlibRequestsMsg');
+      const targetId = normalizeLibraryId($('interlibPartnerLibrary')?.value);
+      const requestPayload = readInterlibraryRequestForm();
       try {
+        if (!targetId) throw new Error('Escolhe primeiro a biblioteca parceira.');
+        if (!requestPayload.message) throw new Error('Escreve uma mensagem curta explicando o pedido.');
+        setStatus('interlibRequestsMsg', 'Enviando solicitação interbibliotecas…', 'warn');
         const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
         const requesterId = normalizeLibraryId(libraryRow?.id);
-        const targetId = normalizeLibraryId($('interlibPartnerLibrary')?.value);
         if (!requesterId) throw new Error('Biblioteca ativa não identificada para enviar a solicitação.');
-        if (!targetId) throw new Error('Escolhe primeiro a biblioteca parceira.');
         if (requesterId === targetId) throw new Error('A solicitação interbibliotecas precisa apontar para outra biblioteca.');
-        const requestPayload = readInterlibraryRequestForm();
-        if (!requestPayload.message) throw new Error('Escreve uma mensagem curta explicando o pedido.');
         const { data, error } = await supabase.rpc(INTERLIB_REQUEST_RPC, {
           p_requester_library_id: requesterId,
           p_target_library_id: targetId,
