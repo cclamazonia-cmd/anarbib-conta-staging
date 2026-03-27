@@ -2358,6 +2358,10 @@
     function updateTopbarAuthButton(isLoggedIn){
       const btn = $('btnSair');
       if (!btn) return;
+      const authMode = isLoggedIn ? 'logout' : 'login';
+      const cadastroHref = String(ROUTES?.CADASTRO || CONFIG?.ROUTES?.cadastro || './cadastro.html').trim();
+      btn.dataset.authMode = authMode;
+      btn.dataset.authHref = cadastroHref;
       btn.textContent = isLoggedIn ? 'Logout' : 'Login';
       btn.setAttribute('aria-label', isLoggedIn ? 'Logout' : 'Login');
       btn.title = isLoggedIn ? 'Encerrar sessão e voltar ao cadastro' : 'Ir para o cadastro / login';
@@ -7031,19 +7035,27 @@ async function fetchActiveLoans(){
     });
     $('btnSair').addEventListener('click', async () => {
       const btn = $('btnSair');
+      const targetHref = String(btn?.dataset?.authHref || ROUTES.CADASTRO || CONFIG?.ROUTES?.cadastro || './cadastro.html').trim();
+      const authMode = String(btn?.dataset?.authMode || '').trim().toLowerCase();
+      const shouldLogout = authMode === 'logout' || (!!session?.user?.id && authMode !== 'login');
+
+      if (!shouldLogout) {
+        location.assign(targetHref);
+        return;
+      }
+
       btn.disabled = true;
       try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        if (!currentSession?.user?.id) {
-          location.assign(ROUTES.CADASTRO);
-          return;
-        }
         await supabase.auth.signOut();
+      } catch (error) {
+        console.warn('Falha ao encerrar a sessão no painel; seguindo para o cadastro mesmo assim.', error);
+      } finally {
         session = null;
         isLibrarian = false;
-        location.assign(ROUTES.CADASTRO);
+        updateTopbarAuthButton(false);
+        btn.disabled = false;
+        location.assign(targetHref);
       }
-      finally { btn.disabled = false; }
     });
 
     renderInternalTasks();
