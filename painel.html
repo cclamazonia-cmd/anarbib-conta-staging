@@ -2392,6 +2392,9 @@
     async function syncPainelAuthState(nextSession, { reloadData=false, allowAnonymousReset=true } = {}){
       const syncId = ++authSyncSerial;
       session = nextSession || null;
+      if (!session?.user?.id) {
+        session = await getConfirmedCurrentSession({ attempts: allowAnonymousReset ? 3 : 1, delayMs: 120 });
+      }
       updateTopbarAuthButton(!!session?.user?.id);
 
       if (!session?.user?.id) {
@@ -4926,10 +4929,53 @@ function belemNowParts(){
       }
       return null;
     }
+    async function getConfirmedCurrentSession({ attempts = 3, delayMs = 120 } = {}){
+      for (let i = 0; i < attempts; i += 1) {
+        try {
+          const { data: { session: sess } } = await supabase.auth.getSession();
+          if (sess?.user?.id) return sess;
+        } catch (error) {
+          console.warn('getSession falhou ao confirmar a sessão do painel.', error);
+        }
+
+        try {
+          const { data } = await supabase.auth.getUser();
+          if (data?.user?.id) {
+            const { data: { session: recoveredSession } } = await supabase.auth.getSession();
+            if (recoveredSession?.user?.id) return recoveredSession;
+          }
+        } catch (error) {
+          console.warn('getUser falhou ao confirmar a sessão do painel.', error);
+        }
+
+        if (i < attempts - 1) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      }
+      return null;
+    }
     let currentAccessRow = null;
     let currentIdentityRow = null;
     async function fetchMyAccessRows(userId){
       let lastError = null;
+      const collectedRows = [];
+      const seenKeys = new Set();
+      const pushRows = (rows) => {
+        const normalizedRows = Array.isArray(rows) ? rows : (rows ? [rows] : []);
+        for (const row of normalizedRows) {
+          if (!row || typeof row !== 'object') continue;
+          const key = JSON.stringify([
+            String(row?.user_id || row?.id || userId || '').trim(),
+            String(row?.library_id || row?.library_slug || row?.default_library_slug || '').trim(),
+            String(row?.role || '').trim(),
+            String(row?.status || '').trim(),
+          ]);
+          if (seenKeys.has(key)) continue;
+          seenKeys.add(key);
+          collectedRows.push(row);
+        }
+      };
+
       const directAttempts = [
         () => supabase.from('my_access').select('*'),
         () => supabase.from('my_session_context').select('*').limit(1),
@@ -4939,9 +4985,10 @@ function belemNowParts(){
         try {
           const res = await run();
           if (!res?.error) {
-            return { data: Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []), error: null };
+            pushRows(Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []));
+          } else {
+            lastError = res.error;
           }
-          lastError = res.error;
         } catch (error) {
           lastError = error;
         }
@@ -4997,7 +5044,7 @@ function belemNowParts(){
               };
             });
 
-            if (mergedRows.length) return { data: mergedRows, error: null };
+            pushRows(mergedRows);
           }
         } else {
           lastError = membershipRes.error;
@@ -5006,8 +5053,8 @@ function belemNowParts(){
         lastError = error;
       }
 
-      if (profileRow) return { data: [profileRow], error: null };
-      return { data: [], error: lastError };
+      if (profileRow) pushRows([profileRow]);
+      return { data: collectedRows, error: lastError };
     }
     function pickCurrentLibrarianAccess(rows){
       const normalized = Array.isArray(rows) ? rows : [];
