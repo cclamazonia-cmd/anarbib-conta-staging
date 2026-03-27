@@ -1755,6 +1755,13 @@
       CONTA: CONFIG.ROUTES.conta,
       MANUAL: CONFIG.ROUTES.manual,
     };
+    const CANONICAL_CADASTRO_URL = 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html';
+
+    function resolveCadastroHref(){
+      const configured = String(ROUTES?.CADASTRO || CONFIG?.ROUTES?.cadastro || '').trim();
+      if (configured && /\/cadastro\.html(?:$|[?#])/i.test(configured)) return configured;
+      return CANONICAL_CADASTRO_URL;
+    }
 
     const SUPABASE_URL = CONFIG.SUPABASE_URL;
     const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
@@ -2359,7 +2366,7 @@
       const btn = $('btnSair');
       if (!btn) return;
       const authMode = isLoggedIn ? 'logout' : 'login';
-      const cadastroHref = String(ROUTES?.CADASTRO || CONFIG?.ROUTES?.cadastro || './cadastro.html').trim();
+      const cadastroHref = resolveCadastroHref();
       btn.dataset.authMode = authMode;
       btn.dataset.authHref = cadastroHref;
       btn.textContent = isLoggedIn ? 'Logout' : 'Login';
@@ -7035,12 +7042,14 @@ async function fetchActiveLoans(){
     });
     $('btnSair').addEventListener('click', async () => {
       const btn = $('btnSair');
-      const targetHref = String(btn?.dataset?.authHref || ROUTES.CADASTRO || CONFIG?.ROUTES?.cadastro || './cadastro.html').trim();
+      const targetHref = resolveCadastroHref();
       const authMode = String(btn?.dataset?.authMode || '').trim().toLowerCase();
       const shouldLogout = authMode === 'logout' || (!!session?.user?.id && authMode !== 'login');
 
+      btn.dataset.authHref = targetHref;
+
       if (!shouldLogout) {
-        location.assign(targetHref);
+        window.location.href = targetHref;
         return;
       }
 
@@ -7054,7 +7063,7 @@ async function fetchActiveLoans(){
         isLibrarian = false;
         updateTopbarAuthButton(false);
         btn.disabled = false;
-        location.assign(targetHref);
+        window.location.href = targetHref;
       }
     });
 
