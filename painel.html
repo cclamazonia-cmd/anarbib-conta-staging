@@ -485,7 +485,7 @@
         <a class="btn" id="btnCatalogacao" href="https://cclamazonia-cmd.github.io/anarbib-staging/catalogacao.html">Catalogação</a>
         <a class="btn" id="btnManual" href="https://cclamazonia-cmd.github.io/anarbib-staging/Manual_do_AnarBib.pdf" target="_blank" rel="noopener noreferrer">Manual do AnarBib</a>
         <a class="btn" id="btnModoLeitor" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html">Ir para modo leitor</a>
-        <button class="btn primary" id="btnSair" type="button">Login</button>
+        <button class="btn primary" id="btnSair" type="button" data-auth-mode="login" data-auth-href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html" onclick="if ((this.dataset.authMode || 'login') === 'login') { window.location.href = (this.dataset.authHref || 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html'); return false; }">Login</button>
       </div>
     </div>
 
@@ -2355,6 +2355,12 @@
       el.dataset.candidateIndex = '0';
     }
 
+    function resolveCadastroHref(){
+      const fallbackHref = 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html';
+      const candidate = String(ROUTES?.CADASTRO || CONFIG?.ROUTES?.cadastro || FALLBACK_CONFIG?.ROUTES?.cadastro || fallbackHref).trim();
+      return /\/cadastro\.html(?:[?#].*)?$/i.test(candidate) ? candidate : fallbackHref;
+    }
+
     function updateTopbarAuthButton(isLoggedIn){
       const btn = $('btnSair');
       if (!btn) return;
@@ -2382,13 +2388,14 @@
     }
 
     let authSyncSerial = 0;
-    async function syncPainelAuthState(nextSession, { reloadData=false } = {}){
+    let painelAuthBootstrapping = true;
+    async function syncPainelAuthState(nextSession, { reloadData=false, allowAnonymousReset=true } = {}){
       const syncId = ++authSyncSerial;
       session = nextSession || null;
       updateTopbarAuthButton(!!session?.user?.id);
 
       if (!session?.user?.id) {
-        resetPainelAuthChrome();
+        if (allowAnonymousReset) resetPainelAuthChrome();
         return false;
       }
 
@@ -4896,11 +4903,26 @@ function belemNowParts(){
     bindResScheduleAtParts();
     setupReturnScheduleEditor();
 
-    async function requireSession(){
-      for (let i = 0; i < 12; i += 1) {
-        const { data: { session: sess } } = await supabase.auth.getSession();
-        if (sess?.user?.id) return sess;
-        await new Promise((resolve) => setTimeout(resolve, 120));
+    async function requireSession({ attempts = 40, delayMs = 150 } = {}){
+      for (let i = 0; i < attempts; i += 1) {
+        try {
+          const { data: { session: sess } } = await supabase.auth.getSession();
+          if (sess?.user?.id) return sess;
+        } catch (error) {
+          console.warn('getSession falhou durante o bootstrap do painel.', error);
+        }
+
+        try {
+          const { data } = await supabase.auth.getUser();
+          if (data?.user?.id) {
+            const { data: { session: recoveredSession } } = await supabase.auth.getSession();
+            if (recoveredSession?.user?.id) return recoveredSession;
+          }
+        } catch (error) {
+          console.warn('getUser falhou durante o bootstrap do painel.', error);
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
       return null;
     }
@@ -4996,28 +5018,32 @@ function belemNowParts(){
       });
       return librarianRows.find((row) => row?.is_primary === true) || librarianRows[0] || null;
     }
-    async function requireBibliotecaOrRedirect(){
-      const accessRead = await fetchMyAccessRows(session.user.id);
-      const accessRows = accessRead?.data || [];
-      const lastErrorMessage = accessRead?.error?.message || '';
-      currentIdentityRow = accessRows.find((row) => String(row?.id || row?.user_id || '') === String(session?.user?.id || '')) || accessRows[0] || null;
-      currentAccessRow = pickCurrentLibrarianAccess(accessRows);
+    async function requireBibliotecaOrRedirect({ attempts = 6, delayMs = 200 } = {}){
+      let lastErrorMessage = '';
+      for (let i = 0; i < attempts; i += 1) {
+        const accessRead = await fetchMyAccessRows(session.user.id);
+        const accessRows = accessRead?.data || [];
+        lastErrorMessage = accessRead?.error?.message || '';
+        currentIdentityRow = accessRows.find((row) => String(row?.id || row?.user_id || '') === String(session?.user?.id || '')) || accessRows[0] || null;
+        currentAccessRow = pickCurrentLibrarianAccess(accessRows);
 
-      if (!currentAccessRow && currentIdentityRow?.is_librarian === true && currentIdentityRow?.is_restricted !== true) {
-        currentAccessRow = {
-          ...currentIdentityRow,
-          role: 'librarian',
-          status: 'active',
-          can_access_painel: true
-        };
+        if (!currentAccessRow && currentIdentityRow?.is_librarian === true && currentIdentityRow?.is_restricted !== true) {
+          currentAccessRow = {
+            ...currentIdentityRow,
+            role: 'librarian',
+            status: 'active',
+            can_access_painel: true
+          };
+        }
+
+        if (currentAccessRow) return true;
+        if (i < attempts - 1) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
       }
 
-      if (!currentAccessRow) {
-        setStatus('statusLoans', 'Não consegui verificar o acesso da biblioteca' + (lastErrorMessage ? ': ' + lastErrorMessage : '.'), 'bad', false);
-        return false;
-      }
-
-      return true;
+      setStatus('statusLoans', 'Não consegui verificar o acesso da biblioteca' + (lastErrorMessage ? ': ' + lastErrorMessage : '.'), 'bad', false);
+      return false;
     }
     async function fillHeader(){
       const identity = { ...(currentIdentityRow || {}), ...(currentAccessRow || {}) };
@@ -7126,12 +7152,15 @@ async function fetchActiveLoans(){
 
     supabase.auth.onAuthStateChange(async (event, nextSession) => {
       const eventName = String(event || '').trim().toUpperCase();
+      if (painelAuthBootstrapping && eventName === 'INITIAL_SESSION' && !nextSession?.user?.id) return;
       const shouldReload = eventName === 'SIGNED_IN' || eventName === 'USER_UPDATED' || eventName === 'INITIAL_SESSION';
-      await syncPainelAuthState(nextSession, { reloadData: shouldReload });
+      const allowAnonymousReset = eventName === 'SIGNED_OUT' || !painelAuthBootstrapping;
+      await syncPainelAuthState(nextSession, { reloadData: shouldReload, allowAnonymousReset });
     });
 
-    session = await requireSession();
-    await syncPainelAuthState(session, { reloadData: !!session?.user?.id });
+    session = await requireSession({ attempts: 40, delayMs: 150 });
+    painelAuthBootstrapping = false;
+    await syncPainelAuthState(session, { reloadData: !!session?.user?.id, allowAnonymousReset: true });
   </script>
 </body>
 </html>
