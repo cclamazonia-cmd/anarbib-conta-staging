@@ -6389,13 +6389,13 @@ async function fetchActiveLoans(){
       if (!isMissingFunctionError(rpcRes.error)) throw rpcRes.error;
 
       const { data: reserva, error: reservaError } = await supabase
-        .from('reservas')
+        .from('v_reservations_enriched')
         .select('id,bib_ref,user_id,status,fulfilled_at,cancelled_at')
         .eq('id', reservaId)
         .maybeSingle();
       if (reservaError) throw reservaError;
       if (!reserva?.id) throw new Error(`Reserva ${reservaId} não encontrada.`);
-      if (reserva.status !== 'pending' || reserva.fulfilled_at || reserva.cancelled_at) {
+      if (!['pending','active'].includes(String(reserva.status || '')) || reserva.fulfilled_at || reserva.cancelled_at) {
         throw new Error(`Reserva ${reservaId} não está pendente.`);
       }
 
