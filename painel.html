@@ -1,38 +1,40 @@
 <!doctype html>
-<html lang="pt-BR" data-library-slug="default" data-theme-slug="default" data-library-name="AnarBib">
+<html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AnarBib – painel</title>
-  <link rel="stylesheet" href="./assets/css/theme-base.css">
-  <script src="./assets/js/library-context.js" defer></script>
-  <script src="./assets/js/theme-loader.js" defer></script>
-  <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
-  <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
-  <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
+  <title>BLMF — Painel</title>
+  <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
+  <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
+  <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png">
   <style>
     :root{
-      --panel:var(--brand-panel-bg,rgba(10,10,10,.90));
-      --text:var(--brand-text,#f4f4f4);
-      --muted:var(--brand-muted,rgba(255,255,255,.78));
-      --red:var(--brand-color-primary,#7a0b14);
-      --red2:var(--brand-color-primary,#bb1e2c);
-      --line:var(--brand-panel-border,rgba(255,255,255,.12));
-      --shadow:var(--brand-shadow,0 16px 38px rgba(0,0,0,.42));
+      --panel:rgba(18,18,18,.96);
+      --text:#f2f2f2;
+      --muted:rgba(255,255,255,.74);
+      --red:#b30018;
+      --red2:#e11d2f;
+      --line:rgba(255,255,255,.10);
+      --shadow:0 10px 30px rgba(0,0,0,.35);
       --ok:#4ade80;
       --warn:#fbbf24;
       --bad:#fb7185;
     }
     *{box-sizing:border-box}
-    html,body{margin:0;padding:0;color:var(--text);font-family:var(--brand-font-body,Inter,Segoe UI,Arial,sans-serif)}
-    body{background:transparent;}
+    html,body{margin:0;padding:0;color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif}
+    body{
+      background-image:
+        linear-gradient(rgba(0,0,0,.78), rgba(0,0,0,.78)),
+        url('https://cclamazonia.noblogs.org/files/2024/11/Arte-CCLA-paredao.jpg');
+      background-size:cover;background-position:center;background-attachment:fixed;background-repeat:no-repeat;
+    }
     a,a:visited{color:inherit;text-decoration:none}
     .wrap{max-width:1680px;margin:0 auto;padding:24px}
     .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
     .brand{display:flex;align-items:center;gap:12px}
     .logo{height:64px;width:auto;max-width:170px;object-fit:contain;display:block;flex-shrink:0;filter:drop-shadow(0 8px 18px rgba(0,0,0,.35))}
     .btn{
-      border:1px solid var(--line);background:rgba(12,12,12,.84);color:var(--text);
+      border:1px solid var(--line);background:rgba(18,18,18,.92);color:var(--text);
       border-radius:14px;padding:10px 12px;cursor:pointer;box-shadow:var(--shadow);
       font-weight:900;font-size:.95rem;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;
     }
@@ -41,25 +43,25 @@
     .btn:disabled{opacity:.58;cursor:default}
     .btn.mini{padding:7px 10px;font-size:.85rem;border-radius:12px}
     .hero{
-      border:1px solid var(--line);
-      background:linear-gradient(135deg, var(--red2), var(--panel));
+      border:1px solid rgba(255,255,255,.08);
+      background:linear-gradient(135deg, rgba(179,0,24,.95), rgba(90,0,12,.96));
       border-radius:22px;padding:18px;box-shadow:var(--shadow);margin-bottom:16px;
     }
     .hero h1{margin:0 0 6px;font-size:1.5rem}
     .hero p{margin:0;color:rgba(255,255,255,.92)}
     .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
     .chip{
-      display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.12);
-      background:rgba(10,10,10,.72);padding:7px 10px;border-radius:999px;font-size:.9rem;color:rgba(255,255,255,.86)
+      display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.10);
+      background:rgba(18,18,18,.65);padding:7px 10px;border-radius:999px;font-size:.9rem;color:rgba(255,255,255,.86)
     }
     .grid{display:grid;grid-template-columns:1fr;gap:14px}
-    .card{border:1px solid rgba(255,255,255,.10);background:var(--panel);border-radius:22px;padding:16px;box-shadow:var(--shadow)}
+    .card{border:1px solid rgba(255,255,255,.08);background:var(--panel);border-radius:22px;padding:16px;box-shadow:var(--shadow)}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
     @media (max-width:980px){.row,.row3{grid-template-columns:1fr}}
     label{display:block;font-size:.9rem;color:var(--muted);margin:0 0 6px}
     .input,.select,.textarea{
-      width:100%;border:1px solid rgba(255,255,255,.12);background:rgba(12,12,12,.75);color:var(--text);
+      width:100%;border:1px solid rgba(255,255,255,.10);background:rgba(12,12,12,.75);color:var(--text);
       border-radius:14px;padding:12px 12px;outline:none;font:inherit;
     }
     .textarea{min-height:96px;resize:vertical}
@@ -67,12 +69,12 @@
     .hint{color:var(--muted);font-size:.9rem;margin-top:8px}
     .status{margin-top:10px;font-size:.92rem;min-height:1.2em}
     .status.ok{color:var(--ok)} .status.warn{color:var(--warn)} .status.bad{color:var(--bad)}
-    .sep{height:1px;background:rgba(255,255,255,.10);margin:14px 0}
-    .tableWrap{overflow:auto;max-height:58vh;border-radius:16px;border:1px solid rgba(255,255,255,.10)}
+    .sep{height:1px;background:rgba(255,255,255,.08);margin:14px 0}
+    .tableWrap{overflow:auto;max-height:58vh;border-radius:16px;border:1px solid rgba(255,255,255,.08)}
     table{width:100%;border-collapse:separate;border-spacing:0;min-width:1120px;background:rgba(10,10,10,.35)}
     thead th{
       position:sticky;top:0;z-index:2;text-align:left;padding:12px 14px;
-      background:linear-gradient(180deg,#26060a,#160407);color:#fff;border-bottom:1px solid rgba(255,255,255,.10);
+      background:linear-gradient(180deg,#26060a,#160407);color:#fff;border-bottom:1px solid rgba(255,255,255,.08);
       font-size:.86rem;text-transform:uppercase;letter-spacing:.05em
     }
     tbody td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06);vertical-align:top}
@@ -125,10 +127,10 @@
 
     .section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
     .section-head h2,.section-head h3{margin:0}
-    .muted-box{border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:10px 12px;background:rgba(255,255,255,.03)}
+    .muted-box{border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px 12px;background:rgba(255,255,255,.03)}
     .stack{display:flex;flex-direction:column;gap:12px}
     .clickable-row{cursor:pointer}
-    .checkline{display:flex;align-items:center;gap:10px;min-height:48px;padding:12px 14px;border:1px solid rgba(255,255,255,.12);background:rgba(12,12,12,.75);border-radius:14px}
+    .checkline{display:flex;align-items:center;gap:10px;min-height:48px;padding:12px 14px;border:1px solid rgba(255,255,255,.10);background:rgba(12,12,12,.75);border-radius:14px}
     .checkline input[type="checkbox"]{width:18px;height:18px;accent-color:var(--red2)}
 
     @media (max-width:980px){
@@ -302,7 +304,7 @@
         display:block;
         margin:0 0 12px;
         padding:12px 14px;
-        border:1px solid rgba(255,255,255,.10);
+        border:1px solid rgba(255,255,255,.08);
         border-radius:16px;
         background:rgba(10,10,10,.46);
       }
@@ -431,7 +433,7 @@
     .task-summary{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
     .task-split{display:grid;grid-template-columns:1fr;gap:14px}
     .task-list{display:flex;flex-direction:column;gap:10px}
-    .task-item{border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:12px;background:rgba(255,255,255,.03)}
+    .task-item{border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px;background:rgba(255,255,255,.03)}
     .task-item-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
     .task-item-title{font-weight:700}
     .task-item-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
@@ -446,7 +448,7 @@
     .suggest-wrap{position:relative}
     .suggest-list{
       position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:20;
-      border:1px solid rgba(255,255,255,.12);background:rgba(12,12,12,.98);border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);background:rgba(12,12,12,.98);border-radius:14px;
       box-shadow:var(--shadow);max-height:220px;overflow:auto;padding:6px;
     }
     .suggest-item{
@@ -477,21 +479,20 @@
   <div class="wrap">
     <div class="topbar">
       <div class="brand">
-        <img id="brandLogo" data-brand-logo class="logo" src="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png" alt="AnarBib">
-        <img id="activeLibraryLogo" class="logo hidden" src="" alt="Logo da biblioteca ativa">
+        <img class="logo" src="https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png" alt="BLMF">
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <a class="btn" id="btnCatalogo" href="https://cclamazonia-cmd.github.io/anarbib-staging/index.html">Voltar ao catálogo</a>
-        <a class="btn" id="btnCatalogacao" href="https://cclamazonia-cmd.github.io/anarbib-staging/catalogacao.html">Catalogação</a>
-        <a class="btn" id="btnManual" href="https://cclamazonia-cmd.github.io/anarbib-staging/Manual_do_AnarBib.pdf" target="_blank" rel="noopener noreferrer">Manual do AnarBib</a>
-        <a class="btn" id="btnModoLeitor" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html">Ir para modo leitor</a>
-        <button class="btn primary" id="btnSair" type="button">Login</button>
+        <a class="btn" id="btnBlog" href="#">Voltar ao blogue</a>
+        <a class="btn" id="btnCatalogo" href="#">Voltar ao catálogo</a>
+        <a class="btn" id="btnCatalogacao" href="#">Catalogação</a>
+        <a class="btn" id="btnManual" href="#" target="_blank" rel="noopener noreferrer">Manual do AnarBib</a>
+        <a class="btn hidden" id="btnModoLeitor" href="#">Ir para modo leitor</a>
+        <button class="btn primary" id="btnSair" type="button">Sair</button>
       </div>
     </div>
 
     <div class="hero">
-      <h1 id="pageHeroTitle">Painel d@ Bibliotecári@</h1>
-      <p id="pageHeroSubtitle">Gestão de biblioteca militante</p>
+      <h1>Painel (gestão da biblioteca)</h1>
       <p id="helloLine"></p>
       <div class="chips">
         <span class="chip" id="chipFuncao">Função: —</span>
@@ -507,8 +508,8 @@
     <div class="tabs-layout">
       <nav class="tabs-nav" role="tablist" aria-label="Seções do painel">
         <button class="tab-btn active" type="button" data-tab="funcionamento" role="tab" aria-selected="true" aria-controls="tab-funcionamento">
-          Biblioteca
-          <span class="hint">Funcionamento, horários, regras locais e tema</span>
+          Funcionamento
+          <span class="hint">Modo global e reservas públicas</span>
         </button>
         <button class="tab-btn" type="button" data-tab="acoes" role="tab" aria-selected="false" aria-controls="tab-acoes">
           Ações
@@ -548,19 +549,7 @@
             <div class="card">
               <div class="section-head">
                 <div>
-                  <h2>Biblioteca</h2>
-                  <div class="mini">Configuração local da biblioteca: funcionamento, horários, regras de circulação, identidade e tema visual.</div>
-                </div>
-              </div>
-              <div class="muted-box" style="margin-top:12px">
-                <div class="mini">Ajustes próprios da biblioteca para funcionamento, circulação, identidade e apresentação pública.</div>
-              </div>
-            </div>
-
-            <div class="card">
-              <div class="section-head">
-                <div>
-                  <h2>Estado do serviço</h2>
+                  <h2>Modo de funcionamento da biblioteca</h2>
                   <div class="mini">Fonte única de verdade para a mensagem pública e a abertura de novas reservas.</div>
                 </div>
               </div>
@@ -568,9 +557,10 @@
                 <div>
                   <label for="serviceModeSelect">Modo atual</label>
                   <select class="select" id="serviceModeSelect">
-                    <option value="funcionamento_normal">Funcionamento normal</option>
-                    <option value="somente_consulta">Somente consulta</option>
-                    <option value="pausada">Pausada</option>
+                    <option value="em_organizacao">Em organização</option>
+                    <option value="atendimento_eventual">Atendimento eventual</option>
+                    <option value="atendimento_semanal">Atendimento semanal</option>
+                    <option value="fechado_temporariamente">Fechado temporariamente</option>
                   </select>
                 </div>
                 <div>
@@ -591,385 +581,10 @@
                 <textarea class="textarea" id="internalServiceMessage" placeholder="Observação interna para a equipe da biblioteca."></textarea>
               </div>
               <div class="actions">
-                <button class="btn primary" id="btnSaveServiceState" type="button">Salvar funcionamento</button>
+                <button class="btn primary" id="btnSaveServiceState" type="button">Salvar modo de funcionamento</button>
               </div>
               <div class="status" id="serviceStateMsg"></div>
             </div>
-
-            <div class="card">
-              <div class="section-head">
-                <div>
-                  <h2>Horários e permanências</h2>
-                  <div class="mini">Informe os horários semanais, as permanências fixas e os fechamentos ou suspensões excepcionais.</div>
-                </div>
-              </div>
-              <div class="row3" style="margin-top:12px">
-                <div>
-                  <label for="libraryOpenMonday">Segunda-feira</label>
-                  <input class="input" id="libraryOpenMonday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
-                </div>
-                <div>
-                  <label for="libraryOpenTuesday">Terça-feira</label>
-                  <input class="input" id="libraryOpenTuesday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
-                </div>
-                <div>
-                  <label for="libraryOpenWednesday">Quarta-feira</label>
-                  <input class="input" id="libraryOpenWednesday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
-                </div>
-              </div>
-              <div class="row3" style="margin-top:12px">
-                <div>
-                  <label for="libraryOpenThursday">Quinta-feira</label>
-                  <input class="input" id="libraryOpenThursday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
-                </div>
-                <div>
-                  <label for="libraryOpenFriday">Sexta-feira</label>
-                  <input class="input" id="libraryOpenFriday" type="text" placeholder="Ex.: 14h–18h / fechado / variável">
-                </div>
-                <div>
-                  <label for="libraryOpenWeekend">Fim de semana</label>
-                  <input class="input" id="libraryOpenWeekend" type="text" placeholder="Ex.: somente em plantões / fechado">
-                </div>
-              </div>
-              <div style="margin-top:12px">
-                <label for="libraryFixedOpenings">Permanências fixas</label>
-                <textarea class="textarea" id="libraryFixedOpenings" placeholder="Ex.: toda terça, das 15h às 18h, no espaço da biblioteca."></textarea>
-              </div>
-              <div style="margin-top:12px">
-                <label for="libraryExceptionalClosures">Fechamentos ou suspensões temporárias</label>
-                <textarea class="textarea" id="libraryExceptionalClosures" placeholder="Ex.: fechado no feriado, mutirão interno, reforma do espaço, pausa temporária etc."></textarea>
-              </div>
-              <div class="actions">
-                <button class="btn" id="btnSaveLibrarySchedule" type="button">Salvar horários</button>
-              </div>
-              <div class="status" id="libraryScheduleMsg"></div>
-            </div>
-
-            <div class="card">
-              <div class="section-head">
-                <div>
-                  <h2>Regras locais de circulação</h2>
-                  <div class="mini">Parâmetros locais para reservas e empréstimos de pessoas não inscritas nesta biblioteca.</div>
-                </div>
-              </div>
-              <div class="row" style="margin-top:12px">
-                <div>
-                  <label for="nonMemberReservationPolicy">Reservas para não inscritas/os</label>
-                  <select class="select" id="nonMemberReservationPolicy">
-                    <option value="nao_permitir">Não permitir</option>
-                    <option value="sob_analise">Permitir sob análise</option>
-                    <option value="permitir">Permitir</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="nonMemberLoanPolicy">Empréstimos para não inscritas/os</label>
-                  <select class="select" id="nonMemberLoanPolicy">
-                    <option value="nao_permitir">Não permitir</option>
-                    <option value="sob_analise">Permitir sob análise</option>
-                    <option value="permitir">Permitir</option>
-                  </select>
-                </div>
-              </div>
-              <div style="margin-top:12px">
-                <label for="nonMemberPublicNote">Texto público explicativo</label>
-                <textarea class="textarea" id="nonMemberPublicNote" placeholder="Ex.: leitoras/es de outras bibliotecas podem reservar, mas a retirada depende de análise local da equipe."></textarea>
-              </div>
-              <div class="actions">
-                <button class="btn" id="btnSaveLocalRules" type="button">Salvar regras locais</button>
-              </div>
-              <div class="status" id="localRulesMsg"></div>
-            </div>
-
-            <div class="card">
-              <div class="section-head">
-                <div>
-                  <h2>Governança documental</h2>
-                  <div class="mini">Define o que esta biblioteca pode editar diretamente, o que deve virar proposta de correção, o que pode ser retomado localmente e como a mutualização começa por padrão.</div>
-                </div>
-              </div>
-              <div class="row" style="margin-top:12px">
-                <div>
-                  <label for="docGovDirectEditMode">Edição direta de notices de outras bibliotecas</label>
-                  <select class="select" id="docGovDirectEditMode">
-                    <option value="nao_permitir">Não permitir</option>
-                    <option value="permitir_com_parceiros">Permitir só com parceiras autorizadas</option>
-                    <option value="permitir_todas">Permitir para qualquer notice compartilhada</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="docGovCorrectionMode">Correções em notices externas</label>
-                  <select class="select" id="docGovCorrectionMode">
-                    <option value="propor_correcao">Só propor correção</option>
-                    <option value="propor_ou_editar">Propor ou editar segundo a regra acima</option>
-                    <option value="edicao_direta">Priorizar edição direta quando for permitido</option>
-                  </select>
-                </div>
-              </div>
-              <div class="row" style="margin-top:12px">
-                <div>
-                  <label for="docGovLocalRepriseMode">Retomada local de notice parceira</label>
-                  <select class="select" id="docGovLocalRepriseMode">
-                    <option value="nao_permitir">Não permitir</option>
-                    <option value="rascunho_local">Criar rascunho local sem mexer na original</option>
-                    <option value="reprise_local">Permitir criação de cópia local</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="docGovDigitalLinkMode">Ligar recursos digitais a notices externas</label>
-                  <select class="select" id="docGovDigitalLinkMode">
-                    <option value="nao_permitir">Não permitir</option>
-                    <option value="somente_locais">Permitir só para recursos locais desta biblioteca</option>
-                    <option value="permitir_com_parceiros">Permitir segundo parceiras autorizadas</option>
-                  </select>
-                </div>
-              </div>
-              <div class="row" style="margin-top:12px">
-                <div>
-                  <label for="docGovDefaultMutualization">Mutualização padrão para novas notices locais</label>
-                  <select class="select" id="docGovDefaultMutualization">
-                    <option value="local">Somente local</option>
-                    <option value="mutualizavel">Mutualizável</option>
-                    <option value="consulta_local">Consulta local</option>
-                    <option value="emprestimo_interbib">Empréstimo inter-bibs possível</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="docGovLocalItemsOnly">Edição de exemplares locais</label>
-                  <label class="checkline" for="docGovLocalItemsOnly">
-                    <input id="docGovLocalItemsOnly" type="checkbox">
-                    <span>Restringir a edição material aos exemplares e rótulos desta biblioteca</span>
-                  </label>
-                </div>
-              </div>
-              <div style="margin-top:12px">
-                <label for="docGovAuthorizedPartners">Parceiras autorizadas</label>
-                <textarea class="textarea" id="docGovAuthorizedPartners" placeholder="Ex.: btl, cira, csl-milano"></textarea>
-                <div class="hint">Usa slugs, siglas ou identificadores curtos separados por vírgula, um por linha ou por ponto e vírgula.</div>
-              </div>
-              <div style="margin-top:12px">
-                <label for="docGovInternalNote">Nota interna de governança</label>
-                <textarea class="textarea" id="docGovInternalNote" placeholder="Ex.: notices BTL só podem receber proposta de correção; PDFs locais podem ser ligados a notices mutualizadas."></textarea>
-              </div>
-              <div style="margin-top:12px">
-                <label for="docGovStateNote">Resumo atual</label>
-                <input class="input" id="docGovStateNote" type="text" value="" placeholder="Sem regra documental específica salva." readonly>
-              </div>
-              <div class="actions">
-                <button class="btn" id="btnSaveDocGovernance" type="button">Salvar governança documental</button>
-              </div>
-              <div class="status" id="docGovernanceMsg"></div>
-            </div>
-
-            <div class="card">
-              <div class="section-head">
-                <div>
-                  <h2>Identidade da biblioteca</h2>
-                  <div class="mini">Nome público, forma abreviada e identificador curto da biblioteca.</div>
-                </div>
-              </div>
-              <div class="row3" style="margin-top:12px">
-                <div>
-                  <label for="libraryFullName">Nome completo</label>
-                  <input class="input" id="libraryFullName" type="text" placeholder="Ex.: Biblioteca Libertária Maxwell Ferreira">
-                </div>
-                <div>
-                  <label for="libraryShortName">Nome abreviado</label>
-                  <input class="input" id="libraryShortName" type="text" placeholder="Ex.: BLMF">
-                </div>
-                <div>
-                  <label for="librarySlug">Slug / identificador curto</label>
-                  <input class="input mono" id="librarySlug" type="text" placeholder="Ex.: blmf">
-                </div>
-              </div>
-              <div class="row3" style="margin-top:12px">
-                <div>
-                  <label for="libraryContactName">Pessoa ou coletivo de contato</label>
-                  <input class="input" id="libraryContactName" type="text" placeholder="Ex.: Equipe de coordenação da biblioteca">
-                </div>
-                <div>
-                  <label for="libraryContactRole">Função ou responsabilidade</label>
-                  <input class="input" id="libraryContactRole" type="text" placeholder="Ex.: Biblioteca / coordenação / circulação">
-                </div>
-                <div>
-                  <label for="libraryContactEmail">E-mail de contato</label>
-                  <input class="input" id="libraryContactEmail" type="email" placeholder="Ex.: contato@biblioteca.org">
-                </div>
-              </div>
-              <div class="row3" style="margin-top:12px">
-                <div>
-                  <label for="libraryContactPhone">Telefone</label>
-                  <input class="input" id="libraryContactPhone" type="text" placeholder="Ex.: +55 91 99999-9999">
-                </div>
-                <div>
-                  <label for="libraryContactWhatsapp">WhatsApp</label>
-                  <input class="input" id="libraryContactWhatsapp" type="text" placeholder="Ex.: +55 91 99999-9999">
-                </div>
-                <div>
-                  <label for="libraryContactAlternate">Canal alternativo</label>
-                  <input class="input" id="libraryContactAlternate" type="text" placeholder="Ex.: Signal / Telegram / outro canal acordado">
-                </div>
-              </div>
-              <div style="margin-top:12px">
-                <label for="libraryPostalAddress">Endereço postal</label>
-                <textarea class="textarea" id="libraryPostalAddress" placeholder="Ex.: Rua..., número..., bairro, cidade, estado, CEP, país"></textarea>
-                <div class="hint">Esses dados servem para contato institucional e para a cooperação direta entre bibliotecas parceiras.</div>
-              </div>
-              <div class="actions">
-                <button class="btn" id="btnSaveLibraryIdentity" type="button">Salvar identidade</button>
-              </div>
-              <div class="status" id="libraryIdentityMsg"></div>
-            </div>
-
-            <div class="card">
-              <div class="section-head">
-                <div>
-                  <h2>Solicitações interbibliotecas</h2>
-                  <div class="mini">Registra pedidos formais entre bibliotecas parceiras, mantendo visíveis os canais diretos de contato para que as pessoas responsáveis também possam se falar fora do sistema.</div>
-                </div>
-              </div>
-              <div class="row3" style="margin-top:12px">
-                <div>
-                  <label for="interlibPartnerLibrary">Biblioteca parceira</label>
-                  <select class="select" id="interlibPartnerLibrary">
-                    <option value="">Selecione uma biblioteca parceira</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="interlibRequestedAction">Solicitação</label>
-                  <select class="select" id="interlibRequestedAction">
-                    <option value="edicao_notice">Pedir edição direta de notice</option>
-                    <option value="proposta_correcao">Pedir análise de proposta de correção</option>
-                    <option value="copia_local">Pedir criação de cópia local</option>
-                    <option value="vinculo_recurso_digital">Pedir vínculo de recurso digital</option>
-                    <option value="mutualizacao">Pedir ajuste de mutualização</option>
-                    <option value="outra">Outra solicitação</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="interlibObjectType">Camada / objeto</label>
-                  <select class="select" id="interlibObjectType">
-                    <option value="notice">Notice bibliográfica</option>
-                    <option value="exemplar">Exemplar / rótulo</option>
-                    <option value="recurso_digital">Recurso digital</option>
-                    <option value="governanca">Governança / permissão</option>
-                    <option value="outro">Outro</option>
-                  </select>
-                </div>
-              </div>
-              <div class="row" style="margin-top:12px">
-                <div>
-                  <label for="interlibObjectRef">Referência da notice / item / recurso</label>
-                  <input class="input" id="interlibObjectRef" type="text" placeholder="Ex.: BTL-TL-000245, id 53, URL de rascunho, lote, etc.">
-                </div>
-                <div>
-                  <label for="interlibPartnerContact">Contato visível da parceira</label>
-                  <input class="input" id="interlibPartnerContact" type="text" value="" placeholder="Será carregado quando houver contato institucional salvo." readonly>
-                </div>
-              </div>
-              <div style="margin-top:12px">
-                <label for="interlibPartnerChannels">Canais diretos</label>
-                <textarea class="textarea" id="interlibPartnerChannels" placeholder="E-mail, telefone, WhatsApp, canal alternativo e endereço aparecerão aqui quando a biblioteca parceira tiver salvo esses dados." readonly></textarea>
-                <div class="hint">Se preferirem, conversem diretamente antes de responder no sistema. O importante é deixar a decisão final registrada aqui depois.</div>
-              </div>
-              <div style="margin-top:12px">
-                <label for="interlibRequestMessage">Mensagem</label>
-                <textarea class="textarea" id="interlibRequestMessage" placeholder="Explica o pedido, o contexto político/técnico e, se necessário, indica qual notice, exemplar ou recurso está em jogo."></textarea>
-              </div>
-              <div style="margin-top:12px">
-                <label for="interlibRecentRequests">Solicitações recentes</label>
-                <textarea class="textarea" id="interlibRecentRequests" placeholder="As solicitações recentes desta biblioteca aparecerão aqui." readonly></textarea>
-              </div>
-              <div class="actions">
-                <button class="btn" id="btnRefreshInterlibRequests" type="button">Atualizar solicitações</button>
-                <button class="btn primary" id="btnSendInterlibRequest" type="button">Enviar solicitação</button>
-              </div>
-              <div class="status" id="interlibRequestsMsg"></div>
-            </div>
-
-            <div class="card">
-              <div class="section-head">
-                <div>
-                  <h2>Tema visual da biblioteca</h2>
-                  <div class="mini">Imagem de fundo, paleta e conjunto tipográfico da biblioteca, dentro de opções controladas.</div>
-                </div>
-              </div>
-              <div class="row" style="margin-top:12px">
-                <div>
-                  <label for="libraryThemeBackground">Imagem de fundo (1920 × 1080 recomendado)</label>
-                  <input class="input" id="libraryThemeBackground" type="text" placeholder="URL pública da imagem de fundo">
-                </div>
-                <div>
-                  <label for="libraryThemePalette">Paleta</label>
-                  <select class="select" id="libraryThemePalette">
-                    <option value="default">Padrão AnarBib</option>
-                    <option value="contraste_suave">Contraste suave</option>
-                    <option value="vermelho_escuro">Vermelho escuro</option>
-                    <option value="cinza_vermelho">Cinza e vermelho</option>
-                  </select>
-                </div>
-              </div>
-              <div class="row" style="margin-top:12px">
-                <div>
-                  <label for="libraryThemeFontPack">Conjunto tipográfico</label>
-                  <select class="select" id="libraryThemeFontPack">
-                    <option value="default">Padrão AnarBib</option>
-                    <option value="inter_merriweather">Inter + Merriweather</option>
-                    <option value="inter_source">Inter + Source Serif</option>
-                    <option value="system">Sistema</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="libraryThemePreviewNote">Pré-visualização</label>
-                  <input class="input" id="libraryThemePreviewNote" type="text" value="" placeholder="Resumo do tema atual." readonly>
-                </div>
-              </div>
-              <div class="actions">
-                <button class="btn" id="btnSaveLibraryTheme" type="button">Salvar tema</button>
-                <button class="btn" id="btnResetLibraryTheme" type="button">Restaurar tema padrão</button>
-              </div>
-              <div class="status" id="libraryThemeMsg"></div>
-
-
-            <div class="card">
-              <div class="section-head">
-                <div>
-                  <h2>Regimento da biblioteca</h2>
-                  <div class="mini">Mantém um rascunho privado e, quando quiseres, publica uma cópia pública do regimento ativo desta biblioteca.</div>
-                </div>
-              </div>
-              <div class="row" style="margin-top:12px">
-                <div>
-                  <label for="libraryRegimentoVersion">Versão / etiqueta</label>
-                  <input class="input" id="libraryRegimentoVersion" type="text" placeholder="Ex.: 2026.1 / março de 2026">
-                </div>
-                <div>
-                  <label for="libraryRegimentoFile">Arquivo PDF</label>
-                  <input class="input" id="libraryRegimentoFile" type="file" accept="application/pdf">
-                </div>
-              </div>
-              <div class="row" style="margin-top:12px">
-                <div>
-                  <label for="libraryRegimentoCurrent">Rascunho privado atual</label>
-                  <input class="input mono" id="libraryRegimentoCurrent" type="text" value="" placeholder="Nenhum rascunho privado salvo." readonly>
-                </div>
-                <div>
-                  <label for="libraryRegimentoPublicUrl">URL pública publicada</label>
-                  <input class="input mono" id="libraryRegimentoPublicUrl" type="text" value="" placeholder="Será resolvida automaticamente quando houver versão publicada." readonly>
-                </div>
-              </div>
-              <div style="margin-top:12px">
-                <label for="libraryRegimentoStateNote">Situação atual</label>
-                <input class="input" id="libraryRegimentoStateNote" type="text" value="" placeholder="Sem regimento publicado." readonly>
-                
-              </div>
-              <div class="actions">
-                <button class="btn" id="btnOpenLibraryRegimento" type="button">Abrir regimento</button>
-                <button class="btn" id="btnSaveLibraryRegimentoDraft" type="button">Salvar rascunho</button>
-                <button class="btn primary" id="btnPublishLibraryRegimento" type="button">Publicar regimento</button>
-                <button class="btn" id="btnDepublishLibraryRegimento" type="button">Despublicar regimento</button>
-              </div>
-              <div class="status" id="libraryRegimentoMsg"></div>
-            </div>            </div>
           </div>
         </section>
 
@@ -1690,74 +1305,31 @@
   </div>
 
   <script type="module">
-    import { supabase } from "./js/blmf-supabase.js";
-
-    const FALLBACK_CONFIG = {
-      SUPABASE_URL: "https://uflwmikiyjfnikiphtcp.supabase.co",
-      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmbHdtaWtpeWpmbmlraXBodGNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MzIyNDUsImV4cCI6MjA4OTQwODI0NX0.kCs7nPg08ofjb9CWwRH9xVN6BjanrAC5pj418line1o",
-      ROUTES: {
-        blog: "https://cclamazonia.noblogs.org/",
-        catalogo: "https://cclamazonia-cmd.github.io/anarbib-staging/index.html",
-        catalogacao: "https://cclamazonia-cmd.github.io/anarbib-staging/catalogacao.html",
-        cadastro: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html",
-        conta: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html",
-        painel: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html",
-        manual: "https://cclamazonia-cmd.github.io/anarbib-staging/Manual_do_AnarBib.pdf"
-      }
-    };
-
-    let CONFIG = FALLBACK_CONFIG;
-    let applyPageChrome = function(pageKey, options = {}) {
-      const routes = CONFIG?.ROUTES || {};
-      const routeMap = options?.routeMap || {};
-      Object.entries(routeMap).forEach(([id, routeKey]) => {
-        const el = document.getElementById(id);
-        const href = routes?.[routeKey];
-        if (el && href) el.href = href;
-      });
-    };
-
-    try {
-      const mod = await import("./shared/config.js");
-      if (mod?.CONFIG) {
-        CONFIG = {
-          ...FALLBACK_CONFIG,
-          ...mod.CONFIG,
-          ROUTES: { ...(FALLBACK_CONFIG.ROUTES || {}), ...((mod.CONFIG && mod.CONFIG.ROUTES) || {}) }
-        };
-      }
-      if (typeof mod?.applyPageChrome === "function") applyPageChrome = mod.applyPageChrome;
-    } catch (error) {
-      console.warn("config.js ausente ou com falha; usando fallback interno.", error);
-    }
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
     const $ = (id) => document.getElementById(id);
     const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
 
-    applyPageChrome("painel", {
-      logoId: "brandLogo",
-      heroTitleId: "pageHeroTitle",
-      heroSubtitleId: "pageHeroSubtitle",
-      routeMap: {
-        btnBlog: "blog",
-        btnCatalogo: "catalogo",
-        btnCatalogacao: "catalogacao",
-        btnManual: "manual",
-        btnModoLeitor: "conta"
-      }
-    });
-
+    const GH_BASE = location.origin;
     const ROUTES = {
-      BLOG_HOME: CONFIG.ROUTES.blog,
-      CATALOGO: CONFIG.ROUTES.catalogo,
-      CATALOGACAO: CONFIG.ROUTES.catalogacao,
-      CADASTRO: CONFIG.ROUTES.cadastro,
-      CONTA: CONFIG.ROUTES.conta,
-      MANUAL: CONFIG.ROUTES.manual,
+      BLOG_HOME: "https://cclamazonia.noblogs.org/",
+      CATALOGO: `${GH_BASE}/blmf-catalogo/`,
+      CATALOGACAO: `${GH_BASE}/blmf-catalogo/catalogacao.html`,
+      CADASTRO: `${GH_BASE}/blmf-conta/cadastro.html`,
+      CONTA: `${GH_BASE}/blmf-conta/conta.html`,
+      MANUAL: `${GH_BASE}/blmf-catalogo/Manual_do_AnarBib.pdf`,
     };
+    $("btnBlog").href = ROUTES.BLOG_HOME;
+    $("btnCatalogo").href = ROUTES.CATALOGO;
+    $("btnCatalogacao").href = ROUTES.CATALOGACAO;
+    $("btnManual").href = ROUTES.MANUAL;
+    $("btnModoLeitor").href = ROUTES.CONTA;
 
-    const SUPABASE_URL = CONFIG.SUPABASE_URL;
-    const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
+    const SUPABASE_URL = "https://asptfmokzykwzlshsncw.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzcHRmbW9renlrd3psc2hzbmN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MzcxNzcsImV4cCI6MjA4ODExMzE3N30.JkMLHPCV2AH5ELZV_1RfcoW250QEofLGvnDKSDpkcn0";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { storage: window.sessionStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    });
 
     const statusTimers = new Map();
     let session = null;
@@ -1923,27 +1495,34 @@
 
     function translateServiceMode(mode){
       return ({
-        funcionamento_normal: 'Funcionamento normal',
-        somente_consulta: 'Somente consulta',
-        pausada: 'Pausada'
-      })[String(mode || '').trim()] || '—';
+        em_organizacao: 'Em organização',
+        atendimento_eventual: 'Atendimento eventual',
+        atendimento_semanal: 'Atendimento semanal',
+        fechado_temporariamente: 'Fechado temporariamente'
+      })[String(mode || '')] || '—';
     }
 
     function defaultServiceMessage(mode){
       return ({
-        funcionamento_normal: 'A biblioteca está em funcionamento normal.',
-        somente_consulta: 'A biblioteca está funcionando apenas para consulta local no momento.',
-        pausada: 'A biblioteca está com o atendimento pausado no momento.'
-      })[String(mode || '').trim()] || '';
+        em_organizacao: 'A biblioteca está em organização. O atendimento ocorre conforme a capacidade operacional atual.',
+        atendimento_eventual: 'A biblioteca funciona com atendimento eventual. Consulte os canais do CCLA para informações atualizadas.',
+        atendimento_semanal: 'A biblioteca funciona com atendimento semanal em ritmo regular. Consulte os canais do CCLA para os horários e orientações vigentes.',
+        fechado_temporariamente: 'A biblioteca está temporariamente fechada para atendimento presencial. Consulte os canais do CCLA para atualizações e orientações.'
+      })[String(mode || '')] || '';
     }
 
     function isCanonicalServiceDefaultMessage(msg){
       const t = String(msg || '').trim();
       if (!t) return false;
       return [
-        'A biblioteca está em funcionamento normal.',
-        'A biblioteca está funcionando apenas para consulta local no momento.',
-        'A biblioteca está com o atendimento pausado no momento.'
+        'A biblioteca está em organização. O atendimento ocorre conforme a capacidade operacional atual.',
+        'A biblioteca funciona com atendimento eventual. Consulte os canais do CCLA para informações atualizadas.',
+        'A biblioteca funciona com atendimento semanal em ritmo regular. Consulte os canais do CCLA para os horários e orientações vigentes.',
+        'A biblioteca está temporariamente fechada para atendimento presencial. Consulte os canais do CCLA para atualizações e orientações.',
+        'O atendimento ocorre de forma eventual, conforme a disponibilidade da equipe.',
+        'A biblioteca está em atendimento semanal.',
+        'A biblioteca está temporariamente fechada para atendimento presencial.',
+        'A biblioteca está temporariamente fechada para atendimento presencial. Consulte os canais do CCLA para atualizações.'
       ].includes(t);
     }
 
@@ -1952,124 +1531,38 @@
       return isCanonicalServiceDefaultMessage(t) ? '' : t;
     }
 
-    function normalizeLibraryId(value){
-      const v = String(value || '').trim();
-      return v || null;
-    }
-
-    function getAllowedServiceModes(){
-      return ['funcionamento_normal', 'somente_consulta', 'pausada'];
-    }
-
-    function normalizeServiceMode(value){
-      const v = String(value || '').trim();
-      return getAllowedServiceModes().includes(v) ? v : 'funcionamento_normal';
-    }
-
-    function getAllowsNewReservations(row){
-      if (!row || typeof row !== 'object') return false;
-      if (row.allows_new_reservations === true || row.allows_new_reservations === false) return row.allows_new_reservations === true;
-      if (row.allow_reservations === true || row.allow_reservations === false) return row.allow_reservations === true;
-      return false;
-    }
-
-    function getAllowsNewLoans(row){
-      if (!row || typeof row !== 'object') return false;
-      if (row.allows_new_loans === true || row.allows_new_loans === false) return row.allows_new_loans === true;
-      return false;
-    }
-
-    function normalizeLibraryServiceState(row, fallbackLibraryId=null){
-      if (!row || typeof row !== 'object') {
-        return {
-          library_id: normalizeLibraryId(fallbackLibraryId),
-          service_mode: 'funcionamento_normal',
-          allows_new_reservations: false,
-          allows_new_loans: false,
-          public_message: ''
-        };
-      }
-      return {
-        ...row,
-        library_id: normalizeLibraryId(row.library_id || fallbackLibraryId),
-        service_mode: normalizeServiceMode(row.service_mode),
-        allows_new_reservations: getAllowsNewReservations(row),
-        allows_new_loans: getAllowsNewLoans(row),
-        public_message: String(row.public_message || '').trim(),
-      };
-    }
-
     function renderLibraryServiceState(state){
-      const normalizedState = normalizeLibraryServiceState(state);
-      const modeText = translateServiceMode(normalizedState?.service_mode);
-      const reservationsText = normalizedState?.allows_new_reservations ? 'Reservas públicas: abertas' : 'Reservas públicas: fechadas';
+      const modeText = translateServiceMode(state?.service_mode);
+      const reservationsText = state?.allow_reservations ? 'Reservas públicas: abertas' : 'Reservas públicas: fechadas';
       setChip('chipServiceMode', `Modo: ${modeText}`);
       setChip('chipReservationsState', reservationsText);
 
-      if ($('serviceModeSelect')) $('serviceModeSelect').value = normalizeServiceMode(normalizedState?.service_mode);
-      if ($('allowReservationsToggle')) $('allowReservationsToggle').checked = !!normalizedState?.allows_new_reservations;
-      if ($('publicServiceMessage')) $('publicServiceMessage').value = getEditablePublicServiceMessage(normalizedState);
-      if ($('internalServiceMessage')) {
-        $('internalServiceMessage').value = '';
-        $('internalServiceMessage').disabled = true;
-        $('internalServiceMessage').placeholder = 'Campo indisponível nesta versão da base staging.';
-      }
-    }
-
-    async function resolveCurrentLibraryIdentity(){
-      const candidates = [
-        currentAccessRow?.library_id,
-        currentIdentityRow?.library_id,
-        currentAccessRow?.default_library_id,
-        currentIdentityRow?.default_library_id,
-        libraryServiceState?.library_id,
-      ].map(normalizeLibraryId).filter(Boolean);
-      if (candidates.length) return { id: candidates[0], row: null };
-
-      const slug = String(
-        currentAccessRow?.library_slug ||
-        currentAccessRow?.default_library_slug ||
-        currentIdentityRow?.library_slug ||
-        currentIdentityRow?.default_library_slug ||
-        ''
-      ).trim();
-
-      if (slug) {
-        const { data, error } = await supabase
-          .from('libraries')
-          .select('id,slug,name,short_name')
-          .eq('slug', slug)
-          .maybeSingle();
-        if (error) throw error;
-        if (data?.id) return { id: normalizeLibraryId(data.id), row: data };
-      }
-
-      return { id: null, row: null };
+      if ($('serviceModeSelect')) $('serviceModeSelect').value = state?.service_mode || 'em_organizacao';
+      if ($('allowReservationsToggle')) $('allowReservationsToggle').checked = !!state?.allow_reservations;
+      if ($('publicServiceMessage')) $('publicServiceMessage').value = getEditablePublicServiceMessage(state);
+      if ($('internalServiceMessage')) $('internalServiceMessage').value = state?.internal_message || '';
     }
 
     async function loadLibraryServiceState({silent=false} = {}){
       try {
-        const resolved = await resolveCurrentLibraryIdentity();
-        const libraryId = normalizeLibraryId(resolved?.id);
-        if (!libraryId) throw new Error('Biblioteca ativa não identificada para carregar o funcionamento.');
-
-        const { data, error } = await supabase
-          .from('library_service_state')
-          .select('library_id,service_mode,public_message,allows_new_reservations,allows_new_loans,updated_at')
-          .eq('library_id', libraryId)
-          .maybeSingle();
+        const { data, error } = await supabase.rpc('get_library_service_state');
         if (error) throw error;
-
-        libraryServiceState = normalizeLibraryServiceState(data, libraryId);
-        renderLibraryServiceState(libraryServiceState);
+        const row = Array.isArray(data) ? data[0] : data;
+        libraryServiceState = row || null;
+        renderLibraryServiceState(libraryServiceState || {
+          service_mode: 'em_organizacao',
+          allow_reservations: false,
+          public_message: '',
+          internal_message: ''
+        });
         if (!silent) clearStatus('serviceStateMsg');
       } catch (e) {
         libraryServiceState = null;
         renderLibraryServiceState({
-          service_mode: 'funcionamento_normal',
-          allows_new_reservations: false,
-          allows_new_loans: false,
-          public_message: ''
+          service_mode: 'em_organizacao',
+          allow_reservations: false,
+          public_message: '',
+          internal_message: ''
         });
         setChip('chipServiceMode', 'Modo: erro');
         setChip('chipReservationsState', 'Reservas públicas: erro');
@@ -2082,27 +1575,17 @@
       const btn = $('btnSaveServiceState');
       btn.disabled = true;
       try {
-        const resolved = await resolveCurrentLibraryIdentity();
-        const libraryId = normalizeLibraryId(resolved?.id);
-        if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar o funcionamento.');
-
-        const currentState = normalizeLibraryServiceState(libraryServiceState, libraryId);
         const payload = {
-          library_id: libraryId,
-          service_mode: normalizeServiceMode($('serviceModeSelect')?.value),
-          allows_new_reservations: !!$('allowReservationsToggle')?.checked,
-          allows_new_loans: currentState.allows_new_loans,
-          public_message: String($('publicServiceMessage')?.value || '').trim()
+          p_service_mode: $('serviceModeSelect').value,
+          p_allow_reservations: !!$('allowReservationsToggle').checked,
+          p_public_message: $('publicServiceMessage').value.trim(),
+          p_internal_message: $('internalServiceMessage').value.trim()
         };
-        const { data, error } = await supabase
-          .from('library_service_state')
-          .upsert(payload, { onConflict: 'library_id' })
-          .select('library_id,service_mode,public_message,allows_new_reservations,allows_new_loans,updated_at')
-          .maybeSingle();
+        const { data, error } = await supabase.rpc('set_library_service_state', payload);
         if (error) throw error;
-
-        libraryServiceState = normalizeLibraryServiceState(data || payload, libraryId);
-        renderLibraryServiceState(libraryServiceState);
+        const row = Array.isArray(data) ? data[0] : data;
+        libraryServiceState = row || null;
+        renderLibraryServiceState(libraryServiceState || payload);
         setStatus('serviceStateMsg', 'Modo de funcionamento atualizado.', 'ok');
       } catch (e) {
         setStatus('serviceStateMsg', 'Não consegui salvar o modo de funcionamento: ' + (e.message || String(e)), 'bad', false);
@@ -2115,2085 +1598,8 @@
       $('btnSaveServiceState')?.addEventListener('click', saveLibraryServiceState);
     }
 
-    let currentLibraryRow = null;
-    let currentLibraryContactProfile = null;
-    let currentInterlibraryPartnerContact = null;
-    let currentInterlibraryRequests = [];
-    let currentActiveLibraries = [];
-    const LIBRARY_CONTACT_TABLE = 'library_contact_profiles';
-    const LIBRARY_CONTACT_RPC = 'upsert_library_contact_profile';
-    const INTERLIB_REQUEST_TABLE = 'document_permission_requests';
-    const INTERLIB_REQUEST_RPC = 'create_document_permission_request';
-    const INTERLIB_CONTACT_RPC = 'get_library_contact_for_cooperation';
-    let currentLibraryRegimentoBinding = null;
-    let currentLibraryRegimentoState = null;
-    const LIBRARY_REGIMENTO_BUCKET = 'library-regimentos';
 
-    function slugifyLibrarySlug(value){
-      return String(value || '')
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
-    }
-
-    function safeJsonObject(value){
-      if (!value) return {};
-      if (typeof value === 'object' && !Array.isArray(value)) return value;
-      if (typeof value !== 'string') return {};
-      try {
-        const parsed = JSON.parse(value);
-        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-      } catch {
-        return {};
-      }
-    }
-
-    function firstFilledValue(...values){
-      for (const value of values){
-        if (value === 0) return value;
-        if (typeof value === 'string' && value.trim()) return value.trim();
-        if (value !== null && value !== undefined && value !== '') return value;
-      }
-      return '';
-    }
-
-    function getAllowedThemePalettes(){
-      return ['default', 'contraste_suave', 'vermelho_escuro', 'cinza_vermelho'];
-    }
-
-    function getAllowedThemeFontPacks(){
-      return ['default', 'inter_merriweather', 'inter_source', 'system'];
-    }
-
-    function normalizeThemePalette(value){
-      const v = String(value || '').trim();
-      return getAllowedThemePalettes().includes(v) ? v : 'default';
-    }
-
-    function normalizeThemeFontPack(value){
-      const v = String(value || '').trim();
-      return getAllowedThemeFontPacks().includes(v) ? v : 'default';
-    }
-
-    function normalizeThemeStateFromLibraryRow(row){
-      const config = safeJsonObject(row?.theme_config || row?.ui_theme_config || row?.theme || row?.ui_theme);
-      return {
-        background_url: String(firstFilledValue(
-          row?.theme_background_url,
-          row?.background_image_url,
-          row?.hero_background_url,
-          config?.background_url,
-          config?.background_image_url,
-          config?.hero_background_url,
-          config?.background,
-          ''
-        ) || '').trim(),
-        palette: normalizeThemePalette(firstFilledValue(
-          row?.theme_palette,
-          row?.palette,
-          config?.palette,
-          config?.color_palette,
-          'default'
-        )),
-        font_pack: normalizeThemeFontPack(firstFilledValue(
-          row?.theme_font_pack,
-          row?.font_pack,
-          config?.font_pack,
-          config?.fonts,
-          'default'
-        ))
-      };
-    }
-
-    function getEmptyLibraryContactProfile(libraryId=''){
-      return {
-        library_id: String(libraryId || '').trim(),
-        contact_name: '',
-        contact_role: '',
-        contact_email: '',
-        contact_phone: '',
-        contact_whatsapp: '',
-        contact_alternate: '',
-        postal_address: '',
-        created_at: null,
-        created_by: null,
-        updated_at: null,
-        updated_by: null,
-      };
-    }
-
-    function normalizeLibraryContactProfile(row, libraryId=''){
-      const base = getEmptyLibraryContactProfile(libraryId || row?.library_id || '');
-      if (!row || typeof row !== 'object') return base;
-      return {
-        ...base,
-        library_id: String(row?.library_id || base.library_id || '').trim(),
-        contact_name: String(row?.contact_name || '').trim(),
-        contact_role: String(row?.contact_role || '').trim(),
-        contact_email: String(row?.contact_email || '').trim(),
-        contact_phone: String(row?.contact_phone || '').trim(),
-        contact_whatsapp: String(row?.contact_whatsapp || '').trim(),
-        contact_alternate: String(row?.contact_alternate || '').trim(),
-        postal_address: String(row?.postal_address || '').trim(),
-        created_at: row?.created_at || null,
-        created_by: row?.created_by || null,
-        updated_at: row?.updated_at || null,
-        updated_by: row?.updated_by || null,
-      };
-    }
-
-    function isMissingLibraryContactBackendError(error){
-      const raw = String(error?.message || error?.details || error?.hint || error || '').toLowerCase();
-      return raw.includes('could not find')
-        || raw.includes('does not exist')
-        || raw.includes('relation')
-        || raw.includes('function')
-        || raw.includes('schema cache');
-    }
-
-    async function fetchLibraryContactProfile(libraryId){
-      const { data, error } = await supabase
-        .from(LIBRARY_CONTACT_TABLE)
-        .select('library_id,contact_name,contact_role,contact_email,contact_phone,contact_whatsapp,contact_alternate,postal_address,created_at,created_by,updated_at,updated_by')
-        .eq('library_id', libraryId)
-        .maybeSingle();
-      if (error) throw error;
-      return normalizeLibraryContactProfile(data || { library_id: libraryId }, libraryId);
-    }
-
-    function buildLibraryContactProfilePayload(libraryId){
-      return {
-        library_id: libraryId,
-        contact_name: String($('libraryContactName')?.value || '').trim() || null,
-        contact_role: String($('libraryContactRole')?.value || '').trim() || null,
-        contact_email: String($('libraryContactEmail')?.value || '').trim() || null,
-        contact_phone: String($('libraryContactPhone')?.value || '').trim() || null,
-        contact_whatsapp: String($('libraryContactWhatsapp')?.value || '').trim() || null,
-        contact_alternate: String($('libraryContactAlternate')?.value || '').trim() || null,
-        postal_address: String($('libraryPostalAddress')?.value || '').trim() || null,
-      };
-    }
-
-    function renderLibraryIdentity(row, profile=currentLibraryContactProfile){
-      const normalizedProfile = normalizeLibraryContactProfile(profile || {}, row?.id || row?.library_id || currentLibraryRow?.id || '');
-      $('libraryFullName').value = String(row?.name || '').trim();
-      $('libraryShortName').value = String(row?.short_name || '').trim();
-      $('librarySlug').value = String(row?.slug || '').trim();
-      $('libraryContactName').value = normalizedProfile.contact_name;
-      $('libraryContactRole').value = normalizedProfile.contact_role;
-      $('libraryContactEmail').value = normalizedProfile.contact_email;
-      $('libraryContactPhone').value = normalizedProfile.contact_phone;
-      $('libraryContactWhatsapp').value = normalizedProfile.contact_whatsapp;
-      $('libraryContactAlternate').value = normalizedProfile.contact_alternate;
-      $('libraryPostalAddress').value = normalizedProfile.postal_address;
-    }
-
-    function renderLibraryTheme(row){
-      const theme = normalizeThemeStateFromLibraryRow(row || {});
-      $('libraryThemeBackground').value = theme.background_url;
-      $('libraryThemePalette').value = theme.palette;
-      $('libraryThemeFontPack').value = theme.font_pack;
-      const previewBits = [];
-      previewBits.push(theme.background_url ? 'Imagem configurada' : 'Sem imagem personalizada');
-      previewBits.push('Paleta: ' + theme.palette.replace(/_/g, ' '));
-      previewBits.push('Fontes: ' + theme.font_pack.replace(/_/g, ' + '));
-      $('libraryThemePreviewNote').value = previewBits.join(' · ');
-    }
-
-
-    function getKnownLibraryLogoCandidatesBySlug(slug){
-      const normalized = String(slug || '').trim().toLowerCase();
-      if (!normalized) return [];
-      const localPath = `./assets/img/libraries/${normalized}/logo-${normalized}.png`;
-      const bySlug = {
-        anarbib: [localPath, 'https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png'],
-        blmf: [localPath, 'https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png'],
-        btl: [localPath, 'https://cclamazonia.noblogs.org/files/2026/03/logo-btl.png']
-      };
-      return Array.isArray(bySlug[normalized]) ? bySlug[normalized] : [localPath];
-    }
-
-    function safeJsonArray(value){
-      if (!value) return [];
-      if (Array.isArray(value)) return value;
-      if (typeof value !== 'string') return [];
-      try {
-        const parsed = JSON.parse(value);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
-    }
-
-    function getLibraryLogoCandidates(row){
-      const config = safeJsonObject(row?.theme_config || row?.ui_theme_config || row?.theme || row?.ui_theme);
-      const direct = [
-        row?.logo_url,
-        row?.public_logo_url,
-        row?.logo_public_url,
-        row?.brand_logo_url,
-        row?.header_logo_url,
-        row?.theme_logo_url,
-        row?.ui_logo_url,
-        config?.logo_url,
-        config?.public_logo_url,
-        config?.brand_logo_url,
-        config?.header_logo_url,
-        config?.theme_logo_url,
-      ].map((value) => String(value || '').trim()).filter(Boolean);
-      const slugCandidates = getKnownLibraryLogoCandidatesBySlug(row?.slug || row?.library_slug || row?.default_library_slug || '');
-      return Array.from(new Set([...direct, ...slugCandidates])).filter(Boolean);
-    }
-
-    function hideActiveLibraryLogo(){
-      const el = $('activeLibraryLogo');
-      if (!el) return;
-      el.classList.add('hidden');
-      el.removeAttribute('src');
-      el.dataset.candidates = '[]';
-      el.dataset.candidateIndex = '0';
-    }
-
-    function updateTopbarAuthButton(isLoggedIn){
-      const btn = $('btnSair');
-      if (!btn) return;
-      btn.textContent = isLoggedIn ? 'Logout' : 'Login';
-      btn.setAttribute('aria-label', isLoggedIn ? 'Logout' : 'Login');
-      btn.title = isLoggedIn ? 'Encerrar sessão e voltar ao cadastro' : 'Ir para o cadastro / login';
-    }
-
-    function applyActiveLibraryLogoCandidate(index=0){
-      const el = $('activeLibraryLogo');
-      if (!el) return;
-      const candidates = safeJsonArray(el.dataset.candidates || '[]');
-      if (!Array.isArray(candidates) || index >= candidates.length) {
-        hideActiveLibraryLogo();
-        return;
-      }
-      el.dataset.candidateIndex = String(index);
-      el.classList.remove('hidden');
-      el.src = String(candidates[index] || '').trim();
-    }
-
-    function renderActiveLibraryLogo(row){
-      const el = $('activeLibraryLogo');
-      if (!el) return;
-      const candidates = getLibraryLogoCandidates(row);
-      const libraryName = String(row?.short_name || row?.library_short_name || row?.name || row?.library_name || row?.slug || row?.library_slug || 'biblioteca ativa').trim();
-      el.alt = `Logo de ${libraryName}`;
-      el.dataset.candidates = JSON.stringify(candidates);
-      el.onerror = () => {
-        const nextIndex = Number(el.dataset.candidateIndex || '0') + 1;
-        applyActiveLibraryLogoCandidate(nextIndex);
-      };
-      if (!candidates.length) {
-        hideActiveLibraryLogo();
-        return;
-      }
-      applyActiveLibraryLogoCandidate(0);
-    }
-
-    function patchCachedLibraryIdentity(updatedRow){
-      if (!updatedRow || typeof updatedRow !== 'object') return;
-      currentLibraryRow = { ...(currentLibraryRow || {}), ...updatedRow };
-      if (currentAccessRow) {
-        currentAccessRow = {
-          ...currentAccessRow,
-          library_name: updatedRow?.name || currentAccessRow.library_name,
-          library_slug: updatedRow?.slug || currentAccessRow.library_slug,
-          library_short_name: updatedRow?.short_name || currentAccessRow.library_short_name,
-          default_library_name: updatedRow?.name || currentAccessRow.default_library_name,
-          default_library_slug: updatedRow?.slug || currentAccessRow.default_library_slug,
-        };
-      }
-      if (currentIdentityRow) {
-        currentIdentityRow = {
-          ...currentIdentityRow,
-          library_name: updatedRow?.name || currentIdentityRow.library_name,
-          library_slug: updatedRow?.slug || currentIdentityRow.library_slug,
-          library_short_name: updatedRow?.short_name || currentIdentityRow.library_short_name,
-          default_library_name: updatedRow?.name || currentIdentityRow.default_library_name,
-          default_library_slug: updatedRow?.slug || currentIdentityRow.default_library_slug,
-        };
-      }
-    }
-
-    async function fetchCurrentLibraryRow(){
-      const resolved = await resolveCurrentLibraryIdentity();
-      const libraryId = normalizeLibraryId(resolved?.id);
-      if (!libraryId) throw new Error('Biblioteca ativa não identificada para carregar os dados locais.');
-      const { data, error } = await supabase
-        .from('libraries')
-        .select('*')
-        .eq('id', libraryId)
-        .maybeSingle();
-      if (error) throw error;
-      currentLibraryRow = { ...(resolved?.row || {}), ...(data || {}), id: libraryId };
-      return currentLibraryRow;
-    }
-
-    async function loadLibraryIdentity(){
-      try {
-        const row = await fetchCurrentLibraryRow();
-        patchCachedLibraryIdentity(row);
-        try {
-          currentLibraryContactProfile = await fetchLibraryContactProfile(row?.id);
-        } catch (contactError) {
-          if (!isMissingLibraryContactBackendError(contactError)) throw contactError;
-          currentLibraryContactProfile = getEmptyLibraryContactProfile(row?.id);
-        }
-        renderLibraryIdentity(row, currentLibraryContactProfile);
-        renderActiveLibraryLogo(row);
-        await fillHeader();
-        clearStatus('libraryIdentityMsg');
-      } catch (e) {
-        currentLibraryContactProfile = getEmptyLibraryContactProfile('');
-        renderLibraryIdentity({}, currentLibraryContactProfile);
-        hideActiveLibraryLogo();
-        setStatus('libraryIdentityMsg', 'Não consegui carregar a identidade da biblioteca: ' + (e.message || String(e)), 'bad', false);
-      }
-    }
-
-    async function saveLibraryIdentity(){
-      clearStatus('libraryIdentityMsg');
-      const btn = $('btnSaveLibraryIdentity');
-      btn.disabled = true;
-      try {
-        const baseRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
-        const libraryId = normalizeLibraryId(baseRow?.id);
-        if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar a identidade.');
-
-        const fullName = String($('libraryFullName')?.value || '').trim();
-        const shortName = String($('libraryShortName')?.value || '').trim();
-        const slugInput = String($('librarySlug')?.value || '').trim();
-        const slug = slugifyLibrarySlug(slugInput);
-
-        if (!fullName) throw new Error('Informe o nome completo da biblioteca.');
-        if (!shortName) throw new Error('Informe o nome abreviado da biblioteca.');
-        if (!slug) throw new Error('Informe um slug válido para a biblioteca.');
-
-        $('librarySlug').value = slug;
-
-        const payload = { name: fullName, short_name: shortName, slug };
-        const { data, error } = await supabase
-          .from('libraries')
-          .update(payload)
-          .eq('id', libraryId)
-          .select('*')
-          .maybeSingle();
-        if (error) throw error;
-
-        patchCachedLibraryIdentity(data || { id: libraryId, ...payload });
-
-        const contactPayload = buildLibraryContactProfilePayload(libraryId);
-        let contactBackendMissing = false;
-        try {
-          const { data: contactData, error: contactError } = await supabase.rpc(LIBRARY_CONTACT_RPC, {
-            p_library_id: libraryId,
-            p_profile: contactPayload,
-          });
-          if (contactError) throw contactError;
-          currentLibraryContactProfile = normalizeLibraryContactProfile(contactData || contactPayload, libraryId);
-        } catch (contactError) {
-          if (!isMissingLibraryContactBackendError(contactError)) throw contactError;
-          contactBackendMissing = true;
-          currentLibraryContactProfile = normalizeLibraryContactProfile(contactPayload, libraryId);
-        }
-
-        renderLibraryIdentity(currentLibraryRow || data || payload, currentLibraryContactProfile);
-        renderActiveLibraryLogo(currentLibraryRow || data || payload);
-        await fillHeader();
-        setStatus(
-          'libraryIdentityMsg',
-          contactBackendMissing
-            ? 'Identidade atualizada. Os canais de contato desta biblioteca ainda precisam do backend dedicado para ficarem salvos.'
-            : 'Identidade e canais de contato da biblioteca atualizados.',
-          contactBackendMissing ? 'warn' : 'ok'
-        );
-      } catch (e) {
-        setStatus('libraryIdentityMsg', 'Não consegui salvar a identidade da biblioteca: ' + (e.message || String(e)), 'bad', false);
-      } finally {
-        btn.disabled = false;
-      }
-    }
-
-    async function trySetLibraryThemeConfig(libraryId, themeConfig){
-      const attempts = [
-        { p_library_id: libraryId, p_theme_config: themeConfig },
-        { library_id: libraryId, p_theme_config: themeConfig },
-        { p_library_id: libraryId, theme_config: themeConfig },
-        { library_id: libraryId, theme_config: themeConfig },
-        { p_library_id: libraryId, p_config: themeConfig },
-        { library_id: libraryId, config: themeConfig },
-      ];
-      let lastError = null;
-      for (const args of attempts){
-        const { data, error } = await supabase.rpc('set_library_theme_config', args);
-        if (!error) return { data, args };
-        lastError = error;
-        const message = String(error?.message || '').toLowerCase();
-        const looksLikeSignatureIssue = message.includes('function') || message.includes('schema cache') || message.includes('signature') || message.includes('parameter');
-        if (!looksLikeSignatureIssue) throw error;
-      }
-      throw lastError || new Error('RPC set_library_theme_config indisponível.');
-    }
-
-    async function loadLibraryTheme(){
-      try {
-        const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
-        renderLibraryTheme(row);
-        clearStatus('libraryThemeMsg');
-      } catch (e) {
-        renderLibraryTheme({});
-        setStatus('libraryThemeMsg', 'Não consegui carregar o tema da biblioteca: ' + (e.message || String(e)), 'bad', false);
-      }
-    }
-
-    async function saveLibraryTheme({reset=false} = {}){
-      clearStatus('libraryThemeMsg');
-      const saveBtn = $('btnSaveLibraryTheme');
-      const resetBtn = $('btnResetLibraryTheme');
-      saveBtn.disabled = true;
-      resetBtn.disabled = true;
-      try {
-        const baseRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
-        const libraryId = normalizeLibraryId(baseRow?.id);
-        if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar o tema.');
-
-        const themeConfig = {
-          background_url: reset ? '' : String($('libraryThemeBackground')?.value || '').trim(),
-          palette: normalizeThemePalette(reset ? 'default' : $('libraryThemePalette')?.value),
-          font_pack: normalizeThemeFontPack(reset ? 'default' : $('libraryThemeFontPack')?.value),
-        };
-
-        await trySetLibraryThemeConfig(libraryId, themeConfig);
-        const refreshed = await fetchCurrentLibraryRow();
-        renderLibraryTheme(refreshed);
-        setStatus('libraryThemeMsg', reset ? 'Tema padrão restaurado.' : 'Tema da biblioteca atualizado.', 'ok');
-      } catch (e) {
-        setStatus('libraryThemeMsg', 'Não consegui salvar o tema da biblioteca: ' + (e.message || String(e)), 'bad', false);
-      } finally {
-        saveBtn.disabled = false;
-        resetBtn.disabled = false;
-      }
-    }
-
-    function setupLibraryIdentityActions(){
-      $('btnSaveLibraryIdentity')?.addEventListener('click', saveLibraryIdentity);
-      $('librarySlug')?.addEventListener('blur', () => {
-        $('librarySlug').value = slugifyLibrarySlug($('librarySlug').value);
-      });
-    }
-
-    function getEmptyInterlibraryContact(libraryId=''){
-      return {
-        library_id: normalizeLibraryId(libraryId),
-        slug: '',
-        name: '',
-        short_name: '',
-        city: '',
-        state: '',
-        contact_name: '',
-        contact_role: '',
-        contact_email: '',
-        contact_phone: '',
-        contact_whatsapp: '',
-        contact_alternate: '',
-        postal_address: '',
-      };
-    }
-
-    function normalizeInterlibraryContact(row, libraryId=''){
-      const obj = row && typeof row === 'object' ? row : {};
-      return {
-        library_id: normalizeLibraryId(firstFilledValue(obj.library_id, obj.id, libraryId)),
-        slug: String(firstFilledValue(obj.slug, '') || '').trim(),
-        name: String(firstFilledValue(obj.name, obj.library_name, '') || '').trim(),
-        short_name: String(firstFilledValue(obj.short_name, obj.library_short_name, '') || '').trim(),
-        city: String(firstFilledValue(obj.city, '') || '').trim(),
-        state: String(firstFilledValue(obj.state, '') || '').trim(),
-        contact_name: String(firstFilledValue(obj.contact_name, '') || '').trim(),
-        contact_role: String(firstFilledValue(obj.contact_role, '') || '').trim(),
-        contact_email: String(firstFilledValue(obj.contact_email, '') || '').trim(),
-        contact_phone: String(firstFilledValue(obj.contact_phone, '') || '').trim(),
-        contact_whatsapp: String(firstFilledValue(obj.contact_whatsapp, '') || '').trim(),
-        contact_alternate: String(firstFilledValue(obj.contact_alternate, '') || '').trim(),
-        postal_address: String(firstFilledValue(obj.postal_address, '') || '').trim(),
-      };
-    }
-
-    function normalizeInterlibraryRequest(row){
-      const obj = row && typeof row === 'object' ? row : {};
-      return {
-        id: String(firstFilledValue(obj.id, '') || '').trim(),
-        requester_library_id: normalizeLibraryId(firstFilledValue(obj.requester_library_id, '')),
-        target_library_id: normalizeLibraryId(firstFilledValue(obj.target_library_id, '')),
-        requested_action: String(firstFilledValue(obj.requested_action, obj.action, 'outra') || 'outra').trim(),
-        object_type: String(firstFilledValue(obj.object_type, 'outro') || 'outro').trim(),
-        object_ref: String(firstFilledValue(obj.object_ref, '') || '').trim(),
-        message: String(firstFilledValue(obj.message, '') || '').trim(),
-        status: String(firstFilledValue(obj.status, 'pending') || 'pending').trim(),
-        response_note: String(firstFilledValue(obj.response_note, '') || '').trim(),
-        created_at: firstFilledValue(obj.created_at, null),
-        updated_at: firstFilledValue(obj.updated_at, null),
-        decided_at: firstFilledValue(obj.decided_at, null),
-      };
-    }
-
-    function isMissingInterlibraryBackendError(error){
-      const msg = String(error?.message || error || '').toLowerCase();
-      return (msg.includes(INTERLIB_REQUEST_TABLE.toLowerCase()) && (msg.includes('does not exist') || msg.includes('not found') || msg.includes('unknown')))
-        || (msg.includes(INTERLIB_REQUEST_RPC.toLowerCase()) && msg.includes('function'))
-        || (msg.includes(INTERLIB_CONTACT_RPC.toLowerCase()) && msg.includes('function'));
-    }
-
-    function interlibraryActionLabel(value){
-      const v = String(value || '').trim();
-      return {
-        edicao_notice: 'edição direta de notice',
-        proposta_correcao: 'análise de proposta de correção',
-        copia_local: 'criação de cópia local',
-        vinculo_recurso_digital: 'vínculo de recurso digital',
-        mutualizacao: 'ajuste de mutualização',
-        outra: 'outra solicitação',
-      }[v] || v || 'solicitação';
-    }
-
-    function interlibraryObjectLabel(value){
-      const v = String(value || '').trim();
-      return {
-        notice: 'notice',
-        exemplar: 'exemplar',
-        recurso_digital: 'recurso digital',
-        governanca: 'governança',
-        outro: 'outro',
-      }[v] || v || 'objeto';
-    }
-
-    function interlibraryStatusLabel(value){
-      const v = String(value || '').trim();
-      return {
-        pending: 'pendente',
-        accepted: 'aceita',
-        refused: 'recusada',
-        cancelled: 'cancelada',
-        expired: 'expirada',
-      }[v] || v || 'pendente';
-    }
-
-    function shortLibraryLabel(row){
-      const obj = row && typeof row === 'object' ? row : {};
-      const head = String(firstFilledValue(obj.short_name, obj.library_short_name, obj.name, obj.library_name, obj.slug, 'Biblioteca') || 'Biblioteca').trim();
-      const place = [obj.city, obj.state].map((v) => String(v || '').trim()).filter(Boolean).join(' / ');
-      return place ? `${head} — ${place}` : head;
-    }
-
-    function findKnownLibraryById(libraryId){
-      const id = normalizeLibraryId(libraryId);
-      if (!id) return null;
-      if (normalizeLibraryId(currentLibraryRow?.id) === id) return currentLibraryRow;
-      return currentActiveLibraries.find((row) => normalizeLibraryId(row?.id) === id) || null;
-    }
-
-    function renderInterlibraryPartnerOptions(options){
-      const select = $('interlibPartnerLibrary');
-      if (!select) return;
-      const currentValue = String(select.value || '').trim();
-      const authPartners = Array.isArray(currentDocGovernanceState?.authorized_partners)
-        ? currentDocGovernanceState.authorized_partners.map((v) => String(v || '').trim().toLowerCase()).filter(Boolean)
-        : [];
-      const sorted = [...(options || [])].sort((a, b) => {
-        const aScore = authPartners.includes(String(a?.slug || '').trim().toLowerCase()) ? 0 : 1;
-        const bScore = authPartners.includes(String(b?.slug || '').trim().toLowerCase()) ? 0 : 1;
-        if (aScore !== bScore) return aScore - bScore;
-        return shortLibraryLabel(a).localeCompare(shortLibraryLabel(b), 'pt-BR');
-      });
-      const validIds = new Set(sorted.map((row) => normalizeLibraryId(row?.id)).filter(Boolean));
-      const fallback = sorted[0] ? normalizeLibraryId(sorted[0].id) : '';
-      const preferred = authPartners.length
-        ? normalizeLibraryId((sorted.find((row) => authPartners.includes(String(row?.slug || '').trim().toLowerCase())) || {}).id || '')
-        : '';
-      const nextValue = validIds.has(currentValue) ? currentValue : (preferred && validIds.has(preferred) ? preferred : fallback);
-      select.innerHTML = '<option value="">Selecione uma biblioteca parceira</option>' + sorted.map((row) => {
-        const id = normalizeLibraryId(row?.id);
-        return `<option value="${id}">${shortLibraryLabel(row)}</option>`;
-      }).join('');
-      select.value = nextValue || '';
-    }
-
-    function summarizeInterlibraryPartner(contact){
-      const normalized = normalizeInterlibraryContact(contact);
-      const pieces = [
-        normalized.short_name || normalized.name || normalized.slug || '',
-        normalized.contact_name || '',
-        normalized.contact_role || ''
-      ].filter(Boolean);
-      return pieces.length ? pieces.join(' — ') : 'A biblioteca parceira ainda não salvou um contato institucional visível.';
-    }
-
-    function buildInterlibraryChannelsText(contact){
-      const normalized = normalizeInterlibraryContact(contact);
-      const lines = [];
-      if (normalized.contact_email) lines.push(`E-mail: ${normalized.contact_email}`);
-      if (normalized.contact_phone) lines.push(`Telefone: ${normalized.contact_phone}`);
-      if (normalized.contact_whatsapp) lines.push(`WhatsApp: ${normalized.contact_whatsapp}`);
-      if (normalized.contact_alternate) lines.push(`Canal alternativo: ${normalized.contact_alternate}`);
-      if (normalized.postal_address) lines.push(`Endereço: ${normalized.postal_address}`);
-      if (!lines.length) lines.push('A biblioteca parceira ainda não salvou canais diretos neste espaço.');
-      return lines.join('
-');
-    }
-
-    function renderInterlibraryPartnerContact(contact){
-      const normalized = normalizeInterlibraryContact(contact);
-      $('interlibPartnerContact').value = summarizeInterlibraryPartner(normalized);
-      $('interlibPartnerChannels').value = buildInterlibraryChannelsText(normalized);
-    }
-
-    function renderInterlibraryRequests(items){
-      const currentId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
-      const lines = (items || []).map((item) => {
-        const normalized = normalizeInterlibraryRequest(item);
-        const otherId = normalizeLibraryId(normalized.requester_library_id) === currentId
-          ? normalized.target_library_id
-          : normalized.requester_library_id;
-        const otherLibrary = findKnownLibraryById(otherId) || { id: otherId, name: otherId || 'Biblioteca parceira' };
-        const moment = fmtDateTimeBelem(normalized.updated_at || normalized.created_at || nowISO());
-        const action = interlibraryActionLabel(normalized.requested_action);
-        const objectLabel = interlibraryObjectLabel(normalized.object_type);
-        const objectRef = normalized.object_ref ? ` · ref.: ${normalized.object_ref}` : '';
-        return `${moment} · ${shortLibraryLabel(otherLibrary)} · ${action} (${objectLabel}) · ${interlibraryStatusLabel(normalized.status)}${objectRef}`;
-      });
-      $('interlibRecentRequests').value = lines.length ? lines.join('
-') : 'Nenhuma solicitação interbibliotecas registrada ainda para esta biblioteca.';
-    }
-
-    async function fetchInterlibraryActiveLibraries(){
-      const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
-      const currentId = normalizeLibraryId(libraryRow?.id);
-      const { data, error } = await supabase
-        .from('libraries')
-        .select('id,slug,name,short_name,city,state,is_active')
-        .eq('is_active', true)
-        .order('name', { ascending: true });
-      if (error) throw error;
-      currentActiveLibraries = (data || [])
-        .map((row) => ({
-          ...row,
-          id: normalizeLibraryId(row?.id),
-          slug: String(row?.slug || '').trim(),
-          name: String(row?.name || '').trim(),
-          short_name: String(row?.short_name || '').trim(),
-          city: String(row?.city || '').trim(),
-          state: String(row?.state || '').trim(),
-        }))
-        .filter((row) => row.id && row.id !== currentId);
-      return currentActiveLibraries;
-    }
-
-    async function fetchInterlibraryPartnerContact(libraryId){
-      const targetId = normalizeLibraryId(libraryId);
-      if (!targetId) return getEmptyInterlibraryContact('');
-      const { data, error } = await supabase.rpc(INTERLIB_CONTACT_RPC, { p_target_library_id: targetId });
-      if (error) throw error;
-      const row = Array.isArray(data) ? (data[0] || null) : data;
-      return normalizeInterlibraryContact(row || { library_id: targetId }, targetId);
-    }
-
-    async function fetchInterlibraryRequests(libraryId){
-      const currentId = normalizeLibraryId(libraryId);
-      if (!currentId) return [];
-      const { data, error } = await supabase
-        .from(INTERLIB_REQUEST_TABLE)
-        .select('id,requester_library_id,target_library_id,requested_action,object_type,object_ref,message,status,response_note,created_at,updated_at,decided_at')
-        .or(`requester_library_id.eq.${currentId},target_library_id.eq.${currentId}`)
-        .order('updated_at', { ascending: false })
-        .limit(8);
-      if (error) throw error;
-      return (data || []).map(normalizeInterlibraryRequest);
-    }
-
-    async function loadInterlibraryPartnerContact({ silent=false } = {}){
-      const targetId = normalizeLibraryId($('interlibPartnerLibrary')?.value);
-      if (!targetId) {
-        currentInterlibraryPartnerContact = getEmptyInterlibraryContact('');
-        renderInterlibraryPartnerContact(currentInterlibraryPartnerContact);
-        if (!silent) setStatus('interlibRequestsMsg', 'Selecione uma biblioteca parceira para ver os canais diretos de contato.', 'warn');
-        return currentInterlibraryPartnerContact;
-      }
-      try {
-        currentInterlibraryPartnerContact = await fetchInterlibraryPartnerContact(targetId);
-        renderInterlibraryPartnerContact(currentInterlibraryPartnerContact);
-        if (!silent) setStatus('interlibRequestsMsg', 'Contato institucional da parceira carregado.', 'ok');
-        return currentInterlibraryPartnerContact;
-      } catch (e) {
-        currentInterlibraryPartnerContact = getEmptyInterlibraryContact(targetId);
-        renderInterlibraryPartnerContact(currentInterlibraryPartnerContact);
-        const missing = isMissingInterlibraryBackendError(e);
-        const msg = missing
-          ? 'Ainda não encontrei o backend de contato interbibliotecas. Aplica primeiro o mini-lote SQL desta etapa.'
-          : 'Não consegui carregar o contato da biblioteca parceira: ' + (e.message || String(e));
-        setStatus('interlibRequestsMsg', msg, missing ? 'warn' : 'bad', false);
-        return currentInterlibraryPartnerContact;
-      }
-    }
-
-    async function loadInterlibraryRequests({ silent=false } = {}){
-      try {
-        const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
-        const libraryId = normalizeLibraryId(libraryRow?.id);
-        if (!libraryId) throw new Error('Biblioteca ativa não identificada para carregar as solicitações interbibliotecas.');
-        await fetchInterlibraryActiveLibraries();
-        renderInterlibraryPartnerOptions(currentActiveLibraries);
-        await loadInterlibraryPartnerContact({ silent: true });
-        currentInterlibraryRequests = await fetchInterlibraryRequests(libraryId);
-        renderInterlibraryRequests(currentInterlibraryRequests);
-        if (!silent) setStatus('interlibRequestsMsg', currentInterlibraryRequests.length ? 'Solicitações interbibliotecas carregadas.' : 'Ainda não há solicitações interbibliotecas desta biblioteca.', currentInterlibraryRequests.length ? 'ok' : 'warn');
-      } catch (e) {
-        currentInterlibraryRequests = [];
-        renderInterlibraryRequests(currentInterlibraryRequests);
-        const missing = isMissingInterlibraryBackendError(e);
-        const msg = missing
-          ? 'Ainda não encontrei o backend das solicitações interbibliotecas. Aplica primeiro o mini-lote SQL desta etapa.'
-          : 'Não consegui carregar as solicitações interbibliotecas: ' + (e.message || String(e));
-        setStatus('interlibRequestsMsg', msg, missing ? 'warn' : 'bad', false);
-      }
-    }
-
-    function readInterlibraryRequestForm(){
-      return {
-        requested_action: String($('interlibRequestedAction')?.value || 'outra').trim() || 'outra',
-        object_type: String($('interlibObjectType')?.value || 'outro').trim() || 'outro',
-        object_ref: String($('interlibObjectRef')?.value || '').trim(),
-        message: String($('interlibRequestMessage')?.value || '').trim(),
-      };
-    }
-
-    async function saveInterlibraryRequest(){
-      const btn = $('btnSendInterlibRequest');
-      if (btn) btn.disabled = true;
-      try {
-        const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
-        const requesterId = normalizeLibraryId(libraryRow?.id);
-        const targetId = normalizeLibraryId($('interlibPartnerLibrary')?.value);
-        if (!requesterId) throw new Error('Biblioteca ativa não identificada para enviar a solicitação.');
-        if (!targetId) throw new Error('Escolhe primeiro a biblioteca parceira.');
-        if (requesterId === targetId) throw new Error('A solicitação interbibliotecas precisa apontar para outra biblioteca.');
-        const requestPayload = readInterlibraryRequestForm();
-        if (!requestPayload.message) throw new Error('Escreve uma mensagem curta explicando o pedido.');
-        const { data, error } = await supabase.rpc(INTERLIB_REQUEST_RPC, {
-          p_requester_library_id: requesterId,
-          p_target_library_id: targetId,
-          p_request: requestPayload
-        });
-        if (error) throw error;
-        const normalized = normalizeInterlibraryRequest(data || requestPayload);
-        currentInterlibraryRequests = [normalized, ...currentInterlibraryRequests].slice(0, 8);
-        renderInterlibraryRequests(currentInterlibraryRequests);
-        $('interlibObjectRef').value = '';
-        $('interlibRequestMessage').value = '';
-        setStatus('interlibRequestsMsg', 'Solicitação interbibliotecas enviada. Se preferirem, conversem diretamente e registrem depois a resposta no sistema.', 'ok');
-        await loadInterlibraryRequests({ silent: true });
-      } catch (e) {
-        const missing = isMissingInterlibraryBackendError(e);
-        const msg = missing
-          ? 'Ainda não encontrei o backend das solicitações interbibliotecas. Aplica primeiro o mini-lote SQL desta etapa.'
-          : 'Não consegui enviar a solicitação interbibliotecas: ' + (e.message || String(e));
-        setStatus('interlibRequestsMsg', msg, missing ? 'warn' : 'bad', false);
-      } finally {
-        if (btn) btn.disabled = false;
-      }
-    }
-
-    function setupInterlibraryRequestActions(){
-      $('interlibPartnerLibrary')?.addEventListener('change', () => { loadInterlibraryPartnerContact(); });
-      $('btnRefreshInterlibRequests')?.addEventListener('click', () => { loadInterlibraryRequests(); });
-      $('btnSendInterlibRequest')?.addEventListener('click', saveInterlibraryRequest);
-    }
-
-    function setupLibraryThemeActions(){
-      $('btnSaveLibraryTheme')?.addEventListener('click', () => saveLibraryTheme());
-      $('btnResetLibraryTheme')?.addEventListener('click', () => saveLibraryTheme({ reset: true }));
-    }
-
-    let currentLibraryScheduleBinding = null;
-    let currentLibraryScheduleStateRow = null;
-
-    function getEmptyLibrarySchedule(){
-      return {
-        monday: '',
-        tuesday: '',
-        wednesday: '',
-        thursday: '',
-        friday: '',
-        weekend: '',
-        fixed_openings: '',
-        exceptional_closures: ''
-      };
-    }
-
-    function normalizeLibrarySchedule(input){
-      const base = getEmptyLibrarySchedule();
-      const source = input && typeof input === 'object' ? input : {};
-      return {
-        monday: String(source.monday || source.segunda || '').trim(),
-        tuesday: String(source.tuesday || source.terca || source.terça || '').trim(),
-        wednesday: String(source.wednesday || source.quarta || '').trim(),
-        thursday: String(source.thursday || source.quinta || '').trim(),
-        friday: String(source.friday || source.sexta || '').trim(),
-        weekend: String(source.weekend || source.fim_de_semana || '').trim(),
-        fixed_openings: String(source.fixed_openings || source.permanencias_fixas || source.permanências_fixas || '').trim(),
-        exceptional_closures: String(source.exceptional_closures || source.fechamentos_excepcionais || source.suspensoes_temporarias || source.suspensões_temporárias || '').trim(),
-      };
-    }
-
-    const LIBRARY_SCHEDULE_TEXT_FIELDS = {
-      monday: ['open_monday', 'library_open_monday', 'monday_hours', 'hours_monday', 'schedule_monday'],
-      tuesday: ['open_tuesday', 'library_open_tuesday', 'tuesday_hours', 'hours_tuesday', 'schedule_tuesday'],
-      wednesday: ['open_wednesday', 'library_open_wednesday', 'wednesday_hours', 'hours_wednesday', 'schedule_wednesday'],
-      thursday: ['open_thursday', 'library_open_thursday', 'thursday_hours', 'hours_thursday', 'schedule_thursday'],
-      friday: ['open_friday', 'library_open_friday', 'friday_hours', 'hours_friday', 'schedule_friday'],
-      weekend: ['open_weekend', 'library_open_weekend', 'weekend_hours', 'hours_weekend', 'schedule_weekend'],
-      fixed_openings: ['fixed_openings', 'library_fixed_openings', 'permanencias_fixas', 'permanencias_fixas', 'permanences'],
-      exceptional_closures: ['exceptional_closures', 'library_exceptional_closures', 'fechamentos_excepcionais', 'suspensoes_temporarias', 'closure_notes']
-    };
-
-    const LIBRARY_SCHEDULE_JSON_FIELDS = ['service_schedule', 'opening_hours', 'hours_config', 'schedule_config', 'operating_hours', 'service_hours', 'weekly_schedule'];
-    const LIBRARY_SCHEDULE_CONTAINER_FIELDS = ['config', 'settings', 'metadata', 'public_config', 'library_config', 'service_config', 'extra', 'extra_config', 'ui_config'];
-    const LIBRARY_SCHEDULE_CONTAINER_KEYS = ['service_schedule', 'opening_hours', 'hours', 'schedule', 'operating_hours', 'weekly_schedule'];
-
-    function hasOwn(obj, key){
-      return !!obj && Object.prototype.hasOwnProperty.call(obj, key);
-    }
-
-    function pickExistingField(row, candidates){
-      return (candidates || []).find((field) => hasOwn(row, field)) || null;
-    }
-
-    function extractLibraryScheduleFromTextFields(row){
-      const out = getEmptyLibrarySchedule();
-      const matched = {};
-      let found = 0;
-      for (const [logicalKey, candidates] of Object.entries(LIBRARY_SCHEDULE_TEXT_FIELDS)) {
-        const field = pickExistingField(row, candidates);
-        if (!field) continue;
-        matched[logicalKey] = field;
-        out[logicalKey] = String(row?.[field] || '').trim();
-        found += 1;
-      }
-      if (!found) return null;
-      return { schedule: normalizeLibrarySchedule(out), source: { type: 'text-fields', fields: matched } };
-    }
-
-    function extractLibraryScheduleFromJsonFields(row){
-      for (const field of LIBRARY_SCHEDULE_JSON_FIELDS) {
-        if (!hasOwn(row, field)) continue;
-        const obj = safeJsonObject(row?.[field]);
-        if (Object.keys(obj).length) return { schedule: normalizeLibrarySchedule(obj), source: { type: 'direct-json', field } };
-      }
-      for (const field of LIBRARY_SCHEDULE_CONTAINER_FIELDS) {
-        if (!hasOwn(row, field)) continue;
-        const container = safeJsonObject(row?.[field]);
-        for (const subkey of LIBRARY_SCHEDULE_CONTAINER_KEYS) {
-          const nested = safeJsonObject(container?.[subkey]);
-          if (Object.keys(nested).length) return { schedule: normalizeLibrarySchedule(nested), source: { type: 'json-container', field, subkey } };
-        }
-      }
-      return null;
-    }
-
-    function extractLibraryScheduleBinding(tableName, row){
-      if (!row || typeof row !== 'object') return null;
-      const textBinding = extractLibraryScheduleFromTextFields(row);
-      if (textBinding) return { table: tableName, ...textBinding };
-      const jsonBinding = extractLibraryScheduleFromJsonFields(row);
-      if (jsonBinding) return { table: tableName, ...jsonBinding };
-      return null;
-    }
-
-    function detectFallbackLibraryScheduleBinding(){
-      const serviceRow = currentLibraryScheduleStateRow || {};
-      const libraryRow = currentLibraryRow || {};
-
-      for (const field of LIBRARY_SCHEDULE_JSON_FIELDS) {
-        if (hasOwn(serviceRow, field)) return { table: 'library_service_state', source: { type: 'direct-json', field } };
-      }
-      for (const field of LIBRARY_SCHEDULE_CONTAINER_FIELDS) {
-        if (hasOwn(serviceRow, field)) return { table: 'library_service_state', source: { type: 'json-container', field, subkey: 'service_schedule' } };
-      }
-      for (const field of LIBRARY_SCHEDULE_JSON_FIELDS) {
-        if (hasOwn(libraryRow, field)) return { table: 'libraries', source: { type: 'direct-json', field } };
-      }
-      for (const field of LIBRARY_SCHEDULE_CONTAINER_FIELDS) {
-        if (hasOwn(libraryRow, field)) return { table: 'libraries', source: { type: 'json-container', field, subkey: 'service_schedule' } };
-      }
-      const serviceText = extractLibraryScheduleFromTextFields(serviceRow);
-      if (serviceText?.source) return { table: 'library_service_state', source: serviceText.source };
-      const libraryText = extractLibraryScheduleFromTextFields(libraryRow);
-      if (libraryText?.source) return { table: 'libraries', source: libraryText.source };
-      return null;
-    }
-
-    function renderLibrarySchedule(schedule){
-      const normalized = normalizeLibrarySchedule(schedule);
-      $('libraryOpenMonday').value = normalized.monday;
-      $('libraryOpenTuesday').value = normalized.tuesday;
-      $('libraryOpenWednesday').value = normalized.wednesday;
-      $('libraryOpenThursday').value = normalized.thursday;
-      $('libraryOpenFriday').value = normalized.friday;
-      $('libraryOpenWeekend').value = normalized.weekend;
-      $('libraryFixedOpenings').value = normalized.fixed_openings;
-      $('libraryExceptionalClosures').value = normalized.exceptional_closures;
-    }
-
-    function collectLibraryScheduleFromForm(){
-      return normalizeLibrarySchedule({
-        monday: $('libraryOpenMonday')?.value,
-        tuesday: $('libraryOpenTuesday')?.value,
-        wednesday: $('libraryOpenWednesday')?.value,
-        thursday: $('libraryOpenThursday')?.value,
-        friday: $('libraryOpenFriday')?.value,
-        weekend: $('libraryOpenWeekend')?.value,
-        fixed_openings: $('libraryFixedOpenings')?.value,
-        exceptional_closures: $('libraryExceptionalClosures')?.value,
-      });
-    }
-
-    async function fetchCurrentLibraryServiceStateRow(){
-      const resolved = await resolveCurrentLibraryIdentity();
-      const libraryId = normalizeLibraryId(resolved?.id);
-      if (!libraryId) throw new Error('Biblioteca ativa não identificada para carregar os horários.');
-      const { data, error } = await supabase
-        .from('library_service_state')
-        .select('*')
-        .eq('library_id', libraryId)
-        .maybeSingle();
-      if (error) throw error;
-      currentLibraryScheduleStateRow = { ...(data || {}), library_id: libraryId };
-      return currentLibraryScheduleStateRow;
-    }
-
-    async function loadLibrarySchedule(){
-      try {
-        const serviceRow = await fetchCurrentLibraryServiceStateRow();
-        const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
-        const binding = extractLibraryScheduleBinding('library_service_state', serviceRow)
-          || extractLibraryScheduleBinding('libraries', libraryRow)
-          || detectFallbackLibraryScheduleBinding();
-        currentLibraryScheduleBinding = binding || null;
-        renderLibrarySchedule(binding?.schedule || getEmptyLibrarySchedule());
-        clearStatus('libraryScheduleMsg');
-      } catch (e) {
-        currentLibraryScheduleBinding = null;
-        renderLibrarySchedule(getEmptyLibrarySchedule());
-        setStatus('libraryScheduleMsg', 'Não consegui carregar os horários da biblioteca: ' + (e.message || String(e)), 'bad', false);
-      }
-    }
-
-    function buildLibrarySchedulePayload(binding, schedule, baseRow){
-      const source = binding?.source || {};
-      if (source.type === 'text-fields') {
-        const payload = {};
-        for (const [logicalKey, field] of Object.entries(source.fields || {})) {
-          payload[field] = String(schedule?.[logicalKey] || '').trim();
-        }
-        return payload;
-      }
-      if (source.type === 'direct-json') {
-        return { [source.field]: schedule };
-      }
-      if (source.type === 'json-container') {
-        const field = source.field;
-        const subkey = source.subkey || 'service_schedule';
-        const container = safeJsonObject(baseRow?.[field]);
-        return { [field]: { ...container, [subkey]: schedule } };
-      }
-      throw new Error('Não encontrei uma estrutura segura para salvar os horários desta biblioteca.');
-    }
-
-    async function saveLibrarySchedule(){
-      clearStatus('libraryScheduleMsg');
-      const btn = $('btnSaveLibrarySchedule');
-      btn.disabled = true;
-      try {
-        const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
-        const serviceRow = currentLibraryScheduleStateRow?.library_id ? currentLibraryScheduleStateRow : await fetchCurrentLibraryServiceStateRow();
-        const binding = currentLibraryScheduleBinding || extractLibraryScheduleBinding('library_service_state', serviceRow) || extractLibraryScheduleBinding('libraries', libraryRow) || detectFallbackLibraryScheduleBinding();
-        if (!binding) throw new Error('Não encontrei ainda um campo de persistência para os horários desta biblioteca.');
-
-        const schedule = collectLibraryScheduleFromForm();
-        const libraryId = normalizeLibraryId(libraryRow?.id || serviceRow?.library_id);
-        if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar os horários.');
-
-        if (binding.table === 'library_service_state') {
-          const payload = buildLibrarySchedulePayload(binding, schedule, serviceRow);
-          const { data, error } = await supabase
-            .from('library_service_state')
-            .upsert({ library_id: libraryId, ...payload }, { onConflict: 'library_id' })
-            .select('*')
-            .maybeSingle();
-          if (error) throw error;
-          currentLibraryScheduleStateRow = { ...(data || {}), library_id: libraryId };
-        } else if (binding.table === 'libraries') {
-          const payload = buildLibrarySchedulePayload(binding, schedule, libraryRow);
-          const { data, error } = await supabase
-            .from('libraries')
-            .update(payload)
-            .eq('id', libraryId)
-            .select('*')
-            .maybeSingle();
-          if (error) throw error;
-          currentLibraryRow = { ...(currentLibraryRow || {}), ...(data || {}), id: libraryId };
-        } else {
-          throw new Error('Destino de gravação não reconhecido para os horários.');
-        }
-
-        await loadLibrarySchedule();
-        setStatus('libraryScheduleMsg', 'Horários e permanências atualizados.', 'ok');
-      } catch (e) {
-        setStatus('libraryScheduleMsg', 'Não consegui salvar os horários da biblioteca: ' + (e.message || String(e)), 'bad', false);
-      } finally {
-        btn.disabled = false;
-      }
-    }
-
-    function setupLibraryScheduleActions(){
-      $('btnSaveLibrarySchedule')?.addEventListener('click', saveLibrarySchedule);
-    }
-
-    let currentLibraryLocalRulesBinding = null;
-    let currentLibraryLocalRulesStateRow = null;
-
-    function getEmptyLocalRules(){
-      return {
-        reservation_policy: 'nao_permitir',
-        loan_policy: 'nao_permitir',
-        public_note: ''
-      };
-    }
-
-    function normalizeLocalPolicyValue(value){
-      const normalized = String(value || '').trim().toLowerCase();
-      return ['nao_permitir', 'sob_analise', 'permitir'].includes(normalized) ? normalized : 'nao_permitir';
-    }
-
-    function normalizeLocalRules(input){
-      const source = input && typeof input === 'object' ? input : {};
-      return {
-        reservation_policy: normalizeLocalPolicyValue(
-          source.reservation_policy || source.non_member_reservation_policy || source.reservas_nao_inscritos || source.reservation || ''
-        ),
-        loan_policy: normalizeLocalPolicyValue(
-          source.loan_policy || source.non_member_loan_policy || source.emprestimos_nao_inscritos || source.loan || ''
-        ),
-        public_note: String(
-          source.public_note || source.non_member_public_note || source.nota_publica || source.note || ''
-        ).trim()
-      };
-    }
-
-    function renderLocalRules(input){
-      const rules = normalizeLocalRules(input);
-      $('nonMemberReservationPolicy').value = rules.reservation_policy;
-      $('nonMemberLoanPolicy').value = rules.loan_policy;
-      $('nonMemberPublicNote').value = rules.public_note;
-    }
-
-    function collectLocalRulesFromForm(){
-      return normalizeLocalRules({
-        reservation_policy: $('nonMemberReservationPolicy')?.value,
-        loan_policy: $('nonMemberLoanPolicy')?.value,
-        public_note: $('nonMemberPublicNote')?.value,
-      });
-    }
-
-    function extractLocalRulesFromObject(obj){
-      if (!obj || typeof obj !== 'object') return null;
-      const rules = normalizeLocalRules(obj);
-      const hasAny = Boolean(
-        String(obj.reservation_policy || obj.non_member_reservation_policy || obj.reservas_nao_inscritos || obj.reservation || '').trim() ||
-        String(obj.loan_policy || obj.non_member_loan_policy || obj.emprestimos_nao_inscritos || obj.loan || '').trim() ||
-        String(obj.public_note || obj.non_member_public_note || obj.nota_publica || obj.note || '').trim()
-      );
-      return hasAny ? rules : null;
-    }
-
-    function extractLocalRulesBinding(tableName, row){
-      if (!row || typeof row !== 'object') return null;
-      const textCandidates = [
-        {
-          reservation_policy: 'non_member_reservation_policy',
-          loan_policy: 'non_member_loan_policy',
-          public_note: 'non_member_public_note'
-        },
-        {
-          reservation_policy: 'reservation_policy',
-          loan_policy: 'loan_policy',
-          public_note: 'public_note'
-        },
-        {
-          reservation_policy: 'outsider_reservation_policy',
-          loan_policy: 'outsider_loan_policy',
-          public_note: 'outsider_public_note'
-        }
-      ];
-      for (const fields of textCandidates) {
-        if (Object.values(fields).every((field) => Object.prototype.hasOwnProperty.call(row, field))) {
-          return { table: tableName, source: { type: 'text-fields', fields } };
-        }
-      }
-
-      const directJsonFields = [
-        'local_circulation_rules',
-        'circulation_rules',
-        'local_rules',
-        'circulation_policy',
-        'circulation_config'
-      ];
-      for (const field of directJsonFields) {
-        if (!Object.prototype.hasOwnProperty.call(row, field)) continue;
-        const parsed = safeJsonObject(row[field]);
-        if (extractLocalRulesFromObject(parsed || row[field])) {
-          return { table: tableName, source: { type: 'direct-json', field } };
-        }
-        if (parsed && typeof parsed === 'object') {
-          return { table: tableName, source: { type: 'direct-json', field } };
-        }
-      }
-
-      const containerFields = ['settings', 'config', 'library_config', 'service_config', 'ui_config', 'metadata', 'extra', 'policy_config'];
-      const subkeys = ['local_circulation_rules', 'circulation_rules', 'non_member_rules', 'local_rules'];
-      for (const field of containerFields) {
-        if (!Object.prototype.hasOwnProperty.call(row, field)) continue;
-        const container = safeJsonObject(row[field]);
-        if (!container || typeof container !== 'object') continue;
-        for (const subkey of subkeys) {
-          if (extractLocalRulesFromObject(container[subkey])) {
-            return { table: tableName, source: { type: 'json-container', field, subkey } };
-          }
-        }
-        return { table: tableName, source: { type: 'json-container', field, subkey: 'local_circulation_rules' } };
-      }
-      return null;
-    }
-
-    function detectFallbackLocalRulesBinding(){
-      const serviceRow = currentLibraryLocalRulesStateRow || currentLibraryScheduleStateRow || null;
-      const libraryRow = currentLibraryRow || null;
-      return extractLocalRulesBinding('library_service_state', serviceRow) || extractLocalRulesBinding('libraries', libraryRow) || null;
-    }
-
-    function readLocalRulesFromBinding(binding, baseRow){
-      const source = binding?.source || {};
-      if (!baseRow || typeof baseRow !== 'object' || !binding) return getEmptyLocalRules();
-      if (source.type === 'text-fields') {
-        const fields = source.fields || {};
-        return normalizeLocalRules({
-          reservation_policy: baseRow[fields.reservation_policy],
-          loan_policy: baseRow[fields.loan_policy],
-          public_note: baseRow[fields.public_note],
-        });
-      }
-      if (source.type === 'direct-json') {
-        return normalizeLocalRules(safeJsonObject(baseRow[source.field]));
-      }
-      if (source.type === 'json-container') {
-        const container = safeJsonObject(baseRow[source.field]);
-        return normalizeLocalRules(container?.[source.subkey]);
-      }
-      return getEmptyLocalRules();
-    }
-
-    function buildLocalRulesPayload(binding, rules, baseRow){
-      const source = binding?.source || {};
-      if (source.type === 'text-fields') {
-        const payload = {};
-        payload[source.fields.reservation_policy] = rules.reservation_policy;
-        payload[source.fields.loan_policy] = rules.loan_policy;
-        payload[source.fields.public_note] = rules.public_note;
-        return payload;
-      }
-      if (source.type === 'direct-json') {
-        return {
-          [source.field]: {
-            reservation_policy: rules.reservation_policy,
-            loan_policy: rules.loan_policy,
-            public_note: rules.public_note,
-          }
-        };
-      }
-      if (source.type === 'json-container') {
-        const container = safeJsonObject(baseRow?.[source.field]);
-        return {
-          [source.field]: {
-            ...container,
-            [source.subkey || 'local_circulation_rules']: {
-              reservation_policy: rules.reservation_policy,
-              loan_policy: rules.loan_policy,
-              public_note: rules.public_note,
-            }
-          }
-        };
-      }
-      throw new Error('Não encontrei uma estrutura segura para salvar as regras locais desta biblioteca.');
-    }
-
-    async function loadLocalRules(){
-      try {
-        const serviceRow = await fetchCurrentLibraryServiceStateRow();
-        currentLibraryLocalRulesStateRow = serviceRow;
-        const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
-        const binding = extractLocalRulesBinding('library_service_state', serviceRow)
-          || extractLocalRulesBinding('libraries', libraryRow)
-          || detectFallbackLocalRulesBinding();
-        currentLibraryLocalRulesBinding = binding;
-        const sourceRow = binding?.table === 'library_service_state' ? serviceRow : libraryRow;
-        renderLocalRules(readLocalRulesFromBinding(binding, sourceRow));
-        clearStatus('localRulesMsg');
-      } catch (e) {
-        renderLocalRules(getEmptyLocalRules());
-        setStatus('localRulesMsg', 'Não consegui carregar as regras locais: ' + (e.message || String(e)), 'bad', false);
-      }
-    }
-
-    async function saveLocalRules(){
-      clearStatus('localRulesMsg');
-      const btn = $('btnSaveLocalRules');
-      btn.disabled = true;
-      try {
-        const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
-        const serviceRow = currentLibraryLocalRulesStateRow?.library_id ? currentLibraryLocalRulesStateRow : await fetchCurrentLibraryServiceStateRow();
-        currentLibraryLocalRulesStateRow = serviceRow;
-        const binding = currentLibraryLocalRulesBinding
-          || extractLocalRulesBinding('library_service_state', serviceRow)
-          || extractLocalRulesBinding('libraries', libraryRow)
-          || detectFallbackLocalRulesBinding();
-        if (!binding) throw new Error('Não encontrei ainda um campo de persistência para as regras locais desta biblioteca.');
-
-        const libraryId = normalizeLibraryId(libraryRow?.id || serviceRow?.library_id);
-        if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar as regras locais.');
-        const rules = collectLocalRulesFromForm();
-
-        if (binding.table === 'library_service_state') {
-          const payload = buildLocalRulesPayload(binding, rules, serviceRow);
-          const { data, error } = await supabase
-            .from('library_service_state')
-            .upsert({ library_id: libraryId, ...payload }, { onConflict: 'library_id' })
-            .select('*')
-            .maybeSingle();
-          if (error) throw error;
-          currentLibraryLocalRulesStateRow = { ...(data || {}), library_id: libraryId };
-          currentLibraryScheduleStateRow = currentLibraryLocalRulesStateRow;
-        } else if (binding.table === 'libraries') {
-          const payload = buildLocalRulesPayload(binding, rules, libraryRow);
-          const { data, error } = await supabase
-            .from('libraries')
-            .update(payload)
-            .eq('id', libraryId)
-            .select('*')
-            .maybeSingle();
-          if (error) throw error;
-          currentLibraryRow = { ...(currentLibraryRow || {}), ...(data || {}), id: libraryId };
-        } else {
-          throw new Error('Destino de gravação não reconhecido para as regras locais.');
-        }
-
-        await loadLocalRules();
-        setStatus('localRulesMsg', 'Regras locais atualizadas.', 'ok');
-      } catch (e) {
-        setStatus('localRulesMsg', 'Não consegui salvar as regras locais: ' + (e.message || String(e)), 'bad', false);
-      } finally {
-        btn.disabled = false;
-      }
-    }
-
-    function setupLocalRulesActions(){
-      $('btnSaveLocalRules')?.addEventListener('click', saveLocalRules);
-    }
-
-    let currentDocGovernanceBinding = null;
-    let currentDocGovernanceState = null;
-
-    function getEmptyDocGovernance(){
-      return {
-        direct_edit_mode: 'nao_permitir',
-        correction_mode: 'propor_correcao',
-        local_reprise_mode: 'rascunho_local',
-        digital_link_mode: 'somente_locais',
-        default_mutualization: 'local',
-        local_items_only: true,
-        authorized_partners: [],
-        internal_note: ''
-      };
-    }
-
-    function normalizeDocGovSelect(value, allowed, fallback){
-      const normalized = String(value || '').trim().toLowerCase();
-      return allowed.includes(normalized) ? normalized : fallback;
-    }
-
-    function parseDocGovPartners(value){
-      if (Array.isArray(value)) {
-        return Array.from(new Set(value.map((item) => String(item || '').trim()).filter(Boolean)));
-      }
-      return Array.from(new Set(
-        String(value || '')
-          .split(/[\n,;]+/)
-          .map((item) => String(item || '').trim())
-          .filter(Boolean)
-      ));
-    }
-
-    function normalizeDocGovernance(value){
-      const obj = safeJsonObject(value);
-      const base = getEmptyDocGovernance();
-      return {
-        direct_edit_mode: normalizeDocGovSelect(firstFilledValue(
-          obj.direct_edit_mode,
-          obj.document_direct_edit_mode,
-          obj.direct_edit_foreign_notices,
-          ''
-        ), ['nao_permitir', 'permitir_com_parceiros', 'permitir_todas'], base.direct_edit_mode),
-        correction_mode: normalizeDocGovSelect(firstFilledValue(
-          obj.correction_mode,
-          obj.document_correction_mode,
-          obj.external_correction_mode,
-          ''
-        ), ['propor_correcao', 'propor_ou_editar', 'edicao_direta'], base.correction_mode),
-        local_reprise_mode: normalizeDocGovSelect(firstFilledValue(
-          obj.local_reprise_mode,
-          obj.document_local_reprise_mode,
-          obj.local_takeover_mode,
-          ''
-        ), ['nao_permitir', 'rascunho_local', 'reprise_local'], base.local_reprise_mode),
-        digital_link_mode: normalizeDocGovSelect(firstFilledValue(
-          obj.digital_link_mode,
-          obj.document_digital_link_mode,
-          obj.attach_digital_resources_mode,
-          ''
-        ), ['nao_permitir', 'somente_locais', 'permitir_com_parceiros'], base.digital_link_mode),
-        default_mutualization: normalizeDocGovSelect(firstFilledValue(
-          obj.default_mutualization,
-          obj.default_mutualization_status,
-          obj.mutualization_default,
-          ''
-        ), ['local', 'mutualizavel', 'consulta_local', 'emprestimo_interbib'], base.default_mutualization),
-        local_items_only: regimentoToBool(firstFilledValue(
-          obj.local_items_only,
-          obj.edit_local_items_only,
-          obj.local_exemplars_only,
-          base.local_items_only
-        )),
-        authorized_partners: parseDocGovPartners(firstFilledValue(
-          obj.authorized_partners,
-          obj.allowed_partners,
-          obj.partner_slugs,
-          ''
-        )),
-        internal_note: String(firstFilledValue(
-          obj.internal_note,
-          obj.document_governance_note,
-          obj.note,
-          ''
-        ) || '').trim(),
-      };
-    }
-
-    const DOC_GOV_TABLE = 'library_document_governance';
-    const DOC_GOV_RPC = 'upsert_library_document_governance';
-
-    function extractDocGovernanceBinding(row){
-      if (!row || typeof row !== 'object') return null;
-      const directJsonFields = ['document_governance_config', 'documentary_governance_config', 'governance_config', 'document_governance'];
-      for (const field of directJsonFields) {
-        if (Object.prototype.hasOwnProperty.call(row, field)) {
-          return { table: 'libraries', source: { type: 'direct-json', field } };
-        }
-      }
-      const containerFields = ['settings', 'config', 'library_config', 'metadata', 'extra'];
-      for (const field of containerFields) {
-        if (!Object.prototype.hasOwnProperty.call(row, field)) continue;
-        return { table: 'libraries', source: { type: 'json-container', field, subkey: 'document_governance' } };
-      }
-      return null;
-    }
-
-    function readDocGovernanceFromBinding(binding, row){
-      const source = binding?.source || {};
-      if (!binding || !row || typeof row !== 'object') return getEmptyDocGovernance();
-      if (source.type === 'dedicated-table') {
-        return normalizeDocGovernance(row?.config);
-      }
-      if (source.type === 'direct-json') {
-        return normalizeDocGovernance(row[source.field]);
-      }
-      if (source.type === 'json-container') {
-        const container = safeJsonObject(row[source.field]);
-        return normalizeDocGovernance(container?.[source.subkey]);
-      }
-      return getEmptyDocGovernance();
-    }
-
-    function getDocGovernancePayloadData(governance){
-      return {
-        direct_edit_mode: governance.direct_edit_mode,
-        correction_mode: governance.correction_mode,
-        local_reprise_mode: governance.local_reprise_mode,
-        digital_link_mode: governance.digital_link_mode,
-        default_mutualization: governance.default_mutualization,
-        local_items_only: !!governance.local_items_only,
-        authorized_partners: parseDocGovPartners(governance.authorized_partners),
-        internal_note: String(governance.internal_note || '').trim(),
-      };
-    }
-
-    function buildDocGovernancePayload(binding, governance, baseRow){
-      const payloadData = getDocGovernancePayloadData(governance);
-      const source = binding?.source || {};
-      if (source.type === 'direct-json') {
-        return { [source.field]: payloadData };
-      }
-      if (source.type === 'json-container') {
-        const container = safeJsonObject(baseRow?.[source.field]);
-        return {
-          [source.field]: {
-            ...container,
-            [source.subkey || 'document_governance']: payloadData
-          }
-        };
-      }
-      throw new Error('Não encontrei ainda um campo de persistência para a governança documental.');
-    }
-
-    function buildDocGovernanceSummary(governance){
-      const direct = ({
-        nao_permitir: 'sem edição direta de notices externas',
-        permitir_com_parceiros: 'edição direta só com parceiras autorizadas',
-        permitir_todas: 'edição direta liberada para notices compartilhadas'
-      })[governance.direct_edit_mode] || 'sem regra definida';
-      const localCopy = ({
-        nao_permitir: 'sem criação de cópia local',
-        rascunho_local: 'criação de cópia local via rascunho',
-        reprise_local: 'criação de cópia local imediata'
-      })[governance.local_reprise_mode] || 'sem regra de cópia local';
-      const mutual = ({
-        local: 'novas notices locais por padrão',
-        mutualizavel: 'novas notices mutualizáveis por padrão',
-        consulta_local: 'novas notices em consulta local por padrão',
-        emprestimo_interbib: 'novas notices com empréstimo inter-bibs por padrão'
-      })[governance.default_mutualization] || 'mutualização sem regra';
-      const partners = governance.authorized_partners.length ? `parceiras: ${governance.authorized_partners.join(', ')}` : 'sem parceiras autorizadas';
-      return [direct, localCopy, mutual, partners].join(' · ');
-    }
-
-    function renderDocGovernance(governance){
-      const normalized = normalizeDocGovernance(governance || {});
-      $('docGovDirectEditMode').value = normalized.direct_edit_mode;
-      $('docGovCorrectionMode').value = normalized.correction_mode;
-      $('docGovLocalRepriseMode').value = normalized.local_reprise_mode;
-      $('docGovDigitalLinkMode').value = normalized.digital_link_mode;
-      $('docGovDefaultMutualization').value = normalized.default_mutualization;
-      $('docGovLocalItemsOnly').checked = !!normalized.local_items_only;
-      $('docGovAuthorizedPartners').value = normalized.authorized_partners.join(', ');
-      $('docGovInternalNote').value = normalized.internal_note;
-      $('docGovStateNote').value = buildDocGovernanceSummary(normalized);
-      currentDocGovernanceState = normalized;
-    }
-
-    function collectDocGovernanceFromForm(){
-      return normalizeDocGovernance({
-        direct_edit_mode: $('docGovDirectEditMode')?.value,
-        correction_mode: $('docGovCorrectionMode')?.value,
-        local_reprise_mode: $('docGovLocalRepriseMode')?.value,
-        digital_link_mode: $('docGovDigitalLinkMode')?.value,
-        default_mutualization: $('docGovDefaultMutualization')?.value,
-        local_items_only: !!$('docGovLocalItemsOnly')?.checked,
-        authorized_partners: $('docGovAuthorizedPartners')?.value,
-        internal_note: $('docGovInternalNote')?.value,
-      });
-    }
-
-    function isMissingDocGovernanceBackendError(error){
-      const raw = String(error?.message || error?.details || error?.hint || error || '').toLowerCase();
-      return raw.includes('could not find')
-        || raw.includes('does not exist')
-        || raw.includes('relation')
-        || raw.includes('function')
-        || raw.includes('schema cache');
-    }
-
-    async function fetchDedicatedDocGovernanceRow(libraryId){
-      const { data, error } = await supabase
-        .from(DOC_GOV_TABLE)
-        .select('library_id,config,updated_at,updated_by')
-        .eq('library_id', libraryId)
-        .maybeSingle();
-      if (error) throw error;
-      return data || null;
-    }
-
-    async function loadDocGovernance(){
-      try {
-        const libraryRow = currentLibraryRow || await fetchCurrentLibraryRow();
-        const libraryId = normalizeLibraryId(libraryRow?.id);
-        if (!libraryId) throw new Error('Biblioteca ativa não identificada para carregar a governança documental.');
-
-        try {
-          const dedicatedRow = await fetchDedicatedDocGovernanceRow(libraryId);
-          currentDocGovernanceBinding = { table: DOC_GOV_TABLE, source: { type: 'dedicated-table' } };
-          renderDocGovernance(dedicatedRow?.config || getEmptyDocGovernance());
-          setStatus('docGovernanceMsg', dedicatedRow ? 'Governança documental carregada.' : 'Ainda não há regras salvas para esta biblioteca.', dedicatedRow ? 'ok' : 'warn');
-          return;
-        } catch (error) {
-          if (!isMissingDocGovernanceBackendError(error)) throw error;
-        }
-
-        const binding = extractDocGovernanceBinding(libraryRow);
-        currentDocGovernanceBinding = binding;
-        renderDocGovernance(binding ? readDocGovernanceFromBinding(binding, libraryRow) : getEmptyDocGovernance());
-        setStatus('docGovernanceMsg', binding ? 'Governança documental carregada a partir do backend legado.' : 'Ainda não encontrei um backend persistente para a governança documental.', binding ? 'warn' : 'warn');
-      } catch (e) {
-        renderDocGovernance(getEmptyDocGovernance());
-        setStatus('docGovernanceMsg', 'Não consegui carregar a governança documental: ' + (e.message || String(e)), 'bad', false);
-      }
-    }
-
-    async function saveDocGovernance(){
-      clearStatus('docGovernanceMsg');
-      const btn = $('btnSaveDocGovernance');
-      if (btn) btn.disabled = true;
-      try {
-        const libraryRow = currentLibraryRow || await fetchCurrentLibraryRow();
-        const libraryId = normalizeLibraryId(libraryRow?.id);
-        if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar a governança documental.');
-        const governance = collectDocGovernanceFromForm();
-        const payloadData = getDocGovernancePayloadData(governance);
-
-        try {
-          const { data, error } = await supabase.rpc(DOC_GOV_RPC, {
-            p_library_id: libraryId,
-            p_config: payloadData,
-          });
-          if (error) throw error;
-          currentDocGovernanceBinding = { table: DOC_GOV_TABLE, source: { type: 'dedicated-table' } };
-          renderDocGovernance((data && data.config) ? data.config : governance);
-          setStatus('docGovernanceMsg', 'Governança documental atualizada.', 'ok');
-          return;
-        } catch (error) {
-          if (!isMissingDocGovernanceBackendError(error)) throw error;
-        }
-
-        const binding = currentDocGovernanceBinding || extractDocGovernanceBinding(libraryRow);
-        if (!binding) throw new Error('Não encontrei ainda um campo de persistência para a governança documental.');
-        const payload = buildDocGovernancePayload(binding, governance, libraryRow);
-        const { data, error } = await supabase
-          .from('libraries')
-          .update(payload)
-          .eq('id', libraryId)
-          .select('*')
-          .maybeSingle();
-        if (error) throw error;
-        currentLibraryRow = { ...(currentLibraryRow || {}), ...(data || {}), id: libraryId };
-        currentDocGovernanceBinding = binding;
-        renderDocGovernance(governance);
-        setStatus('docGovernanceMsg', 'Governança documental atualizada no backend legado.', 'warn');
-      } catch (e) {
-        setStatus('docGovernanceMsg', 'Não consegui salvar a governança documental: ' + (e.message || String(e)), 'bad', false);
-      } finally {
-        if (btn) btn.disabled = false;
-      }
-    }
-
-    function setupDocGovernanceActions(){
-      $('btnSaveDocGovernance')?.addEventListener('click', saveDocGovernance);
-    }
-    const LIBRARY_REGIMENTO_DRAFT_BUCKET = 'library-regimentos-private';
-    const LIBRARY_REGIMENTO_PUBLIC_BUCKET = 'library-regimentos-public';
-    const LIBRARY_REGIMENTO_SIGNED_TTL = 3600;
-
-    function regimentoToBool(value){
-      if (typeof value === 'boolean') return value;
-      if (value == null) return false;
-      const raw = String(value).trim().toLowerCase();
-      return ['1','true','t','yes','y','sim','s','on'].includes(raw);
-    }
-
-    function getEmptyLibraryRegimento(){
-      return {
-        draft_bucket: LIBRARY_REGIMENTO_DRAFT_BUCKET,
-        draft_object_path: '',
-        draft_filename: '',
-        draft_version: '',
-        draft_updated_at: null,
-        published_bucket: LIBRARY_REGIMENTO_PUBLIC_BUCKET,
-        published_object_path: '',
-        published_url: '',
-        published_filename: '',
-        published_version: '',
-        published_at: null,
-        is_published: false,
-        version_label: '',
-      };
-    }
-
-    function normalizeLibraryRegimento(value){
-      const obj = safeJsonObject(value);
-      const base = getEmptyLibraryRegimento();
-      const legacyPublished = String(firstFilledValue(obj.object_path, obj.path, obj.regimento_object_path, obj.library_regimento_object_path, '') || '').trim();
-      const legacyPublishedUrl = String(firstFilledValue(obj.public_url, obj.url, obj.regimento_public_url, obj.library_regimento_public_url, obj.regimento_published_url, '') || '').trim();
-      const legacyIsPublished = regimentoToBool(firstFilledValue(obj.is_published, obj.published, obj.regimento_is_published, obj.library_regimento_is_published, false));
-      const draftObjectPath = String(firstFilledValue(
-        obj.draft_object_path,
-        obj.regimento_draft_object_path,
-        obj.library_regimento_draft_object_path,
-        (!legacyIsPublished && legacyPublished && !legacyPublishedUrl) ? legacyPublished : '',
-        ''
-      ) || '').trim();
-      const publishedObjectPath = String(firstFilledValue(
-        obj.published_object_path,
-        obj.regimento_published_object_path,
-        obj.library_regimento_published_object_path,
-        legacyPublished,
-        ''
-      ) || '').trim();
-      const publishedUrl = String(firstFilledValue(
-        obj.published_url,
-        obj.regimento_published_url,
-        obj.library_regimento_published_url,
-        obj.public_url,
-        obj.url,
-        legacyPublishedUrl,
-        ''
-      ) || '').trim();
-      const draftVersion = String(firstFilledValue(
-        obj.draft_version,
-        obj.regimento_draft_version,
-        obj.library_regimento_draft_version,
-        (!legacyIsPublished && !legacyPublishedUrl) ? firstFilledValue(obj.version_label, obj.version, obj.regimento_version_label, obj.library_regimento_version_label, '') : '',
-        ''
-      ) || '').trim();
-      const publishedVersion = String(firstFilledValue(
-        obj.published_version,
-        obj.regimento_published_version,
-        obj.library_regimento_published_version,
-        legacyIsPublished ? firstFilledValue(obj.version_label, obj.version, obj.regimento_version_label, obj.library_regimento_version_label, '') : '',
-        ''
-      ) || '').trim();
-      const regimento = {
-        draft_bucket: LIBRARY_REGIMENTO_DRAFT_BUCKET,
-        draft_object_path: draftObjectPath,
-        draft_filename: String(firstFilledValue(obj.draft_filename, obj.regimento_draft_filename, obj.library_regimento_draft_filename, (!legacyIsPublished && !legacyPublishedUrl) ? firstFilledValue(obj.filename, obj.regimento_filename, obj.library_regimento_filename, '') : '', '') || '').trim(),
-        draft_version: draftVersion,
-        draft_updated_at: firstFilledValue(obj.draft_updated_at, obj.regimento_draft_updated_at, obj.library_regimento_draft_updated_at, null) || null,
-        published_bucket: LIBRARY_REGIMENTO_PUBLIC_BUCKET,
-        published_object_path: publishedObjectPath,
-        published_url: publishedUrl,
-        published_filename: String(firstFilledValue(obj.published_filename, obj.regimento_published_filename, obj.library_regimento_published_filename, legacyIsPublished ? firstFilledValue(obj.filename, obj.regimento_filename, obj.library_regimento_filename, '') : '', '') || '').trim(),
-        published_version: publishedVersion,
-        published_at: firstFilledValue(obj.published_at, obj.regimento_published_at, obj.library_regimento_published_at, null) || null,
-      };
-      regimento.is_published = !!(regimento.published_object_path || regimento.published_url || legacyIsPublished);
-      regimento.version_label = regimento.draft_version || regimento.published_version || '';
-      return regimento;
-    }
-
-    function extractLibraryRegimentoFromObject(value){
-      const regimento = normalizeLibraryRegimento(value);
-      const hasAny = !!(
-        regimento.draft_object_path ||
-        regimento.published_object_path ||
-        regimento.published_url ||
-        regimento.draft_version ||
-        regimento.published_version ||
-        regimento.draft_filename ||
-        regimento.published_filename ||
-        regimento.is_published
-      );
-      return hasAny ? regimento : null;
-    }
-
-    function extractLibraryRegimentoBinding(row){
-      if (!row || typeof row !== 'object') return null;
-      const directFieldSets = [
-        {
-          draft_object_path: 'regimento_draft_object_path',
-          draft_filename: 'regimento_draft_filename',
-          draft_version: 'regimento_draft_version',
-          draft_updated_at: 'regimento_draft_updated_at',
-          published_object_path: 'regimento_published_object_path',
-          published_url: 'regimento_published_url',
-          published_filename: 'regimento_published_filename',
-          published_version: 'regimento_published_version',
-          published_at: 'regimento_published_at',
-        },
-        {
-          draft_object_path: 'library_regimento_draft_object_path',
-          draft_filename: 'library_regimento_draft_filename',
-          draft_version: 'library_regimento_draft_version',
-          draft_updated_at: 'library_regimento_draft_updated_at',
-          published_object_path: 'library_regimento_published_object_path',
-          published_url: 'library_regimento_published_url',
-          published_filename: 'library_regimento_published_filename',
-          published_version: 'library_regimento_published_version',
-          published_at: 'library_regimento_published_at',
-        }
-      ];
-      for (const fields of directFieldSets) {
-        const existing = Object.values(fields).filter((field) => Object.prototype.hasOwnProperty.call(row, field));
-        if (!existing.length) continue;
-        return { table: 'libraries', source: { type: 'text-fields', fields } };
-      }
-
-      const directJsonFields = ['regimento', 'library_regimento'];
-      for (const field of directJsonFields) {
-        if (!Object.prototype.hasOwnProperty.call(row, field)) continue;
-        return { table: 'libraries', source: { type: 'direct-json', field } };
-      }
-
-      const containerFields = ['settings', 'config', 'library_config', 'metadata', 'extra'];
-      const subkeys = ['regimento', 'library_regimento'];
-      for (const field of containerFields) {
-        if (!Object.prototype.hasOwnProperty.call(row, field)) continue;
-        const container = safeJsonObject(row[field]);
-        if (!container || typeof container !== 'object') continue;
-        for (const subkey of subkeys) {
-          if (extractLibraryRegimentoFromObject(container[subkey])) {
-            return { table: 'libraries', source: { type: 'json-container', field, subkey } };
-          }
-        }
-        return { table: 'libraries', source: { type: 'json-container', field, subkey: 'regimento' } };
-      }
-      return null;
-    }
-
-    function bindingSupportsLibraryRegimentoDraft(binding){
-      const source = binding?.source || {};
-      if (source.type === 'direct-json' || source.type === 'json-container') return true;
-      if (source.type !== 'text-fields') return false;
-      const fields = source.fields || {};
-      return !!fields.draft_object_path;
-    }
-
-    function readLibraryRegimentoFromBinding(binding, row){
-      const source = binding?.source || {};
-      if (!binding || !row || typeof row !== 'object') return getEmptyLibraryRegimento();
-      if (source.type === 'text-fields') {
-        const fields = source.fields || {};
-        const payload = {};
-        Object.entries(fields).forEach(([key, field]) => { payload[key] = row[field]; });
-        return normalizeLibraryRegimento(payload);
-      }
-      if (source.type === 'direct-json') {
-        return normalizeLibraryRegimento(row[source.field]);
-      }
-      if (source.type === 'json-container') {
-        const container = safeJsonObject(row[source.field]);
-        return normalizeLibraryRegimento(container?.[source.subkey]);
-      }
-      return getEmptyLibraryRegimento();
-    }
-
-    function buildLibraryRegimentoPayload(binding, regimento, baseRow){
-      const source = binding?.source || {};
-      const payloadData = {
-        regimento_draft_object_path: regimento.draft_object_path || null,
-        regimento_draft_filename: regimento.draft_filename || null,
-        regimento_draft_version: regimento.draft_version || null,
-        regimento_draft_updated_at: regimento.draft_updated_at || null,
-        regimento_published_object_path: regimento.published_object_path || null,
-        regimento_published_url: regimento.published_url || null,
-        regimento_published_filename: regimento.published_filename || null,
-        regimento_published_version: regimento.published_version || null,
-        regimento_published_at: regimento.published_at || null,
-      };
-      if (source.type === 'text-fields') {
-        const payload = {};
-        Object.entries(source.fields || {}).forEach(([key, field]) => {
-          if (!field) return;
-          const dataKey = field.startsWith('library_') ? field.slice(8) : field;
-          payload[field] = Object.prototype.hasOwnProperty.call(payloadData, dataKey) ? payloadData[dataKey] : null;
-        });
-        return payload;
-      }
-      if (source.type === 'direct-json') {
-        return { [source.field]: payloadData };
-      }
-      if (source.type === 'json-container') {
-        const container = safeJsonObject(baseRow?.[source.field]);
-        return {
-          [source.field]: {
-            ...container,
-            [source.subkey || 'regimento']: payloadData
-          }
-        };
-      }
-      throw new Error('Não encontrei uma estrutura segura para salvar o regimento desta biblioteca.');
-    }
-
-    function sanitizeStorageName(name){
-      return String(name || 'regimento.pdf')
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-zA-Z0-9._-]+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        || 'regimento.pdf';
-    }
-
-    function buildLibraryRegimentoPublicUrl(bucket, objectPath){
-      const b = String(bucket || '').trim();
-      const p = String(objectPath || '').trim();
-      if (!b || !p) return '';
-      try {
-        const { data } = supabase.storage.from(b).getPublicUrl(p);
-        return String(data?.publicUrl || '').trim();
-      } catch {
-        return '';
-      }
-    }
-
-    async function createLibraryRegimentoSignedUrl(bucket, objectPath){
-      const b = String(bucket || '').trim();
-      const p = String(objectPath || '').trim();
-      if (!b || !p) return '';
-      const { data, error } = await supabase.storage.from(b).createSignedUrl(p, LIBRARY_REGIMENTO_SIGNED_TTL);
-      if (error) throw error;
-      return String(data?.signedUrl || data?.signedURL || '').trim();
-    }
-
-    function getLibrarySlugForAssets(row){
-      const fallbackSlug = String(
-        currentLibraryRow?.slug ||
-        currentAccessRow?.library_slug ||
-        currentAccessRow?.default_library_slug ||
-        currentIdentityRow?.library_slug ||
-        currentIdentityRow?.default_library_slug ||
-        'biblioteca'
-      ).trim();
-      const raw = String(firstFilledValue(row?.slug, row?.short_name, row?.name, fallbackSlug || 'biblioteca') || 'biblioteca').trim();
-      return sanitizeStorageName(raw.toLowerCase()).replace(/\.[a-z0-9]+$/i, '') || 'biblioteca';
-    }
-
-    function buildLibraryRegimentoObjectPath(kind, row, fileName, versionLabel){
-      const slug = getLibrarySlugForAssets(row);
-      const stamp = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
-      const safeVersion = sanitizeStorageName(String(versionLabel || '').trim().toLowerCase()).replace(/\.[a-z0-9]+$/i, '');
-      const safeName = sanitizeStorageName(fileName || 'regimento.pdf');
-      const base = safeVersion ? `regimento-${safeVersion}-${stamp}` : `regimento-${stamp}`;
-      const extMatch = safeName.match(/(\.[a-z0-9]+)$/i);
-      const ext = extMatch ? extMatch[1] : '.pdf';
-      if (kind === 'draft') return `${slug}/regimentos/drafts/${base}${ext}`;
-      return `${slug}/regimentos/publicados/${base}${ext}`;
-    }
-
-    function renderLibraryRegimento(regimento){
-      const meta = normalizeLibraryRegimento(regimento || {});
-      const publishedUrl = meta.published_url || buildLibraryRegimentoPublicUrl(meta.published_bucket, meta.published_object_path);
-      $('libraryRegimentoVersion').value = meta.draft_version || meta.published_version || '';
-      $('libraryRegimentoCurrent').value = meta.draft_object_path || meta.draft_filename || '';
-      $('libraryRegimentoPublicUrl').value = meta.is_published ? publishedUrl : '';
-      const bits = [];
-      if (meta.draft_object_path) bits.push(`Rascunho privado salvo${meta.draft_updated_at ? ' em ' + fmtDateTime(meta.draft_updated_at) : ''}.`);
-      else bits.push('Sem rascunho privado salvo.');
-      if (meta.is_published && (publishedUrl || meta.published_object_path)) bits.push(`Versão pública ativa${meta.published_at ? ' desde ' + fmtDateTime(meta.published_at) : ''}.`);
-      else bits.push('Sem versão pública ativa.');
-      $('libraryRegimentoStateNote').value = bits.join(' ');
-      $('btnOpenLibraryRegimento').disabled = !(meta.draft_object_path || (meta.is_published && (publishedUrl || meta.published_object_path)));
-      $('btnSaveLibraryRegimentoDraft').disabled = false;
-      $('btnPublishLibraryRegimento').disabled = false;
-      $('btnDepublishLibraryRegimento').disabled = !meta.is_published && !meta.published_object_path && !meta.published_url;
-      currentLibraryRegimentoState = meta;
-    }
-
-    async function loadLibraryRegimento(){
-      try {
-        const libraryRow = currentLibraryRow || await fetchCurrentLibraryRow();
-        const binding = extractLibraryRegimentoBinding(libraryRow);
-        currentLibraryRegimentoBinding = binding;
-        const meta = binding ? readLibraryRegimentoFromBinding(binding, libraryRow) : getEmptyLibraryRegimento();
-        currentLibraryRegimentoState = meta;
-        renderLibraryRegimento(meta);
-        setStatus('libraryRegimentoMsg', binding ? 'Regimento carregado.' : 'Ainda não encontrei um campo de persistência em libraries para o regimento desta biblioteca.', binding ? 'ok' : 'warn');
-      } catch (e) {
-        setStatus('libraryRegimentoMsg', 'Não consegui carregar o regimento desta biblioteca: ' + (e.message || String(e)), 'bad', false);
-      }
-    }
-
-    async function persistLibraryRegimentoState(nextMeta, libraryRow){
-      const libraryId = normalizeLibraryId(libraryRow?.id || currentLibraryRow?.id);
-      if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar o regimento.');
-      const binding = currentLibraryRegimentoBinding || extractLibraryRegimentoBinding(libraryRow);
-      if (!binding) throw new Error('Não encontrei ainda um campo de persistência em libraries para o regimento desta biblioteca.');
-      const payload = buildLibraryRegimentoPayload(binding, nextMeta, libraryRow);
-      const { data, error } = await supabase
-        .from('libraries')
-        .update(payload)
-        .eq('id', libraryId)
-        .select('*')
-        .maybeSingle();
-      if (error) throw error;
-      currentLibraryRegimentoBinding = binding;
-      currentLibraryRow = { ...(currentLibraryRow || {}), ...(data || {}), id: libraryId };
-      currentLibraryRegimentoState = normalizeLibraryRegimento(nextMeta);
-      return currentLibraryRow;
-    }
-
-    async function uploadLibraryRegimentoDraft(file, libraryRow, currentMeta){
-      const fileName = sanitizeStorageName(file?.name || currentMeta?.draft_filename || currentMeta?.published_filename || 'regimento.pdf');
-      const versionInput = String($('libraryRegimentoVersion')?.value || currentMeta?.draft_version || currentMeta?.published_version || '').trim();
-      const objectPath = buildLibraryRegimentoObjectPath('draft', libraryRow, fileName, versionInput);
-      const { error } = await supabase.storage
-        .from(LIBRARY_REGIMENTO_DRAFT_BUCKET)
-        .upload(objectPath, file, { upsert: true, contentType: file?.type || 'application/pdf' });
-      if (error) throw error;
-      const nowIso = new Date().toISOString();
-      return normalizeLibraryRegimento({
-        ...normalizeLibraryRegimento(currentMeta || {}),
-        draft_object_path: objectPath,
-        draft_filename: fileName,
-        draft_version: versionInput,
-        draft_updated_at: nowIso,
-      });
-    }
-
-    async function saveLibraryRegimentoDraft(){
-      const btn = $('btnSaveLibraryRegimentoDraft');
-      if (btn) btn.disabled = true;
-      try {
-        const libraryRow = currentLibraryRow || await fetchCurrentLibraryRow();
-        const binding = currentLibraryRegimentoBinding || extractLibraryRegimentoBinding(libraryRow);
-        if (!binding) throw new Error('Não encontrei ainda um campo de persistência em libraries para o regimento desta biblioteca.');
-        if (!bindingSupportsLibraryRegimentoDraft(binding)) throw new Error('Esta estrutura ainda não expõe um espaço seguro para guardar metadados separados do rascunho privado.');
-        const file = $('libraryRegimentoFile')?.files?.[0];
-        if (!file) throw new Error('Escolhe um PDF antes de salvar o rascunho.');
-        const nextMeta = await uploadLibraryRegimentoDraft(file, libraryRow, readLibraryRegimentoFromBinding(binding, libraryRow));
-        await persistLibraryRegimentoState(nextMeta, libraryRow);
-        $('libraryRegimentoFile').value = '';
-        await loadLibraryRegimento();
-        setStatus('libraryRegimentoMsg', 'Rascunho privado do regimento salvo.', 'ok');
-      } catch (e) {
-        setStatus('libraryRegimentoMsg', 'Não consegui salvar o rascunho do regimento: ' + (e.message || String(e)), 'bad', false);
-      } finally {
-        if (btn) btn.disabled = false;
-      }
-    }
-
-    async function removePublishedLibraryRegimentoObject(meta){
-      const bucket = String(meta?.published_bucket || '').trim();
-      const objectPath = String(meta?.published_object_path || '').trim();
-      if (!bucket || !objectPath) return;
-      const { error } = await supabase.storage.from(bucket).remove([objectPath]);
-      if (error) throw error;
-    }
-
-    async function ensureDraftMetaForPublication(libraryRow, binding, currentMeta){
-      const file = $('libraryRegimentoFile')?.files?.[0];
-      if (file) {
-        if (!bindingSupportsLibraryRegimentoDraft(binding)) throw new Error('Esta estrutura ainda não expõe um espaço seguro para guardar metadados separados do rascunho privado.');
-        return uploadLibraryRegimentoDraft(file, libraryRow, currentMeta);
-      }
-      if (!currentMeta?.draft_object_path) throw new Error('Salva primeiro um rascunho privado ou escolhe um PDF para publicar.');
-      const versionInput = String($('libraryRegimentoVersion')?.value || currentMeta?.draft_version || currentMeta?.published_version || '').trim();
-      return normalizeLibraryRegimento({
-        ...currentMeta,
-        draft_version: versionInput,
-      });
-    }
-
-    async function saveLibraryRegimentoPublish(){
-      const btn = $('btnPublishLibraryRegimento');
-      if (btn) btn.disabled = true;
-      try {
-        const libraryRow = currentLibraryRow || await fetchCurrentLibraryRow();
-        const binding = currentLibraryRegimentoBinding || extractLibraryRegimentoBinding(libraryRow);
-        if (!binding) throw new Error('Não encontrei ainda um campo de persistência em libraries para o regimento desta biblioteca.');
-        const currentMeta = readLibraryRegimentoFromBinding(binding, libraryRow);
-        let nextMeta = await ensureDraftMetaForPublication(libraryRow, binding, currentMeta);
-        if (currentMeta?.published_object_path) {
-          await removePublishedLibraryRegimentoObject(currentMeta);
-        }
-        const publishedFileName = nextMeta.draft_filename || 'regimento.pdf';
-        const publishedVersion = String($('libraryRegimentoVersion')?.value || nextMeta.draft_version || nextMeta.published_version || '').trim();
-        const publishedPath = buildLibraryRegimentoObjectPath('published', libraryRow, publishedFileName, publishedVersion);
-        const { error: copyError } = await supabase.storage
-          .from(nextMeta.draft_bucket || LIBRARY_REGIMENTO_DRAFT_BUCKET)
-          .copy(nextMeta.draft_object_path, publishedPath, { destinationBucket: LIBRARY_REGIMENTO_PUBLIC_BUCKET });
-        if (copyError) throw copyError;
-        const nowIso = new Date().toISOString();
-        nextMeta = normalizeLibraryRegimento({
-          ...nextMeta,
-          published_object_path: publishedPath,
-          published_url: buildLibraryRegimentoPublicUrl(LIBRARY_REGIMENTO_PUBLIC_BUCKET, publishedPath),
-          published_filename: publishedFileName,
-          published_version: publishedVersion,
-          published_at: nowIso,
-        });
-        await persistLibraryRegimentoState(nextMeta, libraryRow);
-        $('libraryRegimentoFile').value = '';
-        await loadLibraryRegimento();
-        setStatus('libraryRegimentoMsg', 'Regimento publicado a partir do rascunho privado.', 'ok');
-      } catch (e) {
-        setStatus('libraryRegimentoMsg', 'Não consegui publicar o regimento: ' + (e.message || String(e)), 'bad', false);
-      } finally {
-        if (btn) btn.disabled = false;
-      }
-    }
-
-    async function saveLibraryRegimentoDepublish(){
-      const btn = $('btnDepublishLibraryRegimento');
-      if (btn) btn.disabled = true;
-      try {
-        const libraryRow = currentLibraryRow || await fetchCurrentLibraryRow();
-        const binding = currentLibraryRegimentoBinding || extractLibraryRegimentoBinding(libraryRow);
-        if (!binding) throw new Error('Não encontrei ainda um campo de persistência em libraries para o regimento desta biblioteca.');
-        const currentMeta = readLibraryRegimentoFromBinding(binding, libraryRow);
-        if (!currentMeta.published_object_path && !currentMeta.is_published) throw new Error('Esta biblioteca ainda não tem um regimento publicado para despublicar.');
-        await removePublishedLibraryRegimentoObject(currentMeta);
-        const nextMeta = normalizeLibraryRegimento({
-          ...currentMeta,
-          published_object_path: '',
-          published_url: '',
-          published_filename: '',
-          published_version: '',
-          published_at: null,
-        });
-        await persistLibraryRegimentoState(nextMeta, libraryRow);
-        $('libraryRegimentoFile').value = '';
-        await loadLibraryRegimento();
-        setStatus('libraryRegimentoMsg', 'Versão pública removida. O rascunho privado foi preservado.', 'ok');
-      } catch (e) {
-        setStatus('libraryRegimentoMsg', 'Não consegui despublicar o regimento: ' + (e.message || String(e)), 'bad', false);
-      } finally {
-        if (btn) btn.disabled = false;
-      }
-    }
-
-    async function openLibraryRegimento(){
-      try {
-        const meta = normalizeLibraryRegimento(currentLibraryRegimentoState || {});
-        if (meta.is_published) {
-          const publicUrl = meta.published_url || buildLibraryRegimentoPublicUrl(meta.published_bucket, meta.published_object_path);
-          if (publicUrl) return window.open(publicUrl, '_blank', 'noopener');
-        }
-        if (meta.draft_object_path) {
-          const signedUrl = await createLibraryRegimentoSignedUrl(meta.draft_bucket || LIBRARY_REGIMENTO_DRAFT_BUCKET, meta.draft_object_path);
-          if (signedUrl) return window.open(signedUrl, '_blank', 'noopener');
-        }
-        setStatus('libraryRegimentoMsg', 'Ainda não há um regimento disponível para abrir.', 'warn');
-      } catch (e) {
-        setStatus('libraryRegimentoMsg', 'Não consegui abrir o regimento: ' + (e.message || String(e)), 'bad', false);
-      }
-    }
-
-    function setupLibraryRegimentoActions(){
-      $('btnOpenLibraryRegimento')?.addEventListener('click', openLibraryRegimento);
-      $('btnSaveLibraryRegimentoDraft')?.addEventListener('click', saveLibraryRegimentoDraft);
-      $('btnPublishLibraryRegimento')?.addEventListener('click', saveLibraryRegimentoPublish);
-      $('btnDepublishLibraryRegimento')?.addEventListener('click', saveLibraryRegimentoDepublish);
-    }
-
-
-function belemNowParts(){
+    function belemNowParts(){
       const d = new Date();
       const parts = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Belem',
@@ -4288,6 +1694,7 @@ function belemNowParts(){
     async function loadInternalTaskLibrarians(){
       try {
         const { data, error } = await supabase
+          .schema('api')
           .from('profiles')
           .select('*')
           .eq('is_librarian', true)
@@ -4833,162 +2240,36 @@ function belemNowParts(){
     const activateProfileTab = setupProfileTabs();
     setupMainTabs();
     setupServiceStateActions();
-    setupLibraryIdentityActions();
-    setupLibraryThemeActions();
-    setupDocGovernanceActions();
     bindResScheduleAtParts();
     setupReturnScheduleEditor();
 
     async function requireSession(){
-      for (let i = 0; i < 12; i += 1) {
-        const { data: { session: sess } } = await supabase.auth.getSession();
-        if (sess?.user?.id) return sess;
-        await new Promise((resolve) => setTimeout(resolve, 120));
-      }
-      return null;
-    }
-    let currentAccessRow = null;
-    let currentIdentityRow = null;
-    async function fetchMyAccessRows(userId){
-      let lastError = null;
-      const directAttempts = [
-        () => supabase.from('my_access').select('*'),
-        () => supabase.from('my_session_context').select('*').limit(1),
-      ];
-
-      for (const run of directAttempts) {
-        try {
-          const res = await run();
-          if (!res?.error) {
-            return { data: Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []), error: null };
-          }
-          lastError = res.error;
-        } catch (error) {
-          lastError = error;
-        }
-      }
-
-      let profileRow = null;
-      try {
-        const profileRes = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-        if (!profileRes?.error && profileRes?.data) {
-          profileRow = profileRes.data;
-        } else if (profileRes?.error) {
-          lastError = profileRes.error;
-        }
-      } catch (error) {
-        lastError = error;
-      }
-
-      try {
-        const membershipRes = await supabase
-          .from('user_library_memberships')
-          .select('user_id,library_id,role,status,is_primary')
-          .eq('user_id', userId)
-          .eq('status', 'active');
-
-        if (!membershipRes?.error) {
-          const membershipRows = Array.isArray(membershipRes?.data) ? membershipRes.data : [];
-          if (membershipRows.length) {
-            const libraryIds = Array.from(new Set(membershipRows.map((row) => normalizeLibraryId(row?.library_id)).filter(Boolean)));
-            let librariesById = new Map();
-            if (libraryIds.length) {
-              const librariesRes = await supabase
-                .from('libraries')
-                .select('id,slug,name,short_name')
-                .in('id', libraryIds);
-              if (!librariesRes?.error) {
-                librariesById = new Map((librariesRes.data || []).map((row) => [normalizeLibraryId(row.id), row]));
-              } else {
-                lastError = librariesRes.error;
-              }
-            }
-
-            const mergedRows = membershipRows.map((row) => {
-              const lib = librariesById.get(normalizeLibraryId(row?.library_id)) || {};
-              return {
-                ...(profileRow || {}),
-                ...row,
-                library_name: lib?.name || profileRow?.default_library_name || '',
-                library_slug: lib?.slug || profileRow?.default_library_slug || '',
-                library_short_name: lib?.short_name || '',
-                can_access_painel: String(row?.role || '').toLowerCase() === 'librarian',
-                is_librarian: String(row?.role || '').toLowerCase() === 'librarian',
-                is_restricted: !!profileRow?.is_restricted,
-              };
-            });
-
-            if (mergedRows.length) return { data: mergedRows, error: null };
-          }
-        } else {
-          lastError = membershipRes.error;
-        }
-      } catch (error) {
-        lastError = error;
-      }
-
-      if (profileRow) return { data: [profileRow], error: null };
-      return { data: [], error: lastError };
-    }
-    function pickCurrentLibrarianAccess(rows){
-      const normalized = Array.isArray(rows) ? rows : [];
-      const activeRows = normalized.filter((row) => String(row?.status || 'active').toLowerCase() === 'active');
-      const librarianRows = activeRows.filter((row) => {
-        const role = String(row?.role || '').toLowerCase();
-        return (role === 'librarian' || row?.is_librarian === true) && row?.is_restricted !== true && row?.can_access_painel !== false;
-      });
-      return librarianRows.find((row) => row?.is_primary === true) || librarianRows[0] || null;
+      const { data: { session: sess } } = await supabase.auth.getSession();
+      if (!sess){ location.assign(ROUTES.CADASTRO); return null; }
+      return sess;
     }
     async function requireBibliotecaOrRedirect(){
-      const accessRead = await fetchMyAccessRows(session.user.id);
-      const accessRows = accessRead?.data || [];
-      const lastErrorMessage = accessRead?.error?.message || '';
-      currentIdentityRow = accessRows.find((row) => String(row?.id || row?.user_id || '') === String(session?.user?.id || '')) || accessRows[0] || null;
-      currentAccessRow = pickCurrentLibrarianAccess(accessRows);
-
-      if (!currentAccessRow && currentIdentityRow?.is_librarian === true && currentIdentityRow?.is_restricted !== true) {
-        currentAccessRow = {
-          ...currentIdentityRow,
-          role: 'librarian',
-          status: 'active',
-          can_access_painel: true
-        };
-      }
-
-      if (!currentAccessRow) {
-        setStatus('statusLoans', 'Não consegui verificar o acesso da biblioteca' + (lastErrorMessage ? ': ' + lastErrorMessage : '.'), 'bad', false);
-        return false;
-      }
-
+      const { data, error } = await supabase
+        .schema('api')
+        .from('profiles')
+        .select('is_librarian')
+        .eq('id', session.user.id)
+        .maybeSingle();
+      if (error){ setStatus('statusLoans', 'Não consegui verificar o acesso da biblioteca: ' + error.message, 'bad', false); return false; }
+      if (!data?.is_librarian){ location.assign(ROUTES.CONTA); return false; }
       return true;
     }
     async function fillHeader(){
-      const identity = { ...(currentIdentityRow || {}), ...(currentAccessRow || {}) };
-      const accessEmail = String(identity?.email || session?.user?.email || '').trim();
-      const accessPublicId = String(identity?.public_id || '').trim();
-      const firstName = String(identity?.first_name || '').trim();
-      const lastName = String(identity?.last_name || '').trim();
-      const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
-      const libraryLabel = String(identity?.library_name || identity?.default_library_name || identity?.library_slug || identity?.default_library_slug || '').trim();
-      const isLibraryUser = identity?.is_librarian === true || String(identity?.role || '').toLowerCase() === 'librarian';
-
-      setChip('chipEmail', 'E-mail: ' + (accessEmail || '—'));
-      setChip('chipFuncao', 'Função: ' + (isLibraryUser ? 'bibliotecário(a/e)' : '—'));
-      const helloParts = [];
-      if (fullName) helloParts.push(fullName);
-      if (accessPublicId) helloParts.push('ID ' + accessPublicId);
-      if (libraryLabel) helloParts.push(libraryLabel);
-      if (!helloParts.length && accessEmail) helloParts.push(accessEmail);
-      $('helloLine').textContent = helloParts.length ? ('Conectad@: ' + helloParts.join(' · ')) : '';
+      setChip('chipEmail', 'E-mail: ' + (session?.user?.email || '—'));
+      setChip('chipFuncao', 'Função: bibliotecário(a/e) e leitor(a/e)');
+      $('helloLine').textContent = '';
       $('btnModoLeitor').classList.toggle('hidden', !isLibrarian);
-      updateTopbarAuthButton(!!session?.user?.id);
-      renderActiveLibraryLogo(currentLibraryRow || identity || {});
     }
 
     async function loadProfilesByIds(userIds){
       const ids = Array.from(new Set((userIds || []).map((v) => String(v || '').trim()).filter(Boolean)));
       if (!ids.length) return new Map();
-      const { data, error } = await supabase.from('profiles').select('*').in('id', ids);
+      const { data, error } = await supabase.schema('api').from('profiles').select('*').in('id', ids);
       if (error) throw error;
       return new Map((data || []).map((row) => [String(row.id), row]));
     }
@@ -4996,7 +2277,7 @@ function belemNowParts(){
     async function loadBooksByBibRefs(refs){
       const clean = Array.from(new Set((refs || []).map((r) => String(r || '').trim()).filter(Boolean)));
       if (!clean.length) return new Map();
-      const { data, error } = await supabase.from('books_public').select('id,bib_ref,titulo,autor,editora,ano,loanable').in('bib_ref', clean);
+      const { data, error } = await supabase.schema('api').from('books_public').select('id,bib_ref,titulo,autor,editora,ano,loanable').in('bib_ref', clean);
       if (error) throw error;
       return new Map((data || []).map((row) => [String(row.bib_ref), row]));
     }
@@ -5020,42 +2301,131 @@ function belemNowParts(){
     }
 
     async function fetchActiveReservations(){
+      const v2Views = ['v_reserva_itens_v2_ui'];
+      let v2Rows = [];
+      let lastV2Error = null;
+      let hadV2ReadableSource = false;
+
+      for (const viewName of v2Views) {
+        const qv2 = await supabase
+          .from(viewName)
+          .select('*')
+          .limit(500);
+
+        if (qv2.error) {
+          lastV2Error = qv2.error;
+          continue;
+        }
+
+        hadV2ReadableSource = true;
+
+        const rows = (qv2.data || []).filter((r) => {
+          const status = String(r?.item_status || r?.reserva_status || r?.status || '').toLowerCase();
+          if (r?.fulfilled_at || r?.cancelled_at) return false;
+          if (!status) return true;
+          return ['ativa', 'ativo', 'pending', 'pendente'].includes(status)
+            || ['solicitada', 'em_preparacao', 'aviso_enviado', 'retirada_a_combinar', 'retirada_agendada', 're-retirada_agendada', 'pronta_para_retirada', 'nao_retirada', 'liberada_para_circulacao'].includes(status);
+        });
+
+        if (rows.length) {
+          v2Rows = rows.sort((a, b) => {
+            const reservaA = Number(a?.reserva_id || 0);
+            const reservaB = Number(b?.reserva_id || 0);
+            if (reservaA !== reservaB) return reservaB - reservaA;
+            return Number(a?.line_no || 1) - Number(b?.line_no || 1);
+          });
+          break;
+        }
+      }
+
+      if (v2Rows.length) {
+        const profilesMap = await loadProfilesByIds(v2Rows.map((r) => r.user_id));
+        const rotulosMap = await loadRotulosByBibRefs(v2Rows.map((r) => r.bib_ref));
+
+        activeReservations = v2Rows
+          .map((r) => {
+            const reservaId = Number(r?.reserva_id || 0);
+            const lineNo = Number(r?.line_no || 1);
+            if (!reservaId) return null;
+            const user = profilesMap.get(String(r.user_id)) || {};
+            const createdAt = r.reserva_created_at || r.reserva_em || r.item_created_at || r.created_at;
+            return {
+              id: Number(`${reservaId}${String(lineNo).padStart(2, '0')}`),
+              reserva_id: reservaId,
+              sub_id: r.sub_id || `${reservaId}.${lineNo}`,
+              line_no: lineNo,
+              source: 'v2',
+              user_id: r.user_id,
+              user_name: profileName(user),
+              user_email: user.email || '—',
+              bib_ref: r.bib_ref,
+              titulo: r.titulo || `Referência ${r.bib_ref}`,
+              autor: r.autor || '',
+              rotulo: r.rotulo || rotulosMap.get(String(r.bib_ref || '').trim()) || '—',
+              reserva_em: createdAt,
+              validade: r.expires_at || r.validade || addDays(createdAt || Date.now(), 14),
+              workflow_stage: r.workflow_stage_effective || r.workflow_stage || 'solicitada',
+              workflow_stage_updated_at: r.workflow_stage_updated_at_effective || r.workflow_stage_updated_at || null,
+              workflow_note: r.workflow_note || '',
+              pickup_scheduled_for: r.pickup_scheduled_for || null,
+              pickup_reply_status: r.pickup_reply_status || null,
+              pickup_reply_note: r.pickup_reply_note || '',
+              pickup_reply_at: r.pickup_reply_at || null,
+              pickup_attention: r.pickup_attention || null,
+              raw: r,
+            };
+          })
+          .filter(Boolean);
+
+        selectedReservaIds = new Set(
+          [...selectedReservaIds].filter((id) => activeReservations.some((r) => r.id === id))
+        );
+        return;
+      }
+
+      if (lastV2Error && !hadV2ReadableSource) throw lastV2Error;
+
+      // fallback ancien modèle
       const { data, error } = await supabase
-        .from('v_reservations_enriched')
-        .select('*')
-        .eq('status', 'active')
+        .schema('api')
+        .from('reservas')
+        .select('id,bib_ref,user_id,created_at,status,fulfilled_at,fulfilled_loan_id,fulfilled_by,cancelled_at,cancelled_by,reserva_em,cancelled_by_role,cancelled_reason')
+        .eq('status', 'pending')
+        .is('fulfilled_at', null)
+        .is('cancelled_at', null)
+        .order('reserva_em', { ascending:false })
         .order('created_at', { ascending:false })
         .limit(500);
 
       if (error) throw error;
       const rows = data || [];
+      const booksMap = await loadBooksByBibRefs(rows.map((r) => r.bib_ref));
+      const rotulosMap = await loadRotulosByBibRefs(rows.map((r) => r.bib_ref));
       const profilesMap = await loadProfilesByIds(rows.map((r) => r.user_id));
 
       activeReservations = rows.map((r) => {
+        const book = booksMap.get(String(r.bib_ref)) || {};
         const user = profilesMap.get(String(r.user_id)) || {};
-        const createdAt = r.created_at || null;
+        const created = r.reserva_em || r.created_at;
         return {
           id: Number(r.id),
           reserva_id: Number(r.id),
           sub_id: `${r.id}.1`,
           line_no: 1,
-          source: 'reservations',
+          source: 'old',
           user_id: r.user_id,
           user_name: profileName(user),
           user_email: user.email || '—',
           bib_ref: r.bib_ref,
-          titulo: r.titulo || `Referência ${r.bib_ref}`,
-          autor: r.autor || '',
-          rotulo: '—',
-          reserva_em: createdAt,
-          validade: addDays(createdAt || Date.now(), 14),
+          titulo: book.titulo || `Referência ${r.bib_ref}`,
+          autor: book.autor || '',
+          rotulo: rotulosMap.get(String(r.bib_ref || '').trim()) || '—',
+          reserva_em: created,
+          validade: addDays(created || Date.now(), 14),
           workflow_stage: 'solicitada',
-          workflow_stage_updated_at: r.updated_at || createdAt,
-          workflow_note: String(r.notes || '').trim(),
+          workflow_stage_updated_at: created || null,
+          workflow_note: '',
           pickup_scheduled_for: null,
-          pickup_reply_status: null,
-          pickup_reply_note: '',
-          pickup_reply_at: null,
           pickup_attention: null,
           raw: r,
         };
@@ -5067,7 +2437,7 @@ function belemNowParts(){
     }
 
 
-async function fetchActiveLoans(){
+    async function fetchActiveLoans(){
       const qv2 = await supabase
         .from('v_emprestimo_itens_v2_ui_fix')
         .select('*')
@@ -5159,6 +2529,7 @@ async function fetchActiveLoans(){
       let data = null;
       let error = null;
       const q = await supabase
+        .schema('api')
         .from('loans_detalhes')
         .select('id,user_id,book_id,checkout_date,due_date,returned_date,created_at,batch_id,batch_size,extended_once,extended_at,reminder_sent_at,books')
         .is('returned_date', null)
@@ -5938,7 +3309,7 @@ async function fetchActiveLoans(){
       const normalized = normalizeEmail(email);
       let lastError = null;
       const attempts = [
-        () => supabase.from('profiles').select(select).ilike('email', normalized).limit(2),
+        () => supabase.schema('api').from('profiles').select(select).ilike('email', normalized).limit(2),
         () => supabase.from('profiles').select(select).ilike('email', normalized).limit(2),
       ];
       for (const run of attempts){
@@ -5969,7 +3340,7 @@ async function fetchActiveLoans(){
       if (!normalizedId) return null;
       let lastError = null;
       const attempts = [
-        () => supabase.from('profiles').select(select).eq('id', normalizedId).maybeSingle(),
+        () => supabase.schema('api').from('profiles').select(select).eq('id', normalizedId).maybeSingle(),
         () => supabase.from('profiles').select(select).eq('id', normalizedId).maybeSingle(),
       ];
       for (const run of attempts){
@@ -6077,6 +3448,7 @@ async function fetchActiveLoans(){
       const clean = Array.from(new Set((refs || []).map((r) => String(r || '').trim()).filter(Boolean)));
       if (!clean.length) throw new Error('Nenhum livro informado para o empréstimo.');
       const { data, error } = await supabase
+        .schema('api')
         .from('books_public')
         .select('id,bib_ref,titulo,loanable')
         .in('bib_ref', clean);
@@ -6094,6 +3466,7 @@ async function fetchActiveLoans(){
       const ids = Array.from(new Set((bookIds || []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0)));
       if (!ids.length) return;
       const { data, error } = await supabase
+        .schema('api')
         .from('loans')
         .select('id,book_id,user_id')
         .in('book_id', ids)
@@ -6109,6 +3482,7 @@ async function fetchActiveLoans(){
 
     async function countOpenLoansForUser(userId){
       const { count, error } = await supabase
+        .schema('api')
         .from('loans')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId)
@@ -6163,6 +3537,7 @@ async function fetchActiveLoans(){
           : Promise.resolve({ data: [], error: null }),
         ids.length
           ? supabase
+              .schema('api')
               .from('loans')
               .select('id,book_id')
               .in('book_id', ids)
@@ -6195,6 +3570,7 @@ async function fetchActiveLoans(){
           .eq('user_id', userId)
           .eq('item_status', 'aberto'),
         supabase
+          .schema('api')
           .from('loans')
           .select('id', { count: 'exact', head: true })
           .eq('user_id', userId)
@@ -6256,6 +3632,7 @@ async function fetchActiveLoans(){
       if (!isMissingFunctionError(rpcRes.error)) throw rpcRes.error;
 
       const { data: reserva, error: reservaError } = await supabase
+        .schema('api')
         .from('reservas')
         .select('id,bib_ref,user_id,status,fulfilled_at,cancelled_at')
         .eq('id', reservaId)
@@ -7030,30 +4407,15 @@ async function fetchActiveLoans(){
       }
     });
     $('btnSair').addEventListener('click', async () => {
-      const btn = $('btnSair');
-      btn.disabled = true;
-      try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        if (!currentSession?.user?.id) {
-          location.assign(ROUTES.CADASTRO);
-          return;
-        }
-        await supabase.auth.signOut();
-        session = null;
-        isLibrarian = false;
-        location.assign(ROUTES.CADASTRO);
-      }
-      finally { btn.disabled = false; }
+      $('btnSair').disabled = true;
+      try { await supabase.auth.signOut(); location.assign(ROUTES.CADASTRO); }
+      finally { $('btnSair').disabled = false; }
     });
 
     renderInternalTasks();
     bindReservationSelection();
     bindDynamicActions();
     bindInternalTaskOwnerSuggestions();
-    setupLibraryScheduleActions();
-    setupLocalRulesActions();
-    setupLibraryRegimentoActions();
-    setupInterlibraryRequestActions();
 
     function setupRefreshHooks(){
       if (refreshTimer) clearInterval(refreshTimer);
@@ -7064,23 +4426,11 @@ async function fetchActiveLoans(){
     }
 
     session = await requireSession();
-    updateTopbarAuthButton(!!session?.user?.id);
-    if (!session?.user?.id) {
-      hideActiveLibraryLogo();
-      $('btnModoLeitor').classList.add('hidden');
-    }
     if (session){
       isLibrarian = await requireBibliotecaOrRedirect();
       if (isLibrarian){
         await fillHeader();
         await loadLibraryServiceState();
-        await loadLibraryIdentity();
-        await loadLibraryTheme();
-        await loadDocGovernance();
-        await loadInterlibraryRequests({ silent:true });
-        await loadLibrarySchedule();
-        await loadLocalRules();
-        await loadLibraryRegimento();
         await loadInternalTaskLibrarians();
         await loadInternalTasks({ silent:true });
         await refreshCollections();
