@@ -823,6 +823,72 @@
             <div class="card">
               <div class="section-head">
                 <div>
+                  <h2>Solicitações interbibliotecas</h2>
+                  <div class="mini">Registra pedidos formais entre bibliotecas parceiras, mantendo visíveis os canais diretos de contato para que as pessoas responsáveis também possam se falar fora do sistema.</div>
+                </div>
+              </div>
+              <div class="row3" style="margin-top:12px">
+                <div>
+                  <label for="interlibPartnerLibrary">Biblioteca parceira</label>
+                  <select class="select" id="interlibPartnerLibrary">
+                    <option value="">Selecione uma biblioteca parceira</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="interlibRequestedAction">Solicitação</label>
+                  <select class="select" id="interlibRequestedAction">
+                    <option value="edicao_notice">Pedir edição direta de notice</option>
+                    <option value="proposta_correcao">Pedir análise de proposta de correção</option>
+                    <option value="copia_local">Pedir criação de cópia local</option>
+                    <option value="vinculo_recurso_digital">Pedir vínculo de recurso digital</option>
+                    <option value="mutualizacao">Pedir ajuste de mutualização</option>
+                    <option value="outra">Outra solicitação</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="interlibObjectType">Camada / objeto</label>
+                  <select class="select" id="interlibObjectType">
+                    <option value="notice">Notice bibliográfica</option>
+                    <option value="exemplar">Exemplar / rótulo</option>
+                    <option value="recurso_digital">Recurso digital</option>
+                    <option value="governanca">Governança / permissão</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row" style="margin-top:12px">
+                <div>
+                  <label for="interlibObjectRef">Referência da notice / item / recurso</label>
+                  <input class="input" id="interlibObjectRef" type="text" placeholder="Ex.: BTL-TL-000245, id 53, URL de rascunho, lote, etc.">
+                </div>
+                <div>
+                  <label for="interlibPartnerContact">Contato visível da parceira</label>
+                  <input class="input" id="interlibPartnerContact" type="text" value="" placeholder="Será carregado quando houver contato institucional salvo." readonly>
+                </div>
+              </div>
+              <div style="margin-top:12px">
+                <label for="interlibPartnerChannels">Canais diretos</label>
+                <textarea class="textarea" id="interlibPartnerChannels" placeholder="E-mail, telefone, WhatsApp, canal alternativo e endereço aparecerão aqui quando a biblioteca parceira tiver salvo esses dados." readonly></textarea>
+                <div class="hint">Se preferirem, conversem diretamente antes de responder no sistema. O importante é deixar a decisão final registrada aqui depois.</div>
+              </div>
+              <div style="margin-top:12px">
+                <label for="interlibRequestMessage">Mensagem</label>
+                <textarea class="textarea" id="interlibRequestMessage" placeholder="Explica o pedido, o contexto político/técnico e, se necessário, indica qual notice, exemplar ou recurso está em jogo."></textarea>
+              </div>
+              <div style="margin-top:12px">
+                <label for="interlibRecentRequests">Solicitações recentes</label>
+                <textarea class="textarea" id="interlibRecentRequests" placeholder="As solicitações recentes desta biblioteca aparecerão aqui." readonly></textarea>
+              </div>
+              <div class="actions">
+                <button class="btn" id="btnRefreshInterlibRequests" type="button">Atualizar solicitações</button>
+                <button class="btn primary" id="btnSendInterlibRequest" type="button">Enviar solicitação</button>
+              </div>
+              <div class="status" id="interlibRequestsMsg"></div>
+            </div>
+
+            <div class="card">
+              <div class="section-head">
+                <div>
                   <h2>Tema visual da biblioteca</h2>
                   <div class="mini">Imagem de fundo, paleta e conjunto tipográfico da biblioteca, dentro de opções controladas.</div>
                 </div>
@@ -2051,8 +2117,14 @@
 
     let currentLibraryRow = null;
     let currentLibraryContactProfile = null;
+    let currentInterlibraryPartnerContact = null;
+    let currentInterlibraryRequests = [];
+    let currentActiveLibraries = [];
     const LIBRARY_CONTACT_TABLE = 'library_contact_profiles';
     const LIBRARY_CONTACT_RPC = 'upsert_library_contact_profile';
+    const INTERLIB_REQUEST_TABLE = 'document_permission_requests';
+    const INTERLIB_REQUEST_RPC = 'create_document_permission_request';
+    const INTERLIB_CONTACT_RPC = 'get_library_contact_for_cooperation';
     let currentLibraryRegimentoBinding = null;
     let currentLibraryRegimentoState = null;
     const LIBRARY_REGIMENTO_BUCKET = 'library-regimentos';
@@ -2504,6 +2576,332 @@
       $('librarySlug')?.addEventListener('blur', () => {
         $('librarySlug').value = slugifyLibrarySlug($('librarySlug').value);
       });
+    }
+
+    function getEmptyInterlibraryContact(libraryId=''){
+      return {
+        library_id: normalizeLibraryId(libraryId),
+        slug: '',
+        name: '',
+        short_name: '',
+        city: '',
+        state: '',
+        contact_name: '',
+        contact_role: '',
+        contact_email: '',
+        contact_phone: '',
+        contact_whatsapp: '',
+        contact_alternate: '',
+        postal_address: '',
+      };
+    }
+
+    function normalizeInterlibraryContact(row, libraryId=''){
+      const obj = row && typeof row === 'object' ? row : {};
+      return {
+        library_id: normalizeLibraryId(firstFilledValue(obj.library_id, obj.id, libraryId)),
+        slug: String(firstFilledValue(obj.slug, '') || '').trim(),
+        name: String(firstFilledValue(obj.name, obj.library_name, '') || '').trim(),
+        short_name: String(firstFilledValue(obj.short_name, obj.library_short_name, '') || '').trim(),
+        city: String(firstFilledValue(obj.city, '') || '').trim(),
+        state: String(firstFilledValue(obj.state, '') || '').trim(),
+        contact_name: String(firstFilledValue(obj.contact_name, '') || '').trim(),
+        contact_role: String(firstFilledValue(obj.contact_role, '') || '').trim(),
+        contact_email: String(firstFilledValue(obj.contact_email, '') || '').trim(),
+        contact_phone: String(firstFilledValue(obj.contact_phone, '') || '').trim(),
+        contact_whatsapp: String(firstFilledValue(obj.contact_whatsapp, '') || '').trim(),
+        contact_alternate: String(firstFilledValue(obj.contact_alternate, '') || '').trim(),
+        postal_address: String(firstFilledValue(obj.postal_address, '') || '').trim(),
+      };
+    }
+
+    function normalizeInterlibraryRequest(row){
+      const obj = row && typeof row === 'object' ? row : {};
+      return {
+        id: String(firstFilledValue(obj.id, '') || '').trim(),
+        requester_library_id: normalizeLibraryId(firstFilledValue(obj.requester_library_id, '')),
+        target_library_id: normalizeLibraryId(firstFilledValue(obj.target_library_id, '')),
+        requested_action: String(firstFilledValue(obj.requested_action, obj.action, 'outra') || 'outra').trim(),
+        object_type: String(firstFilledValue(obj.object_type, 'outro') || 'outro').trim(),
+        object_ref: String(firstFilledValue(obj.object_ref, '') || '').trim(),
+        message: String(firstFilledValue(obj.message, '') || '').trim(),
+        status: String(firstFilledValue(obj.status, 'pending') || 'pending').trim(),
+        response_note: String(firstFilledValue(obj.response_note, '') || '').trim(),
+        created_at: firstFilledValue(obj.created_at, null),
+        updated_at: firstFilledValue(obj.updated_at, null),
+        decided_at: firstFilledValue(obj.decided_at, null),
+      };
+    }
+
+    function isMissingInterlibraryBackendError(error){
+      const msg = String(error?.message || error || '').toLowerCase();
+      return (msg.includes(INTERLIB_REQUEST_TABLE.toLowerCase()) && (msg.includes('does not exist') || msg.includes('not found') || msg.includes('unknown')))
+        || (msg.includes(INTERLIB_REQUEST_RPC.toLowerCase()) && msg.includes('function'))
+        || (msg.includes(INTERLIB_CONTACT_RPC.toLowerCase()) && msg.includes('function'));
+    }
+
+    function interlibraryActionLabel(value){
+      const v = String(value || '').trim();
+      return {
+        edicao_notice: 'edição direta de notice',
+        proposta_correcao: 'análise de proposta de correção',
+        copia_local: 'criação de cópia local',
+        vinculo_recurso_digital: 'vínculo de recurso digital',
+        mutualizacao: 'ajuste de mutualização',
+        outra: 'outra solicitação',
+      }[v] || v || 'solicitação';
+    }
+
+    function interlibraryObjectLabel(value){
+      const v = String(value || '').trim();
+      return {
+        notice: 'notice',
+        exemplar: 'exemplar',
+        recurso_digital: 'recurso digital',
+        governanca: 'governança',
+        outro: 'outro',
+      }[v] || v || 'objeto';
+    }
+
+    function interlibraryStatusLabel(value){
+      const v = String(value || '').trim();
+      return {
+        pending: 'pendente',
+        accepted: 'aceita',
+        refused: 'recusada',
+        cancelled: 'cancelada',
+        expired: 'expirada',
+      }[v] || v || 'pendente';
+    }
+
+    function shortLibraryLabel(row){
+      const obj = row && typeof row === 'object' ? row : {};
+      const head = String(firstFilledValue(obj.short_name, obj.library_short_name, obj.name, obj.library_name, obj.slug, 'Biblioteca') || 'Biblioteca').trim();
+      const place = [obj.city, obj.state].map((v) => String(v || '').trim()).filter(Boolean).join(' / ');
+      return place ? `${head} — ${place}` : head;
+    }
+
+    function findKnownLibraryById(libraryId){
+      const id = normalizeLibraryId(libraryId);
+      if (!id) return null;
+      if (normalizeLibraryId(currentLibraryRow?.id) === id) return currentLibraryRow;
+      return currentActiveLibraries.find((row) => normalizeLibraryId(row?.id) === id) || null;
+    }
+
+    function renderInterlibraryPartnerOptions(options){
+      const select = $('interlibPartnerLibrary');
+      if (!select) return;
+      const currentValue = String(select.value || '').trim();
+      const authPartners = Array.isArray(currentDocGovernanceState?.authorized_partners)
+        ? currentDocGovernanceState.authorized_partners.map((v) => String(v || '').trim().toLowerCase()).filter(Boolean)
+        : [];
+      const sorted = [...(options || [])].sort((a, b) => {
+        const aScore = authPartners.includes(String(a?.slug || '').trim().toLowerCase()) ? 0 : 1;
+        const bScore = authPartners.includes(String(b?.slug || '').trim().toLowerCase()) ? 0 : 1;
+        if (aScore !== bScore) return aScore - bScore;
+        return shortLibraryLabel(a).localeCompare(shortLibraryLabel(b), 'pt-BR');
+      });
+      const validIds = new Set(sorted.map((row) => normalizeLibraryId(row?.id)).filter(Boolean));
+      const fallback = sorted[0] ? normalizeLibraryId(sorted[0].id) : '';
+      const preferred = authPartners.length
+        ? normalizeLibraryId((sorted.find((row) => authPartners.includes(String(row?.slug || '').trim().toLowerCase())) || {}).id || '')
+        : '';
+      const nextValue = validIds.has(currentValue) ? currentValue : (preferred && validIds.has(preferred) ? preferred : fallback);
+      select.innerHTML = '<option value="">Selecione uma biblioteca parceira</option>' + sorted.map((row) => {
+        const id = normalizeLibraryId(row?.id);
+        return `<option value="${id}">${shortLibraryLabel(row)}</option>`;
+      }).join('');
+      select.value = nextValue || '';
+    }
+
+    function summarizeInterlibraryPartner(contact){
+      const normalized = normalizeInterlibraryContact(contact);
+      const pieces = [
+        normalized.short_name || normalized.name || normalized.slug || '',
+        normalized.contact_name || '',
+        normalized.contact_role || ''
+      ].filter(Boolean);
+      return pieces.length ? pieces.join(' — ') : 'A biblioteca parceira ainda não salvou um contato institucional visível.';
+    }
+
+    function buildInterlibraryChannelsText(contact){
+      const normalized = normalizeInterlibraryContact(contact);
+      const lines = [];
+      if (normalized.contact_email) lines.push(`E-mail: ${normalized.contact_email}`);
+      if (normalized.contact_phone) lines.push(`Telefone: ${normalized.contact_phone}`);
+      if (normalized.contact_whatsapp) lines.push(`WhatsApp: ${normalized.contact_whatsapp}`);
+      if (normalized.contact_alternate) lines.push(`Canal alternativo: ${normalized.contact_alternate}`);
+      if (normalized.postal_address) lines.push(`Endereço: ${normalized.postal_address}`);
+      if (!lines.length) lines.push('A biblioteca parceira ainda não salvou canais diretos neste espaço.');
+      return lines.join('
+');
+    }
+
+    function renderInterlibraryPartnerContact(contact){
+      const normalized = normalizeInterlibraryContact(contact);
+      $('interlibPartnerContact').value = summarizeInterlibraryPartner(normalized);
+      $('interlibPartnerChannels').value = buildInterlibraryChannelsText(normalized);
+    }
+
+    function renderInterlibraryRequests(items){
+      const currentId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
+      const lines = (items || []).map((item) => {
+        const normalized = normalizeInterlibraryRequest(item);
+        const otherId = normalizeLibraryId(normalized.requester_library_id) === currentId
+          ? normalized.target_library_id
+          : normalized.requester_library_id;
+        const otherLibrary = findKnownLibraryById(otherId) || { id: otherId, name: otherId || 'Biblioteca parceira' };
+        const moment = fmtDateTimeBelem(normalized.updated_at || normalized.created_at || nowISO());
+        const action = interlibraryActionLabel(normalized.requested_action);
+        const objectLabel = interlibraryObjectLabel(normalized.object_type);
+        const objectRef = normalized.object_ref ? ` · ref.: ${normalized.object_ref}` : '';
+        return `${moment} · ${shortLibraryLabel(otherLibrary)} · ${action} (${objectLabel}) · ${interlibraryStatusLabel(normalized.status)}${objectRef}`;
+      });
+      $('interlibRecentRequests').value = lines.length ? lines.join('
+') : 'Nenhuma solicitação interbibliotecas registrada ainda para esta biblioteca.';
+    }
+
+    async function fetchInterlibraryActiveLibraries(){
+      const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+      const currentId = normalizeLibraryId(libraryRow?.id);
+      const { data, error } = await supabase
+        .from('libraries')
+        .select('id,slug,name,short_name,city,state,is_active')
+        .eq('is_active', true)
+        .order('name', { ascending: true });
+      if (error) throw error;
+      currentActiveLibraries = (data || [])
+        .map((row) => ({
+          ...row,
+          id: normalizeLibraryId(row?.id),
+          slug: String(row?.slug || '').trim(),
+          name: String(row?.name || '').trim(),
+          short_name: String(row?.short_name || '').trim(),
+          city: String(row?.city || '').trim(),
+          state: String(row?.state || '').trim(),
+        }))
+        .filter((row) => row.id && row.id !== currentId);
+      return currentActiveLibraries;
+    }
+
+    async function fetchInterlibraryPartnerContact(libraryId){
+      const targetId = normalizeLibraryId(libraryId);
+      if (!targetId) return getEmptyInterlibraryContact('');
+      const { data, error } = await supabase.rpc(INTERLIB_CONTACT_RPC, { p_target_library_id: targetId });
+      if (error) throw error;
+      const row = Array.isArray(data) ? (data[0] || null) : data;
+      return normalizeInterlibraryContact(row || { library_id: targetId }, targetId);
+    }
+
+    async function fetchInterlibraryRequests(libraryId){
+      const currentId = normalizeLibraryId(libraryId);
+      if (!currentId) return [];
+      const { data, error } = await supabase
+        .from(INTERLIB_REQUEST_TABLE)
+        .select('id,requester_library_id,target_library_id,requested_action,object_type,object_ref,message,status,response_note,created_at,updated_at,decided_at')
+        .or(`requester_library_id.eq.${currentId},target_library_id.eq.${currentId}`)
+        .order('updated_at', { ascending: false })
+        .limit(8);
+      if (error) throw error;
+      return (data || []).map(normalizeInterlibraryRequest);
+    }
+
+    async function loadInterlibraryPartnerContact({ silent=false } = {}){
+      const targetId = normalizeLibraryId($('interlibPartnerLibrary')?.value);
+      if (!targetId) {
+        currentInterlibraryPartnerContact = getEmptyInterlibraryContact('');
+        renderInterlibraryPartnerContact(currentInterlibraryPartnerContact);
+        if (!silent) setStatus('interlibRequestsMsg', 'Selecione uma biblioteca parceira para ver os canais diretos de contato.', 'warn');
+        return currentInterlibraryPartnerContact;
+      }
+      try {
+        currentInterlibraryPartnerContact = await fetchInterlibraryPartnerContact(targetId);
+        renderInterlibraryPartnerContact(currentInterlibraryPartnerContact);
+        if (!silent) setStatus('interlibRequestsMsg', 'Contato institucional da parceira carregado.', 'ok');
+        return currentInterlibraryPartnerContact;
+      } catch (e) {
+        currentInterlibraryPartnerContact = getEmptyInterlibraryContact(targetId);
+        renderInterlibraryPartnerContact(currentInterlibraryPartnerContact);
+        const missing = isMissingInterlibraryBackendError(e);
+        const msg = missing
+          ? 'Ainda não encontrei o backend de contato interbibliotecas. Aplica primeiro o mini-lote SQL desta etapa.'
+          : 'Não consegui carregar o contato da biblioteca parceira: ' + (e.message || String(e));
+        setStatus('interlibRequestsMsg', msg, missing ? 'warn' : 'bad', false);
+        return currentInterlibraryPartnerContact;
+      }
+    }
+
+    async function loadInterlibraryRequests({ silent=false } = {}){
+      try {
+        const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const libraryId = normalizeLibraryId(libraryRow?.id);
+        if (!libraryId) throw new Error('Biblioteca ativa não identificada para carregar as solicitações interbibliotecas.');
+        await fetchInterlibraryActiveLibraries();
+        renderInterlibraryPartnerOptions(currentActiveLibraries);
+        await loadInterlibraryPartnerContact({ silent: true });
+        currentInterlibraryRequests = await fetchInterlibraryRequests(libraryId);
+        renderInterlibraryRequests(currentInterlibraryRequests);
+        if (!silent) setStatus('interlibRequestsMsg', currentInterlibraryRequests.length ? 'Solicitações interbibliotecas carregadas.' : 'Ainda não há solicitações interbibliotecas desta biblioteca.', currentInterlibraryRequests.length ? 'ok' : 'warn');
+      } catch (e) {
+        currentInterlibraryRequests = [];
+        renderInterlibraryRequests(currentInterlibraryRequests);
+        const missing = isMissingInterlibraryBackendError(e);
+        const msg = missing
+          ? 'Ainda não encontrei o backend das solicitações interbibliotecas. Aplica primeiro o mini-lote SQL desta etapa.'
+          : 'Não consegui carregar as solicitações interbibliotecas: ' + (e.message || String(e));
+        setStatus('interlibRequestsMsg', msg, missing ? 'warn' : 'bad', false);
+      }
+    }
+
+    function readInterlibraryRequestForm(){
+      return {
+        requested_action: String($('interlibRequestedAction')?.value || 'outra').trim() || 'outra',
+        object_type: String($('interlibObjectType')?.value || 'outro').trim() || 'outro',
+        object_ref: String($('interlibObjectRef')?.value || '').trim(),
+        message: String($('interlibRequestMessage')?.value || '').trim(),
+      };
+    }
+
+    async function saveInterlibraryRequest(){
+      const btn = $('btnSendInterlibRequest');
+      if (btn) btn.disabled = true;
+      try {
+        const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const requesterId = normalizeLibraryId(libraryRow?.id);
+        const targetId = normalizeLibraryId($('interlibPartnerLibrary')?.value);
+        if (!requesterId) throw new Error('Biblioteca ativa não identificada para enviar a solicitação.');
+        if (!targetId) throw new Error('Escolhe primeiro a biblioteca parceira.');
+        if (requesterId === targetId) throw new Error('A solicitação interbibliotecas precisa apontar para outra biblioteca.');
+        const requestPayload = readInterlibraryRequestForm();
+        if (!requestPayload.message) throw new Error('Escreve uma mensagem curta explicando o pedido.');
+        const { data, error } = await supabase.rpc(INTERLIB_REQUEST_RPC, {
+          p_requester_library_id: requesterId,
+          p_target_library_id: targetId,
+          p_request: requestPayload
+        });
+        if (error) throw error;
+        const normalized = normalizeInterlibraryRequest(data || requestPayload);
+        currentInterlibraryRequests = [normalized, ...currentInterlibraryRequests].slice(0, 8);
+        renderInterlibraryRequests(currentInterlibraryRequests);
+        $('interlibObjectRef').value = '';
+        $('interlibRequestMessage').value = '';
+        setStatus('interlibRequestsMsg', 'Solicitação interbibliotecas enviada. Se preferirem, conversem diretamente e registrem depois a resposta no sistema.', 'ok');
+        await loadInterlibraryRequests({ silent: true });
+      } catch (e) {
+        const missing = isMissingInterlibraryBackendError(e);
+        const msg = missing
+          ? 'Ainda não encontrei o backend das solicitações interbibliotecas. Aplica primeiro o mini-lote SQL desta etapa.'
+          : 'Não consegui enviar a solicitação interbibliotecas: ' + (e.message || String(e));
+        setStatus('interlibRequestsMsg', msg, missing ? 'warn' : 'bad', false);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function setupInterlibraryRequestActions(){
+      $('interlibPartnerLibrary')?.addEventListener('change', () => { loadInterlibraryPartnerContact(); });
+      $('btnRefreshInterlibRequests')?.addEventListener('click', () => { loadInterlibraryRequests(); });
+      $('btnSendInterlibRequest')?.addEventListener('click', saveInterlibraryRequest);
     }
 
     function setupLibraryThemeActions(){
@@ -6639,6 +7037,7 @@ async function fetchActiveLoans(){
     setupLibraryScheduleActions();
     setupLocalRulesActions();
     setupLibraryRegimentoActions();
+    setupInterlibraryRequestActions();
 
     function setupRefreshHooks(){
       if (refreshTimer) clearInterval(refreshTimer);
@@ -6657,6 +7056,7 @@ async function fetchActiveLoans(){
         await loadLibraryIdentity();
         await loadLibraryTheme();
         await loadDocGovernance();
+        await loadInterlibraryRequests({ silent:true });
         await loadLibrarySchedule();
         await loadLocalRules();
         await loadLibraryRegimento();
