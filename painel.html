@@ -2763,7 +2763,7 @@
       if (normalized.contact_alternate) lines.push(`Canal alternativo: ${normalized.contact_alternate}`);
       if (normalized.postal_address) lines.push(`Endereço: ${normalized.postal_address}`);
       if (!lines.length) lines.push('A biblioteca parceira ainda não salvou canais diretos neste espaço.');
-      __PLACEHOLDER__
+      return lines.join('\n');
     }
 
     function renderInterlibraryPartnerContact(contact){
