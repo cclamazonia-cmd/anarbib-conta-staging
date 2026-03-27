@@ -683,6 +683,86 @@
             <div class="card">
               <div class="section-head">
                 <div>
+                  <h2>Governança documental</h2>
+                  <div class="mini">Define o que esta biblioteca pode editar diretamente, o que deve virar proposta de correção, o que pode ser retomado localmente e como a mutualização começa por padrão.</div>
+                </div>
+              </div>
+              <div class="row" style="margin-top:12px">
+                <div>
+                  <label for="docGovDirectEditMode">Edição direta de notices de outras bibliotecas</label>
+                  <select class="select" id="docGovDirectEditMode">
+                    <option value="nao_permitir">Não permitir</option>
+                    <option value="permitir_com_parceiros">Permitir só com parceiras autorizadas</option>
+                    <option value="permitir_todas">Permitir para qualquer notice compartilhada</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="docGovCorrectionMode">Correções em notices externas</label>
+                  <select class="select" id="docGovCorrectionMode">
+                    <option value="propor_correcao">Só propor correção</option>
+                    <option value="propor_ou_editar">Propor ou editar segundo a regra acima</option>
+                    <option value="edicao_direta">Priorizar edição direta quando for permitido</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row" style="margin-top:12px">
+                <div>
+                  <label for="docGovLocalRepriseMode">Retomada local de notice parceira</label>
+                  <select class="select" id="docGovLocalRepriseMode">
+                    <option value="nao_permitir">Não permitir</option>
+                    <option value="rascunho_local">Criar rascunho local sem mexer na original</option>
+                    <option value="reprise_local">Permitir criação de cópia local</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="docGovDigitalLinkMode">Ligar recursos digitais a notices externas</label>
+                  <select class="select" id="docGovDigitalLinkMode">
+                    <option value="nao_permitir">Não permitir</option>
+                    <option value="somente_locais">Permitir só para recursos locais desta biblioteca</option>
+                    <option value="permitir_com_parceiros">Permitir segundo parceiras autorizadas</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row" style="margin-top:12px">
+                <div>
+                  <label for="docGovDefaultMutualization">Mutualização padrão para novas notices locais</label>
+                  <select class="select" id="docGovDefaultMutualization">
+                    <option value="local">Somente local</option>
+                    <option value="mutualizavel">Mutualizável</option>
+                    <option value="consulta_local">Consulta local</option>
+                    <option value="emprestimo_interbib">Empréstimo inter-bibs possível</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="docGovLocalItemsOnly">Edição de exemplares locais</label>
+                  <label class="checkline" for="docGovLocalItemsOnly">
+                    <input id="docGovLocalItemsOnly" type="checkbox">
+                    <span>Restringir a edição material aos exemplares e rótulos desta biblioteca</span>
+                  </label>
+                </div>
+              </div>
+              <div style="margin-top:12px">
+                <label for="docGovAuthorizedPartners">Parceiras autorizadas</label>
+                <textarea class="textarea" id="docGovAuthorizedPartners" placeholder="Ex.: btl, cira, csl-milano"></textarea>
+                <div class="hint">Usa slugs, siglas ou identificadores curtos separados por vírgula, um por linha ou por ponto e vírgula.</div>
+              </div>
+              <div style="margin-top:12px">
+                <label for="docGovInternalNote">Nota interna de governança</label>
+                <textarea class="textarea" id="docGovInternalNote" placeholder="Ex.: notices BTL só podem receber proposta de correção; PDFs locais podem ser ligados a notices mutualizadas."></textarea>
+              </div>
+              <div style="margin-top:12px">
+                <label for="docGovStateNote">Resumo atual</label>
+                <input class="input" id="docGovStateNote" type="text" value="" placeholder="Sem regra documental específica salva." readonly>
+              </div>
+              <div class="actions">
+                <button class="btn" id="btnSaveDocGovernance" type="button">Salvar governança documental</button>
+              </div>
+              <div class="status" id="docGovernanceMsg"></div>
+            </div>
+
+            <div class="card">
+              <div class="section-head">
+                <div>
                   <h2>Identidade da biblioteca</h2>
                   <div class="mini">Nome público, forma abreviada e identificador curto da biblioteca.</div>
                 </div>
@@ -2783,6 +2863,246 @@
     function setupLocalRulesActions(){
       $('btnSaveLocalRules')?.addEventListener('click', saveLocalRules);
     }
+
+    let currentDocGovernanceBinding = null;
+    let currentDocGovernanceState = null;
+
+    function getEmptyDocGovernance(){
+      return {
+        direct_edit_mode: 'nao_permitir',
+        correction_mode: 'propor_correcao',
+        local_reprise_mode: 'rascunho_local',
+        digital_link_mode: 'somente_locais',
+        default_mutualization: 'local',
+        local_items_only: true,
+        authorized_partners: [],
+        internal_note: ''
+      };
+    }
+
+    function normalizeDocGovSelect(value, allowed, fallback){
+      const normalized = String(value || '').trim().toLowerCase();
+      return allowed.includes(normalized) ? normalized : fallback;
+    }
+
+    function parseDocGovPartners(value){
+      if (Array.isArray(value)) {
+        return Array.from(new Set(value.map((item) => String(item || '').trim()).filter(Boolean)));
+      }
+      return Array.from(new Set(
+        String(value || '')
+          .split(/[\n,;]+/)
+          .map((item) => String(item || '').trim())
+          .filter(Boolean)
+      ));
+    }
+
+    function normalizeDocGovernance(value){
+      const obj = safeJsonObject(value);
+      const base = getEmptyDocGovernance();
+      return {
+        direct_edit_mode: normalizeDocGovSelect(firstFilledValue(
+          obj.direct_edit_mode,
+          obj.document_direct_edit_mode,
+          obj.direct_edit_foreign_notices,
+          ''
+        ), ['nao_permitir', 'permitir_com_parceiros', 'permitir_todas'], base.direct_edit_mode),
+        correction_mode: normalizeDocGovSelect(firstFilledValue(
+          obj.correction_mode,
+          obj.document_correction_mode,
+          obj.external_correction_mode,
+          ''
+        ), ['propor_correcao', 'propor_ou_editar', 'edicao_direta'], base.correction_mode),
+        local_reprise_mode: normalizeDocGovSelect(firstFilledValue(
+          obj.local_reprise_mode,
+          obj.document_local_reprise_mode,
+          obj.local_takeover_mode,
+          ''
+        ), ['nao_permitir', 'rascunho_local', 'reprise_local'], base.local_reprise_mode),
+        digital_link_mode: normalizeDocGovSelect(firstFilledValue(
+          obj.digital_link_mode,
+          obj.document_digital_link_mode,
+          obj.attach_digital_resources_mode,
+          ''
+        ), ['nao_permitir', 'somente_locais', 'permitir_com_parceiros'], base.digital_link_mode),
+        default_mutualization: normalizeDocGovSelect(firstFilledValue(
+          obj.default_mutualization,
+          obj.default_mutualization_status,
+          obj.mutualization_default,
+          ''
+        ), ['local', 'mutualizavel', 'consulta_local', 'emprestimo_interbib'], base.default_mutualization),
+        local_items_only: regimentoToBool(firstFilledValue(
+          obj.local_items_only,
+          obj.edit_local_items_only,
+          obj.local_exemplars_only,
+          base.local_items_only
+        )),
+        authorized_partners: parseDocGovPartners(firstFilledValue(
+          obj.authorized_partners,
+          obj.allowed_partners,
+          obj.partner_slugs,
+          ''
+        )),
+        internal_note: String(firstFilledValue(
+          obj.internal_note,
+          obj.document_governance_note,
+          obj.note,
+          ''
+        ) || '').trim(),
+      };
+    }
+
+    function extractDocGovernanceBinding(row){
+      if (!row || typeof row !== 'object') return null;
+      const directJsonFields = ['document_governance_config', 'documentary_governance_config', 'governance_config', 'document_governance'];
+      for (const field of directJsonFields) {
+        if (Object.prototype.hasOwnProperty.call(row, field)) {
+          return { table: 'libraries', source: { type: 'direct-json', field } };
+        }
+      }
+      const containerFields = ['settings', 'config', 'library_config', 'metadata', 'extra'];
+      const subkeys = ['document_governance', 'documentary_governance', 'governance'];
+      for (const field of containerFields) {
+        if (!Object.prototype.hasOwnProperty.call(row, field)) continue;
+        return { table: 'libraries', source: { type: 'json-container', field, subkey: 'document_governance' } };
+      }
+      return null;
+    }
+
+    function readDocGovernanceFromBinding(binding, row){
+      const source = binding?.source || {};
+      if (!binding || !row || typeof row !== 'object') return getEmptyDocGovernance();
+      if (source.type === 'direct-json') {
+        return normalizeDocGovernance(row[source.field]);
+      }
+      if (source.type === 'json-container') {
+        const container = safeJsonObject(row[source.field]);
+        return normalizeDocGovernance(container?.[source.subkey]);
+      }
+      return getEmptyDocGovernance();
+    }
+
+    function buildDocGovernancePayload(binding, governance, baseRow){
+      const payloadData = {
+        direct_edit_mode: governance.direct_edit_mode,
+        correction_mode: governance.correction_mode,
+        local_reprise_mode: governance.local_reprise_mode,
+        digital_link_mode: governance.digital_link_mode,
+        default_mutualization: governance.default_mutualization,
+        local_items_only: !!governance.local_items_only,
+        authorized_partners: parseDocGovPartners(governance.authorized_partners),
+        internal_note: String(governance.internal_note || '').trim(),
+      };
+      const source = binding?.source || {};
+      if (source.type === 'direct-json') {
+        return { [source.field]: payloadData };
+      }
+      if (source.type === 'json-container') {
+        const container = safeJsonObject(baseRow?.[source.field]);
+        return {
+          [source.field]: {
+            ...container,
+            [source.subkey || 'document_governance']: payloadData
+          }
+        };
+      }
+      throw new Error('Não encontrei ainda um campo de persistência em libraries para a governança documental.');
+    }
+
+    function buildDocGovernanceSummary(governance){
+      const direct = ({
+        nao_permitir: 'sem edição direta de notices externas',
+        permitir_com_parceiros: 'edição direta só com parceiras autorizadas',
+        permitir_todas: 'edição direta liberada para notices compartilhadas'
+      })[governance.direct_edit_mode] || 'sem regra definida';
+      const reprise = ({
+        nao_permitir: 'sem retomada local',
+        rascunho_local: 'retomada via rascunho local',
+        reprise_local: 'retomada local assumida'
+      })[governance.local_reprise_mode] || 'sem regra de retomada';
+      const mutual = ({
+        local: 'novas notices locais por padrão',
+        mutualizavel: 'novas notices mutualizáveis por padrão',
+        consulta_local: 'novas notices em consulta local por padrão',
+        emprestimo_interbib: 'novas notices com empréstimo inter-bibs por padrão'
+      })[governance.default_mutualization] || 'mutualização sem regra';
+      const partners = governance.authorized_partners.length ? `parceiras: ${governance.authorized_partners.join(', ')}` : 'sem parceiras autorizadas';
+      return [direct, reprise, mutual, partners].join(' · ');
+    }
+
+    function renderDocGovernance(governance){
+      const normalized = normalizeDocGovernance(governance || {});
+      $('docGovDirectEditMode').value = normalized.direct_edit_mode;
+      $('docGovCorrectionMode').value = normalized.correction_mode;
+      $('docGovLocalRepriseMode').value = normalized.local_reprise_mode;
+      $('docGovDigitalLinkMode').value = normalized.digital_link_mode;
+      $('docGovDefaultMutualization').value = normalized.default_mutualization;
+      $('docGovLocalItemsOnly').checked = !!normalized.local_items_only;
+      $('docGovAuthorizedPartners').value = normalized.authorized_partners.join(', ');
+      $('docGovInternalNote').value = normalized.internal_note;
+      $('docGovStateNote').value = buildDocGovernanceSummary(normalized);
+      currentDocGovernanceState = normalized;
+    }
+
+    function collectDocGovernanceFromForm(){
+      return normalizeDocGovernance({
+        direct_edit_mode: $('docGovDirectEditMode')?.value,
+        correction_mode: $('docGovCorrectionMode')?.value,
+        local_reprise_mode: $('docGovLocalRepriseMode')?.value,
+        digital_link_mode: $('docGovDigitalLinkMode')?.value,
+        default_mutualization: $('docGovDefaultMutualization')?.value,
+        local_items_only: !!$('docGovLocalItemsOnly')?.checked,
+        authorized_partners: $('docGovAuthorizedPartners')?.value,
+        internal_note: $('docGovInternalNote')?.value,
+      });
+    }
+
+    async function loadDocGovernance(){
+      try {
+        const libraryRow = currentLibraryRow || await fetchCurrentLibraryRow();
+        const binding = extractDocGovernanceBinding(libraryRow);
+        currentDocGovernanceBinding = binding;
+        renderDocGovernance(binding ? readDocGovernanceFromBinding(binding, libraryRow) : getEmptyDocGovernance());
+        setStatus('docGovernanceMsg', binding ? 'Governança documental carregada.' : 'Ainda não encontrei um campo de persistência em libraries para a governança documental.', binding ? 'ok' : 'warn');
+      } catch (e) {
+        renderDocGovernance(getEmptyDocGovernance());
+        setStatus('docGovernanceMsg', 'Não consegui carregar a governança documental: ' + (e.message || String(e)), 'bad', false);
+      }
+    }
+
+    async function saveDocGovernance(){
+      clearStatus('docGovernanceMsg');
+      const btn = $('btnSaveDocGovernance');
+      if (btn) btn.disabled = true;
+      try {
+        const libraryRow = currentLibraryRow || await fetchCurrentLibraryRow();
+        const binding = currentDocGovernanceBinding || extractDocGovernanceBinding(libraryRow);
+        if (!binding) throw new Error('Não encontrei ainda um campo de persistência em libraries para a governança documental.');
+        const libraryId = normalizeLibraryId(libraryRow?.id);
+        if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar a governança documental.');
+        const governance = collectDocGovernanceFromForm();
+        const payload = buildDocGovernancePayload(binding, governance, libraryRow);
+        const { data, error } = await supabase
+          .from('libraries')
+          .update(payload)
+          .eq('id', libraryId)
+          .select('*')
+          .maybeSingle();
+        if (error) throw error;
+        currentLibraryRow = { ...(currentLibraryRow || {}), ...(data || {}), id: libraryId };
+        currentDocGovernanceBinding = binding;
+        renderDocGovernance(governance);
+        setStatus('docGovernanceMsg', 'Governança documental atualizada.', 'ok');
+      } catch (e) {
+        setStatus('docGovernanceMsg', 'Não consegui salvar a governança documental: ' + (e.message || String(e)), 'bad', false);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function setupDocGovernanceActions(){
+      $('btnSaveDocGovernance')?.addEventListener('click', saveDocGovernance);
+    }
     const LIBRARY_REGIMENTO_DRAFT_BUCKET = 'library-regimentos-private';
     const LIBRARY_REGIMENTO_PUBLIC_BUCKET = 'library-regimentos-public';
     const LIBRARY_REGIMENTO_SIGNED_TTL = 3600;
@@ -3910,6 +4230,7 @@ function belemNowParts(){
     setupServiceStateActions();
     setupLibraryIdentityActions();
     setupLibraryThemeActions();
+    setupDocGovernanceActions();
     bindResScheduleAtParts();
     setupReturnScheduleEditor();
 
@@ -6136,6 +6457,7 @@ async function fetchActiveLoans(){
         await loadLibraryServiceState();
         await loadLibraryIdentity();
         await loadLibraryTheme();
+        await loadDocGovernance();
         await loadLibrarySchedule();
         await loadLocalRules();
         await loadLibraryRegimento();
