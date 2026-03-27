@@ -892,6 +892,10 @@
                 </div>
               </div>
               <div style="margin-top:12px">
+                <label for="interlibPendingIncomingMessage">Mensagem recebida</label>
+                <textarea class="textarea" id="interlibPendingIncomingMessage" placeholder="A mensagem escrita pela biblioteca parceira aparecerá aqui." readonly></textarea>
+              </div>
+              <div style="margin-top:12px">
                 <label for="interlibResponseNote">Nota da resposta (opcional)</label>
                 <textarea class="textarea" id="interlibResponseNote" placeholder="Ex.: aceitamos a solicitação, mas pedimos retorno depois da intervenção na notice."></textarea>
               </div>
@@ -2829,6 +2833,7 @@
       const selectedId = String($('interlibPendingIncomingSelect')?.value || '').trim();
       const selected = currentInterlibraryRequests.find((item) => String(item?.id || '').trim() === selectedId);
       $('interlibPendingIncomingSummary').value = selected ? summarizePendingIncomingInterlibraryRequest(selected) : '';
+      $('interlibPendingIncomingMessage').value = selected ? String(selected.message || '').trim() : '';
       const hasSelection = !!selected;
       if ($('btnAcceptInterlibRequest')) $('btnAcceptInterlibRequest').disabled = !hasSelection;
       if ($('btnRefuseInterlibRequest')) $('btnRefuseInterlibRequest').disabled = !hasSelection;
@@ -2844,7 +2849,7 @@
         return `<option value="${esc(normalized.id)}">${esc(summarizePendingIncomingInterlibraryRequest(normalized))}</option>`;
       }).join('');
       const validIds = new Set(pending.map((item) => String(item?.id || '').trim()).filter(Boolean));
-      select.value = validIds.has(currentValue) ? currentValue : '';
+      select.value = validIds.has(currentValue) ? currentValue : (pending[0] ? String(pending[0].id || '').trim() : '');
       renderSelectedPendingIncomingInterlibraryRequest();
     }
 
@@ -2990,8 +2995,11 @@
     }
 
     async function saveInterlibraryDecision(decision){
-      const requestId = Number($('interlibPendingIncomingSelect')?.value || 0);
-      if (!requestId) return setStatus('interlibRequestsMsg', 'Escolhe primeiro uma solicitação recebida pendente.', 'warn');
+      const selectedId = String($('interlibPendingIncomingSelect')?.value || '').trim();
+      const selected = currentInterlibraryRequests.find((item) => String(item?.id || '').trim() === selectedId);
+      if (!selected) return setStatus('interlibRequestsMsg', 'Escolhe primeiro uma solicitação recebida pendente.', 'warn');
+      const requestId = Number(selected.id || 0);
+      if (!requestId) return setStatus('interlibRequestsMsg', 'Não consegui identificar a solicitação selecionada.', 'warn');
       const note = String($('interlibResponseNote')?.value || '').trim();
       const acceptBtn = $('btnAcceptInterlibRequest');
       const refuseBtn = $('btnRefuseInterlibRequest');
