@@ -701,7 +701,7 @@
                 </div>
               </div>
               <div class="actions">
-                <button class="btn" id="btnSaveLibraryIdentity" type="button" disabled>Salvar identidade</button>
+                <button class="btn" id="btnSaveLibraryIdentity" type="button">Salvar identidade</button>
               </div>
               <div class="status" id="libraryIdentityMsg">Bloco preparado para ligação futura ao backend.</div>
             </div>
@@ -744,8 +744,8 @@
                 </div>
               </div>
               <div class="actions">
-                <button class="btn" id="btnSaveLibraryTheme" type="button" disabled>Salvar tema</button>
-                <button class="btn" id="btnResetLibraryTheme" type="button" disabled>Restaurar tema padrão</button>
+                <button class="btn" id="btnSaveLibraryTheme" type="button">Salvar tema</button>
+                <button class="btn" id="btnResetLibraryTheme" type="button">Restaurar tema padrão</button>
               </div>
               <div class="status" id="libraryThemeMsg">Bloco preparado para ligação futura ao backend.</div>
             </div>
@@ -1894,6 +1894,268 @@
       $('btnSaveServiceState')?.addEventListener('click', saveLibraryServiceState);
     }
 
+    let currentLibraryRow = null;
+
+    function slugifyLibrarySlug(value){
+      return String(value || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    }
+
+    function safeJsonObject(value){
+      if (!value) return {};
+      if (typeof value === 'object' && !Array.isArray(value)) return value;
+      if (typeof value !== 'string') return {};
+      try {
+        const parsed = JSON.parse(value);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function firstFilledValue(...values){
+      for (const value of values){
+        if (value === 0) return value;
+        if (typeof value === 'string' && value.trim()) return value.trim();
+        if (value !== null && value !== undefined && value !== '') return value;
+      }
+      return '';
+    }
+
+    function getAllowedThemePalettes(){
+      return ['default', 'contraste_suave', 'vermelho_escuro', 'cinza_vermelho'];
+    }
+
+    function getAllowedThemeFontPacks(){
+      return ['default', 'inter_merriweather', 'inter_source', 'system'];
+    }
+
+    function normalizeThemePalette(value){
+      const v = String(value || '').trim();
+      return getAllowedThemePalettes().includes(v) ? v : 'default';
+    }
+
+    function normalizeThemeFontPack(value){
+      const v = String(value || '').trim();
+      return getAllowedThemeFontPacks().includes(v) ? v : 'default';
+    }
+
+    function normalizeThemeStateFromLibraryRow(row){
+      const config = safeJsonObject(row?.theme_config || row?.ui_theme_config || row?.theme || row?.ui_theme);
+      return {
+        background_url: String(firstFilledValue(
+          row?.theme_background_url,
+          row?.background_image_url,
+          row?.hero_background_url,
+          config?.background_url,
+          config?.background_image_url,
+          config?.hero_background_url,
+          config?.background,
+          ''
+        ) || '').trim(),
+        palette: normalizeThemePalette(firstFilledValue(
+          row?.theme_palette,
+          row?.palette,
+          config?.palette,
+          config?.color_palette,
+          'default'
+        )),
+        font_pack: normalizeThemeFontPack(firstFilledValue(
+          row?.theme_font_pack,
+          row?.font_pack,
+          config?.font_pack,
+          config?.fonts,
+          'default'
+        ))
+      };
+    }
+
+    function renderLibraryIdentity(row){
+      $('libraryFullName').value = String(row?.name || '').trim();
+      $('libraryShortName').value = String(row?.short_name || '').trim();
+      $('librarySlug').value = String(row?.slug || '').trim();
+    }
+
+    function renderLibraryTheme(row){
+      const theme = normalizeThemeStateFromLibraryRow(row || {});
+      $('libraryThemeBackground').value = theme.background_url;
+      $('libraryThemePalette').value = theme.palette;
+      $('libraryThemeFontPack').value = theme.font_pack;
+      const previewBits = [];
+      previewBits.push(theme.background_url ? 'Imagem configurada' : 'Sem imagem personalizada');
+      previewBits.push('Paleta: ' + theme.palette.replace(/_/g, ' '));
+      previewBits.push('Fontes: ' + theme.font_pack.replace(/_/g, ' + '));
+      $('libraryThemePreviewNote').value = previewBits.join(' · ');
+    }
+
+    function patchCachedLibraryIdentity(updatedRow){
+      if (!updatedRow || typeof updatedRow !== 'object') return;
+      currentLibraryRow = { ...(currentLibraryRow || {}), ...updatedRow };
+      if (currentAccessRow) {
+        currentAccessRow = {
+          ...currentAccessRow,
+          library_name: updatedRow?.name || currentAccessRow.library_name,
+          library_slug: updatedRow?.slug || currentAccessRow.library_slug,
+          library_short_name: updatedRow?.short_name || currentAccessRow.library_short_name,
+          default_library_name: updatedRow?.name || currentAccessRow.default_library_name,
+          default_library_slug: updatedRow?.slug || currentAccessRow.default_library_slug,
+        };
+      }
+      if (currentIdentityRow) {
+        currentIdentityRow = {
+          ...currentIdentityRow,
+          library_name: updatedRow?.name || currentIdentityRow.library_name,
+          library_slug: updatedRow?.slug || currentIdentityRow.library_slug,
+          library_short_name: updatedRow?.short_name || currentIdentityRow.library_short_name,
+          default_library_name: updatedRow?.name || currentIdentityRow.default_library_name,
+          default_library_slug: updatedRow?.slug || currentIdentityRow.default_library_slug,
+        };
+      }
+    }
+
+    async function fetchCurrentLibraryRow(){
+      const resolved = await resolveCurrentLibraryIdentity();
+      const libraryId = normalizeLibraryId(resolved?.id);
+      if (!libraryId) throw new Error('Biblioteca ativa não identificada para carregar os dados locais.');
+      const { data, error } = await supabase
+        .from('libraries')
+        .select('*')
+        .eq('id', libraryId)
+        .maybeSingle();
+      if (error) throw error;
+      currentLibraryRow = { ...(resolved?.row || {}), ...(data || {}), id: libraryId };
+      return currentLibraryRow;
+    }
+
+    async function loadLibraryIdentity(){
+      try {
+        const row = await fetchCurrentLibraryRow();
+        patchCachedLibraryIdentity(row);
+        renderLibraryIdentity(row);
+        await fillHeader();
+        clearStatus('libraryIdentityMsg');
+      } catch (e) {
+        renderLibraryIdentity({});
+        setStatus('libraryIdentityMsg', 'Não consegui carregar a identidade da biblioteca: ' + (e.message || String(e)), 'bad', false);
+      }
+    }
+
+    async function saveLibraryIdentity(){
+      clearStatus('libraryIdentityMsg');
+      const btn = $('btnSaveLibraryIdentity');
+      btn.disabled = true;
+      try {
+        const baseRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const libraryId = normalizeLibraryId(baseRow?.id);
+        if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar a identidade.');
+
+        const fullName = String($('libraryFullName')?.value || '').trim();
+        const shortName = String($('libraryShortName')?.value || '').trim();
+        const slugInput = String($('librarySlug')?.value || '').trim();
+        const slug = slugifyLibrarySlug(slugInput);
+
+        if (!fullName) throw new Error('Informe o nome completo da biblioteca.');
+        if (!shortName) throw new Error('Informe o nome abreviado da biblioteca.');
+        if (!slug) throw new Error('Informe um slug válido para a biblioteca.');
+
+        $('librarySlug').value = slug;
+
+        const payload = { name: fullName, short_name: shortName, slug };
+        const { data, error } = await supabase
+          .from('libraries')
+          .update(payload)
+          .eq('id', libraryId)
+          .select('*')
+          .maybeSingle();
+        if (error) throw error;
+
+        patchCachedLibraryIdentity(data || { id: libraryId, ...payload });
+        renderLibraryIdentity(currentLibraryRow || data || payload);
+        await fillHeader();
+        setStatus('libraryIdentityMsg', 'Identidade da biblioteca atualizada.', 'ok');
+      } catch (e) {
+        setStatus('libraryIdentityMsg', 'Não consegui salvar a identidade da biblioteca: ' + (e.message || String(e)), 'bad', false);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function trySetLibraryThemeConfig(libraryId, themeConfig){
+      const attempts = [
+        { p_library_id: libraryId, p_theme_config: themeConfig },
+        { library_id: libraryId, p_theme_config: themeConfig },
+        { p_library_id: libraryId, theme_config: themeConfig },
+        { library_id: libraryId, theme_config: themeConfig },
+        { p_library_id: libraryId, p_config: themeConfig },
+        { library_id: libraryId, config: themeConfig },
+      ];
+      let lastError = null;
+      for (const args of attempts){
+        const { data, error } = await supabase.rpc('set_library_theme_config', args);
+        if (!error) return { data, args };
+        lastError = error;
+        const message = String(error?.message || '').toLowerCase();
+        const looksLikeSignatureIssue = message.includes('function') || message.includes('schema cache') || message.includes('signature') || message.includes('parameter');
+        if (!looksLikeSignatureIssue) throw error;
+      }
+      throw lastError || new Error('RPC set_library_theme_config indisponível.');
+    }
+
+    async function loadLibraryTheme(){
+      try {
+        const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        renderLibraryTheme(row);
+        clearStatus('libraryThemeMsg');
+      } catch (e) {
+        renderLibraryTheme({});
+        setStatus('libraryThemeMsg', 'Não consegui carregar o tema da biblioteca: ' + (e.message || String(e)), 'bad', false);
+      }
+    }
+
+    async function saveLibraryTheme({reset=false} = {}){
+      clearStatus('libraryThemeMsg');
+      const saveBtn = $('btnSaveLibraryTheme');
+      const resetBtn = $('btnResetLibraryTheme');
+      saveBtn.disabled = true;
+      resetBtn.disabled = true;
+      try {
+        const baseRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const libraryId = normalizeLibraryId(baseRow?.id);
+        if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar o tema.');
+
+        const themeConfig = {
+          background_url: reset ? '' : String($('libraryThemeBackground')?.value || '').trim(),
+          palette: normalizeThemePalette(reset ? 'default' : $('libraryThemePalette')?.value),
+          font_pack: normalizeThemeFontPack(reset ? 'default' : $('libraryThemeFontPack')?.value),
+        };
+
+        await trySetLibraryThemeConfig(libraryId, themeConfig);
+        const refreshed = await fetchCurrentLibraryRow();
+        renderLibraryTheme(refreshed);
+        setStatus('libraryThemeMsg', reset ? 'Tema padrão restaurado.' : 'Tema da biblioteca atualizado.', 'ok');
+      } catch (e) {
+        setStatus('libraryThemeMsg', 'Não consegui salvar o tema da biblioteca: ' + (e.message || String(e)), 'bad', false);
+      } finally {
+        saveBtn.disabled = false;
+        resetBtn.disabled = false;
+      }
+    }
+
+    function setupLibraryIdentityActions(){
+      $('btnSaveLibraryIdentity')?.addEventListener('click', saveLibraryIdentity);
+      $('librarySlug')?.addEventListener('blur', () => {
+        $('librarySlug').value = slugifyLibrarySlug($('librarySlug').value);
+      });
+    }
+
+    function setupLibraryThemeActions(){
+      $('btnSaveLibraryTheme')?.addEventListener('click', () => saveLibraryTheme());
+      $('btnResetLibraryTheme')?.addEventListener('click', () => saveLibraryTheme({ reset: true }));
+    }
+
 
 function belemNowParts(){
       const d = new Date();
@@ -2535,6 +2797,8 @@ function belemNowParts(){
     const activateProfileTab = setupProfileTabs();
     setupMainTabs();
     setupServiceStateActions();
+    setupLibraryIdentityActions();
+    setupLibraryThemeActions();
     bindResScheduleAtParts();
     setupReturnScheduleEditor();
 
@@ -4755,6 +5019,8 @@ async function fetchActiveLoans(){
       if (isLibrarian){
         await fillHeader();
         await loadLibraryServiceState();
+        await loadLibraryIdentity();
+        await loadLibraryTheme();
         await loadInternalTaskLibrarians();
         await loadInternalTasks({ silent:true });
         await refreshCollections();
