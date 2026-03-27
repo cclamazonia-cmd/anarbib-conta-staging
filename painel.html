@@ -711,7 +711,7 @@
                   <select class="select" id="docGovLocalRepriseMode">
                     <option value="nao_permitir">Não permitir</option>
                     <option value="rascunho_local">Criar rascunho local sem mexer na original</option>
-                    <option value="copia_local">Permitir criação de cópia local</option>
+                    <option value="reprise_local">Permitir criação de cópia local</option>
                   </select>
                 </div>
                 <div>
@@ -2373,6 +2373,37 @@
       btn.title = isLoggedIn ? 'Encerrar sessão e voltar ao cadastro' : 'Ir para o cadastro / login';
     }
 
+    function applyActiveLibraryLogoCandidate(index=0){
+      const el = $('activeLibraryLogo');
+      if (!el) return;
+      const candidates = safeJsonArray(el.dataset.candidates || '[]');
+      if (!Array.isArray(candidates) || index >= candidates.length) {
+        hideActiveLibraryLogo();
+        return;
+      }
+      el.dataset.candidateIndex = String(index);
+      el.classList.remove('hidden');
+      el.src = String(candidates[index] || '').trim();
+    }
+
+    function renderActiveLibraryLogo(row){
+      const el = $('activeLibraryLogo');
+      if (!el) return;
+      const candidates = getLibraryLogoCandidates(row);
+      const libraryName = String(row?.short_name || row?.library_short_name || row?.name || row?.library_name || row?.slug || row?.library_slug || 'biblioteca ativa').trim();
+      el.alt = `Logo de ${libraryName}`;
+      el.dataset.candidates = JSON.stringify(candidates);
+      el.onerror = () => {
+        const nextIndex = Number(el.dataset.candidateIndex || '0') + 1;
+        applyActiveLibraryLogoCandidate(nextIndex);
+      };
+      if (!candidates.length) {
+        hideActiveLibraryLogo();
+        return;
+      }
+      applyActiveLibraryLogoCandidate(0);
+    }
+
     function resetPainelAuthChrome(){
       session = null;
       isLibrarian = false;
@@ -2392,6 +2423,9 @@
     async function syncPainelAuthState(nextSession, { reloadData=false, allowAnonymousReset=true } = {}){
       const syncId = ++authSyncSerial;
       session = nextSession || null;
+      if (!session?.user?.id) {
+        session = await getConfirmedCurrentSession({ attempts: allowAnonymousReset ? 3 : 1, delayMs: 120 });
+      }
       updateTopbarAuthButton(!!session?.user?.id);
 
       if (!session?.user?.id) {
@@ -2427,38 +2461,7 @@
       }
     }
 
-    function applyActiveLibraryLogoCandidate(index=0){
-      const el = $('activeLibraryLogo');
-      if (!el) return;
-      const candidates = safeJsonArray(el.dataset.candidates || '[]');
-      if (!Array.isArray(candidates) || index >= candidates.length) {
-        hideActiveLibraryLogo();
-        return;
-      }
-      el.dataset.candidateIndex = String(index);
-      el.classList.remove('hidden');
-      el.src = String(candidates[index] || '').trim();
-    }
-
-    function renderActiveLibraryLogo(row){
-      const el = $('activeLibraryLogo');
-      if (!el) return;
-      const candidates = getLibraryLogoCandidates(row);
-      const libraryName = String(row?.short_name || row?.library_short_name || row?.name || row?.library_name || row?.slug || row?.library_slug || 'biblioteca ativa').trim();
-      el.alt = `Logo de ${libraryName}`;
-      el.dataset.candidates = JSON.stringify(candidates);
-      el.onerror = () => {
-        const nextIndex = Number(el.dataset.candidateIndex || '0') + 1;
-        applyActiveLibraryLogoCandidate(nextIndex);
-      };
-      if (!candidates.length) {
-        hideActiveLibraryLogo();
-        return;
-      }
-      applyActiveLibraryLogoCandidate(0);
-    }
-
-    function patchCachedLibraryIdentity(updatedRow){
+        function patchCachedLibraryIdentity(updatedRow){
       if (!updatedRow || typeof updatedRow !== 'object') return;
       currentLibraryRow = { ...(currentLibraryRow || {}), ...updatedRow };
       if (currentAccessRow) {
@@ -2805,8 +2808,7 @@
       if (normalized.contact_alternate) lines.push(`Canal alternativo: ${normalized.contact_alternate}`);
       if (normalized.postal_address) lines.push(`Endereço: ${normalized.postal_address}`);
       if (!lines.length) lines.push('A biblioteca parceira ainda não salvou canais diretos neste espaço.');
-      return lines.join('
-');
+      return lines.join('\n');
     }
 
     function renderInterlibraryPartnerContact(contact){
@@ -2829,8 +2831,7 @@
         const objectRef = normalized.object_ref ? ` · ref.: ${normalized.object_ref}` : '';
         return `${moment} · ${shortLibraryLabel(otherLibrary)} · ${action} (${objectLabel}) · ${interlibraryStatusLabel(normalized.status)}${objectRef}`;
       });
-      $('interlibRecentRequests').value = lines.length ? lines.join('
-') : 'Nenhuma solicitação interbibliotecas registrada ainda para esta biblioteca.';
+      $('interlibRecentRequests').value = lines.length ? lines.join('\n') : 'Nenhuma solicitação interbibliotecas registrada ainda para esta biblioteca.';
     }
 
     async function fetchInterlibraryActiveLibraries(){
@@ -3497,12 +3498,6 @@
       return allowed.includes(normalized) ? normalized : fallback;
     }
 
-    function normalizeDocGovLocalRepriseMode(value){
-      const normalized = String(value || '').trim().toLowerCase();
-      if (normalized === 'reprise_local') return 'copia_local';
-      return normalizeDocGovSelect(normalized, ['nao_permitir', 'rascunho_local', 'copia_local'], 'rascunho_local');
-    }
-
     function parseDocGovPartners(value){
       if (Array.isArray(value)) {
         return Array.from(new Set(value.map((item) => String(item || '').trim()).filter(Boolean)));
@@ -3531,12 +3526,12 @@
           obj.external_correction_mode,
           ''
         ), ['propor_correcao', 'propor_ou_editar', 'edicao_direta'], base.correction_mode),
-        local_reprise_mode: normalizeDocGovLocalRepriseMode(firstFilledValue(
+        local_reprise_mode: normalizeDocGovSelect(firstFilledValue(
           obj.local_reprise_mode,
           obj.document_local_reprise_mode,
           obj.local_takeover_mode,
           ''
-        )),
+        ), ['nao_permitir', 'rascunho_local', 'reprise_local'], base.local_reprise_mode),
         digital_link_mode: normalizeDocGovSelect(firstFilledValue(
           obj.digital_link_mode,
           obj.document_digital_link_mode,
@@ -3645,7 +3640,7 @@
       const localCopy = ({
         nao_permitir: 'sem criação de cópia local',
         rascunho_local: 'criação de cópia local via rascunho',
-        copia_local: 'criação de cópia local imediata'
+        reprise_local: 'criação de cópia local imediata'
       })[governance.local_reprise_mode] || 'sem regra de cópia local';
       const mutual = ({
         local: 'novas notices locais por padrão',
@@ -4932,10 +4927,53 @@ function belemNowParts(){
       }
       return null;
     }
+    async function getConfirmedCurrentSession({ attempts = 3, delayMs = 120 } = {}){
+      for (let i = 0; i < attempts; i += 1) {
+        try {
+          const { data: { session: sess } } = await supabase.auth.getSession();
+          if (sess?.user?.id) return sess;
+        } catch (error) {
+          console.warn('getSession falhou ao confirmar a sessão do painel.', error);
+        }
+
+        try {
+          const { data } = await supabase.auth.getUser();
+          if (data?.user?.id) {
+            const { data: { session: recoveredSession } } = await supabase.auth.getSession();
+            if (recoveredSession?.user?.id) return recoveredSession;
+          }
+        } catch (error) {
+          console.warn('getUser falhou ao confirmar a sessão do painel.', error);
+        }
+
+        if (i < attempts - 1) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      }
+      return null;
+    }
     let currentAccessRow = null;
     let currentIdentityRow = null;
     async function fetchMyAccessRows(userId){
       let lastError = null;
+      const collectedRows = [];
+      const seenKeys = new Set();
+      const pushRows = (rows) => {
+        const normalizedRows = Array.isArray(rows) ? rows : (rows ? [rows] : []);
+        for (const row of normalizedRows) {
+          if (!row || typeof row !== 'object') continue;
+          const key = JSON.stringify([
+            String(row?.user_id || row?.id || userId || '').trim(),
+            String(row?.library_id || row?.library_slug || row?.default_library_slug || '').trim(),
+            String(row?.role || '').trim(),
+            String(row?.status || '').trim(),
+          ]);
+          if (seenKeys.has(key)) continue;
+          seenKeys.add(key);
+          collectedRows.push(row);
+        }
+      };
+
       const directAttempts = [
         () => supabase.from('my_access').select('*'),
         () => supabase.from('my_session_context').select('*').limit(1),
@@ -4945,9 +4983,10 @@ function belemNowParts(){
         try {
           const res = await run();
           if (!res?.error) {
-            return { data: Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []), error: null };
+            pushRows(Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []));
+          } else {
+            lastError = res.error;
           }
-          lastError = res.error;
         } catch (error) {
           lastError = error;
         }
@@ -5003,7 +5042,7 @@ function belemNowParts(){
               };
             });
 
-            if (mergedRows.length) return { data: mergedRows, error: null };
+            pushRows(mergedRows);
           }
         } else {
           lastError = membershipRes.error;
@@ -5012,8 +5051,8 @@ function belemNowParts(){
         lastError = error;
       }
 
-      if (profileRow) return { data: [profileRow], error: null };
-      return { data: [], error: lastError };
+      if (profileRow) pushRows([profileRow]);
+      return { data: collectedRows, error: lastError };
     }
     function pickCurrentLibrarianAccess(rows){
       const normalized = Array.isArray(rows) ? rows : [];
@@ -7121,19 +7160,24 @@ async function fetchActiveLoans(){
     $('btnSair').addEventListener('click', async (event) => {
       const btn = $('btnSair');
       const targetHref = String(btn?.dataset?.authHref || resolveCadastroHref()).trim() || resolveCadastroHref();
-      const authMode = String(btn?.dataset?.authMode || 'login').trim().toLowerCase();
-      if (authMode === 'login') {
-        event.preventDefault();
+      const authMode = String(btn?.dataset?.authMode || '').trim().toLowerCase();
+      const shouldLogout = authMode === 'logout' || (!!session?.user?.id && authMode !== 'login');
+
+      if (!shouldLogout) {
         window.location.href = targetHref;
         return;
       }
+
+      event.preventDefault();
       btn.disabled = true;
       try {
         await supabase.auth.signOut();
       } catch (error) {
-        console.warn('Não consegui encerrar a sessão do painel.', error);
+        console.warn('Falha ao encerrar a sessão no painel; seguindo para o cadastro mesmo assim.', error);
       } finally {
-        resetPainelAuthChrome();
+        session = null;
+        isLibrarian = false;
+        updateTopbarAuthButton(false);
         btn.disabled = false;
         window.location.href = targetHref;
       }
