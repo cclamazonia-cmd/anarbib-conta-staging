@@ -2256,6 +2256,14 @@ button[type="submit"] *,
       ], "reservation-actions");
     }
 
+    function reservationCancelOnlyAction(reservaId) {
+      return buildActionGrid([
+        actionSlotEmpty(),
+        actionSlotEmpty(),
+        `<button type="button" class="secondary mini-btn" data-cancel-current="${reservaId}">Cancelar</button>`
+      ], "reservation-actions");
+    }
+
     async function renderActiveReservations() {
       if (!activeReservationsEl) return;
       if (activeReserveMsg) activeReserveMsg.textContent = "";
@@ -2287,7 +2295,9 @@ button[type="submit"] *,
           const workflowDetails = reservationWorkflowDetailLines(workflowRow);
           const actionHtml = rid && lineNo
             ? reservationPickupReplyActions(workflowRow)
-            : `<div class="reservation-actions">${actionSlotNote("Ação indisponível nesta visualização")}</div>`;
+            : (rid
+                ? reservationCancelOnlyAction(rid)
+                : `<div class="reservation-actions">${actionSlotNote("Ação indisponível nesta visualização")}</div>`);
           return `
           <tr>
             <td>#${escapeHtml(rid || r.id)}</td>
@@ -2312,7 +2322,9 @@ button[type="submit"] *,
           const workflowDetails = reservationWorkflowDetailLines(workflowRow);
           const actionHtml = rid && lineNo
             ? reservationPickupReplyActions(workflowRow)
-            : `<div class="reservation-actions">${actionSlotNote("Ação indisponível nesta visualização")}</div>`;
+            : (rid
+                ? reservationCancelOnlyAction(rid)
+                : `<div class="reservation-actions">${actionSlotNote("Ação indisponível nesta visualização")}</div>`);
           return `
             <article class="mobile-card">
               <h4>${escapeHtml(r.titulo || "Livro")}</h4>
@@ -2343,6 +2355,26 @@ button[type="submit"] *,
           </div>
           <div class="mobile-only mobile-cards">${mobileCards}</div>`;
 
+        activeReservationsEl.querySelectorAll("[data-cancel-current]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const reservaId = Number(btn.getAttribute("data-cancel-current"));
+            if (!reservaId) return;
+            btn.disabled = true;
+            if (activeReserveMsg) activeReserveMsg.textContent = "Cancelando reserva...";
+            let rpc = await supabase.rpc("cancel_my_reserva", { p_reserva_id: reservaId });
+            if (rpc.error && /function|does not exist|não existe/i.test(String(rpc.error.message || ""))) {
+              rpc = await supabase.rpc("cancel_reserva", { p_reserva_id: reservaId });
+            }
+            if (rpc.error) {
+              activeReserveMsg.textContent = "Erro ao cancelar: " + rpc.error.message;
+              btn.disabled = false;
+              return;
+            }
+            activeReserveMsg.textContent = "Reserva cancelada.";
+            await renderActiveReservations();
+            await renderHistory();
+          });
+        });
         activeReservationsEl.querySelectorAll("[data-cancel-v2]").forEach((btn) => {
           btn.addEventListener("click", async () => {
             const [rid, lineNo] = String(btn.getAttribute("data-cancel-v2") || "").split("|").map(Number);
