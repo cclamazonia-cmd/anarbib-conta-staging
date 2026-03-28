@@ -6298,9 +6298,56 @@ async function fetchActiveLoans(){
       throw new Error('Não encontrei esse e-mail no cadastro.');
     }
 
+    function resetProfileEditorState(){
+      editingProfileId = null;
+      editingProfileRow = null;
+      editingKnownColumns = {};
+      $('profileArea').classList.add('hidden');
+      renderProfileLists();
+    }
+
+    async function canManageProfileFromCurrentLibrary(profileId, profileRow=null){
+      const currentLibraryId = normalizeLibraryId(
+        currentLibraryRow?.id ||
+        currentAccessRow?.library_id ||
+        currentIdentityRow?.library_id ||
+        currentAccessRow?.default_library_id ||
+        currentIdentityRow?.default_library_id ||
+        ''
+      );
+      if (!currentLibraryId) throw new Error('Biblioteca ativa não identificada para gerir este cadastro.');
+      const targetProfileId = String(profileId || profileRow?.id || '').trim();
+      if (!targetProfileId) throw new Error('Cadastro sem identificador válido.');
+      const targetLibraryId = normalizeLibraryId(
+        profileRow?.library_id ||
+        profileRow?.default_library_id ||
+        profileRow?.home_library_id ||
+        ''
+      );
+      if (targetLibraryId) return targetLibraryId === currentLibraryId;
+
+      try {
+        const { data, error } = await supabase
+          .from('user_library_memberships')
+          .select('library_id,status')
+          .eq('user_id', targetProfileId)
+          .eq('status', 'active');
+        if (error) throw error;
+        const libraryIds = Array.from(new Set((data || []).map((row) => normalizeLibraryId(row?.library_id)).filter(Boolean)));
+        if (libraryIds.length) return libraryIds.includes(currentLibraryId);
+      } catch (_error) {}
+
+      return false;
+    }
+
     async function loadProfileByEmail(email){
       const data = await resolveProfileByEmail(email, '*');
       if (!data?.id) throw new Error('Não encontrei esse e-mail no cadastro.');
+      const canManage = await canManageProfileFromCurrentLibrary(data.id, data);
+      if (!canManage) {
+        resetProfileEditorState();
+        throw new Error('Este cadastro não pertence à biblioteca ativa deste painel.');
+      }
       editingProfileId = data.id;
       editingProfileRow = data;
       editingKnownColumns = {
@@ -6323,6 +6370,11 @@ async function fetchActiveLoans(){
 
     async function saveProfile(){
       if (!editingProfileId) return setStatus('statusPerfil', 'Busque um perfil primeiro.', 'warn');
+      const canManage = await canManageProfileFromCurrentLibrary(editingProfileId, editingProfileRow);
+      if (!canManage) {
+        resetProfileEditorState();
+        throw new Error('Este cadastro não pertence à biblioteca ativa deste painel.');
+      }
       const payload = {
         first_name: $('editFirstName').value.trim(),
         last_name: $('editLastName').value.trim(),
@@ -7291,6 +7343,7 @@ async function fetchActiveLoans(){
     $('btnRecarregarLotes').addEventListener('click', () => refreshCollections());
     $('btnBuscarPerfil').addEventListener('click', async () => {
       clearStatus('statusPerfil');
+      resetProfileEditorState();
       const email = $('searchEmail').value.trim().toLowerCase();
       if (!email) return setStatus('statusPerfil', 'Informe um e-mail.', 'warn');
       $('btnBuscarPerfil').disabled = true;
