@@ -1575,11 +1575,15 @@ button[type="submit"] *,
       const mode = publicServiceState?.service_mode || null;
       const modeLabel = SERVICE_MODE_LABELS[mode] || "Funcionamento não informado";
       const message = getServiceModeMessage(publicServiceState);
+      const reservationsClosed = publicServiceState ? publicServiceState.allow_reservations === false : false;
+      const reservationsLabel = reservationsClosed ? "Reservas temporariamente interrompidas" : "Reservas possíveis no momento";
+      const reservationsMessage = reservationsClosed
+        ? "As novas reservas públicas estão fechadas no momento. Consulte os canais do CCLA para atualizações e orientações."
+        : "As novas reservas públicas estão abertas no momento para a sua biblioteca de vínculo.";
       if (serviceStateNotice) {
         serviceStateNotice.style.display = "block";
-        serviceStateNotice.innerHTML = `<b>Funcionamento: ${escapeHtml(modeLabel)}</b><div class="small">${escapeHtml(message)}</div>`;
+        serviceStateNotice.innerHTML = `<b>Funcionamento: ${escapeHtml(modeLabel)}</b><div class="small">${escapeHtml(message)}</div><div class="small"><b>${escapeHtml(reservationsLabel)}</b> — ${escapeHtml(reservationsMessage)}</div>`;
       }
-      const reservationsClosed = publicServiceState ? publicServiceState.allow_reservations === false : false;
       if (reserveServiceNotice) {
         if (reservationsClosed) {
           reserveServiceNotice.style.display = "block";
