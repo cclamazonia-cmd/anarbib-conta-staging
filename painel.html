@@ -5414,6 +5414,10 @@ function belemNowParts(){
         const stage = normalizeReservationWorkflowStageValue(
           firstFilledValue(row?.workflow_stage_effective, row?.workflow_stage, row?.stage, row?.item_status, row?.status, '')
         );
+        const globalStatus = String(firstFilledValue(row?.status_global, row?.reserva_status, row?.reservation_status, '') || '').trim().toLowerCase();
+        if (globalStatus && !['aberta', 'aberto', 'ativa', 'ativo', 'active', 'pending', 'solicitada', 'em_preparacao', 'pronta_para_retirada', 'retirada_a_combinar', 'retirada_agendada', 're-retirada_agendada', 'nao_retirada'].includes(globalStatus)) {
+          return false;
+        }
         return !['liberada_para_circulacao', 'retirada_efetivada', 'cancelada_leitor', 'cancelada_biblioteca', 'expirada'].includes(stage);
       };
 
@@ -5512,8 +5516,7 @@ function belemNowParts(){
         'v_reservas_ativas_v2',
         'v_reserva_itens_v2',
         'v_reserva_linhas_v2',
-        'reserva_linhas_v2',
-        'reservas_v2'
+        'reserva_linhas_v2'
       ];
 
       let v2SourceResolved = false;
