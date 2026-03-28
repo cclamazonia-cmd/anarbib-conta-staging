@@ -6672,96 +6672,34 @@ async function fetchActiveLoans(){
     }
 
     async function ensureBooksCurrentlyAvailable(bookIds, bibRefs){
-      const ids = Array.from(new Set((bookIds || []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0)));
-      if (!ids.length) return;
-      const { data, error } = await supabase
-        .from('loans')
-        .select('id,book_id,user_id')
-        .in('book_id', ids)
-        .is('returned_date', null);
-      if (error) throw error;
-      const openByBook = new Set((data || []).map((row) => Number(row.book_id)));
-      const unavailable = [];
-      ids.forEach((bookId, idx) => {
-        if (openByBook.has(bookId)) unavailable.push(bibRefs[idx]);
-      });
-      if (unavailable.length) throw new Error('Livros indisponíveis para empréstimo: ' + unavailable.join(', '));
+      return await ensureBooksCurrentlyAvailableHybrid(bookIds, bibRefs);
     }
 
     async function countOpenLoansForUser(userId){
-      const { count, error } = await supabase
-        .from('loans')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .is('returned_date', null);
-      if (error) throw error;
-      return Number(count || 0);
+      return await countOpenLoansForUserHybrid(userId);
     }
 
     async function insertCurrentLoansForUser(userId, bibRefs, note='Saída registrada no painel.', dueAt=null){
-      const books = await loadBooksForLoanBibRefs(bibRefs);
-      const cleanRefs = books.map((b) => String(b.bib_ref));
-      await ensureBooksCurrentlyAvailable(books.map((b) => b.id), cleanRefs);
-      const openCount = await countOpenLoansForUser(userId);
-      if (openCount + books.length > 5) {
-        throw new Error('Limite de empréstimos ativos = 5: devolva algo antes de registrar nova saída.');
-      }
-      const dueDate = dueAt || addDays(todayISO(), loanDaysByCount(books.length));
-      const batchId = (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function')
-        ? globalThis.crypto.randomUUID()
-        : `batch-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;
-      const payload = books.map((book) => ({
-        user_id: userId,
-        book_id: book.id,
-        checkout_date: todayISO(),
-        due_date: dueDate,
-        batch_id: batchId,
-        batch_size: books.length,
-        extended_once: false
-      }));
-      const { data, error } = await supabase
-        .from('loans')
-        .insert(payload)
-        .select('id,batch_id,due_date');
-      if (error) throw error;
-      const storedDueDate = (data || []).map((row) => row?.due_date).find(Boolean) || dueDate;
-      return { loanIds: (data || []).map((row) => Number(row.id)).filter(Boolean), batchId, dueDate: storedDueDate };
+      return await insertCurrentLoansForUserV2First(userId, bibRefs, note, dueAt);
     }
 
 
     async function ensureBooksCurrentlyAvailableHybrid(bookIds, bibRefs){
       const cleanRefs = Array.from(new Set((bibRefs || []).map((v) => String(v || '').trim()).filter(Boolean)));
-      const ids = Array.from(new Set((bookIds || []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0)));
-      if (!cleanRefs.length && !ids.length) return;
+      if (!cleanRefs.length) return;
 
-      const [v2, old] = await Promise.all([
-        cleanRefs.length
-          ? supabase
-              .from('v_emprestimo_itens_v2_ui_fix')
-              .select('bib_ref')
-              .in('bib_ref', cleanRefs)
-              .eq('item_status', 'aberto')
-          : Promise.resolve({ data: [], error: null }),
-        ids.length
-          ? supabase
-              .from('loans')
-              .select('id,book_id')
-              .in('book_id', ids)
-              .is('returned_date', null)
-          : Promise.resolve({ data: [], error: null })
-      ]);
+      const v2 = await supabase
+        .from('v_emprestimo_itens_v2_ui_fix')
+        .select('bib_ref')
+        .in('bib_ref', cleanRefs)
+        .eq('item_status', 'aberto');
 
       if (v2.error) throw v2.error;
-      if (old.error) throw old.error;
 
       const unavailable = new Set();
       (v2.data || []).forEach((row) => {
         const ref = String(row?.bib_ref || '').trim();
         if (ref) unavailable.add(ref);
-      });
-      const oldOpenByBook = new Set((old.data || []).map((row) => Number(row.book_id)).filter((v) => Number.isFinite(v) && v > 0));
-      ids.forEach((bookId, idx) => {
-        if (oldOpenByBook.has(bookId)) unavailable.add(String(cleanRefs[idx] || bibRefs[idx] || '').trim());
       });
 
       const conflictRefs = Array.from(unavailable).filter(Boolean);
@@ -6769,21 +6707,13 @@ async function fetchActiveLoans(){
     }
 
     async function countOpenLoansForUserHybrid(userId){
-      const [v2, old] = await Promise.all([
-        supabase
-          .from('v_emprestimo_itens_v2_ui_fix')
-          .select('emprestimo_item_id', { count: 'exact', head: true })
-          .eq('user_id', userId)
-          .eq('item_status', 'aberto'),
-        supabase
-          .from('loans')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', userId)
-          .is('returned_date', null)
-      ]);
+      const v2 = await supabase
+        .from('v_emprestimo_itens_v2_ui_fix')
+        .select('emprestimo_item_id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('item_status', 'aberto');
       if (v2.error) throw v2.error;
-      if (old.error) throw old.error;
-      return Number(v2.count || 0) + Number(old.count || 0);
+      return Number(v2.count || 0);
     }
 
     function normalizeEmprestimoV2CreateResult(data, dueDateFallback){
@@ -6834,37 +6764,10 @@ async function fetchActiveLoans(){
       if (!rpcRes.error) {
         return Number(Array.isArray(rpcRes.data) ? rpcRes.data[0] : rpcRes.data);
       }
-      if (!isMissingFunctionError(rpcRes.error)) throw rpcRes.error;
-
-      const { data: reserva, error: reservaError } = await supabase
-        .from('reservas')
-        .select('id,bib_ref,user_id,status,fulfilled_at,cancelled_at')
-        .eq('id', reservaId)
-        .maybeSingle();
-      if (reservaError) throw reservaError;
-      if (!reserva?.id) throw new Error(`Reserva ${reservaId} não encontrada.`);
-      if (reserva.status !== 'pending' || reserva.fulfilled_at || reserva.cancelled_at) {
-        throw new Error(`Reserva ${reservaId} não está pendente.`);
+      if (isMissingFunctionError(rpcRes.error)) {
+        throw new Error('O fluxo legado de confirmação de reserva para empréstimo não está disponível nesta base. Usa a conversão v2 das reservas ativas ou reativa a RPC fn_confirm_reserva_to_loan.');
       }
-
-      const result = await insertCurrentLoansForUser(reserva.user_id, [reserva.bib_ref], 'Retirada presencial confirmada no painel.', null);
-      const createdLoanId = Number(result.loanIds?.[0] || 0);
-      if (!createdLoanId) throw new Error(`Não consegui criar o empréstimo para a reserva ${reservaId}.`);
-
-      const fulfillRpc = await supabase.rpc('fn_confirm_reserva_legacy_to_loan_as_biblioteca', {
-        p_reserva_id: reservaId,
-        p_fulfilled_loan_id: createdLoanId
-      });
-      if (fulfillRpc.error) {
-        await supabase.from('loans').update({ returned_date: todayISO() }).eq('id', createdLoanId).is('returned_date', null);
-        throw fulfillRpc.error;
-      }
-      const updatedCount = Number(Array.isArray(fulfillRpc.data) ? fulfillRpc.data[0] : fulfillRpc.data) || 0;
-      if (updatedCount < 1) {
-        await supabase.from('loans').update({ returned_date: todayISO() }).eq('id', createdLoanId).is('returned_date', null);
-        throw new Error(`A reserva ${reservaId} mudou de estado antes da confirmação.`);
-      }
-      return createdLoanId;
+      throw rpcRes.error;
     }
 
     async function registerLoan(){
@@ -6903,16 +6806,10 @@ async function fetchActiveLoans(){
       if (!rpc.error) return Number(rpc.data || 0) || 0;
 
       const msg = String(rpc.error?.message || '');
-      if (!/function|not exist|não existe/i.test(msg)) throw rpc.error;
-
-      const { data, error } = await supabase
-        .from('loans')
-        .update({ returned_date: todayISO() })
-        .in('id', ids)
-        .is('returned_date', null)
-        .select('id');
-      if (error) throw error;
-      return (data || []).length;
+      if (/function|not exist|não existe/i.test(msg)) {
+        throw new Error('A devolução do fluxo legado não está disponível nesta base. Para os empréstimos v2, usa as ações canônicas do painel.');
+      }
+      throw rpc.error;
     }
 
     async function returnTotalById(){
