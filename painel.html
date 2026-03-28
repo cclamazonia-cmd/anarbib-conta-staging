@@ -1797,6 +1797,7 @@
     let refreshSerial = 0;
     let profileLookupRequestSerial = 0;
     const PROFILE_LOOKUP_TIMEOUT_MS = 4500;
+    const PROFILE_LOOKUP_EMAIL_TIMEOUT_MS = 12000;
     let libraryServiceState = null;
     let reservationFollowUpFilter = 'all';
     let manualInternalTasks = [];
@@ -6280,6 +6281,15 @@ async function fetchActiveLoans(){
     async function resolveProfileByLookup(lookup, select = '*'){
       const normalizedLookup = normalizeProfileLookup(lookup);
       if (!normalizedLookup) throw new Error('Informe um ID público ou e-mail.');
+      const lookupIsEmail = looksLikeEmail(normalizedLookup);
+      if (lookupIsEmail) {
+        try {
+          const emailRpcData = await queryProfileByEmailRpc(normalizedLookup);
+          if (emailRpcData?.id) return pickProfileFields(emailRpcData, select);
+        } catch (error) {
+          if (!isMissingFunctionError(error)) throw error;
+        }
+      }
       try {
         const rpcData = await queryProfileByLookupRpc(normalizedLookup, select);
         if (rpcData?.id) return rpcData;
@@ -6362,10 +6372,15 @@ async function fetchActiveLoans(){
       return data;
     }
 
+    function getProfileLookupTimeoutMs(lookup){
+      return looksLikeEmail(lookup) ? PROFILE_LOOKUP_EMAIL_TIMEOUT_MS : PROFILE_LOOKUP_TIMEOUT_MS;
+    }
+
     async function runProfileLookupWithTimeout(lookup, options = {}){
+      const timeoutMs = getProfileLookupTimeoutMs(lookup);
       return await Promise.race([
         loadProfileByLookup(lookup, options),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('A busca deste cadastro demorou mais do que o esperado. Tenta novamente.')), PROFILE_LOOKUP_TIMEOUT_MS))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('A busca deste cadastro demorou mais do que o esperado. Tenta novamente.')), timeoutMs))
       ]);
     }
 
