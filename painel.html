@@ -1058,9 +1058,9 @@
               </div>
               <div class="row">
                 <div>
-                  <label for="borrowerEmail">E-mail do(a/e) leitor(a/e)</label>
-                  <input class="input" id="borrowerEmail" type="email" placeholder="leitor@exemplo.org">
-                  <div class="hint">O e-mail precisa estar cadastrado e ativo.</div>
+                  <label for="borrowerEmail">ID público ou e-mail do(a/e) leitor(a/e)</label>
+                  <input class="input" id="borrowerEmail" type="text" placeholder="Ex.: U000085 ou leitor@exemplo.org" inputmode="email" autocapitalize="characters" spellcheck="false">
+                  <div class="hint">O ID público ou o e-mail precisa estar cadastrado e ativo.</div>
                 </div>
                 <div>
                   <label for="bibRefs">Referência(s) do(s) livro(s)</label>
@@ -6629,9 +6629,9 @@ async function fetchActiveLoans(){
       setStatus('statusPerfil', 'Alterações salvas.', 'ok');
     }
 
-    async function findUserByEmail(email){
-      const data = await resolveProfileByLookup(email, 'id,email');
-      if (!data?.id) throw new Error('E-mail não encontrado no cadastro.');
+    async function findBorrowerByLookup(lookup){
+      const data = await resolveProfileByLookup(lookup, 'id,email');
+      if (!data?.id) throw new Error('ID público ou e-mail não encontrado no cadastro.');
       return data;
     }
 
@@ -6772,16 +6772,16 @@ async function fetchActiveLoans(){
 
     async function registerLoan(){
       clearStatus('statusSaida');
-      const email = $('borrowerEmail').value.trim().toLowerCase();
+      const borrowerLookup = normalizeProfileLookup($('borrowerEmail').value);
       const refs = parseRefs($('bibRefs').value);
-      if (!email) return setStatus('statusSaida', 'Informe o e-mail do(a/e) leitor(a/e).', 'warn');
+      if (!borrowerLookup) return setStatus('statusSaida', 'Informe o ID público ou o e-mail do(a/e) leitor(a/e).', 'warn');
       if (!refs.length) return setStatus('statusSaida', 'Informe pelo menos 1 referência.', 'warn');
       if (refs.length > 5) return setStatus('statusSaida', 'Máximo: 5 referências.', 'warn');
       const bad = refs.find((r) => !/^\d{7}$/.test(r));
       if (bad) return setStatus('statusSaida', `Referência inválida: ${bad}. Use 7 dígitos.`, 'warn');
       $('btnRegistrarSaida').disabled = true;
       try {
-        const borrower = await findUserByEmail(email);
+        const borrower = await findBorrowerByLookup(borrowerLookup);
         const result = await insertCurrentLoansForUserV2First(borrower.id, refs, 'Saída registrada no painel.', null);
         const lotLabel = result.displayId || (result.loanIds.length ? String(Math.min(...result.loanIds)) : '—');
         setStatus('statusSaida', `Saída registrada. ID do empréstimo: ${lotLabel}. Prazo: ${fmtDate(result.dueDate)}.`, 'ok');
