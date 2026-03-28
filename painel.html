@@ -7077,8 +7077,16 @@ async function fetchActiveLoans(){
         }
 
         selectedReservaIds = new Set([...selectedReservaIds].filter((id) => !ids.includes(id)));
-        setStatus('statusRes', `Livro(s) cancelado(s): ${total}.`, 'ok');
-        await refreshCollections({silent:true});
+        try {
+          await fetchActiveReservations();
+          renderReservationTable();
+          renderCounts();
+          renderProfileLists();
+          renderTrabalhoDoDia();
+          setStatus('statusRes', `Livro(s) cancelado(s): ${total}.`, 'ok');
+        } catch (refreshError) {
+          setStatus('statusRes', `Livro(s) cancelado(s): ${total}. A lista de reservas não pôde ser recarregada agora: ${refreshError?.message || String(refreshError)}.`, 'warn', false);
+        }
       } catch (e) {
         setStatus('statusRes', e.message || String(e), 'bad', false);
       } finally {
