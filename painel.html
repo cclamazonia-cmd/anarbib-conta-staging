@@ -5452,7 +5452,6 @@ function belemNowParts(){
             reserva_em: createdAt,
             validade: validadeRaw || addDays(createdAt || Date.now(), 14),
             workflow_stage: workflowStage,
-            workflow_stage_effective: workflowStage,
             workflow_stage_updated_at: workflowUpdatedAt,
             workflow_note: String(firstFilledValue(row?.workflow_note, row?.note, row?.notes, '') || '').trim(),
             pickup_scheduled_for: firstFilledValue(row?.pickup_scheduled_for, row?.scheduled_pickup_for, row?.retirada_agendada_para, null) || null,
@@ -5465,11 +5464,47 @@ function belemNowParts(){
         }).sort((a, b) => String(b.reserva_em || '').localeCompare(String(a.reserva_em || '')));
       };
 
+      const mapLegacyReservationRows = async (rows) => {
+        const profilesMap = await loadProfilesByIds((rows || []).map((row) => row?.user_id).filter(Boolean));
+        return (rows || []).map((row) => {
+          const user = profilesMap.get(String(row?.user_id)) || {};
+          const createdAt = row?.created_at || null;
+          return {
+            id: Number(row?.id),
+            reserva_id: Number(row?.id),
+            sub_id: `${row?.id}.1`,
+            line_no: 1,
+            source: 'reservations',
+            reservation_source_name: 'v_reservations_enriched',
+            user_id: row?.user_id,
+            user_name: profileName(user),
+            user_email: user?.email || '—',
+            bib_ref: row?.bib_ref,
+            titulo: row?.titulo || (row?.bib_ref ? `Referência ${row.bib_ref}` : 'Referência sem título'),
+            autor: row?.autor || '',
+            rotulo: '—',
+            reserva_em: createdAt,
+            validade: addDays(createdAt || Date.now(), 14),
+            workflow_stage: 'solicitada',
+            workflow_stage_updated_at: row?.updated_at || createdAt,
+            workflow_note: String(row?.notes || '').trim(),
+            pickup_scheduled_for: null,
+            pickup_reply_status: null,
+            pickup_reply_note: '',
+            pickup_reply_at: null,
+            pickup_attention: null,
+            raw: row,
+          };
+        }).sort((a, b) => String(b.reserva_em || '').localeCompare(String(a.reserva_em || '')));
+      };
+
       const tryReservationV2Sources = [
         'v_reserva_linhas_v2_ui_fix',
         'v_reserva_itens_v2_ui_fix',
         'v_reservas_v2_ui_fix',
         'v_reservas_ativas_v2',
+        'v_reserva_itens_v2',
+        'v_reserva_linhas_v2',
         'reserva_linhas_v2',
         'reservas_v2'
       ];
@@ -5484,19 +5519,31 @@ function belemNowParts(){
           if (isMissingReservationSourceError(attempt.error)) continue;
           throw attempt.error;
         }
-        activeReservations = await mapV2ReservationRows(attempt.data || [], sourceName);
+        const mapped = await mapV2ReservationRows(attempt.data || [], sourceName);
+        if (!mapped.length) continue;
+        activeReservations = mapped;
         v2SourceResolved = true;
         break;
       }
 
       if (!v2SourceResolved) {
-        activeReservations = [];
-        selectedReservaIds = new Set();
-        setStatus('statusRes', 'Não encontrei ainda uma fonte v2 ativa para gerir as etapas intermediárias neste painel.', 'warn', false);
-        return;
+        const fallback = await supabase
+          .from('v_reservations_enriched')
+          .select('*')
+          .eq('status', 'active')
+          .order('created_at', { ascending:false })
+          .limit(500);
+        if (fallback.error) throw fallback.error;
+        activeReservations = await mapLegacyReservationRows(fallback.data || []);
+        if (activeReservations.length) {
+          setStatus('statusRes', 'Reservas ativas carregadas pelo fluxo antigo. As etapas intermediárias continuam indisponíveis aqui até identificarmos a fonte v2 certa.', 'warn', false);
+        } else {
+          clearStatus('statusRes');
+        }
+      } else {
+        clearStatus('statusRes');
       }
 
-      clearStatus('statusRes');
       selectedReservaIds = new Set(
         [...selectedReservaIds].filter((id) => activeReservations.some((r) => r.id === id))
       );
@@ -6066,7 +6113,7 @@ async function fetchActiveLoans(){
       const skipped = (rows || []).filter((r) => !r || r.source !== 'v2');
       if (!cleanRows.length) {
         const msg = skipped.length
-          ? 'As etapas intermediárias só podem ser geridas nas reservas v2 ativas.'
+          ? 'As etapas intermediárias só podem ser geridas nas reservas v2 ativas. As linhas selecionadas ainda vêm do fluxo antigo.'
           : 'Selecione pelo menos 1 reserva ativa.';
         setStatus(targetStatusId, msg, 'warn');
         return;
@@ -6183,7 +6230,7 @@ async function fetchActiveLoans(){
             <td>${esc(r.titulo)}${r.autor ? `<br><span class="mini subtle">${esc(r.autor)}</span>` : ''}</td>
             <td class="mono">${esc(r.bib_ref)}</td>
             <td>${esc(r.rotulo || '—')}</td>
-            <td>${esc(fmtDateTimeBelem(r.reserva_em))} (Belém)<br><span class="pill ${esc(reservationWorkflowStageClass(r.workflow_stage))}">${esc(workflowLabel)}</span>${r.workflow_stage_updated_at ? `<br><span class="mini subtle">Atualizado: ${esc(fmtDateTimeBelem(r.workflow_stage_updated_at))} (Belém)</span>` : ''}${workflowDetail ? `<br><span class="mini subtle">${esc(workflowDetail)}</span>` : ''}</td>
+            <td>${esc(fmtDateTimeBelem(r.reserva_em))} (Belém)<br><span class="pill ${esc(reservationWorkflowStageClass(r.workflow_stage))}">${esc(workflowLabel)}</span>${r.workflow_stage_updated_at ? `<br><span class="mini subtle">Atualizado: ${esc(fmtDateTimeBelem(r.workflow_stage_updated_at))} (Belém)</span>` : ''}${workflowDetail ? `<br><span class="mini subtle">${esc(workflowDetail)}</span>` : ''}${r.source !== 'v2' ? `<br><span class="mini subtle">Fluxo antigo: etapas intermediárias ainda indisponíveis aqui.</span>` : ''}</td>
             <td>${esc(fmtDateTimeBelem(r.validade))} (Belém)<br><span class="pill ${esc(followUp.className)}">${esc(followUp.label)}</span><br><span class="mini subtle">${esc(followUp.detail)}</span></td>
           </tr>`;
       }).join('');
