@@ -2801,20 +2801,23 @@
       const currentId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
       const lines = (items || []).map((item) => {
         const normalized = normalizeInterlibraryRequest(item);
-        const otherId = normalizeLibraryId(normalized.requester_library_id) === currentId
-          ? normalized.target_library_id
-          : normalized.requester_library_id;
+        const isOutgoing = normalizeLibraryId(normalized.requester_library_id) === currentId;
+        const otherId = isOutgoing ? normalized.target_library_id : normalized.requester_library_id;
         const otherLibrary = findKnownLibraryById(otherId) || { id: otherId, name: otherId || 'Biblioteca parceira' };
-        const moment = fmtDateTimeBelem(normalized.updated_at || normalized.created_at || nowISO());
+        const momentValue = normalized.decided_at || normalized.updated_at || normalized.created_at || nowISO();
+        const momentLabel = normalized.decided_at ? 'decidida em' : (normalized.status === 'pending' ? 'criada em' : 'atualizada em');
+        const directionLabel = isOutgoing ? 'enviada para' : 'recebida de';
         const action = interlibraryActionLabel(normalized.requested_action);
         const objectLabel = interlibraryObjectLabel(normalized.object_type);
         const objectRef = normalized.object_ref ? ` · ref.: ${normalized.object_ref}` : '';
-        return `${moment} · ${shortLibraryLabel(otherLibrary)} · ${action} (${objectLabel}) · ${interlibraryStatusLabel(normalized.status)}${objectRef}`;
+        const responseNote = normalized.response_note ? ` · resposta: ${normalized.response_note}` : '';
+        return `${momentLabel} ${fmtDateTimeBelem(momentValue)} · ${directionLabel} ${shortLibraryLabel(otherLibrary)} · ${action} (${objectLabel}) · ${interlibraryStatusLabel(normalized.status)}${objectRef}${responseNote}`;
       });
       $('interlibRecentRequests').value = lines.length ? lines.join('\n') : 'Nenhuma solicitação interbibliotecas registrada ainda para esta biblioteca.';
     }
 
-    function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequests){
+    
+function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequests){
       const currentId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
       return (items || [])
         .map(normalizeInterlibraryRequest)
