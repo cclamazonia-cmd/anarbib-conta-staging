@@ -604,7 +604,7 @@
       const isLib = await fetchIsLibrarian(userId, signInData);
 
       try { window.sessionStorage.setItem("anarbib_last_login_target", isLib ? ROUTES.PAINEL : ROUTES.CONTA); } catch {}
-      try { window.localStorage.setItem("anarbib_last_login_target", isLib ? ROUTES.PAINEL : ROUTES.CONTA); } catch {}
+      try { window.localStorage.removeItem("anarbib_last_login_target"); } catch {}
 
       if (next) {
         window.location.replace(next);
