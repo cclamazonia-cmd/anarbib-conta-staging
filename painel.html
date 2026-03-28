@@ -6239,49 +6239,24 @@ async function fetchActiveLoans(){
       return normalized.includes('@');
     }
 
-    async function queryProfileByPublicIdDirect(publicId, select = '*'){
-      const normalized = normalizePublicId(publicId);
-      if (!normalized) return null;
-      let lastError = null;
-      const attempts = [
-        () => supabase.from('profiles').select(select).ilike('public_id', normalized).limit(2),
-        () => supabase.from('profiles').select(select).eq('public_id', normalized).limit(2),
-      ];
-      for (const run of attempts){
-        try {
-          const { data, error } = await run();
-          if (error) { lastError = error; continue; }
-          const rows = Array.isArray(data) ? data : [];
-          const exact = rows.find((row) => normalizePublicId(row?.public_id) === normalized) || rows[0] || null;
-          if (exact?.id) return exact;
-        } catch (error) {
-          lastError = error;
-        }
+    function pickProfileFields(data, select = '*'){
+      if (!data || typeof data !== 'object') return null;
+      if (select === 'id,email') {
+        return {
+          id: data.id,
+          email: data.email || '',
+          public_id: data.public_id || '',
+        };
       }
-      if (lastError) throw lastError;
-      return null;
+      return data;
     }
 
-    async function queryProfileByEmailDirect(email, select = '*'){
-      const normalized = normalizeEmail(email);
-      let lastError = null;
-      const attempts = [
-        () => supabase.from('profiles').select(select).ilike('email', normalized).limit(2),
-        () => supabase.from('profiles').select(select).ilike('email', normalized).limit(2),
-      ];
-      for (const run of attempts){
-        try {
-          const { data, error } = await run();
-          if (error) { lastError = error; continue; }
-          const rows = Array.isArray(data) ? data : [];
-          const exact = rows.find((row) => normalizeEmail(row?.email) === normalized) || rows[0] || null;
-          if (exact?.id) return exact;
-        } catch (error) {
-          lastError = error;
-        }
-      }
-      if (lastError) throw lastError;
-      return null;
+    async function queryProfileByLookupRpc(lookup, select = '*'){
+      const normalized = normalizeProfileLookup(lookup);
+      if (!normalized) return null;
+      const { data, error } = await supabase.rpc('fn_painel_find_profile_by_lookup', { p_lookup: normalized });
+      if (error) throw error;
+      return data?.id ? pickProfileFields(data, select) : null;
     }
 
     async function queryProfileByEmailRpc(email){
@@ -6292,56 +6267,27 @@ async function fetchActiveLoans(){
       return data && typeof data === 'object' ? data : null;
     }
 
-    async function queryProfileByIdDirect(profileId, select = '*'){
+    async function queryProfileByIdRpc(profileId, select = '*'){
       const normalizedId = String(profileId || '').trim();
       if (!normalizedId) return null;
-      let lastError = null;
-      const attempts = [
-        () => supabase.from('profiles').select(select).eq('id', normalizedId).maybeSingle(),
-        () => supabase.from('profiles').select(select).eq('id', normalizedId).maybeSingle(),
-      ];
-      for (const run of attempts){
-        try {
-          const { data, error } = await run();
-          if (error) { lastError = error; continue; }
-          if (data?.id) return data;
-        } catch (error) {
-          lastError = error;
-        }
-      }
-      if (lastError) throw lastError;
-      return null;
+      const { data, error } = await supabase.rpc('fn_painel_get_profile_by_id', { p_profile_id: normalizedId });
+      if (error) throw error;
+      return data?.id ? pickProfileFields(data, select) : null;
     }
 
     async function resolveProfileByLookup(lookup, select = '*'){
       const normalizedLookup = normalizeProfileLookup(lookup);
       if (!normalizedLookup) throw new Error('Informe um ID público ou e-mail.');
-
-      const publicIdData = await queryProfileByPublicIdDirect(normalizedLookup, select);
-      if (publicIdData?.id) return publicIdData;
-
-      if (!looksLikeEmail(normalizedLookup)) {
-        throw new Error('Não encontrei esse ID público no cadastro.');
-      }
-
-      const normalizedEmail = normalizeEmail(normalizedLookup);
       try {
-        const rpcData = await queryProfileByEmailRpc(normalizedEmail);
-        if (rpcData?.id) {
-          if (select === 'id,email') return { id: rpcData.id, email: rpcData.email || normalizedEmail, public_id: rpcData.public_id || '' };
-          try {
-            const freshData = await queryProfileByIdDirect(rpcData.id, select);
-            if (freshData?.id) return freshData;
-          } catch (_e) {}
-          return rpcData;
-        }
+        const rpcData = await queryProfileByLookupRpc(normalizedLookup, select);
+        if (rpcData?.id) return rpcData;
       } catch (error) {
-        if (!isMissingFunctionError(error)) throw error;
+        if (isMissingFunctionError(error)) {
+          throw new Error('O backend de busca por ID público ou e-mail ainda não foi aplicado neste ambiente.');
+        }
+        throw error;
       }
-
-      const directData = await queryProfileByEmailDirect(normalizedEmail, select);
-      if (directData?.id) return directData;
-      throw new Error('Não encontrei esse e-mail no cadastro.');
+      throw new Error('Não encontrei esse ID público ou e-mail no cadastro da biblioteca ativa.');
     }
 
     function resetProfileEditorState(){
@@ -6410,23 +6356,20 @@ async function fetchActiveLoans(){
     async function loadProfileByLookup(lookup){
       const data = await resolveProfileByLookup(lookup, '*');
       if (!data?.id) throw new Error('Não encontrei esse cadastro.');
-      const canManage = await canManageProfileFromCurrentLibrary(data.id, data);
-      if (!canManage) {
-        resetProfileEditorState();
-        throw new Error('Este cadastro não pertence à biblioteca ativa deste painel.');
-      }
       fillProfileEditor(data);
     }
 
     async function loadProfileById(profileId){
-      const data = await queryProfileByIdDirect(profileId, '*');
-      if (!data?.id) throw new Error('Não consegui recarregar este cadastro.');
-      const canManage = await canManageProfileFromCurrentLibrary(data.id, data);
-      if (!canManage) {
-        resetProfileEditorState();
-        throw new Error('Este cadastro não pertence à biblioteca ativa deste painel.');
+      try {
+        const data = await queryProfileByIdRpc(profileId, '*');
+        if (!data?.id) throw new Error('Não consegui recarregar este cadastro.');
+        fillProfileEditor(data);
+      } catch (error) {
+        if (isMissingFunctionError(error)) {
+          throw new Error('O backend de recarga por identificador ainda não foi aplicado neste ambiente.');
+        }
+        throw error;
       }
-      fillProfileEditor(data);
     }
 
     async function saveProfile(){
