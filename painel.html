@@ -7346,12 +7346,18 @@ async function fetchActiveLoans(){
     $('btnRecarregarLoans').addEventListener('click', () => refreshCollections());
     $('btnRecarregarLotes').addEventListener('click', () => refreshCollections());
     $('btnBuscarPerfil').addEventListener('click', async () => {
+      const btn = $('btnBuscarPerfil');
+      if (!btn || btn.disabled) return;
       clearStatus('statusPerfilBusca');
       clearStatus('statusPerfil');
       resetProfileEditorState();
       const lookup = normalizeProfileLookup($('searchEmail').value);
       if (!lookup) return setStatus('statusPerfilBusca', 'Informe um ID público ou e-mail.', 'warn');
-      $('btnBuscarPerfil').disabled = true;
+      btn.disabled = true;
+      const unlockTimer = setTimeout(() => {
+        if (btn) btn.disabled = false;
+      }, 5000);
+      setStatus('statusPerfilBusca', 'Buscando cadastro…', 'warn');
       try {
         await loadProfileByLookup(lookup);
         clearStatus('statusPerfilBusca');
@@ -7359,7 +7365,8 @@ async function fetchActiveLoans(){
       } catch (e) {
         setStatus('statusPerfilBusca', e.message || String(e), 'bad', false);
       } finally {
-        $('btnBuscarPerfil').disabled = false;
+        clearTimeout(unlockTimer);
+        btn.disabled = false;
       }
     });
     $('btnSalvarPerfil').addEventListener('click', async () => {
