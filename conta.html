@@ -1235,7 +1235,9 @@ button[type="submit"] *,
     const { data: sessData } = await supabase.auth.getSession();
     const session = sessData?.session || null;
     if (!session) {
-      window.location.href = buildAuthRedirectTarget("conta.html");
+      const contaRedirectPath =
+        `${window.location.pathname.replace(/^\//, "")}${window.location.search || ""}${window.location.hash || ""}`;
+      window.location.href = buildAuthRedirectTarget(contaRedirectPath);
       throw new Error("No session");
     }
 
