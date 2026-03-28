@@ -1858,6 +1858,8 @@
     let internalTaskOwnerHideTimer = null;
     let activateMainTab = null;
     let returnScheduleEditorState = null;
+    const PAINEL_ACTIVE_TAB_STORAGE_KEY = 'anarbib_painel_active_tab';
+    const PAINEL_PROFILE_TAB_STORAGE_KEY = 'anarbib_painel_profile_tab';
 
     function clearStatus(id){
       const el = $(id);
@@ -5071,18 +5073,33 @@ function belemNowParts(){
           btn.setAttribute('aria-selected', active ? 'true' : 'false');
         });
         panels.forEach((panel) => panel.classList.toggle('active', panel.dataset.tab === nextTab));
+        try { sessionStorage.setItem(PAINEL_ACTIVE_TAB_STORAGE_KEY, nextTab); } catch (_e) {}
         if (pushHash) location.hash = `#${nextTab}`;
       }
       activateMainTab = activate;
       btns.forEach((btn) => btn.addEventListener('click', async () => {
-        activate(btn.dataset.tab);
-        if (session && isLibrarian) await refreshCollections({silent:true});
+        const nextTab = btn.dataset.tab;
+        activate(nextTab);
+        if (!(session && isLibrarian)) return;
+        if (nextTab === 'reservas') {
+          await refreshReservationsOnly({silent:true});
+          return;
+        }
+        if (nextTab === 'emprestimos-livro' || nextTab === 'emprestimos-lote') {
+          await refreshLoansOnly({silent:true});
+          return;
+        }
+        if (nextTab === 'leitor' && editingProfileId) {
+          await Promise.allSettled([refreshReservationsOnly({silent:true}), refreshLoansOnly({silent:true})]);
+        }
       }));
       window.addEventListener('hashchange', () => {
         const current = (location.hash || '').replace('#', '');
         if (validTabs.has(current)) activate(current, { pushHash: false });
       });
-      const initial = (location.hash || '').replace('#', '');
+      let stored = '';
+      try { stored = sessionStorage.getItem(PAINEL_ACTIVE_TAB_STORAGE_KEY) || ''; } catch (_e) {}
+      const initial = (location.hash || '').replace('#', '') || stored;
       activate(validTabs.has(initial) ? initial : 'funcionamento', { pushHash: false });
     }
 
@@ -5093,25 +5110,28 @@ function belemNowParts(){
         Emprestimos: { btn: $('profileTabBtnEmprestimos'), pane: $('profilePaneEmprestimos') },
       };
       function activate(name){
+        const nextName = map[name] ? name : 'Dados';
         Object.entries(map).forEach(([key, cfg]) => {
-          const active = key === name;
+          const active = key === nextName;
           cfg.btn.classList.toggle('active', active);
           cfg.pane.classList.toggle('active', active);
         });
+        try { sessionStorage.setItem(PAINEL_PROFILE_TAB_STORAGE_KEY, nextName); } catch (_e) {}
       }
       map.Dados.btn.addEventListener('click', async () => {
         activate('Dados');
-        if (session && isLibrarian) await refreshCollections({silent:true});
       });
       map.Reservas.btn.addEventListener('click', async () => {
         activate('Reservas');
-        if (session && isLibrarian) await refreshCollections({silent:true});
+        if (session && isLibrarian && editingProfileId) await refreshReservationsOnly({silent:true});
       });
       map.Emprestimos.btn.addEventListener('click', async () => {
         activate('Emprestimos');
-        if (session && isLibrarian) await refreshCollections({silent:true});
+        if (session && isLibrarian && editingProfileId) await refreshLoansOnly({silent:true});
       });
-      activate('Dados');
+      let stored = '';
+      try { stored = sessionStorage.getItem(PAINEL_PROFILE_TAB_STORAGE_KEY) || ''; } catch (_e) {}
+      activate(stored && map[stored] ? stored : 'Dados');
       return activate;
     }
     let activateProfileTab = () => {};
@@ -6336,6 +6356,44 @@ async function fetchActiveLoans(){
     }
 
 
+    async function refreshReservationsOnly({silent=false}={}){
+      if (!silent) $('tbodyRes').innerHTML = '<tr><td colspan="8">Carregando…</td></tr>';
+      try {
+        await fetchActiveReservations();
+        renderReservationTable();
+        clearStatus('statusRes');
+      } catch (error) {
+        $('tbodyRes').innerHTML = '<tr><td colspan="8">Erro ao carregar reservas.</td></tr>';
+        setStatus('statusRes', error?.message || String(error || 'Erro ao carregar reservas.'), 'bad', false);
+      }
+      renderCounts();
+      renderProfileLists();
+      renderTrabalhoDoDia();
+    }
+
+    async function refreshLoansOnly({silent=false}={}){
+      if (!silent) {
+        $('tbodyLoans').innerHTML = '<tr><td colspan="9">Carregando…</td></tr>';
+        $('tbodyBatches').innerHTML = '<tr><td colspan="9">Carregando…</td></tr>';
+      }
+      try {
+        await fetchActiveLoans();
+        renderLoansTable();
+        renderBatchTable();
+        clearStatus('statusLoans');
+        clearStatus('statusBatches');
+      } catch (error) {
+        $('tbodyLoans').innerHTML = '<tr><td colspan="9">Erro ao carregar empréstimos.</td></tr>';
+        $('tbodyBatches').innerHTML = '<tr><td colspan="9">Erro ao carregar empréstimos agrupados.</td></tr>';
+        const msg = error?.message || String(error || 'Erro ao carregar empréstimos.');
+        setStatus('statusLoans', msg, 'bad', false);
+        setStatus('statusBatches', msg, 'bad', false);
+      }
+      renderCounts();
+      renderProfileLists();
+      renderTrabalhoDoDia();
+    }
+
     async function refreshCollections({silent=false}={}){
       const runId = ++refreshSerial;
       if (!silent) {
@@ -6787,10 +6845,10 @@ async function fetchActiveLoans(){
         const borrower = await findBorrowerByLookup(borrowerLookup);
         const result = await insertCurrentLoansForUserV2First(borrower.id, refs, 'Saída registrada no painel.', null);
         const lotLabel = result.displayId || (result.loanIds.length ? String(Math.min(...result.loanIds)) : '—');
-        setStatus('statusSaida', `Saída registrada. ID do empréstimo: ${lotLabel}. Prazo: ${fmtDate(result.dueDate)}.`, 'ok');
         $('bibRefs').value = '';
         refreshLoanHint();
-        await refreshCollections({silent:true});
+        await refreshLoansOnly({silent:true});
+        setStatus('statusSaida', `Saída registrada. ID do empréstimo: ${lotLabel}. Prazo: ${fmtDate(result.dueDate)}.`, 'ok');
       } catch (e) {
         setStatus('statusSaida', e.message || String(e), 'bad', false);
       } finally {
@@ -7077,16 +7135,8 @@ async function fetchActiveLoans(){
         }
 
         selectedReservaIds = new Set([...selectedReservaIds].filter((id) => !ids.includes(id)));
-        try {
-          await fetchActiveReservations();
-          renderReservationTable();
-          renderCounts();
-          renderProfileLists();
-          renderTrabalhoDoDia();
-          setStatus('statusRes', `Livro(s) cancelado(s): ${total}.`, 'ok');
-        } catch (refreshError) {
-          setStatus('statusRes', `Livro(s) cancelado(s): ${total}. A lista de reservas não pôde ser recarregada agora: ${refreshError?.message || String(refreshError)}.`, 'warn', false);
-        }
+        await refreshReservationsOnly({silent:true});
+        setStatus('statusRes', `Livro(s) cancelado(s): ${total}.`, 'ok');
       } catch (e) {
         setStatus('statusRes', e.message || String(e), 'bad', false);
       } finally {
@@ -7476,7 +7526,7 @@ async function fetchActiveLoans(){
         setStatus('statusRes', error?.message || 'Erro ao aplicar etapa.', 'bad');
       }
     });
-    $('btnRecarregarRes').addEventListener('click', () => refreshCollections());
+    $('btnRecarregarRes').addEventListener('click', () => refreshReservationsOnly());
     $('btnRecarregarTrabalhoDia')?.addEventListener('click', () => { renderTrabalhoDoDia(); setStatus('statusTrabalhoDia', 'Prioridades recalculadas.', 'ok'); });
     $('btnAddInternalTask')?.addEventListener('click', async () => {
       const btn = $('btnAddInternalTask');
@@ -7486,8 +7536,8 @@ async function fetchActiveLoans(){
       finally { btn.disabled = false; }
     });
     $('btnClearInternalTaskForm')?.addEventListener('click', clearInternalTaskForm);
-    $('btnRecarregarLoans').addEventListener('click', () => refreshCollections());
-    $('btnRecarregarLotes').addEventListener('click', () => refreshCollections());
+    $('btnRecarregarLoans').addEventListener('click', () => refreshLoansOnly());
+    $('btnRecarregarLotes').addEventListener('click', () => refreshLoansOnly());
     $('btnBuscarPerfil').addEventListener('click', async () => {
       const btn = $('btnBuscarPerfil');
       if (!btn || btn.disabled) return;

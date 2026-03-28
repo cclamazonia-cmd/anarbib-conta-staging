@@ -731,9 +731,9 @@ button[type="submit"] *,
         <h1 id="pageHeroTitle">Conta</h1>
         <p id="pageHeroSubtitle">Espaço d@ leitor@</p>
         <div class="chips">
-          <span class="chip" id="chipContaEspaco">Espaço: leitor/a/e</span>
-          <span class="chip" id="chipContaBiblioteca">Biblioteca de vínculo: —</span>
-          <span class="chip" id="chipContaPublicId">ID público: —</span>
+          <span class="chip" id="chipContaEspaco">Leitor conectad@: —</span>
+          <span class="chip" id="chipContaBiblioteca" style="display:none">Biblioteca de vínculo: —</span>
+          <span class="chip" id="chipContaPublicId" style="display:none">ID público: —</span>
           <span class="chip" id="chipContaCadastro">Cadastro: —</span>
           <span class="chip" id="chipContaReservas">Reservas ativas: —</span>
           <span class="chip" id="chipContaEmprestimos">Empréstimos em curso: —</span>
@@ -1281,6 +1281,7 @@ button[type="submit"] *,
     const reserveFormEl = $("reserveForm");
     const reserveSubmitBtn = $("reserveSubmitBtn");
     const bibRefInput = $("bibRef");
+    const chipContaEspaco = $("chipContaEspaco");
     const chipContaBiblioteca = $("chipContaBiblioteca");
     const chipContaPublicId = $("chipContaPublicId");
     const chipContaCadastro = $("chipContaCadastro");
@@ -1380,8 +1381,21 @@ button[type="submit"] *,
       return null;
     }
 
+    function renderContaIdentityChip() {
+      const firstName = String(currentContaIdentity?.first_name || "").trim();
+      const lastName = String(currentContaIdentity?.last_name || "").trim();
+      const fullName = [firstName, lastName].filter(Boolean).join(" ").trim() || String(session?.user?.email || "Leitor/a/e").trim();
+      const publicId = String(currentContaIdentity?.public_id || "").trim();
+      const libraryName = resolveContaLibraryName() || "—";
+      if (chipContaEspaco) {
+        chipContaEspaco.textContent = `Leitor conectad@: ${fullName}${publicId ? ` · ID ${publicId}` : ""} · ${libraryName}`;
+      }
+      if (chipContaBiblioteca) chipContaBiblioteca.style.display = "none";
+      if (chipContaPublicId) chipContaPublicId.style.display = "none";
+    }
+
     function refreshContaBranding() {
-      setChipText(chipContaBiblioteca, "Biblioteca de vínculo", resolveContaLibraryName() || "—");
+      renderContaIdentityChip();
       void updateContaLibraryLogo();
       updateContaTopbarAction();
     }
@@ -2139,7 +2153,7 @@ button[type="submit"] *,
       if (typeof data.must_change_password === "boolean") enforcePasswordChangeUI(data.must_change_password);
       if (typeof data.is_restricted === "boolean") enforceRestrictionUI(data.is_restricted, data.restricted_reason);
 
-      setChipText(chipContaPublicId, "ID público", data.public_id || "—");
+      renderContaIdentityChip();
       const cadastroLabel = data.is_restricted ? "restrito" : (data.must_change_password ? "requer troca de senha" : "regular");
       setChipText(chipContaCadastro, "Cadastro", cadastroLabel);
 
