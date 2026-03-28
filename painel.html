@@ -892,10 +892,6 @@
                 </div>
               </div>
               <div style="margin-top:12px">
-                <label for="interlibPendingIncomingMessage">Mensagem recebida</label>
-                <textarea class="textarea" id="interlibPendingIncomingMessage" placeholder="A mensagem escrita pela biblioteca parceira aparecerá aqui." readonly></textarea>
-              </div>
-              <div style="margin-top:12px">
                 <label for="interlibResponseNote">Nota da resposta (opcional)</label>
                 <textarea class="textarea" id="interlibResponseNote" placeholder="Ex.: aceitamos a solicitação, mas pedimos retorno depois da intervenção na notice."></textarea>
               </div>
@@ -2142,6 +2138,7 @@
     let currentInterlibraryPartnerContact = null;
     let currentInterlibraryRequests = [];
     let currentActiveLibraries = [];
+    let currentSelectedPendingIncomingRequestKey = '';
     const LIBRARY_CONTACT_TABLE = 'library_contact_profiles';
     const LIBRARY_CONTACT_RPC = 'upsert_library_contact_profile';
     const INTERLIB_REQUEST_TABLE = 'document_permission_requests';
@@ -2829,31 +2826,63 @@
       return `${shortLibraryLabel(requesterLibrary)} · ${action} (${objectLabel})${objectRef}`;
     }
 
-    function getPendingIncomingRequestOptionValue(item){
+    function buildPendingIncomingRequestSelectionKey(item){
       const normalized = normalizeInterlibraryRequest(item);
+      if (normalized.id) return `id:${normalized.id}`;
       return [
-        String(normalized.id || '').trim(),
-        String(normalized.requester_library_id || '').trim(),
-        String(normalized.target_library_id || '').trim(),
-        String(normalized.created_at || '').trim(),
-        String(normalized.requested_action || '').trim(),
-        String(normalized.object_type || '').trim(),
-        String(normalized.object_ref || '').trim(),
-        String(normalized.message || '').trim(),
-      ].join('¦');
+        normalizeLibraryId(normalized.requester_library_id) || '',
+        normalizeLibraryId(normalized.target_library_id) || '',
+        normalized.requested_action || '',
+        normalized.object_type || '',
+        normalized.object_ref || '',
+        normalized.message || '',
+        normalized.created_at || ''
+      ].join('||');
     }
 
-    function findPendingIncomingRequestByOptionValue(value, items=currentInterlibraryRequests){
-      const selectedValue = String(value || '').trim();
-      if (!selectedValue) return null;
-      return (items || []).find((item) => getPendingIncomingRequestOptionValue(item) === selectedValue) || null;
+    function resolveSelectedPendingIncomingInterlibraryRequest(items=currentInterlibraryRequests){
+      const pending = getPendingIncomingInterlibraryRequests(items);
+      const selectValue = String($('interlibPendingIncomingSelect')?.value || '').trim();
+      const wantedKey = String(currentSelectedPendingIncomingRequestKey || selectValue || '').trim();
+      if (wantedKey) {
+        const match = pending.find((item) => {
+          const key = buildPendingIncomingRequestSelectionKey(item);
+          return key === wantedKey || String(item?.id || '').trim() === wantedKey || `id:${String(item?.id || '').trim()}` === wantedKey;
+        });
+        if (match) return normalizeInterlibraryRequest(match);
+      }
+      return pending.length ? normalizeInterlibraryRequest(pending[0]) : null;
+    }
+
+    async function resolvePendingIncomingRequestId(item){
+      const normalized = normalizeInterlibraryRequest(item);
+      const directId = Number(normalized.id || 0);
+      if (Number.isFinite(directId) && directId > 0) return directId;
+      const currentId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
+      const requesterId = normalizeLibraryId(normalized.requester_library_id);
+      if (!currentId || !requesterId) return 0;
+      let query = supabase
+        .from(INTERLIB_REQUEST_TABLE)
+        .select('id')
+        .eq('target_library_id', currentId)
+        .eq('requester_library_id', requesterId)
+        .eq('status', 'pending')
+        .eq('requested_action', normalized.requested_action || 'outra')
+        .eq('object_type', normalized.object_type || 'outro')
+        .eq('message', normalized.message || '')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      query = normalized.object_ref ? query.eq('object_ref', normalized.object_ref) : query.is('object_ref', null);
+      const { data, error } = await query.maybeSingle();
+      if (error) throw error;
+      const fallbackId = Number(data?.id || 0);
+      return Number.isFinite(fallbackId) && fallbackId > 0 ? fallbackId : 0;
     }
 
     function renderSelectedPendingIncomingInterlibraryRequest(){
-      const selectedValue = String($('interlibPendingIncomingSelect')?.value || '').trim();
-      const selected = findPendingIncomingRequestByOptionValue(selectedValue, currentInterlibraryRequests);
+      currentSelectedPendingIncomingRequestKey = String($('interlibPendingIncomingSelect')?.value || currentSelectedPendingIncomingRequestKey || '').trim();
+      const selected = resolveSelectedPendingIncomingInterlibraryRequest(currentInterlibraryRequests);
       $('interlibPendingIncomingSummary').value = selected ? summarizePendingIncomingInterlibraryRequest(selected) : '';
-      if ($('interlibPendingIncomingMessage')) $('interlibPendingIncomingMessage').value = selected ? String(selected.message || '').trim() : '';
       const hasSelection = !!selected;
       if ($('btnAcceptInterlibRequest')) $('btnAcceptInterlibRequest').disabled = !hasSelection;
       if ($('btnRefuseInterlibRequest')) $('btnRefuseInterlibRequest').disabled = !hasSelection;
@@ -2863,44 +2892,16 @@
       const select = $('interlibPendingIncomingSelect');
       if (!select) return;
       const pending = getPendingIncomingInterlibraryRequests(items);
-      const currentValue = String(select.value || '').trim();
+      const currentValue = String(select.value || currentSelectedPendingIncomingRequestKey || '').trim();
       select.innerHTML = '<option value="">Nenhuma solicitação pendente para responder</option>' + pending.map((item) => {
         const normalized = normalizeInterlibraryRequest(item);
-        return `<option value="${esc(getPendingIncomingRequestOptionValue(normalized))}">${esc(summarizePendingIncomingInterlibraryRequest(normalized))}</option>`;
+        const optionValue = buildPendingIncomingRequestSelectionKey(normalized);
+        return `<option value="${esc(optionValue)}">${esc(summarizePendingIncomingInterlibraryRequest(normalized))}</option>`;
       }).join('');
-      const validValues = new Set(pending.map((item) => getPendingIncomingRequestOptionValue(item)).filter(Boolean));
-      select.value = validValues.has(currentValue) ? currentValue : (pending[0] ? getPendingIncomingRequestOptionValue(pending[0]) : '');
+      const validValues = new Set(pending.map((item) => buildPendingIncomingRequestSelectionKey(item)).filter(Boolean));
+      select.value = validValues.has(currentValue) ? currentValue : (pending[0] ? buildPendingIncomingRequestSelectionKey(pending[0]) : '');
+      currentSelectedPendingIncomingRequestKey = String(select.value || '').trim();
       renderSelectedPendingIncomingInterlibraryRequest();
-    }
-
-    async function resolvePendingIncomingRequestId(item){
-      const normalized = normalizeInterlibraryRequest(item);
-      const directId = Number(String(normalized.id || '').trim());
-      if (directId) return directId;
-      const targetLibraryId = normalizeLibraryId(normalized.target_library_id);
-      const requesterLibraryId = normalizeLibraryId(normalized.requester_library_id);
-      if (!targetLibraryId || !requesterLibraryId) return 0;
-      const { data, error } = await supabase
-        .from(INTERLIB_REQUEST_TABLE)
-        .select('id,requester_library_id,target_library_id,requested_action,object_type,object_ref,message,status,created_at')
-        .eq('status', 'pending')
-        .eq('target_library_id', targetLibraryId)
-        .eq('requester_library_id', requesterLibraryId)
-        .order('created_at', { ascending: false })
-        .limit(20);
-      if (error) throw error;
-      const candidates = (data || []).map(normalizeInterlibraryRequest);
-      const resolved = candidates.find((candidate) => (
-        String(candidate.requested_action || '').trim() === String(normalized.requested_action || '').trim()
-        && String(candidate.object_type || '').trim() === String(normalized.object_type || '').trim()
-        && String(candidate.object_ref || '').trim() === String(normalized.object_ref || '').trim()
-        && String(candidate.message || '').trim() === String(normalized.message || '').trim()
-      )) || candidates.find((candidate) => (
-        String(candidate.message || '').trim() === String(normalized.message || '').trim()
-      )) || null;
-      const resolvedId = Number(String(resolved?.id || '').trim());
-      if (resolvedId) normalized.id = String(resolvedId);
-      return resolvedId || 0;
     }
 
     async function fetchInterlibraryActiveLibraries(){
@@ -3043,17 +3044,16 @@
     }
 
     async function saveInterlibraryDecision(decision){
-      const selectedValue = String($('interlibPendingIncomingSelect')?.value || '').trim();
-      const selected = findPendingIncomingRequestByOptionValue(selectedValue, currentInterlibraryRequests);
+      currentSelectedPendingIncomingRequestKey = String($('interlibPendingIncomingSelect')?.value || currentSelectedPendingIncomingRequestKey || '').trim();
+      const selected = resolveSelectedPendingIncomingInterlibraryRequest(currentInterlibraryRequests);
       if (!selected) return setStatus('interlibRequestsMsg', 'Escolhe primeiro uma solicitação recebida pendente.', 'warn');
-      let requestId = Number(String(selected.id || '').trim());
       const note = String($('interlibResponseNote')?.value || '').trim();
       const acceptBtn = $('btnAcceptInterlibRequest');
       const refuseBtn = $('btnRefuseInterlibRequest');
       if (acceptBtn) acceptBtn.disabled = true;
       if (refuseBtn) refuseBtn.disabled = true;
       try {
-        if (!requestId) requestId = await resolvePendingIncomingRequestId(selected);
+        const requestId = await resolvePendingIncomingRequestId(selected);
         if (!requestId) throw new Error('Não consegui identificar a solicitação selecionada.');
         const { data, error } = await supabase.rpc(INTERLIB_DECIDE_RPC, {
           p_request_id: requestId,
@@ -3062,7 +3062,7 @@
         });
         if (error) throw error;
         const normalized = normalizeInterlibraryRequest(data || {});
-        currentInterlibraryRequests = currentInterlibraryRequests.map((item) => getPendingIncomingRequestOptionValue(item) === getPendingIncomingRequestOptionValue(selected) ? normalized : item);
+        currentInterlibraryRequests = currentInterlibraryRequests.map((item) => String(item?.id || '') === String(normalized.id || '') ? normalized : item);
         renderInterlibraryRequests(currentInterlibraryRequests);
         renderPendingIncomingInterlibraryRequests(currentInterlibraryRequests);
         $('interlibResponseNote').value = '';
