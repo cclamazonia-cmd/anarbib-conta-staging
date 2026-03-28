@@ -5543,7 +5543,7 @@ function belemNowParts(){
         if (fallback.error) throw fallback.error;
         activeReservations = await mapLegacyReservationRows(fallback.data || []);
         if (activeReservations.length) {
-          setStatus('statusRes', 'Reservas ativas carregadas pelo fluxo antigo. As etapas intermediárias continuam indisponíveis aqui até identificarmos a fonte v2 certa.', 'warn', false);
+          setStatus('statusRes', 'Reservas ativas carregadas pelo fluxo antigo visível. O painel tentará aplicar as etapas em modo compatível enquanto a fonte v2 exata não for identificada.', 'warn', false);
         } else {
           clearStatus('statusRes');
         }
@@ -6115,12 +6115,25 @@ async function fetchActiveLoans(){
       return payload;
     }
 
+    function reservationCanUseV2WorkflowCompat(row){
+      if (!row) return false;
+      if (row.source === 'v2') return true;
+      const reservaId = Number(row?.reserva_id);
+      const lineNo = Number(row?.line_no || 1);
+      const sourceName = String(row?.reservation_source_name || '').trim();
+      return Number.isFinite(reservaId)
+        && reservaId > 0
+        && Number.isFinite(lineNo)
+        && lineNo > 0
+        && (!sourceName || sourceName === 'v_reservations_enriched');
+    }
+
     async function setReservationWorkflowStage(stage, rows, { note='', pickupScheduledFor=null, targetStatusId='statusRes' } = {}){
-      const cleanRows = (rows || []).filter((r) => r && r.source === 'v2');
-      const skipped = (rows || []).filter((r) => !r || r.source !== 'v2');
+      const cleanRows = (rows || []).filter((r) => reservationCanUseV2WorkflowCompat(r));
+      const skipped = (rows || []).filter((r) => !reservationCanUseV2WorkflowCompat(r));
       if (!cleanRows.length) {
         const msg = skipped.length
-          ? 'As etapas intermediárias só podem ser geridas nas reservas v2 ativas. As linhas selecionadas ainda vêm do fluxo antigo.'
+          ? 'As etapas intermediárias precisam de linhas com identificador de reserva compatível. As linhas selecionadas não puderam ser preparadas para o fluxo v2.'
           : 'Selecione pelo menos 1 reserva ativa.';
         setStatus(targetStatusId, msg, 'warn');
         return;
@@ -6206,8 +6219,10 @@ async function fetchActiveLoans(){
       }
 
       const stageLabel = translateReservationWorkflowStage(stage);
-      const skippedMsg = skipped.length ? ` ${skipped.length} item(ns) fora do fluxo v2 foram ignorados.` : '';
-      setStatus(targetStatusId, `${stageLabel} aplicado para ${processed} item(ns).${skippedMsg}`, 'ok');
+      const skippedMsg = skipped.length ? ` ${skipped.length} item(ns) sem identificador compatível foram ignorados.` : '';
+      const compatCount = cleanRows.filter((r) => r && r.source !== 'v2').length;
+      const compatMsg = compatCount ? ` ${compatCount} item(ns) do fluxo visível foram tratados em modo compatível.` : '';
+      setStatus(targetStatusId, `${stageLabel} aplicado para ${processed} item(ns).${compatMsg}${skippedMsg}`, 'ok');
       await refreshCollections({silent:true});
     }
 
@@ -6237,7 +6252,7 @@ async function fetchActiveLoans(){
             <td>${esc(r.titulo)}${r.autor ? `<br><span class="mini subtle">${esc(r.autor)}</span>` : ''}</td>
             <td class="mono">${esc(r.bib_ref)}</td>
             <td>${esc(r.rotulo || '—')}</td>
-            <td>${esc(fmtDateTimeBelem(r.reserva_em))} (Belém)<br><span class="pill ${esc(reservationWorkflowStageClass(r.workflow_stage))}">${esc(workflowLabel)}</span>${r.workflow_stage_updated_at ? `<br><span class="mini subtle">Atualizado: ${esc(fmtDateTimeBelem(r.workflow_stage_updated_at))} (Belém)</span>` : ''}${workflowDetail ? `<br><span class="mini subtle">${esc(workflowDetail)}</span>` : ''}${r.source !== 'v2' ? `<br><span class="mini subtle">Fluxo antigo: etapas intermediárias ainda indisponíveis aqui.</span>` : ''}</td>
+            <td>${esc(fmtDateTimeBelem(r.reserva_em))} (Belém)<br><span class="pill ${esc(reservationWorkflowStageClass(r.workflow_stage))}">${esc(workflowLabel)}</span>${r.workflow_stage_updated_at ? `<br><span class="mini subtle">Atualizado: ${esc(fmtDateTimeBelem(r.workflow_stage_updated_at))} (Belém)</span>` : ''}${workflowDetail ? `<br><span class="mini subtle">${esc(workflowDetail)}</span>` : ''}${r.source !== 'v2' ? `<br><span class="mini subtle">Fluxo visível antigo: o painel tentará aplicar a etapa em modo compatível.</span>` : ''}</td>
             <td>${esc(fmtDateTimeBelem(r.validade))} (Belém)<br><span class="pill ${esc(followUp.className)}">${esc(followUp.label)}</span><br><span class="mini subtle">${esc(followUp.detail)}</span></td>
           </tr>`;
       }).join('');
