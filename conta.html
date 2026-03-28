@@ -3892,11 +3892,6 @@ function reservationPickupReplyActions(row) {
     await renderActiveReservations();
     await renderLoans();
     await renderHistory();
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) refreshContaView();
-    });
-    window.addEventListener('focus', () => refreshContaView());
-    window.addEventListener('pageshow', () => refreshContaView());
   </script>
 </body>
 </html>

@@ -7548,10 +7548,7 @@ async function fetchActiveLoans(){
 
     function setupRefreshHooks(){
       if (refreshTimer) clearInterval(refreshTimer);
-      refreshTimer = setInterval(() => { refreshCollections({silent:true}); loadLibraryServiceState({silent:true}); }, 30000);
-      document.addEventListener('visibilitychange', () => { if (!document.hidden) { refreshCollections({silent:true}); loadLibraryServiceState({silent:true}); } });
-      window.addEventListener('focus', () => { refreshCollections({silent:true}); loadLibraryServiceState({silent:true}); });
-      window.addEventListener('pageshow', () => { refreshCollections({silent:true}); loadLibraryServiceState({silent:true}); });
+      refreshTimer = null;
     }
 
     let authSyncSerial = 0;
