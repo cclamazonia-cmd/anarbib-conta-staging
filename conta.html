@@ -1388,7 +1388,7 @@ button[type="submit"] *,
       const publicId = String(currentContaIdentity?.public_id || "").trim();
       const libraryName = resolveContaLibraryName() || "—";
       if (chipContaEspaco) {
-        chipContaEspaco.textContent = `Leitor conectad@: ${fullName}${publicId ? ` · ID ${publicId}` : ""} · ${libraryName}`;
+        chipContaEspaco.textContent = `Leitor@ conectad@: ${fullName}${publicId ? ` · ID ${publicId}` : ""} · ${libraryName}`;
       }
       if (chipContaBiblioteca) chipContaBiblioteca.style.display = "none";
       if (chipContaPublicId) chipContaPublicId.style.display = "none";
