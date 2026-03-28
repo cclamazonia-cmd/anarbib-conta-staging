@@ -1285,14 +1285,14 @@
             <div class="section-head">
               <div>
                 <h2>Gerir leitor(a/e)</h2>
-                <div class="mini">Busca por e-mail e gestão coerente com as vistas de massa.</div>
+                <div class="mini">Busca por ID público ou e-mail e gestão coerente com as vistas de massa.</div>
               </div>
             </div>
 
             <div class="row" style="margin-top:12px">
               <div>
-                <label for="searchEmail">Buscar por e-mail</label>
-                <input class="input" id="searchEmail" type="email" placeholder="leitor@exemplo.org">
+                <label for="searchEmail">Buscar por ID público ou e-mail</label>
+                <input class="input" id="searchEmail" type="text" placeholder="Ex.: U000085 ou leitor@exemplo.org">
                 <div class="actions">
                   <button class="btn" id="btnBuscarPerfil" type="button">Buscar</button>
                 </div>
@@ -6226,6 +6226,42 @@ async function fetchActiveLoans(){
       return String(value || '').trim().toLowerCase();
     }
 
+    function normalizePublicId(value){
+      return String(value || '').trim().toUpperCase();
+    }
+
+    function normalizeProfileLookup(value){
+      return String(value || '').trim();
+    }
+
+    function looksLikeEmail(value){
+      const normalized = normalizeProfileLookup(value);
+      return normalized.includes('@');
+    }
+
+    async function queryProfileByPublicIdDirect(publicId, select = '*'){
+      const normalized = normalizePublicId(publicId);
+      if (!normalized) return null;
+      let lastError = null;
+      const attempts = [
+        () => supabase.from('profiles').select(select).ilike('public_id', normalized).limit(2),
+        () => supabase.from('profiles').select(select).eq('public_id', normalized).limit(2),
+      ];
+      for (const run of attempts){
+        try {
+          const { data, error } = await run();
+          if (error) { lastError = error; continue; }
+          const rows = Array.isArray(data) ? data : [];
+          const exact = rows.find((row) => normalizePublicId(row?.public_id) === normalized) || rows[0] || null;
+          if (exact?.id) return exact;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      if (lastError) throw lastError;
+      return null;
+    }
+
     async function queryProfileByEmailDirect(email, select = '*'){
       const normalized = normalizeEmail(email);
       let lastError = null;
@@ -6277,14 +6313,22 @@ async function fetchActiveLoans(){
       return null;
     }
 
-    async function resolveProfileByEmail(email, select = '*'){
-      const normalized = normalizeEmail(email);
-      if (!normalized) throw new Error('Informe um e-mail.');
+    async function resolveProfileByLookup(lookup, select = '*'){
+      const normalizedLookup = normalizeProfileLookup(lookup);
+      if (!normalizedLookup) throw new Error('Informe um ID público ou e-mail.');
 
+      const publicIdData = await queryProfileByPublicIdDirect(normalizedLookup, select);
+      if (publicIdData?.id) return publicIdData;
+
+      if (!looksLikeEmail(normalizedLookup)) {
+        throw new Error('Não encontrei esse ID público no cadastro.');
+      }
+
+      const normalizedEmail = normalizeEmail(normalizedLookup);
       try {
-        const rpcData = await queryProfileByEmailRpc(normalized);
+        const rpcData = await queryProfileByEmailRpc(normalizedEmail);
         if (rpcData?.id) {
-          if (select === 'id,email') return { id: rpcData.id, email: rpcData.email || normalized };
+          if (select === 'id,email') return { id: rpcData.id, email: rpcData.email || normalizedEmail, public_id: rpcData.public_id || '' };
           try {
             const freshData = await queryProfileByIdDirect(rpcData.id, select);
             if (freshData?.id) return freshData;
@@ -6295,7 +6339,7 @@ async function fetchActiveLoans(){
         if (!isMissingFunctionError(error)) throw error;
       }
 
-      const directData = await queryProfileByEmailDirect(normalized, select);
+      const directData = await queryProfileByEmailDirect(normalizedEmail, select);
       if (directData?.id) return directData;
       throw new Error('Não encontrei esse e-mail no cadastro.');
     }
@@ -6342,14 +6386,7 @@ async function fetchActiveLoans(){
       return false;
     }
 
-    async function loadProfileByEmail(email){
-      const data = await resolveProfileByEmail(email, '*');
-      if (!data?.id) throw new Error('Não encontrei esse e-mail no cadastro.');
-      const canManage = await canManageProfileFromCurrentLibrary(data.id, data);
-      if (!canManage) {
-        resetProfileEditorState();
-        throw new Error('Este cadastro não pertence à biblioteca ativa deste painel.');
-      }
+    function fillProfileEditor(data){
       editingProfileId = data.id;
       editingProfileRow = data;
       editingKnownColumns = {
@@ -6368,6 +6405,28 @@ async function fetchActiveLoans(){
       $('profileArea').classList.remove('hidden');
       activateProfileTab('Dados');
       renderProfileLists();
+    }
+
+    async function loadProfileByLookup(lookup){
+      const data = await resolveProfileByLookup(lookup, '*');
+      if (!data?.id) throw new Error('Não encontrei esse cadastro.');
+      const canManage = await canManageProfileFromCurrentLibrary(data.id, data);
+      if (!canManage) {
+        resetProfileEditorState();
+        throw new Error('Este cadastro não pertence à biblioteca ativa deste painel.');
+      }
+      fillProfileEditor(data);
+    }
+
+    async function loadProfileById(profileId){
+      const data = await queryProfileByIdDirect(profileId, '*');
+      if (!data?.id) throw new Error('Não consegui recarregar este cadastro.');
+      const canManage = await canManageProfileFromCurrentLibrary(data.id, data);
+      if (!canManage) {
+        resetProfileEditorState();
+        throw new Error('Este cadastro não pertence à biblioteca ativa deste painel.');
+      }
+      fillProfileEditor(data);
     }
 
     async function saveProfile(){
@@ -6393,7 +6452,7 @@ async function fetchActiveLoans(){
     }
 
     async function findUserByEmail(email){
-      const data = await resolveProfileByEmail(email, 'id,email');
+      const data = await resolveProfileByLookup(email, 'id,email');
       if (!data?.id) throw new Error('E-mail não encontrado no cadastro.');
       return data;
     }
@@ -7347,11 +7406,11 @@ async function fetchActiveLoans(){
       clearStatus('statusPerfilBusca');
       clearStatus('statusPerfil');
       resetProfileEditorState();
-      const email = $('searchEmail').value.trim().toLowerCase();
-      if (!email) return setStatus('statusPerfilBusca', 'Informe um e-mail.', 'warn');
+      const lookup = normalizeProfileLookup($('searchEmail').value);
+      if (!lookup) return setStatus('statusPerfilBusca', 'Informe um ID público ou e-mail.', 'warn');
       $('btnBuscarPerfil').disabled = true;
       try {
-        await loadProfileByEmail(email);
+        await loadProfileByLookup(lookup);
         clearStatus('statusPerfilBusca');
         setStatus('statusPerfil', 'Perfil carregado.', 'ok');
       } catch (e) {
@@ -7367,9 +7426,9 @@ async function fetchActiveLoans(){
       finally { $('btnSalvarPerfil').disabled = false; }
     });
     $('btnRecarregarPerfil').addEventListener('click', async () => {
-      if (!editingProfileRow?.email) return setStatus('statusPerfil', 'Busque um perfil primeiro.', 'warn');
+      if (!editingProfileId) return setStatus('statusPerfil', 'Busque um perfil primeiro.', 'warn');
       try {
-        await loadProfileByEmail(editingProfileRow.email);
+        await loadProfileById(editingProfileId);
         await refreshCollections({silent:true});
         setStatus('statusPerfil', 'Perfil recarregado.', 'ok');
       } catch (e) {
