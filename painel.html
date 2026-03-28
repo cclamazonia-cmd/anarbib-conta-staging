@@ -5387,46 +5387,150 @@ function belemNowParts(){
     }
 
     async function fetchActiveReservations(){
-      const { data, error } = await supabase
-        .from('v_reservations_enriched')
-        .select('*')
-        .eq('status', 'active')
-        .order('created_at', { ascending:false })
-        .limit(500);
+      const isMissingReservationSourceError = (error) => {
+        const msg = String(error?.message || error?.details || error || '').toLowerCase();
+        return msg.includes('does not exist')
+          || msg.includes('could not find')
+          || msg.includes('relation')
+          || msg.includes('schema cache')
+          || msg.includes('permission denied');
+      };
 
-      if (error) throw error;
-      const rows = data || [];
-      const profilesMap = await loadProfilesByIds(rows.map((r) => r.user_id));
+      const normalizeReservationWorkflowStageValue = (value) => {
+        const raw = String(value || '').trim().toLowerCase();
+        if (!raw || ['ativa', 'ativo', 'active'].includes(raw)) return 'solicitada';
+        if (['solicitada', 'em_preparacao', 'pronta_para_retirada', 'retirada_a_combinar', 'retirada_agendada', 're-retirada_agendada', 'nao_retirada', 'liberada_para_circulacao', 'retirada_efetivada', 'cancelada_leitor', 'cancelada_biblioteca', 'expirada'].includes(raw)) return raw;
+        return 'solicitada';
+      };
 
-      activeReservations = rows.map((r) => {
-        const user = profilesMap.get(String(r.user_id)) || {};
-        const createdAt = r.created_at || null;
-        return {
-          id: Number(r.id),
-          reserva_id: Number(r.id),
-          sub_id: `${r.id}.1`,
-          line_no: 1,
-          source: 'reservations',
-          user_id: r.user_id,
-          user_name: profileName(user),
-          user_email: user.email || '—',
-          bib_ref: r.bib_ref,
-          titulo: r.titulo || `Referência ${r.bib_ref}`,
-          autor: r.autor || '',
-          rotulo: '—',
-          reserva_em: createdAt,
-          validade: addDays(createdAt || Date.now(), 14),
-          workflow_stage: 'solicitada',
-          workflow_stage_updated_at: r.updated_at || createdAt,
-          workflow_note: String(r.notes || '').trim(),
-          pickup_scheduled_for: null,
-          pickup_reply_status: null,
-          pickup_reply_note: '',
-          pickup_reply_at: null,
-          pickup_attention: null,
-          raw: r,
-        };
-      });
+      const reservationLooksActiveForWorkflow = (row) => {
+        const stage = normalizeReservationWorkflowStageValue(
+          firstFilledValue(row?.workflow_stage_effective, row?.workflow_stage, row?.stage, row?.item_status, row?.status, '')
+        );
+        return !['liberada_para_circulacao', 'retirada_efetivada', 'cancelada_leitor', 'cancelada_biblioteca', 'expirada'].includes(stage);
+      };
+
+      const buildReservationSyntheticId = (reservaId, lineNo, fallbackId, index) => {
+        const direct = Number(fallbackId);
+        if (Number.isFinite(direct) && direct > 0) return direct;
+        const rid = Number(reservaId);
+        const line = Number(lineNo);
+        if (Number.isFinite(rid) && rid > 0 && Number.isFinite(line) && line > 0) {
+          return Number(`${rid}${String(line).padStart(3, '0')}`);
+        }
+        return Number(index + 1);
+      };
+
+      const mapV2ReservationRows = async (rows, sourceName) => {
+        const filteredRows = (rows || []).filter(reservationLooksActiveForWorkflow);
+        const profileIds = filteredRows.map((row) => firstFilledValue(row?.user_id, row?.reader_id, row?.profile_id, row?.user_uuid, row?.reader_uuid, null)).filter(Boolean);
+        const profilesMap = await loadProfilesByIds(profileIds);
+        return filteredRows.map((row, index) => {
+          const reservaId = Number(firstFilledValue(row?.reserva_id, row?.reservation_id, row?.id, 0));
+          const lineNo = Number(firstFilledValue(row?.line_no, row?.reservation_line_no, row?.item_no, 1)) || 1;
+          const userId = firstFilledValue(row?.user_id, row?.reader_id, row?.profile_id, row?.user_uuid, row?.reader_uuid, null);
+          const user = profilesMap.get(String(userId)) || {};
+          const book = extractBook(row) || {};
+          const createdAt = firstFilledValue(row?.created_at, row?.requested_at, row?.reserva_em, row?.inserted_at, null) || null;
+          const workflowStage = normalizeReservationWorkflowStageValue(firstFilledValue(row?.workflow_stage_effective, row?.workflow_stage, row?.stage, row?.item_status, row?.status, 'solicitada'));
+          const workflowUpdatedAt = firstFilledValue(row?.workflow_stage_updated_at, row?.last_stage_changed_at, row?.updated_at, createdAt, null) || createdAt;
+          const validadeRaw = firstFilledValue(row?.validade, row?.valid_until, row?.expires_at, row?.pickup_until, row?.pickup_expires_at, row?.deadline_at, null);
+          return {
+            id: buildReservationSyntheticId(reservaId, lineNo, row?.id, index),
+            reserva_id: reservaId,
+            sub_id: String(firstFilledValue(row?.sub_id, row?.reservation_sub_id, row?.item_sub_id, `${reservaId}.${lineNo}`)),
+            line_no: lineNo,
+            source: 'v2',
+            reservation_source_name: sourceName,
+            user_id: userId,
+            user_name: firstFilledValue(row?.user_name, row?.reader_name, row?.profile_name, profileName(user)),
+            user_email: firstFilledValue(row?.user_email, row?.reader_email, row?.email, user?.email, '—') || '—',
+            bib_ref: firstFilledValue(row?.bib_ref, row?.book_bib_ref, book?.bib_ref, ''),
+            titulo: firstFilledValue(row?.titulo, row?.title, row?.book_title, book?.titulo, row?.bib_ref ? `Referência ${row.bib_ref}` : 'Referência sem título'),
+            autor: firstFilledValue(row?.autor, row?.author, row?.book_author, book?.autor, ''),
+            rotulo: firstFilledValue(row?.rotulo, row?.label, row?.item_label, row?.tombo, row?.exemplar_tombo, row?.exemplar_label, '—') || '—',
+            reserva_em: createdAt,
+            validade: validadeRaw || addDays(createdAt || Date.now(), 14),
+            workflow_stage: workflowStage,
+            workflow_stage_effective: workflowStage,
+            workflow_stage_updated_at: workflowUpdatedAt,
+            workflow_note: String(firstFilledValue(row?.workflow_note, row?.note, row?.notes, '') || '').trim(),
+            pickup_scheduled_for: firstFilledValue(row?.pickup_scheduled_for, row?.scheduled_pickup_for, row?.retirada_agendada_para, null) || null,
+            pickup_reply_status: firstFilledValue(row?.pickup_reply_status, row?.reader_pickup_reply_status, null) || null,
+            pickup_reply_note: String(firstFilledValue(row?.pickup_reply_note, row?.reader_pickup_reply_note, '') || '').trim(),
+            pickup_reply_at: firstFilledValue(row?.pickup_reply_at, row?.reader_pickup_reply_at, null) || null,
+            pickup_attention: firstFilledValue(row?.pickup_attention, row?.follow_up_bucket, null) || null,
+            raw: row,
+          };
+        }).sort((a, b) => String(b.reserva_em || '').localeCompare(String(a.reserva_em || '')));
+      };
+
+      const tryReservationV2Sources = [
+        'v_reserva_linhas_v2_ui_fix',
+        'v_reserva_itens_v2_ui_fix',
+        'v_reservas_v2_ui_fix',
+        'v_reservas_ativas_v2',
+        'reserva_linhas_v2',
+        'reservas_v2'
+      ];
+
+      let v2SourceResolved = false;
+      for (const sourceName of tryReservationV2Sources) {
+        const attempt = await supabase
+          .from(sourceName)
+          .select('*')
+          .limit(800);
+        if (attempt.error) {
+          if (isMissingReservationSourceError(attempt.error)) continue;
+          throw attempt.error;
+        }
+        activeReservations = await mapV2ReservationRows(attempt.data || [], sourceName);
+        v2SourceResolved = true;
+        break;
+      }
+
+      if (!v2SourceResolved) {
+        const { data, error } = await supabase
+          .from('v_reservations_enriched')
+          .select('*')
+          .eq('status', 'active')
+          .order('created_at', { ascending:false })
+          .limit(500);
+
+        if (error) throw error;
+        const rows = data || [];
+        const profilesMap = await loadProfilesByIds(rows.map((r) => r.user_id));
+
+        activeReservations = rows.map((r) => {
+          const user = profilesMap.get(String(r.user_id)) || {};
+          const createdAt = r.created_at || null;
+          return {
+            id: Number(r.id),
+            reserva_id: Number(r.id),
+            sub_id: `${r.id}.1`,
+            line_no: 1,
+            source: 'reservations',
+            user_id: r.user_id,
+            user_name: profileName(user),
+            user_email: user.email || '—',
+            bib_ref: r.bib_ref,
+            titulo: r.titulo || `Referência ${r.bib_ref}`,
+            autor: r.autor || '',
+            rotulo: '—',
+            reserva_em: createdAt,
+            validade: addDays(createdAt || Date.now(), 14),
+            workflow_stage: 'solicitada',
+            workflow_stage_updated_at: r.updated_at || createdAt,
+            workflow_note: String(r.notes || '').trim(),
+            pickup_scheduled_for: null,
+            pickup_reply_status: null,
+            pickup_reply_note: '',
+            pickup_reply_at: null,
+            pickup_attention: null,
+            raw: r,
+          };
+        });
+      }
 
       selectedReservaIds = new Set(
         [...selectedReservaIds].filter((id) => activeReservations.some((r) => r.id === id))
