@@ -147,6 +147,9 @@
       white-space:nowrap !important;
       overflow-wrap:normal !important;
       word-break:normal !important;
+      min-width:112px !important;
+      padding-left:14px !important;
+      padding-right:14px !important;
       color:#ffffff !important;
     }
     .loan-actions,
@@ -156,6 +159,9 @@
       gap:8px;
       align-items:stretch;
       margin-top:8px;
+    }
+    .reservation-actions{
+      grid-template-columns:repeat(3, minmax(120px, 1fr));
     }
     .loan-actions{ margin-left:0; }
     .loan-actions > *,
@@ -2267,10 +2273,11 @@ button[type="submit"] *,
       const reservaId = Number(row?.reserva_id || row?.id);
       const bibRef = normalizeBibRefValue(row?.bib_ref);
       const subId = String(row?.sub_id || "").trim();
+      const title = String(row?.titulo || "").trim();
       return buildActionGrid([
         actionSlotEmpty(),
         actionSlotEmpty(),
-        `<button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-current="${escapeHtml(reservaId || "")}" data-cancel-current-line-no="${escapeHtml(Number(row?.line_no) || "")}" data-cancel-current-bib-ref="${escapeHtml(bibRef)}" data-cancel-current-sub-id="${escapeHtml(subId)}">Cancelar</button>`
+        `<button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-current="${escapeHtml(reservaId || "")}" data-cancel-current-line-no="${escapeHtml(Number(row?.line_no) || "")}" data-cancel-current-bib-ref="${escapeHtml(bibRef)}" data-cancel-current-sub-id="${escapeHtml(subId)}" data-cancel-current-title="${escapeHtml(title)}">Cancelar</button>`
       ], "reservation-actions");
     }
 
@@ -2327,7 +2334,130 @@ button[type="submit"] *,
       return true;
     }
 
-    async function resolveReservationLineNoForCurrentView(reservaId, rowHint = {}) {
+    
+    function normalizeReservationTitleForMatch(value) {
+      return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    async function loadCancelableReservationCandidateRows() {
+      const attempts = [
+        () => supabase
+          .schema("api")
+          .from("reserva_itens_followup_ui")
+          .select("reserva_id, line_no, bib_ref, sub_id, titulo, item_status, status, workflow_stage_effective, workflow_stage")
+          .eq("user_id", session.user.id)
+          .order("reserva_id", { ascending: false })
+          .order("line_no", { ascending: true })
+          .limit(300),
+        () => supabase
+          .schema("api")
+          .from("reserva_itens_ui")
+          .select("reserva_id, line_no, bib_ref, sub_id, titulo, item_status, status, workflow_stage_effective, workflow_stage")
+          .eq("user_id", session.user.id)
+          .order("reserva_id", { ascending: false })
+          .order("line_no", { ascending: true })
+          .limit(300),
+        () => supabase
+          .schema("api")
+          .from("reserva_itens_followup_ui")
+          .select("reserva_id, line_no, bib_ref, sub_id, titulo, item_status, status, workflow_stage_effective, workflow_stage")
+          .order("reserva_id", { ascending: false })
+          .order("line_no", { ascending: true })
+          .limit(300),
+        () => supabase
+          .schema("api")
+          .from("reserva_itens_ui")
+          .select("reserva_id, line_no, bib_ref, sub_id, titulo, item_status, status, workflow_stage_effective, workflow_stage")
+          .order("reserva_id", { ascending: false })
+          .order("line_no", { ascending: true })
+          .limit(300)
+      ];
+
+      const merged = new Map();
+      for (const run of attempts) {
+        try {
+          const res = await run();
+          if (res?.error || !(res?.data || []).length) continue;
+          for (const row of (res.data || [])) {
+            const reservaId = Number(row?.reserva_id);
+            const lineNo = Number(row?.line_no);
+            if (!(reservaId > 0) || !(lineNo > 0)) continue;
+            const key = `${reservaId}|${lineNo}|${normalizeBibRefValue(row?.bib_ref)}|${String(row?.sub_id || "").trim()}`;
+            if (!merged.has(key)) merged.set(key, row);
+          }
+        } catch (_err) {}
+      }
+      return Array.from(merged.values());
+    }
+
+    function resolveReservationCancelTargetFromCandidateRows(candidateRows, rowHint = {}) {
+      let matches = (Array.isArray(candidateRows) ? candidateRows : []).filter((row) => {
+        return Number(row?.reserva_id) > 0 && Number(row?.line_no) > 0;
+      });
+
+      if (!matches.length) return null;
+
+      const activeEnough = matches.filter((row) => reservationLineLooksActiveEnough(row));
+      if (activeEnough.length) matches = activeEnough;
+
+      const hintedReservaId = Number(rowHint?.reserva_id || rowHint?.id);
+      const hintedBibRef = normalizeBibRefValue(rowHint?.bib_ref);
+      const hintedSubId = String(rowHint?.sub_id || "").trim();
+      const hintedLineNo = Number(rowHint?.line_no) || parseReservationLineNoFromSubId(hintedSubId);
+      const hintedTitle = normalizeReservationTitleForMatch(rowHint?.titulo);
+
+      const tryNarrow = (rows, predicate) => {
+        const narrowed = rows.filter(predicate);
+        return narrowed.length ? narrowed : rows;
+      };
+
+      let best = matches;
+      if (hintedReservaId > 0) best = tryNarrow(best, (row) => Number(row?.reserva_id) === hintedReservaId);
+      if (hintedBibRef) best = tryNarrow(best, (row) => normalizeBibRefValue(row?.bib_ref) === hintedBibRef);
+      if (hintedSubId) best = tryNarrow(best, (row) => String(row?.sub_id || "").trim() === hintedSubId);
+      if (hintedLineNo > 0) best = tryNarrow(best, (row) => Number(row?.line_no) === hintedLineNo);
+      if (hintedTitle) best = tryNarrow(best, (row) => normalizeReservationTitleForMatch(row?.titulo) === hintedTitle);
+
+      const uniqueTargets = Array.from(new Map(
+        best.map((row) => [`${Number(row?.reserva_id)}|${Number(row?.line_no)}`, {
+          reservaId: Number(row?.reserva_id),
+          lineNo: Number(row?.line_no)
+        }])
+      ).values());
+
+      if (uniqueTargets.length === 1) return uniqueTargets[0];
+
+      if (hintedBibRef) {
+        const byBib = uniqueTargets.filter((target) => {
+          return best.some((row) =>
+            Number(row?.reserva_id) === target.reservaId &&
+            Number(row?.line_no) === target.lineNo &&
+            normalizeBibRefValue(row?.bib_ref) === hintedBibRef
+          );
+        });
+        if (byBib.length === 1) return byBib[0];
+      }
+
+      if (hintedSubId) {
+        const bySub = uniqueTargets.filter((target) => {
+          return best.some((row) =>
+            Number(row?.reserva_id) === target.reservaId &&
+            Number(row?.line_no) === target.lineNo &&
+            String(row?.sub_id || "").trim() === hintedSubId
+          );
+        });
+        if (bySub.length === 1) return bySub[0];
+      }
+
+      return null;
+    }
+
+async function resolveReservationLineNoForCurrentView(reservaId, rowHint = {}) {
       const rid = Number(reservaId);
       if (!rid) return null;
       const bibRef = normalizeBibRefValue(rowHint?.bib_ref);
@@ -2402,29 +2532,41 @@ button[type="submit"] *,
     }
 
     async function cancelCurrentActiveReservation(reservaId, rowHint = {}) {
-      const rid = Number(reservaId);
-      if (!rid) return { error: { message: "Reserva inválida." }, data: null };
-
+      const hintedReservaId = Number(reservaId || rowHint?.reserva_id || rowHint?.id);
       const directLineNo = Number(rowHint?.line_no);
-      if (directLineNo > 0) {
-        return await cancelReservaV2(rid, directLineNo);
+
+      if (hintedReservaId > 0 && directLineNo > 0) {
+        return await cancelReservaV2(hintedReservaId, directLineNo);
       }
 
-      const resolvedLineNo = await resolveReservationLineNoForCurrentView(rid, rowHint);
-      if (resolvedLineNo) {
-        return await cancelReservaV2(rid, resolvedLineNo);
+      const candidateRows = await loadCancelableReservationCandidateRows();
+      const resolvedTarget = resolveReservationCancelTargetFromCandidateRows(candidateRows, {
+        ...rowHint,
+        reserva_id: hintedReservaId || rowHint?.reserva_id,
+        id: hintedReservaId || rowHint?.id
+      });
+
+      if (resolvedTarget?.reservaId > 0 && resolvedTarget?.lineNo > 0) {
+        return await cancelReservaV2(resolvedTarget.reservaId, resolvedTarget.lineNo);
       }
 
-      let rpc = await supabase.rpc("cancel_my_reserva", { p_reserva_id: rid });
+      if (hintedReservaId > 0) {
+        const resolvedLineNo = await resolveReservationLineNoForCurrentView(hintedReservaId, rowHint);
+        if (resolvedLineNo) {
+          return await cancelReservaV2(hintedReservaId, resolvedLineNo);
+        }
+      }
+
+      let rpc = await supabase.rpc("cancel_my_reserva", { p_reserva_id: hintedReservaId });
       if (rpc.error && /function|does not exist|não existe/i.test(String(rpc.error.message || ""))) {
-        rpc = await supabase.rpc("cancel_reserva", { p_reserva_id: rid });
+        rpc = await supabase.rpc("cancel_reserva", { p_reserva_id: hintedReservaId });
       }
       if (!rpc.error) return rpc;
 
       if (/function|does not exist|não existe/i.test(String(rpc.error.message || ""))) {
         return {
           error: {
-            message: "Não foi possível localizar automaticamente a linha ativa desta reserva. Este caso precisa de ajuste no backend ou na view atual."
+            message: "Não foi possível localizar automaticamente o item cancelável desta reserva nesta visualização."
           },
           data: null
         };
@@ -2433,7 +2575,9 @@ button[type="submit"] *,
       return rpc;
     }
 
-    function reservationPickupReplyActions(row) {
+
+
+function reservationPickupReplyActions(row) {
       const cancelBtn = `<button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-v2="${row.reserva_id}|${row.line_no}">Cancelar</button>`;
       if (!reservationNeedsPickupReply(row?.workflow_stage_effective)) {
         return buildActionGrid([actionSlotEmpty(), actionSlotEmpty(), cancelBtn], "reservation-actions");
@@ -2577,11 +2721,29 @@ button[type="submit"] *,
 
       if (!currentQ.error) {
         const rowsData = currentQ.data || [];
+        const cancelCandidateRows = await loadCancelableReservationCandidateRows();
         const resolvedRowsData = await Promise.all(rowsData.map(async (row) => {
+          const directReservaId = Number(row?.reserva_id || row?.id);
           const directLineNo = Number(row?.line_no) || parseReservationLineNoFromSubId(row?.sub_id);
-          if (directLineNo > 0) return { ...row, line_no: directLineNo };
-          const resolvedLineNo = await resolveReservationLineNoForCurrentView(Number(row?.reserva_id || row?.id), row);
-          return resolvedLineNo ? { ...row, line_no: resolvedLineNo } : row;
+          if (directReservaId > 0 && directLineNo > 0) {
+            return { ...row, reserva_id: directReservaId, line_no: directLineNo };
+          }
+
+          const resolvedTarget = resolveReservationCancelTargetFromCandidateRows(cancelCandidateRows, {
+            ...row,
+            reserva_id: directReservaId || row?.reserva_id,
+            id: directReservaId || row?.id
+          });
+          if (resolvedTarget?.reservaId > 0 && resolvedTarget?.lineNo > 0) {
+            return { ...row, reserva_id: resolvedTarget.reservaId, line_no: resolvedTarget.lineNo };
+          }
+
+          const resolvedLineNo = directReservaId > 0
+            ? await resolveReservationLineNoForCurrentView(directReservaId, row)
+            : null;
+          return resolvedLineNo
+            ? { ...row, reserva_id: directReservaId, line_no: resolvedLineNo }
+            : { ...row, reserva_id: directReservaId || row?.reserva_id };
         }));
         setActiveReservationBibRefs(resolvedRowsData);
         if (!resolvedRowsData.length) {
@@ -2661,10 +2823,11 @@ button[type="submit"] *,
             const lineNo = Number(btn.getAttribute("data-cancel-current-line-no"));
             const bibRef = normalizeBibRefValue(btn.getAttribute("data-cancel-current-bib-ref"));
             const subId = String(btn.getAttribute("data-cancel-current-sub-id") || "").trim();
+            const title = String(btn.getAttribute("data-cancel-current-title") || "").trim();
             if (!reservaId) return;
             btn.disabled = true;
             if (activeReserveMsg) activeReserveMsg.textContent = "Cancelando reserva...";
-            const rpc = await cancelCurrentActiveReservation(reservaId, { line_no: lineNo, bib_ref: bibRef, sub_id: subId });
+            const rpc = await cancelCurrentActiveReservation(reservaId, { line_no: lineNo, bib_ref: bibRef, sub_id: subId, titulo: title });
             if (rpc.error) {
               activeReserveMsg.textContent = "Erro ao cancelar: " + rpc.error.message;
               btn.disabled = false;
