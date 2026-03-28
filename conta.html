@@ -2411,47 +2411,57 @@ button[type="submit"] *,
       const hintedLineNo = Number(rowHint?.line_no) || parseReservationLineNoFromSubId(hintedSubId);
       const hintedTitle = normalizeReservationTitleForMatch(rowHint?.titulo);
 
-      const tryNarrow = (rows, predicate) => {
-        const narrowed = rows.filter(predicate);
-        return narrowed.length ? narrowed : rows;
-      };
+      const targets = new Map();
 
-      let best = matches;
-      if (hintedReservaId > 0) best = tryNarrow(best, (row) => Number(row?.reserva_id) === hintedReservaId);
-      if (hintedBibRef) best = tryNarrow(best, (row) => normalizeBibRefValue(row?.bib_ref) === hintedBibRef);
-      if (hintedSubId) best = tryNarrow(best, (row) => String(row?.sub_id || "").trim() === hintedSubId);
-      if (hintedLineNo > 0) best = tryNarrow(best, (row) => Number(row?.line_no) === hintedLineNo);
-      if (hintedTitle) best = tryNarrow(best, (row) => normalizeReservationTitleForMatch(row?.titulo) === hintedTitle);
+      for (const row of matches) {
+        const reservaId = Number(row?.reserva_id);
+        const lineNo = Number(row?.line_no);
+        const key = `${reservaId}|${lineNo}`;
+        if (!targets.has(key)) {
+          targets.set(key, {
+            reservaId,
+            lineNo,
+            score: 0,
+            rows: []
+          });
+        }
+        const target = targets.get(key);
+        target.rows.push(row);
 
-      const uniqueTargets = Array.from(new Map(
-        best.map((row) => [`${Number(row?.reserva_id)}|${Number(row?.line_no)}`, {
-          reservaId: Number(row?.reserva_id),
-          lineNo: Number(row?.line_no)
-        }])
-      ).values());
-
-      if (uniqueTargets.length === 1) return uniqueTargets[0];
-
-      if (hintedBibRef) {
-        const byBib = uniqueTargets.filter((target) => {
-          return best.some((row) =>
-            Number(row?.reserva_id) === target.reservaId &&
-            Number(row?.line_no) === target.lineNo &&
-            normalizeBibRefValue(row?.bib_ref) === hintedBibRef
-          );
-        });
-        if (byBib.length === 1) return byBib[0];
+        if (hintedSubId && String(row?.sub_id || "").trim() === hintedSubId) target.score += 100;
+        if (hintedLineNo > 0 && lineNo === hintedLineNo) target.score += 80;
+        if (hintedBibRef && normalizeBibRefValue(row?.bib_ref) === hintedBibRef) target.score += 60;
+        if (hintedTitle && normalizeReservationTitleForMatch(row?.titulo) === hintedTitle) target.score += 40;
+        if (hintedReservaId > 0 && reservaId === hintedReservaId) target.score += 20;
+        if (reservationLineLooksActiveEnough(row)) target.score += 5;
       }
 
-      if (hintedSubId) {
-        const bySub = uniqueTargets.filter((target) => {
-          return best.some((row) =>
-            Number(row?.reserva_id) === target.reservaId &&
-            Number(row?.line_no) === target.lineNo &&
-            String(row?.sub_id || "").trim() === hintedSubId
-          );
-        });
-        if (bySub.length === 1) return bySub[0];
+      const ranked = Array.from(targets.values()).sort((a, b) => b.score - a.score);
+
+      if (ranked.length === 1) {
+        return { reservaId: ranked[0].reservaId, lineNo: ranked[0].lineNo };
+      }
+
+      const best = ranked[0];
+      const second = ranked[1];
+
+      if (best && best.score > 0 && (!second || best.score > second.score)) {
+        return { reservaId: best.reservaId, lineNo: best.lineNo };
+      }
+
+      const exactSubMatches = ranked.filter((target) => target.rows.some((row) => hintedSubId && String(row?.sub_id || "").trim() === hintedSubId));
+      if (exactSubMatches.length === 1) {
+        return { reservaId: exactSubMatches[0].reservaId, lineNo: exactSubMatches[0].lineNo };
+      }
+
+      const exactBibMatches = ranked.filter((target) => target.rows.some((row) => hintedBibRef && normalizeBibRefValue(row?.bib_ref) === hintedBibRef));
+      if (exactBibMatches.length === 1) {
+        return { reservaId: exactBibMatches[0].reservaId, lineNo: exactBibMatches[0].lineNo };
+      }
+
+      const exactTitleMatches = ranked.filter((target) => target.rows.some((row) => hintedTitle && normalizeReservationTitleForMatch(row?.titulo) === hintedTitle));
+      if (exactTitleMatches.length === 1) {
+        return { reservaId: exactTitleMatches[0].reservaId, lineNo: exactTitleMatches[0].lineNo };
       }
 
       return null;
@@ -2531,6 +2541,56 @@ async function resolveReservationLineNoForCurrentView(reservaId, rowHint = {}) {
       return null;
     }
 
+
+    async function tryCancelLegacyReservationRecord(reservaId) {
+      const rid = Number(reservaId);
+      if (!rid) return { data: null, error: null };
+
+      const cancelledAt = new Date().toISOString();
+      const payloads = [
+        {
+          status: "cancelled_by_reader",
+          cancelled_at: cancelledAt,
+          cancelled_reason: "Cancelamento solicitado pela conta do(a/e) leitor(a/e)."
+        },
+        {
+          status: "cancelled",
+          cancelled_at: cancelledAt,
+          cancelled_reason: "Cancelamento solicitado pela conta do(a/e) leitor(a/e)."
+        },
+        {
+          status: "cancelled_by_reader",
+          cancelled_at: cancelledAt
+        },
+        {
+          status: "cancelled",
+          cancelled_at: cancelledAt
+        }
+      ];
+
+      let lastError = null;
+
+      for (const payload of payloads) {
+        try {
+          const res = await supabase
+            .from("reservas")
+            .update(payload)
+            .eq("id", rid)
+            .eq("user_id", session.user.id)
+            .eq("status", "pending")
+            .select("id, status, cancelled_at, cancelled_reason")
+            .maybeSingle();
+
+          if (!res?.error && res?.data?.id) return res;
+          if (res?.error) lastError = res.error;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      return { data: null, error: lastError };
+    }
+
     async function cancelCurrentActiveReservation(reservaId, rowHint = {}) {
       const hintedReservaId = Number(reservaId || rowHint?.reserva_id || rowHint?.id);
       const directLineNo = Number(rowHint?.line_no);
@@ -2555,6 +2615,9 @@ async function resolveReservationLineNoForCurrentView(reservaId, rowHint = {}) {
         if (resolvedLineNo) {
           return await cancelReservaV2(hintedReservaId, resolvedLineNo);
         }
+
+        const legacyCancel = await tryCancelLegacyReservationRecord(hintedReservaId);
+        if (legacyCancel?.data?.id) return legacyCancel;
       }
 
       let rpc = await supabase.rpc("cancel_my_reserva", { p_reserva_id: hintedReservaId });
@@ -2574,7 +2637,6 @@ async function resolveReservationLineNoForCurrentView(reservaId, rowHint = {}) {
 
       return rpc;
     }
-
 
 
 function reservationPickupReplyActions(row) {
