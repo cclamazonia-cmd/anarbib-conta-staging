@@ -1795,6 +1795,8 @@
     let editingKnownColumns = {};
     let refreshTimer = null;
     let refreshSerial = 0;
+    let profileLookupRequestSerial = 0;
+    const PROFILE_LOOKUP_TIMEOUT_MS = 4500;
     let libraryServiceState = null;
     let reservationFollowUpFilter = 'all';
     let manualInternalTasks = [];
@@ -6353,10 +6355,18 @@ async function fetchActiveLoans(){
       renderProfileLists();
     }
 
-    async function loadProfileByLookup(lookup){
+    async function loadProfileByLookup(lookup, { applyToEditor = true } = {}){
       const data = await resolveProfileByLookup(lookup, '*');
       if (!data?.id) throw new Error('Não encontrei esse cadastro.');
-      fillProfileEditor(data);
+      if (applyToEditor) fillProfileEditor(data);
+      return data;
+    }
+
+    async function runProfileLookupWithTimeout(lookup, options = {}){
+      return await Promise.race([
+        loadProfileByLookup(lookup, options),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('A busca deste cadastro demorou mais do que o esperado. Tenta novamente.')), PROFILE_LOOKUP_TIMEOUT_MS))
+      ]);
     }
 
     async function loadProfileById(profileId){
@@ -7348,25 +7358,26 @@ async function fetchActiveLoans(){
     $('btnBuscarPerfil').addEventListener('click', async () => {
       const btn = $('btnBuscarPerfil');
       if (!btn || btn.disabled) return;
+      const requestSerial = ++profileLookupRequestSerial;
       clearStatus('statusPerfilBusca');
       clearStatus('statusPerfil');
       resetProfileEditorState();
       const lookup = normalizeProfileLookup($('searchEmail').value);
       if (!lookup) return setStatus('statusPerfilBusca', 'Informe um ID público ou e-mail.', 'warn');
       btn.disabled = true;
-      const unlockTimer = setTimeout(() => {
-        if (btn) btn.disabled = false;
-      }, 5000);
       setStatus('statusPerfilBusca', 'Buscando cadastro…', 'warn');
       try {
-        await loadProfileByLookup(lookup);
+        const data = await runProfileLookupWithTimeout(lookup, { applyToEditor: false });
+        if (requestSerial !== profileLookupRequestSerial) return;
+        fillProfileEditor(data);
         clearStatus('statusPerfilBusca');
         setStatus('statusPerfil', 'Perfil carregado.', 'ok');
       } catch (e) {
-        setStatus('statusPerfilBusca', e.message || String(e), 'bad', false);
+        if (requestSerial !== profileLookupRequestSerial) return;
+        resetProfileEditorState();
+        setStatus('statusPerfilBusca', e?.message || String(e), 'bad', false);
       } finally {
-        clearTimeout(unlockTimer);
-        btn.disabled = false;
+        if (requestSerial === profileLookupRequestSerial) btn.disabled = false;
       }
     });
     $('btnSalvarPerfil').addEventListener('click', async () => {
