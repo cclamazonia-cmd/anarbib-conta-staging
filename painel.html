@@ -1958,6 +1958,13 @@
       const candidate = row?.full_name || row?.name || row?.nome || row?.display_name || row?.surname || row?.sobrenome || row?.email || '—';
       return String(candidate);
     }
+    function profileNameWithPublicId(row){
+      const firstName = String(row?.first_name || row?.nome || '').trim();
+      const lastName = String(row?.last_name || row?.sobrenome || '').trim();
+      const fullName = [firstName, lastName].filter(Boolean).join(' ').trim() || String(profileName(row) || '—').trim() || '—';
+      const publicId = String(row?.public_id || row?.publicId || row?.reader_public_id || '').trim();
+      return publicId ? `${fullName} - ${publicId}` : fullName;
+    }
     function firstExistingKey(obj, candidates){
       for (const k of candidates){
         if (obj && Object.prototype.hasOwnProperty.call(obj, k)) return k;
@@ -5443,7 +5450,7 @@ function belemNowParts(){
             source: 'v2',
             reservation_source_name: sourceName,
             user_id: userId,
-            user_name: firstFilledValue(row?.user_name, row?.reader_name, row?.profile_name, profileName(user)),
+            user_name: firstFilledValue(row?.user_name, row?.reader_name, row?.profile_name, profileNameWithPublicId(user)),
             user_email: firstFilledValue(row?.user_email, row?.reader_email, row?.email, user?.email, '—') || '—',
             bib_ref: firstFilledValue(row?.bib_ref, row?.book_bib_ref, book?.bib_ref, ''),
             titulo: firstFilledValue(row?.titulo, row?.title, row?.book_title, book?.titulo, row?.bib_ref ? `Referência ${row.bib_ref}` : 'Referência sem título'),
@@ -5477,7 +5484,7 @@ function belemNowParts(){
             source: 'reservations',
             reservation_source_name: 'v_reservations_enriched',
             user_id: row?.user_id,
-            user_name: profileName(user),
+            user_name: profileNameWithPublicId(user),
             user_email: user?.email || '—',
             bib_ref: row?.bib_ref,
             titulo: row?.titulo || (row?.bib_ref ? `Referência ${row.bib_ref}` : 'Referência sem título'),
@@ -5580,7 +5587,7 @@ async function fetchActiveLoans(){
             batch_label: String(r.emprestimo_id),
             sub_id: r.sub_id || `${r.emprestimo_id}.${r.line_no}`,
             user_id: r.user_id,
-            user_name: profileName(user),
+            user_name: profileNameWithPublicId(user),
             user_email: user.email || '—',
             titulo: r.titulo || 'Livro',
             autor: r.autor || '',
@@ -5613,7 +5620,7 @@ async function fetchActiveLoans(){
             batch_key: `v2-${emprestimoId}`,
             batch_label: String(emprestimoId),
             user_id: items[0]?.user_id || null,
-            user_name: items[0]?.user_name || '—',
+            user_name: items[0]?.user_name || profileNameWithPublicId(user) || '—',
             user_email: items[0]?.user_email || '—',
             quantity: items.length,
             sub_ids: dedupeBy(items.map((x) => x.sub_id), (x) => x),
@@ -5691,7 +5698,7 @@ async function fetchActiveLoans(){
             sub_id: subId,
             line_no: idx + 1,
             user_id: row.user_id,
-            user_name: profileName(user),
+            user_name: profileNameWithPublicId(user),
             user_email: user.email || '—',
             titulo: book.titulo || 'Livro',
             autor: book.autor || '',
@@ -5716,7 +5723,7 @@ async function fetchActiveLoans(){
           batch_key: batchKey,
           batch_label: lotLabel,
           user_id: items[0]?.user_id || null,
-          user_name: profileName(user),
+          user_name: profileNameWithPublicId(user),
           user_email: user.email || '—',
           quantity: items.length,
           sub_ids: subIds,
