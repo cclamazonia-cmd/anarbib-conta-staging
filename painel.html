@@ -6371,7 +6371,7 @@ async function fetchActiveLoans(){
       const compatCount = cleanRows.filter((r) => r && r.source !== 'v2').length;
       const compatMsg = compatCount ? ` ${compatCount} item(ns) do fluxo visível foram tratados em modo compatível.` : '';
       setStatus(targetStatusId, `${stageLabel} aplicado para ${processed} item(ns).${compatMsg}${skippedMsg}`, 'ok');
-      await refreshCollections({silent:true});
+      await refreshReservationsOnly({silent:true});
     }
 
     function renderReservationTable(){
@@ -7337,7 +7337,7 @@ async function fetchActiveLoans(){
 
         selectedReservaIds = new Set();
         setStatus('statusRes', `Retirada confirmada. Empréstimo(s) criado(s): ${created.join(', ')}.`, 'ok');
-        await refreshCollections({silent:true});
+        await Promise.allSettled([refreshReservationsOnly({silent:true}), refreshLoansOnly({silent:true})]);
       } catch (e) {
         setStatus('statusRes', e.message || String(e), 'bad', false);
       } finally {
@@ -7823,7 +7823,7 @@ async function fetchActiveLoans(){
       if (!editingProfileId) return setStatus('statusPerfil', 'Busque um perfil primeiro.', 'warn');
       try {
         await loadProfileById(editingProfileId);
-        await refreshCollections({silent:true});
+        await Promise.allSettled([refreshReservationsOnly({silent:true}), refreshLoansOnly({silent:true})]);
         setStatus('statusPerfil', 'Perfil recarregado.', 'ok');
       } catch (e) {
         setStatus('statusPerfil', e.message || String(e), 'bad', false);
