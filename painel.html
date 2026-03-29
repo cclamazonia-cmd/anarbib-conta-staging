@@ -7101,8 +7101,12 @@ async function fetchActiveLoans(){
         const lotLabel = result.displayId || (result.loanIds.length ? String(Math.min(...result.loanIds)) : '—');
         $('bibRefs').value = '';
         refreshLoanHint();
-        await refreshLoansOnly({silent:true});
         setStatus('statusSaida', `Saída registrada. ID do empréstimo: ${lotLabel}. Prazo: ${fmtDate(result.dueDate)}.`, 'ok');
+        try {
+          await refreshLoansOnly({silent:true});
+        } catch (refreshErr) {
+          console.warn('refreshLoansOnly falhou após registrar saída', refreshErr);
+        }
       } catch (e) {
         setStatus('statusSaida', e.message || String(e), 'bad', false);
       } finally {
