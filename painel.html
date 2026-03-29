@@ -7168,7 +7168,7 @@ async function fetchActiveLoans(){
         setStatus(targetStatusId, 'Processando devolução do empréstimo...', 'warn', false);
         const total = await markLoansReturned(ids, 'Devolução agrupada registrada no painel.');
         setStatus(targetStatusId, `Devolução do empréstimo registrada. Itens processados: ${total}.`, 'ok');
-        await refreshCollections({silent:true});
+        await refreshLoansOnly({silent:true});
       } catch (e) {
         setStatus(targetStatusId, 'Erro ao devolver empréstimo: ' + (e.message || String(e)), 'bad', false);
       }
