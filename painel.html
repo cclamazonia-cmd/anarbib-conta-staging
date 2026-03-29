@@ -5581,6 +5581,132 @@ function belemNowParts(){
 
 
 async function fetchActiveLoans(){
+      const qPainelItems = await supabase
+        .schema('api')
+        .from('emprestimo_itens_painel_ui')
+        .select('*')
+        .eq('item_status', 'aberto')
+        .order('emprestimo_created_at', { ascending:false })
+        .order('emprestimo_id', { ascending:false })
+        .order('line_no', { ascending:true })
+        .limit(800);
+
+      if (!qPainelItems.error && (qPainelItems.data || []).length) {
+        const rows = qPainelItems.data || [];
+
+        const mappedV2Loans = rows.map((r) => {
+          const dueSource = r.extended_until || r.due_at;
+          const due = dueSource ? new Date(String(dueSource) + 'T00:00:00') : null;
+          const today = new Date(todayISO() + 'T00:00:00');
+          const overdueDays = due ? Math.floor((today - due) / 86400000) : 0;
+          const fallbackIdentity = {
+            full_name: r.user_name,
+            public_id: r.user_public_id,
+            email: r.user_email,
+          };
+          return {
+            id: Number(`${r.emprestimo_id}${String(r.line_no).padStart(2, '0')}`),
+            loan_id: Number(`${r.emprestimo_id}${String(r.line_no).padStart(2, '0')}`),
+            source: 'v2',
+            emprestimo_id: Number(r.emprestimo_id),
+            line_no: Number(r.line_no),
+            batch_key: `v2-${r.emprestimo_id}`,
+            batch_label: String(r.emprestimo_id),
+            sub_id: r.sub_id || `${r.emprestimo_id}.${r.line_no}`,
+            user_id: r.user_id,
+            user_name: String(r.user_name || '').trim() || profileNameWithPublicId(fallbackIdentity),
+            user_email: r.user_email || '—',
+            titulo: r.titulo || 'Livro',
+            autor: r.autor || '',
+            bib_ref: r.bib_ref || '—',
+            checkout_date: r.emprestimo_created_at,
+            due_date: dueSource,
+            extended_until: r.extended_until || r.due_at || null,
+            extension_note: r.extension_note || '',
+            returned_date: r.returned_at,
+            return_scheduled_for: r.return_scheduled_for || null,
+            return_schedule_status: r.return_schedule_status || (r.returned_at ? 'devolucao_realizada' : 'sem_agendamento'),
+            return_completed_at: r.return_completed_at || null,
+            return_missed_at: r.return_missed_at || null,
+            extended_once: !!r.extended_once,
+            can_renew: overdueDays <= 0 && !r.extended_once,
+            status_text: overdueDays > 0 ? `Atrasado (${overdueDays} dia(s))` : (r.extended_once ? 'Renovado' : 'Em curso'),
+            status_class: overdueDays > 0 ? 'bad' : (r.extended_once ? 'warn' : 'ok'),
+            raw: r,
+          };
+        });
+
+        activeLoans = dedupeBy(mappedV2Loans, (x) => `${x.source}|${x.emprestimo_id}|${x.line_no}|${x.sub_id}`);
+
+        const qPainelBatches = await supabase
+          .schema('api')
+          .from('emprestimo_lotes_painel_ui')
+          .select('*')
+          .order('emprestimo_created_at', { ascending:false })
+          .order('emprestimo_id', { ascending:false })
+          .limit(800);
+
+        if (!qPainelBatches.error && (qPainelBatches.data || []).length) {
+          activeBatches = (qPainelBatches.data || []).map((b) => ({
+            batch_key: `v2-${b.emprestimo_id}`,
+            batch_label: String(b.emprestimo_id),
+            user_id: b.user_id || null,
+            user_name: String(b.user_name || '').trim() || profileNameWithPublicId({ full_name: b.user_name, public_id: b.user_public_id, email: b.user_email }),
+            user_email: b.user_email || '—',
+            quantity: Number(b.quantity || 0) || 0,
+            sub_ids: Array.isArray(b.sub_ids) ? b.sub_ids : [],
+            line_nos: Array.isArray(b.line_nos) ? b.line_nos.map((x) => Number(x)).filter((x) => Number.isFinite(x) && x > 0) : [],
+            bib_refs: Array.isArray(b.bib_refs) ? b.bib_refs : [],
+            checkout_date: b.emprestimo_created_at || null,
+            due_date: b.due_at_effective || b.first_due_at || null,
+            extended_until: b.due_at_effective || b.first_due_at || null,
+            extension_note: '',
+            return_schedule_status: b.return_schedule_status || 'sem_agendamento',
+            return_schedule_mixed: !b.return_schedule_status && !b.return_scheduled_for,
+            return_scheduled_for: b.return_scheduled_for || null,
+            status_text: b.status_text || 'Em curso',
+            status_class: b.status_class || 'ok',
+            can_renew: !(String(b.status_class || '').trim() === 'bad') && !b.extended_once,
+            source: 'v2',
+            loan_ids: [Number(b.emprestimo_id)],
+            emprestimo_id: Number(b.emprestimo_id),
+          }));
+        } else {
+          const groups = groupBy(activeLoans, (x) => x.emprestimo_id);
+          activeBatches = Array.from(groups.entries()).map(([emprestimoId, items]) => {
+            const returnStatuses = dedupeBy(items.map((x) => x.return_schedule_status || 'sem_agendamento'), (x) => x);
+            const returnMoments = dedupeBy(items.map((x) => x.return_scheduled_for || ''), (x) => x).filter(Boolean);
+            const extensionNotes = dedupeBy(items.map((x) => x.extension_note || '').filter(Boolean), (x) => x);
+            return {
+              batch_key: `v2-${emprestimoId}`,
+              batch_label: String(emprestimoId),
+              user_id: items[0]?.user_id || null,
+              user_name: items[0]?.user_name || '—',
+              user_email: items[0]?.user_email || '—',
+              quantity: items.length,
+              sub_ids: dedupeBy(items.map((x) => x.sub_id), (x) => x),
+              line_nos: dedupeBy(items.map((x) => x.line_no), (x) => x),
+              bib_refs: dedupeBy(items.map((x) => x.bib_ref), (x) => x),
+              checkout_date: items[0]?.checkout_date || null,
+              due_date: items[0]?.due_date || null,
+              extended_until: items[0]?.extended_until || items[0]?.due_date || null,
+              extension_note: extensionNotes.join(' · '),
+              return_schedule_status: returnStatuses.length === 1 ? returnStatuses[0] : null,
+              return_schedule_mixed: returnStatuses.length > 1 || returnMoments.length > 1,
+              return_scheduled_for: returnMoments.length === 1 ? returnMoments[0] : null,
+              status_text: items.some((x) => x.status_class === 'bad') ? 'Com atraso' : (items.some((x) => x.extended_once) ? 'Renovado' : 'Em curso'),
+              status_class: items.some((x) => x.status_class === 'bad') ? 'bad' : (items.some((x) => x.extended_once) ? 'warn' : 'ok'),
+              can_renew: items.every((x) => !!x.can_renew),
+              source: 'v2',
+              loan_ids: dedupeBy(items.map((x) => x.loan_id), (x) => x),
+              emprestimo_id: Number(emprestimoId),
+            };
+          });
+        }
+
+        return;
+      }
+
       const qv2 = await supabase
         .from('v_emprestimo_itens_v2_ui_fix')
         .select('*')
@@ -5643,7 +5769,7 @@ async function fetchActiveLoans(){
             batch_key: `v2-${emprestimoId}`,
             batch_label: String(emprestimoId),
             user_id: items[0]?.user_id || null,
-            user_name: items[0]?.user_name || profileNameWithPublicId(user) || '—',
+            user_name: items[0]?.user_name || '—',
             user_email: items[0]?.user_email || '—',
             quantity: items.length,
             sub_ids: dedupeBy(items.map((x) => x.sub_id), (x) => x),
@@ -5764,7 +5890,6 @@ async function fetchActiveLoans(){
       activeLoans.sort((a,b) => String(a.due_date || '').localeCompare(String(b.due_date || '')) || String(a.sub_id).localeCompare(String(b.sub_id)));
       activeBatches.sort((a,b) => Number(a.batch_label) - Number(b.batch_label));
     }
-
 
     function renderCounts(){
       setChip('chipResCount', `Reservas ativas: ${activeReservations.length}`);
@@ -6046,7 +6171,7 @@ async function fetchActiveLoans(){
         if (row?.ok === false) throw new Error(row.message || 'Não foi possível agendar a devolução.');
         closeReturnScheduleEditor();
         setStatus(state.targetStatusId, `${row?.message || 'Agendamento de devolução registrado.'} Horário: ${fmtDateTimeBelem(row?.return_scheduled_for || isoWhen)} (Belém).`, 'ok');
-        await refreshCollections({silent:true});
+        await refreshLoansOnly({silent:true});
       } catch (e) {
         setStatus('returnScheduleEditorStatus', 'Erro ao agendar devolução: ' + (e.message || String(e)), 'bad', false);
       } finally {
@@ -6914,7 +7039,7 @@ async function fetchActiveLoans(){
         }
 
         setStatus('statusDev', `Devolução total registrada. Itens processados: ${count}.`, 'ok');
-        await refreshCollections({silent:true});
+        await refreshLoansOnly({silent:true});
       } catch (e) {
         setStatus('statusDev', e.message || String(e), 'bad', false);
       } finally {
@@ -6967,7 +7092,7 @@ async function fetchActiveLoans(){
         }
 
         setStatus('statusDev', `Devolução parcial registrada. Itens processados: ${total}.`, 'ok');
-        await refreshCollections({silent:true});
+        await refreshLoansOnly({silent:true});
       } catch (e) {
         setStatus('statusDev', e.message || String(e), 'bad', false);
       } finally {
@@ -6988,7 +7113,7 @@ async function fetchActiveLoans(){
         const newDue = row?.due_date || row?.new_due_date;
         const message = row?.message || (newDue ? 'Renovação aplicada.' : 'Renovação concluída.');
         setStatus(targetStatusId, message + (newDue ? ` Nova devolução: ${fmtDate(newDue)}.` : ''), 'ok');
-        await refreshCollections({silent:true});
+        await refreshLoansOnly({silent:true});
       } catch (e) {
         setStatus(targetStatusId, 'Erro ao renovar: ' + (e.message || String(e)), 'bad', false);
       }
@@ -7004,7 +7129,7 @@ async function fetchActiveLoans(){
         const newDue = row?.new_due_date;
         const message = row?.message || (ok ? 'Renovação aplicada.' : 'Renovação recusada.');
         setStatus(targetStatusId, message + (newDue ? ` Nova devolução: ${fmtDate(newDue)}.` : ''), ok ? 'ok' : 'warn', ok);
-        await refreshCollections({silent:true});
+        await refreshLoansOnly({silent:true});
       } catch (e) {
         setStatus(targetStatusId, 'Erro ao renovar: ' + (e.message || String(e)), 'bad', false);
       }
@@ -7030,7 +7155,7 @@ async function fetchActiveLoans(){
           lastDue = row?.due_date || row?.new_due_date || lastDue;
         }
         setStatus(targetStatusId, `Renovação do empréstimo aplicada. Itens processados: ${renewed}.` + (lastDue ? ` Nova devolução: ${fmtDate(lastDue)}.` : ''), 'ok');
-        await refreshCollections({silent:true});
+        await refreshLoansOnly({silent:true});
       } catch (e) {
         setStatus(targetStatusId, 'Erro ao renovar empréstimo: ' + (e.message || String(e)), 'bad', false);
       }
@@ -7255,7 +7380,7 @@ async function fetchActiveLoans(){
             const row = Array.isArray(rpc.data) ? rpc.data[0] : rpc.data;
             if (row?.ok === false) throw new Error(row.message || 'Não foi possível cancelar o agendamento.');
             setStatus('statusBatches', row?.message || 'Agendamento de devolução cancelado.', 'ok');
-            await refreshCollections({silent:true});
+            await refreshLoansOnly({silent:true});
           } catch (e) {
             setStatus('statusBatches', 'Erro ao cancelar agendamento: ' + (e.message || String(e)), 'bad', false);
           } finally {
@@ -7278,7 +7403,7 @@ async function fetchActiveLoans(){
             const row = Array.isArray(rpc.data) ? rpc.data[0] : rpc.data;
             if (row?.ok === false) throw new Error(row.message || 'Não foi possível marcar como não realizado.');
             setStatus('statusBatches', row?.message || 'Devolução marcada como não realizada.', 'ok');
-            await refreshCollections({silent:true});
+            await refreshLoansOnly({silent:true});
           } catch (e) {
             setStatus('statusBatches', 'Erro ao marcar devolução como não realizada: ' + (e.message || String(e)), 'bad', false);
           } finally {
@@ -7322,7 +7447,7 @@ async function fetchActiveLoans(){
             const row = Array.isArray(rpc.data) ? rpc.data[0] : rpc.data;
             if (row?.ok === false) throw new Error(row.message || 'Não foi possível cancelar o agendamento.');
             setStatus(target, row?.message || 'Agendamento de devolução cancelado.', 'ok');
-            await refreshCollections({silent:true});
+            await refreshLoansOnly({silent:true});
           } catch (e) {
             setStatus(target, 'Erro ao cancelar agendamento: ' + (e.message || String(e)), 'bad', false);
           } finally {
@@ -7346,7 +7471,7 @@ async function fetchActiveLoans(){
             const row = Array.isArray(rpc.data) ? rpc.data[0] : rpc.data;
             if (row?.ok === false) throw new Error(row.message || 'Não foi possível marcar como não realizado.');
             setStatus(target, row?.message || 'Devolução marcada como não realizada.', 'ok');
-            await refreshCollections({silent:true});
+            await refreshLoansOnly({silent:true});
           } catch (e) {
             setStatus(target, 'Erro ao marcar devolução como não realizada: ' + (e.message || String(e)), 'bad', false);
           } finally {
@@ -7388,7 +7513,7 @@ async function fetchActiveLoans(){
             if (rpc.error) throw rpc.error;
             const total = Number(rpc.data || 0) || 0;
             setStatus('statusBatches', `Devolução do empréstimo registrada. Itens processados: ${total}.`, 'ok');
-            await refreshCollections({silent:true});
+            await refreshLoansOnly({silent:true});
           } catch (e) {
             setStatus('statusBatches', 'Erro ao devolver empréstimo: ' + (e.message || String(e)), 'bad', false);
           } finally {
@@ -7445,7 +7570,7 @@ async function fetchActiveLoans(){
             const total = Number(rpc.data || 0) || 0;
             const target = returnV2Btn.closest('#profilePaneEmprestimos') ? 'statusPerfil' : 'statusLoans';
             setStatus(target, `Devolução registrada. Itens processados: ${total}.`, 'ok');
-            await refreshCollections({silent:true});
+            await refreshLoansOnly({silent:true});
           } catch (e) {
             const target = returnV2Btn.closest('#profilePaneEmprestimos') ? 'statusPerfil' : 'statusLoans';
             setStatus(target, e.message || String(e), 'bad', false);
@@ -7464,7 +7589,7 @@ async function fetchActiveLoans(){
             const total = await markLoansReturned([loanId]);
             const target = returnBtn.closest('#profilePaneEmprestimos') ? 'statusPerfil' : 'statusLoans';
             setStatus(target, `Devolução registrada. Itens processados: ${total}.`, 'ok');
-            await refreshCollections({silent:true});
+            await refreshLoansOnly({silent:true});
           } catch (e) {
             const target = returnBtn.closest('#profilePaneEmprestimos') ? 'statusPerfil' : 'statusLoans';
             setStatus(target, e.message || String(e), 'bad', false);
