@@ -6857,7 +6857,7 @@ async function fetchActiveLoans(){
       const missing = clean.filter((ref) => !byRef.has(ref));
       if (missing.length) throw new Error('Livros não encontrados para empréstimo: ' + missing.join(', '));
       const unloanable = clean.filter((ref) => byRef.get(ref)?.loanable !== true);
-      if (unloanable.length) throw new Error('Livros indisponíveis para empréstimo: ' + unloanable.join(', '));
+      if (unloanable.length) throw new Error('Este material não pode ser emprestado: ' + unloanable.join(', '));
       return clean.map((ref) => byRef.get(ref));
     }
 
@@ -6893,7 +6893,7 @@ async function fetchActiveLoans(){
       });
 
       const conflictRefs = Array.from(unavailable).filter(Boolean);
-      if (conflictRefs.length) throw new Error('Livros indisponíveis para empréstimo: ' + conflictRefs.join(', '));
+      if (conflictRefs.length) throw new Error('Não há exemplar disponível no momento para esta referência na biblioteca ativa: ' + conflictRefs.join(', '));
     }
 
     async function countOpenLoansForUserHybrid(userId){
