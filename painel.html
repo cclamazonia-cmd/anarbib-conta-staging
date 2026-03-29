@@ -1860,6 +1860,7 @@
     let returnScheduleEditorState = null;
     const PAINEL_ACTIVE_TAB_STORAGE_KEY = 'anarbib_painel_active_tab';
     const PAINEL_PROFILE_TAB_STORAGE_KEY = 'anarbib_painel_profile_tab';
+    const PAINEL_BIBLIOTECA_SUBTAB_STORAGE_KEY = 'anarbib_painel_biblioteca_subtab';
 
     function clearStatus(id){
       const el = $(id);
@@ -5055,9 +5056,12 @@ function belemNowParts(){
           btn.setAttribute('aria-selected', active ? 'true' : 'false');
         });
         panels.forEach((panel) => panel.classList.toggle('active', panel.dataset.bibliotecaSubtabPanel === nextTab));
+        try { sessionStorage.setItem(PAINEL_BIBLIOTECA_SUBTAB_STORAGE_KEY, nextTab); } catch (_e) {}
       }
       btns.forEach((btn) => btn.addEventListener('click', () => activate(btn.dataset.bibliotecaSubtab)));
-      activate('essencial');
+      let stored = '';
+      try { stored = sessionStorage.getItem(PAINEL_BIBLIOTECA_SUBTAB_STORAGE_KEY) || ''; } catch (_e) {}
+      activate(validTabs.has(stored) ? stored : 'essencial');
       return activate;
     }
 
