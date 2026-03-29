@@ -1861,6 +1861,9 @@
     const PAINEL_ACTIVE_TAB_STORAGE_KEY = 'anarbib_painel_active_tab';
     const PAINEL_PROFILE_TAB_STORAGE_KEY = 'anarbib_painel_profile_tab';
     const PAINEL_BIBLIOTECA_SUBTAB_STORAGE_KEY = 'anarbib_painel_biblioteca_subtab';
+    const PAINEL_STATE_SYNC_KEY = 'anarbib_state_sync_v1';
+    let painelLastAppliedStateSyncTs = 0;
+    let painelStateSyncHooksBound = false;
 
     function clearStatus(id){
       const el = $(id);
@@ -5171,6 +5174,7 @@ function belemNowParts(){
       safePainelUiInit('regras locais', () => setupLocalRulesActions());
       safePainelUiInit('regimento da biblioteca', () => setupLibraryRegimentoActions());
       safePainelUiInit('solicitações interbibliotecas', () => setupInterlibraryRequestActions());
+      safePainelUiInit('sincronização de estado', () => setupPainelStateSyncHooks());
     }
 
     async function requireSession({ attempts = 40, delayMs = 150 } = {}){
@@ -6176,6 +6180,7 @@ async function fetchActiveLoans(){
         closeReturnScheduleEditor();
         setStatus(state.targetStatusId, `${row?.message || 'Agendamento de devolução registrado.'} Horário: ${fmtDateTimeBelem(row?.return_scheduled_for || isoWhen)} (Belém).`, 'ok');
         await refreshLoansOnly({silent:true});
+        writePainelStateSync('loans');
       } catch (e) {
         setStatus('returnScheduleEditorStatus', 'Erro ao agendar devolução: ' + (e.message || String(e)), 'bad', false);
       } finally {
@@ -6554,6 +6559,71 @@ async function fetchActiveLoans(){
       renderCounts();
       renderProfileLists();
       renderTrabalhoDoDia();
+    }
+
+    function readPainelStateSyncRaw(){
+      try {
+        const raw = localStorage.getItem(PAINEL_STATE_SYNC_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : null;
+      } catch (_err) {
+        return null;
+      }
+    }
+
+    function writePainelStateSync(scope='circulation'){
+      const payload = {
+        scope: String(scope || 'circulation').trim() || 'circulation',
+        ts: Date.now()
+      };
+      painelLastAppliedStateSyncTs = Math.max(painelLastAppliedStateSyncTs, Number(payload.ts) || 0);
+      try {
+        localStorage.setItem(PAINEL_STATE_SYNC_KEY, JSON.stringify(payload));
+      } catch (_err) {}
+      return payload;
+    }
+
+    async function applyPainelStateSync(source='passive'){
+      const payload = readPainelStateSyncRaw();
+      const ts = Number(payload?.ts || 0);
+      const scope = String(payload?.scope || '').trim() || 'circulation';
+      if (!ts || ts <= painelLastAppliedStateSyncTs) return;
+      painelLastAppliedStateSyncTs = ts;
+      if (!(session && isLibrarian)) return;
+
+      if (scope === 'reservations') {
+        await refreshReservationsOnly({silent:true});
+        return;
+      }
+      if (scope === 'loans') {
+        await refreshLoansOnly({silent:true});
+        return;
+      }
+      await Promise.allSettled([refreshReservationsOnly({silent:true}), refreshLoansOnly({silent:true})]);
+    }
+
+    function setupPainelStateSyncHooks(){
+      if (painelStateSyncHooksBound) return;
+      painelStateSyncHooksBound = true;
+
+      window.addEventListener('storage', async (event) => {
+        if (event.key !== PAINEL_STATE_SYNC_KEY) return;
+        await applyPainelStateSync('storage');
+      });
+
+      window.addEventListener('focus', async () => {
+        await applyPainelStateSync('focus');
+      });
+
+      window.addEventListener('pageshow', async () => {
+        await applyPainelStateSync('pageshow');
+      });
+
+      document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState !== 'visible') return;
+        await applyPainelStateSync('visibilitychange');
+      });
     }
 
     function findProfileReservations(userId){
@@ -7104,6 +7174,7 @@ async function fetchActiveLoans(){
         setStatus('statusSaida', `Saída registrada. ID do empréstimo: ${lotLabel}. Prazo: ${fmtDate(result.dueDate)}.`, 'ok');
         try {
           await refreshLoansOnly({silent:true});
+          writePainelStateSync('loans');
         } catch (refreshErr) {
           console.warn('refreshLoansOnly falhou após registrar saída', refreshErr);
         }
@@ -7173,6 +7244,7 @@ async function fetchActiveLoans(){
 
         setStatus('statusDev', `Devolução total registrada. Itens processados: ${count}.`, 'ok');
         await refreshLoansOnly({silent:true});
+        if (count > 0) writePainelStateSync('loans');
       } catch (e) {
         setStatus('statusDev', e.message || String(e), 'bad', false);
       } finally {
@@ -7226,6 +7298,7 @@ async function fetchActiveLoans(){
 
         setStatus('statusDev', `Devolução parcial registrada. Itens processados: ${total}.`, 'ok');
         await refreshLoansOnly({silent:true});
+        if (total > 0) writePainelStateSync('loans');
       } catch (e) {
         setStatus('statusDev', e.message || String(e), 'bad', false);
       } finally {
@@ -7247,6 +7320,7 @@ async function fetchActiveLoans(){
         const message = row?.message || (newDue ? 'Renovação aplicada.' : 'Renovação concluída.');
         setStatus(targetStatusId, message + (newDue ? ` Nova devolução: ${fmtDate(newDue)}.` : ''), 'ok');
         await refreshLoansOnly({silent:true});
+        writePainelStateSync('loans');
       } catch (e) {
         setStatus(targetStatusId, 'Erro ao renovar: ' + (e.message || String(e)), 'bad', false);
       }
@@ -7263,6 +7337,7 @@ async function fetchActiveLoans(){
         const message = row?.message || (ok ? 'Renovação aplicada.' : 'Renovação recusada.');
         setStatus(targetStatusId, message + (newDue ? ` Nova devolução: ${fmtDate(newDue)}.` : ''), ok ? 'ok' : 'warn', ok);
         await refreshLoansOnly({silent:true});
+        if (ok) writePainelStateSync('loans');
       } catch (e) {
         setStatus(targetStatusId, 'Erro ao renovar: ' + (e.message || String(e)), 'bad', false);
       }
@@ -7289,6 +7364,7 @@ async function fetchActiveLoans(){
         }
         setStatus(targetStatusId, `Renovação do empréstimo aplicada. Itens processados: ${renewed}.` + (lastDue ? ` Nova devolução: ${fmtDate(lastDue)}.` : ''), 'ok');
         await refreshLoansOnly({silent:true});
+        if (renewed > 0) writePainelStateSync('loans');
       } catch (e) {
         setStatus(targetStatusId, 'Erro ao renovar empréstimo: ' + (e.message || String(e)), 'bad', false);
       }
@@ -7302,6 +7378,7 @@ async function fetchActiveLoans(){
         const total = await markLoansReturned(ids, 'Devolução agrupada registrada no painel.');
         setStatus(targetStatusId, `Devolução do empréstimo registrada. Itens processados: ${total}.`, 'ok');
         await refreshLoansOnly({silent:true});
+        if (total > 0) writePainelStateSync('loans');
       } catch (e) {
         setStatus(targetStatusId, 'Erro ao devolver empréstimo: ' + (e.message || String(e)), 'bad', false);
       }
@@ -7346,6 +7423,7 @@ async function fetchActiveLoans(){
         selectedReservaIds = new Set();
         setStatus('statusRes', `Retirada confirmada. Empréstimo(s) criado(s): ${created.join(', ')}.`, 'ok');
         await Promise.allSettled([refreshReservationsOnly({silent:true}), refreshLoansOnly({silent:true})]);
+        writePainelStateSync('circulation');
       } catch (e) {
         setStatus('statusRes', e.message || String(e), 'bad', false);
       } finally {
@@ -7394,6 +7472,7 @@ async function fetchActiveLoans(){
 
         selectedReservaIds = new Set([...selectedReservaIds].filter((id) => !ids.includes(id)));
         await refreshReservationsOnly({silent:true});
+        writePainelStateSync('reservations');
         setStatus('statusRes', `Livro(s) cancelado(s): ${total}.`, 'ok');
       } catch (e) {
         setStatus('statusRes', e.message || String(e), 'bad', false);
@@ -7514,6 +7593,7 @@ async function fetchActiveLoans(){
             if (row?.ok === false) throw new Error(row.message || 'Não foi possível cancelar o agendamento.');
             setStatus('statusBatches', row?.message || 'Agendamento de devolução cancelado.', 'ok');
             await refreshLoansOnly({silent:true});
+            writePainelStateSync('loans');
           } catch (e) {
             setStatus('statusBatches', 'Erro ao cancelar agendamento: ' + (e.message || String(e)), 'bad', false);
           } finally {
@@ -7537,6 +7617,7 @@ async function fetchActiveLoans(){
             if (row?.ok === false) throw new Error(row.message || 'Não foi possível marcar como não realizado.');
             setStatus('statusBatches', row?.message || 'Devolução marcada como não realizada.', 'ok');
             await refreshLoansOnly({silent:true});
+            writePainelStateSync('loans');
           } catch (e) {
             setStatus('statusBatches', 'Erro ao marcar devolução como não realizada: ' + (e.message || String(e)), 'bad', false);
           } finally {
@@ -7581,6 +7662,7 @@ async function fetchActiveLoans(){
             if (row?.ok === false) throw new Error(row.message || 'Não foi possível cancelar o agendamento.');
             setStatus(target, row?.message || 'Agendamento de devolução cancelado.', 'ok');
             await refreshLoansOnly({silent:true});
+            writePainelStateSync('loans');
           } catch (e) {
             setStatus(target, 'Erro ao cancelar agendamento: ' + (e.message || String(e)), 'bad', false);
           } finally {
@@ -7605,6 +7687,7 @@ async function fetchActiveLoans(){
             if (row?.ok === false) throw new Error(row.message || 'Não foi possível marcar como não realizado.');
             setStatus(target, row?.message || 'Devolução marcada como não realizada.', 'ok');
             await refreshLoansOnly({silent:true});
+            writePainelStateSync('loans');
           } catch (e) {
             setStatus(target, 'Erro ao marcar devolução como não realizada: ' + (e.message || String(e)), 'bad', false);
           } finally {
@@ -7647,6 +7730,7 @@ async function fetchActiveLoans(){
             const total = Number(rpc.data || 0) || 0;
             setStatus('statusBatches', `Devolução do empréstimo registrada. Itens processados: ${total}.`, 'ok');
             await refreshLoansOnly({silent:true});
+            if (total > 0) writePainelStateSync('loans');
           } catch (e) {
             setStatus('statusBatches', 'Erro ao devolver empréstimo: ' + (e.message || String(e)), 'bad', false);
           } finally {
@@ -7704,6 +7788,7 @@ async function fetchActiveLoans(){
             const target = returnV2Btn.closest('#profilePaneEmprestimos') ? 'statusPerfil' : 'statusLoans';
             setStatus(target, `Devolução registrada. Itens processados: ${total}.`, 'ok');
             await refreshLoansOnly({silent:true});
+            if (total > 0) writePainelStateSync('loans');
           } catch (e) {
             const target = returnV2Btn.closest('#profilePaneEmprestimos') ? 'statusPerfil' : 'statusLoans';
             setStatus(target, e.message || String(e), 'bad', false);
@@ -7723,6 +7808,7 @@ async function fetchActiveLoans(){
             const target = returnBtn.closest('#profilePaneEmprestimos') ? 'statusPerfil' : 'statusLoans';
             setStatus(target, `Devolução registrada. Itens processados: ${total}.`, 'ok');
             await refreshLoansOnly({silent:true});
+            if (total > 0) writePainelStateSync('loans');
           } catch (e) {
             const target = returnBtn.closest('#profilePaneEmprestimos') ? 'statusPerfil' : 'statusLoans';
             setStatus(target, e.message || String(e), 'bad', false);
@@ -7780,6 +7866,7 @@ async function fetchActiveLoans(){
           pickupScheduledFor: reservationStageNeedsSchedule(stage) ? pickupScheduledFor : null,
           targetStatusId: 'statusRes'
         });
+        writePainelStateSync('reservations');
       } catch (error) {
         setStatus('statusRes', error?.message || 'Erro ao aplicar etapa.', 'bad');
       }

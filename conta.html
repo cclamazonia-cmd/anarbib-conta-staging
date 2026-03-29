@@ -1904,6 +1904,76 @@ button[type="submit"] *,
       if (pushHash) location.hash = "#" + key;
     }
 
+    const CONTA_STATE_SYNC_KEY = 'anarbib_state_sync_v1';
+    let contaLastAppliedStateSyncTs = 0;
+    let contaStateSyncHooksBound = false;
+
+    function readContaStateSyncRaw() {
+      try {
+        const raw = localStorage.getItem(CONTA_STATE_SYNC_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return null;
+        return parsed;
+      } catch (_err) {
+        return null;
+      }
+    }
+
+    function writeContaStateSync(scope = 'circulation') {
+      const payload = {
+        scope: String(scope || 'circulation').trim() || 'circulation',
+        ts: Date.now()
+      };
+      contaLastAppliedStateSyncTs = Math.max(contaLastAppliedStateSyncTs, Number(payload.ts) || 0);
+      try {
+        localStorage.setItem(CONTA_STATE_SYNC_KEY, JSON.stringify(payload));
+      } catch (_err) {}
+      return payload;
+    }
+
+    async function applyContaStateSync(source = 'passive') {
+      const payload = readContaStateSyncRaw();
+      const ts = Number(payload?.ts || 0);
+      const scope = String(payload?.scope || '').trim() || 'circulation';
+      if (!ts || ts <= contaLastAppliedStateSyncTs) return;
+      contaLastAppliedStateSyncTs = ts;
+      if (!session?.user?.id) return;
+
+      if (scope === 'reservations') {
+        await Promise.allSettled([renderActiveReservations(), renderHistory()]);
+        return;
+      }
+      if (scope === 'loans') {
+        await Promise.allSettled([renderLoans(), renderHistory()]);
+        return;
+      }
+      await Promise.allSettled([renderActiveReservations(), renderLoans(), renderHistory()]);
+    }
+
+    function setupContaStateSyncHooks() {
+      if (contaStateSyncHooksBound) return;
+      contaStateSyncHooksBound = true;
+
+      window.addEventListener('storage', async (event) => {
+        if (event.key !== CONTA_STATE_SYNC_KEY) return;
+        await applyContaStateSync('storage');
+      });
+
+      window.addEventListener('focus', async () => {
+        await applyContaStateSync('focus');
+      });
+
+      window.addEventListener('pageshow', async () => {
+        await applyContaStateSync('pageshow');
+      });
+
+      document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState !== 'visible') return;
+        await applyContaStateSync('visibilitychange');
+      });
+    }
+
     let contaRefreshPromise = null;
 
     function getActiveContaTab() {
@@ -2764,6 +2834,7 @@ function reservationPickupReplyActions(row) {
             activeReserveMsg.textContent = "Reserva cancelada.";
             await renderActiveReservations();
             await renderHistory();
+            writeContaStateSync('reservations');
           });
         });
         activeReservationsEl.querySelectorAll("[data-pickup-reply]").forEach((btn) => {
@@ -2791,6 +2862,7 @@ function reservationPickupReplyActions(row) {
               : "Resposta registrada. A biblioteca foi avisada para propor outro horário.";
             await renderActiveReservations();
             await renderHistory();
+            writeContaStateSync('reservations');
           });
         });
         return;
@@ -2920,6 +2992,7 @@ function reservationPickupReplyActions(row) {
             activeReserveMsg.textContent = "Reserva cancelada.";
             await renderActiveReservations();
             await renderHistory();
+            writeContaStateSync('reservations');
           });
         });
         activeReservationsEl.querySelectorAll("[data-cancel-v2]").forEach((btn) => {
@@ -2937,6 +3010,7 @@ function reservationPickupReplyActions(row) {
             activeReserveMsg.textContent = "Reserva cancelada.";
             await renderActiveReservations();
             await renderHistory();
+            writeContaStateSync('reservations');
           });
         });
         activeReservationsEl.querySelectorAll("[data-pickup-reply]").forEach((btn) => {
@@ -2964,6 +3038,7 @@ function reservationPickupReplyActions(row) {
               : "Resposta registrada. A biblioteca foi avisada para propor outro horário.";
             await renderActiveReservations();
             await renderHistory();
+            writeContaStateSync('reservations');
           });
         });
         return;
@@ -3052,6 +3127,7 @@ function reservationPickupReplyActions(row) {
             activeReserveMsg.textContent = "Reserva cancelada.";
             await renderActiveReservations();
             await renderHistory();
+            writeContaStateSync('reservations');
           });
         });
         activeReservationsEl.querySelectorAll("[data-pickup-reply]").forEach((btn) => {
@@ -3079,6 +3155,7 @@ function reservationPickupReplyActions(row) {
               : "Resposta registrada. A biblioteca foi avisada para propor outro horário.";
             await renderActiveReservations();
             await renderHistory();
+            writeContaStateSync('reservations');
           });
         });
         return;
@@ -3571,6 +3648,7 @@ function reservationPickupReplyActions(row) {
           const whenMsg = row?.return_scheduled_for ? ` Horário: ${fmtDateTimeBelem(row.return_scheduled_for)} (Belém).` : "";
           setLoanMsgText(msg + whenMsg, 2000);
           await renderLoans();
+          writeContaStateSync('loans');
         });
       });
 
@@ -3604,6 +3682,7 @@ function reservationPickupReplyActions(row) {
 
           setLoanMsgText(row?.message || "Agendamento de devolução cancelado.", 2000);
           await renderLoans();
+          writeContaStateSync('loans');
         });
       });
 
@@ -3632,6 +3711,7 @@ function reservationPickupReplyActions(row) {
           setLoanMsgText(message + (newDue ? ` Nova devolução: ${fmtDateOnly(newDue)}.` : ""), 2000);
           await renderLoans();
           await renderHistory();
+          writeContaStateSync('loans');
         });
       });
 
@@ -3660,6 +3740,7 @@ function reservationPickupReplyActions(row) {
           setLoanMsgText(message + (newDue ? ` Nova devolução: ${fmtDateOnly(newDue)}.` : ""), 2000);
           await renderLoans();
           await renderHistory();
+          writeContaStateSync('loans');
         });
       });
     }
@@ -3908,6 +3989,7 @@ function reservationPickupReplyActions(row) {
         $("bibRef").value = "";
         await renderActiveReservations();
         await renderHistory();
+        writeContaStateSync('reservations');
         return;
       }
       reserveMsg.textContent = "Erro ao reservar: " + resV2.error.message;
@@ -3918,6 +4000,7 @@ function reservationPickupReplyActions(row) {
     await renderActiveReservations();
     await renderLoans();
     await renderHistory();
+    setupContaStateSyncHooks();
   </script>
 </body>
 </html>
