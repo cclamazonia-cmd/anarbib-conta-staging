@@ -1110,6 +1110,7 @@ button[type="submit"] *,
             <h2>Reservar livro(s)</h2>
             <p class="small">
               No catálogo, clique em <b>copiar referência</b> e cole aqui uma ou várias referências do(s) livro(s), separadas por vírgula.
+              Você pode usar a referência no formato exibido pela sua biblioteca (por exemplo: <b>2453</b>, <b>0000123</b> ou <b>0002453</b>).
               A reserva será criada em lotes e você poderá cancelá-la livro por livro.
             </p>
           </div>
@@ -1117,7 +1118,7 @@ button[type="submit"] *,
           <div id="reserveServiceNotice" class="notice" style="display:none"></div>
 
           <form id="reserveForm" class="row" style="justify-content:flex-start;">
-            <input type="text" id="bibRef" placeholder="Ex.: 0000124, 0000138" style="max-width:380px;" required />
+            <input type="text" id="bibRef" placeholder="Ex.: 2453, 0000123, 0002453" style="max-width:380px;" required />
             <button id="reserveSubmitBtn" type="submit">Reservar</button>
           </form>
           <p id="reserveMsg" class="msg" aria-live="polite"></p>
@@ -1826,7 +1827,8 @@ button[type="submit"] *,
         .replace(/^bib[_\s-]*ref\s*:?\s*/i, "")
         .trim();
       const m = cleaned.match(/(\d{3,})/);
-      return m ? m[1].padStart(7, "0") : cleaned;
+      if (m) return m[1];
+      return cleaned.replace(/\s+/g, " ").trim();
     }
 
     function parseRefs(raw) {
