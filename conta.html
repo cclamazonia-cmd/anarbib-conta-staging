@@ -1388,7 +1388,7 @@ button[type="submit"] *,
       const publicId = String(currentContaIdentity?.public_id || "").trim();
       const libraryName = resolveContaLibraryName() || "—";
       if (chipContaEspaco) {
-        chipContaEspaco.textContent = `Leitor@ conectad@: ${fullName}${publicId ? ` · ID ${publicId}` : ""} · ${libraryName}`;
+        chipContaEspaco.textContent = `Leitor conectad@: ${fullName}${publicId ? ` · ID ${publicId}` : ""} · ${libraryName}`;
       }
       if (chipContaBiblioteca) chipContaBiblioteca.style.display = "none";
       if (chipContaPublicId) chipContaPublicId.style.display = "none";
@@ -3305,20 +3305,30 @@ function reservationPickupReplyActions(row) {
         .order("emprestimo_id", { ascending: false })
         .order("line_no", { ascending: true });
 
-      const oldQ = await supabase
-        .schema("api")
-        .from("loans_detalhes")
-        .select("id, due_date, checkout_date, returned_date, extended_once, books")
-        .eq("user_id", session.user.id)
-        .is("returned_date", null)
-        .order("due_date", { ascending: true });
+      let oldQ = { data: [], error: null };
+      let shouldQueryLegacyLoans = false;
+      if (v2.error) {
+        shouldQueryLegacyLoans = true;
+      } else if (!(v2.data || []).length) {
+        shouldQueryLegacyLoans = true;
+      }
+
+      if (shouldQueryLegacyLoans) {
+        oldQ = await supabase
+          .schema("api")
+          .from("loans_detalhes")
+          .select("id, due_date, checkout_date, returned_date, extended_once, books")
+          .eq("user_id", session.user.id)
+          .is("returned_date", null)
+          .order("due_date", { ascending: true });
+      }
 
       let sections = [];
       let activeLoanCount = 0;
 
       if (v2.error || oldQ.error) {
         console.error("renderLoans errors", { v2: v2.error, oldQ: oldQ.error });
-        const bothMissing = isMissingRelationError(v2.error) && isMissingRelationError(oldQ.error);
+        const bothMissing = isMissingRelationError(v2.error) && (!shouldQueryLegacyLoans || isMissingRelationError(oldQ.error));
         if (bothMissing) {
           setChipText(chipContaEmprestimos, "Empréstimos em curso", "0");
           if (loanMsg) loanMsg.textContent = "Informação de empréstimos ainda não disponível neste ambiente.";
@@ -3425,7 +3435,7 @@ function reservationPickupReplyActions(row) {
         sections.push(`<section class="mobile-section"><div class="panel-head"><h3 style="margin:0 0 6px;">Empréstimos por lote</h3><p class="small" style="margin:0;">Visualização por lote e por livro, com prazos previstos e situação detalhada. Cada empréstimo só pode ser renovado uma única vez.</p></div><div class="desktop-only"><div class="table-scroll"><table class="list-table"><thead><tr><th>Lote</th><th>Livro</th><th>Título</th><th>Referência</th><th>Rótulo</th><th>Saída em</th><th>Prazo</th><th>Situação</th><th>Ação</th></tr></thead><tbody>${rows}</tbody></table></div></div><div class="mobile-only mobile-cards">${mobileCards}</div></section>`);
       }
 
-      if (!oldQ.error && (oldQ.data || []).length) {
+      if (shouldQueryLegacyLoans && !oldQ.error && (oldQ.data || []).length) {
         activeLoanCount += (oldQ.data || []).length;
         const rows = oldQ.data.map((l) => {
           const book = Array.isArray(l.books) ? l.books[0] : l.books;
