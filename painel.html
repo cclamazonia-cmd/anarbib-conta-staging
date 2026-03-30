@@ -6378,10 +6378,10 @@ async function fetchActiveLoans(){
       tbody.innerHTML = rows.map((l) => {
         const renewBtn = l.source === 'v2'
           ? `<button class="btn mini" type="button" data-renew-emp-v2="${esc(l.emprestimo_id)}">Renovar</button>`
-          : `<button class="btn mini" type="button" data-renew-loan="${esc(l.loan_id)}" ${l.can_renew ? '' : 'disabled'}>Renovar</button>`;
+          : '';
         const returnBtn = l.source === 'v2'
           ? `<button class="btn mini" type="button" data-return-emp-v2="${esc(l.emprestimo_id)}" data-return-line-v2="${esc(l.line_no)}">Devolver</button>`
-          : `<button class="btn mini" type="button" data-return-loan="${esc(l.loan_id)}">Devolver</button>`;
+          : '';
         const scheduleLabel = getReturnScheduleActionLabel(l);
         const returnLabel = l.source === 'v2' ? translateReturnScheduleStatus(l.return_schedule_status) : '';
         const returnDetail = l.source === 'v2' ? getReturnScheduleDetail(l) : '';
@@ -6415,10 +6415,10 @@ async function fetchActiveLoans(){
       tbody.innerHTML = rows.map((b) => {
         const renewBtn = b.source === 'v2'
           ? `<button class="btn mini" type="button" data-renew-batch-v2="${esc(b.emprestimo_id)}" ${b.can_renew ? '' : 'disabled'}>Renovar empréstimo</button>`
-          : `<button class="btn mini" type="button" data-renew-batch-old="${esc((b.loan_ids || []).join(','))}" ${b.can_renew ? '' : 'disabled'}>Renovar empréstimo</button>`;
+          : '';
         const returnBtn = b.source === 'v2'
           ? `<button class="btn mini" type="button" data-return-batch-v2="${esc(b.emprestimo_id)}">Devolver empréstimo</button>`
-          : `<button class="btn mini" type="button" data-return-batch-old="${esc((b.loan_ids || []).join(','))}">Devolver empréstimo</button>`;
+          : '';
         const scheduleLabel = getReturnScheduleActionLabel(b);
         const returnLabel = b.source === 'v2' ? translateReturnScheduleStatus(b.return_schedule_status) : '';
         const returnDetail = b.source === 'v2' ? getReturnScheduleDetail(b) : '';
@@ -6639,8 +6639,7 @@ async function fetchActiveLoans(){
                      <button class="btn mini" type="button" data-schedule-return-emp-v2="${l.emprestimo_id}" data-schedule-return-line-v2="${l.line_no}">${esc(scheduleLabel)}</button>
                      ${l.return_scheduled_for ? `<button class="btn mini" type="button" data-clear-return-schedule-emp-v2="${l.emprestimo_id}" data-clear-return-schedule-line-v2="${l.line_no}">Cancelar agendamento</button>` : ''}
                      <button class="btn mini" type="button" data-missed-return-emp-v2="${l.emprestimo_id}" data-missed-return-line-v2="${l.line_no}">Não realizado</button>`
-                  : `<button class="btn mini" type="button" data-renew-loan="${l.loan_id}" ${l.can_renew ? '' : 'disabled'}>Renovar</button>
-                     <button class="btn mini" type="button" data-return-loan="${l.loan_id}">Devolver</button>`}
+                  : ''}
               </div>
             </td>
           </tr>`;
