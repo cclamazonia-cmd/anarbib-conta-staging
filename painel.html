@@ -7126,23 +7126,6 @@ async function fetchActiveLoans(){
       }
     }
 
-    async function markLoansReturned(loanIds, note='Devolução registrada no painel.'){
-      const ids = Array.from(new Set((loanIds || []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0)));
-      if (!ids.length) return 0;
-
-      const rpc = await supabase.rpc('fn_return_loans_by_ids', {
-        p_loan_ids: ids,
-        p_notes: note
-      });
-      if (!rpc.error) return Number(rpc.data || 0) || 0;
-
-      const msg = String(rpc.error?.message || '');
-      if (/function|not exist|não existe/i.test(msg)) {
-        throw new Error('A devolução do fluxo legado não está disponível nesta base. Para os empréstimos v2, usa as ações canônicas do painel.');
-      }
-      throw rpc.error;
-    }
-
     async function returnTotalById(){
       clearStatus('statusDev');
       const raw = ($('loanId').value || '').trim();
@@ -7304,20 +7287,6 @@ async function fetchActiveLoans(){
         if (renewed > 0) writePainelStateSync('loans');
       } catch (e) {
         setStatus(targetStatusId, 'Erro ao renovar empréstimo: ' + (e.message || String(e)), 'bad', false);
-      }
-    }
-
-    async function returnBatchOld(loanIds, targetStatusId='statusBatches'){
-      const ids = Array.from(new Set((loanIds || []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0)));
-      if (!ids.length) return setStatus(targetStatusId, 'Nenhum item válido nesse empréstimo.', 'warn');
-      try {
-        setStatus(targetStatusId, 'Processando devolução do empréstimo...', 'warn', false);
-        const total = await markLoansReturned(ids, 'Devolução agrupada registrada no painel.');
-        setStatus(targetStatusId, `Devolução do empréstimo registrada. Itens processados: ${total}.`, 'ok');
-        await refreshLoansOnly({silent:true});
-        if (total > 0) writePainelStateSync('loans');
-      } catch (e) {
-        setStatus(targetStatusId, 'Erro ao devolver empréstimo: ' + (e.message || String(e)), 'bad', false);
       }
     }
 
