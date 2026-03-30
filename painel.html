@@ -7131,7 +7131,17 @@ async function fetchActiveLoans(){
       const ids = Array.from(new Set((loanIds || []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0)));
       if (!ids.length) return 0;
 
-      throw new Error('Os empréstimos antigos desta base já não aceitam devolução pelo fluxo legacy no painel. Usa apenas as ações canônicas dos empréstimos atuais.');
+      const rpc = await supabase.rpc('fn_return_loans_by_ids', {
+        p_loan_ids: ids,
+        p_notes: note
+      });
+      if (!rpc.error) return Number(rpc.data || 0) || 0;
+
+      const msg = String(rpc.error?.message || '');
+      if (/function|not exist|não existe/i.test(msg)) {
+        throw new Error('A devolução do fluxo legado não está disponível nesta base. Para os empréstimos v2, usa as ações canônicas do painel.');
+      }
+      throw rpc.error;
     }
 
     async function returnTotalById(){
@@ -7279,27 +7289,7 @@ async function fetchActiveLoans(){
     async function renewBatchOld(loanIds, targetStatusId='statusBatches'){
       const ids = Array.from(new Set((loanIds || []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0)));
       if (!ids.length) return setStatus(targetStatusId, 'Nenhum item válido nesse empréstimo.', 'warn');
-      try {
-        setStatus(targetStatusId, 'Processando renovação do empréstimo...', 'warn', false);
-        let renewed = 0;
-        let lastDue = null;
-        for (const loanId of ids) {
-          let res = await supabase.rpc('renew_loan', { p_loan_id: loanId });
-          if (res.error && /function|not exist|não existe/i.test(String(res.error.message || ''))) {
-            res = await supabase.rpc('extend_loan_once', { p_loan_id: loanId });
-          }
-          if (res.error) throw res.error;
-          const row = Array.isArray(res.data) ? res.data[0] : res.data;
-          if (row?.ok === false) throw new Error(row?.message || 'Renovação recusada.');
-          renewed += 1;
-          lastDue = row?.due_date || row?.new_due_date || lastDue;
-        }
-        setStatus(targetStatusId, `Renovação do empréstimo aplicada. Itens processados: ${renewed}.` + (lastDue ? ` Nova devolução: ${fmtDate(lastDue)}.` : ''), 'ok');
-        await refreshLoansOnly({silent:true});
-        if (renewed > 0) writePainelStateSync('loans');
-      } catch (e) {
-        setStatus(targetStatusId, 'Erro ao renovar empréstimo: ' + (e.message || String(e)), 'bad', false);
-      }
+      setStatus(targetStatusId, 'Os empréstimos antigos desta base já não aceitam renovação agrupada pelo fluxo legacy no painel. Usa apenas as ações canônicas dos empréstimos atuais.', 'bad', false);
     }
 
     async function returnBatchOld(loanIds, targetStatusId='statusBatches'){
