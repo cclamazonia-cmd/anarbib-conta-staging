@@ -3308,38 +3308,38 @@ function reservationPickupReplyActions(row) {
         .select("id, library_name, bib_ref, titulo, autor, status, reserved_at, created_at, updated_at, cancelled_at, fulfilled_at, expired_at, closed_at")
         .order("closed_at", { ascending: false })
         .limit(200);
+
+      const reservationHistoryItems = [];
       if (!currentHistory.error) {
-        const rowsData = currentHistory.data || [];
-        if (!rowsData.length) {
-          historyEl.innerHTML = "<p>Não há histórico ainda.</p>";
-          return;
-        }
-        const items = rowsData.map((r) => {
+        for (const r of (currentHistory.data || [])) {
           const when = r.closed_at || r.cancelled_at || r.fulfilled_at || r.expired_at || r.updated_at || r.created_at;
-          return {
+          reservationHistoryItems.push({
             when,
             html: `<li><b>Reserva #${escapeHtml(r.id)}</b> — ${escapeHtml(r.titulo || ('Referência ' + (r.bib_ref || '—')))}${r.autor ? ` — ${escapeHtml(r.autor)}` : ""} — ${escapeHtml(reservationStatusLabel(r.status, r))}${r.library_name ? ` — ${escapeHtml(r.library_name)}` : ""}</li>`
-          };
-        });
-        items.sort((a, b) => new Date(b.when || 0) - new Date(a.when || 0));
-        historyEl.innerHTML = `<ul>${items.map((i) => i.html).join("")}</ul>`;
-        return;
+          });
+        }
       }
+
+      const reservationFallbackPromise = currentHistory.error
+        ? supabase.schema("api").from("reserva_itens_ui").select("reserva_id, sub_id, titulo, autor, bib_ref, rotulo, reserva_created_at, expires_at, item_status, converted_at, cancelled_at").eq("user_id", session.user.id).neq("item_status", "ativa").order("reserva_created_at", { ascending:false }).limit(200)
+        : Promise.resolve({ data: [], error: null });
+
       const [v2Loans, oldLoans, v2Reservas] = await Promise.all([
         supabase.schema("api").from("emprestimo_itens_ui").select("emprestimo_id, line_no, sub_id, titulo, autor, bib_ref, rotulo, emprestimo_created_at, due_at, item_status, returned_at").eq("user_id", session.user.id).order("emprestimo_created_at", { ascending:false }).limit(200),
         supabase.schema("api").from("loans_detalhes").select("id, batch_id, due_date, checkout_date, returned_date, books").eq("user_id", session.user.id).order("checkout_date", { ascending:false }).limit(300),
-        supabase.schema("api").from("reserva_itens_ui").select("reserva_id, sub_id, titulo, autor, bib_ref, rotulo, reserva_created_at, expires_at, item_status, converted_at, cancelled_at").eq("user_id", session.user.id).neq("item_status", "ativa").order("reserva_created_at", { ascending:false }).limit(200)
+        reservationFallbackPromise
       ]);
-      const items = [];
+      const items = [...reservationHistoryItems];
       if (v2Loans.error || oldLoans.error || v2Reservas.error) {
-        console.error("renderHistory errors", { v2Loans: v2Loans.error, oldLoans: oldLoans.error, v2Reservas: v2Reservas.error });
+        console.error("renderHistory errors", { currentHistory: currentHistory.error, v2Loans: v2Loans.error, oldLoans: oldLoans.error, v2Reservas: v2Reservas.error });
         const msgs = [];
+        if (currentHistory.error) msgs.push("reservas atuais: " + (currentHistory.error.message || JSON.stringify(currentHistory.error)));
         if (v2Loans.error) msgs.push("v2 empréstimos: " + (v2Loans.error.message || JSON.stringify(v2Loans.error)));
         if (oldLoans.error) msgs.push("loans antigos: " + (oldLoans.error.message || JSON.stringify(oldLoans.error)));
         if (v2Reservas.error) msgs.push("v2 reservas: " + (v2Reservas.error.message || JSON.stringify(v2Reservas.error)));
         if (historyMsg) historyMsg.textContent = "Diagnóstico histórico — " + msgs.join(" | ");
       }
-      if (!v2Reservas.error) {
+      if (currentHistory.error && !v2Reservas.error) {
         for (const r of (v2Reservas.data || [])) {
           items.push({
             when: r.cancelled_at || r.converted_at || r.reserva_created_at,
