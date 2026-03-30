@@ -7225,27 +7225,6 @@ async function fetchActiveLoans(){
         $('btnDevolverSubIds').disabled = false;
       }
     }
-
-
-    async function renewLoan(loanId, targetStatusId='statusLoans'){
-      try {
-        setStatus(targetStatusId, 'Processando renovação...', 'warn', false);
-        let res = await supabase.rpc('renew_loan', { p_loan_id: loanId });
-        if (res.error && /function|not exist|não existe/i.test(String(res.error.message || ''))) {
-          res = await supabase.rpc('extend_loan_once', { p_loan_id: loanId });
-        }
-        if (res.error) throw res.error;
-        const row = Array.isArray(res.data) ? res.data[0] : res.data;
-        const newDue = row?.due_date || row?.new_due_date;
-        const message = row?.message || (newDue ? 'Renovação aplicada.' : 'Renovação concluída.');
-        setStatus(targetStatusId, message + (newDue ? ` Nova devolução: ${fmtDate(newDue)}.` : ''), 'ok');
-        await refreshLoansOnly({silent:true});
-        writePainelStateSync('loans');
-      } catch (e) {
-        setStatus(targetStatusId, 'Erro ao renovar: ' + (e.message || String(e)), 'bad', false);
-      }
-    }
-
     async function renewEmprestimoV2(emprestimoId, targetStatusId='statusLoans'){
       try {
         setStatus(targetStatusId, 'Processando renovação...', 'warn', false);
@@ -7262,34 +7241,6 @@ async function fetchActiveLoans(){
         setStatus(targetStatusId, 'Erro ao renovar: ' + (e.message || String(e)), 'bad', false);
       }
     }
-
-
-    async function renewBatchOld(loanIds, targetStatusId='statusBatches'){
-      const ids = Array.from(new Set((loanIds || []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0)));
-      if (!ids.length) return setStatus(targetStatusId, 'Nenhum item válido nesse empréstimo.', 'warn');
-      try {
-        setStatus(targetStatusId, 'Processando renovação do empréstimo...', 'warn', false);
-        let renewed = 0;
-        let lastDue = null;
-        for (const loanId of ids) {
-          let res = await supabase.rpc('renew_loan', { p_loan_id: loanId });
-          if (res.error && /function|not exist|não existe/i.test(String(res.error.message || ''))) {
-            res = await supabase.rpc('extend_loan_once', { p_loan_id: loanId });
-          }
-          if (res.error) throw res.error;
-          const row = Array.isArray(res.data) ? res.data[0] : res.data;
-          if (row?.ok === false) throw new Error(row?.message || 'Renovação recusada.');
-          renewed += 1;
-          lastDue = row?.due_date || row?.new_due_date || lastDue;
-        }
-        setStatus(targetStatusId, `Renovação do empréstimo aplicada. Itens processados: ${renewed}.` + (lastDue ? ` Nova devolução: ${fmtDate(lastDue)}.` : ''), 'ok');
-        await refreshLoansOnly({silent:true});
-        if (renewed > 0) writePainelStateSync('loans');
-      } catch (e) {
-        setStatus(targetStatusId, 'Erro ao renovar empréstimo: ' + (e.message || String(e)), 'bad', false);
-      }
-    }
-
 
     async function confirmReservations(reservationIds){
       const ids = Array.from(new Set((reservationIds || []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0)));
