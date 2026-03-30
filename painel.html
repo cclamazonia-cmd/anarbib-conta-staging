@@ -5503,40 +5503,6 @@ function belemNowParts(){
         }).sort((a, b) => String(b.reserva_em || '').localeCompare(String(a.reserva_em || '')));
       };
 
-      const mapLegacyReservationRows = async (rows) => {
-        const profilesMap = await loadProfilesByIds((rows || []).map((row) => row?.user_id).filter(Boolean));
-        return (rows || []).map((row) => {
-          const user = profilesMap.get(String(row?.user_id)) || {};
-          const createdAt = row?.created_at || null;
-          return {
-            id: Number(row?.id),
-            reserva_id: Number(row?.id),
-            sub_id: `${row?.id}.1`,
-            line_no: 1,
-            source: 'reservations',
-            reservation_source_name: 'v_reservations_enriched',
-            user_id: row?.user_id,
-            user_name: profileNameWithPublicId(user),
-            user_email: user?.email || '—',
-            bib_ref: row?.bib_ref,
-            titulo: row?.titulo || (row?.bib_ref ? `Referência ${row.bib_ref}` : 'Referência sem título'),
-            autor: row?.autor || '',
-            rotulo: '—',
-            reserva_em: createdAt,
-            validade: addDays(createdAt || Date.now(), 14),
-            workflow_stage: 'solicitada',
-            workflow_stage_updated_at: row?.updated_at || createdAt,
-            workflow_note: String(row?.notes || '').trim(),
-            pickup_scheduled_for: null,
-            pickup_reply_status: null,
-            pickup_reply_note: '',
-            pickup_reply_at: null,
-            pickup_attention: null,
-            raw: row,
-          };
-        }).sort((a, b) => String(b.reserva_em || '').localeCompare(String(a.reserva_em || '')));
-      };
-
       const tryReservationV2Sources = [
         'v_reserva_linhas_v2_ui_fix',
         'v_reserva_itens_v2_ui_fix',
@@ -5565,22 +5531,9 @@ function belemNowParts(){
       }
 
       if (!v2SourceResolved) {
-        const fallback = await supabase
-          .from('v_reservations_enriched')
-          .select('*')
-          .eq('status', 'active')
-          .order('created_at', { ascending:false })
-          .limit(500);
-        if (fallback.error) throw fallback.error;
-        activeReservations = await mapLegacyReservationRows(fallback.data || []);
-        if (activeReservations.length) {
-          setStatus('statusRes', 'Reservas ativas carregadas pelo fluxo antigo visível. O painel tentará aplicar as etapas em modo compatível enquanto a fonte v2 exata não for identificada.', 'warn', false);
-        } else {
-          clearStatus('statusRes');
-        }
-      } else {
-        clearStatus('statusRes');
+        activeReservations = [];
       }
+      clearStatus('statusRes');
 
       selectedReservaIds = new Set(
         [...selectedReservaIds].filter((id) => activeReservations.some((r) => r.id === id))
@@ -6273,16 +6226,13 @@ async function fetchActiveLoans(){
     }
 
     function reservationCanUseV2WorkflowCompat(row){
-      if (!row) return false;
-      if (row.source === 'v2') return true;
+      if (!row || row.source !== 'v2') return false;
       const reservaId = Number(row?.reserva_id);
       const lineNo = Number(row?.line_no || 1);
-      const sourceName = String(row?.reservation_source_name || '').trim();
       return Number.isFinite(reservaId)
         && reservaId > 0
         && Number.isFinite(lineNo)
-        && lineNo > 0
-        && (!sourceName || sourceName === 'v_reservations_enriched');
+        && lineNo > 0;
     }
 
     async function setReservationWorkflowStage(stage, rows, { note='', pickupScheduledFor=null, targetStatusId='statusRes' } = {}){
@@ -7146,17 +7096,6 @@ async function fetchActiveLoans(){
       return await tryCreateEmprestimoV2ByBibRefs(userId, canonicalRefs, note, dueDate);
     }
 
-    async function confirmReservationToLoan(reservaId){
-      const rpcRes = await supabase.rpc('fn_confirm_reserva_to_loan', { p_reserva_id: reservaId, p_due_at: null });
-      if (!rpcRes.error) {
-        return Number(Array.isArray(rpcRes.data) ? rpcRes.data[0] : rpcRes.data);
-      }
-      if (isMissingFunctionError(rpcRes.error)) {
-        throw new Error('O fluxo legado de confirmação de reserva para empréstimo não está disponível nesta base. Usa a conversão v2 das reservas ativas ou reativa a RPC fn_confirm_reserva_to_loan.');
-      }
-      throw rpcRes.error;
-    }
-
     async function registerLoan(){
       clearStatus('statusSaida');
       const borrowerLookup = normalizeProfileLookup($('borrowerEmail').value);
@@ -7395,29 +7334,23 @@ async function fetchActiveLoans(){
       $('btnConfirmarSelecionados').disabled = true;
       try {
         const v2Rows = rows.filter((r) => r.source === 'v2');
-        const oldRows = rows.filter((r) => r.source !== 'v2');
         const created = [];
 
-        if (v2Rows.length) {
-          const grouped = groupBy(v2Rows, (r) => r.reserva_id);
-          for (const [reservaId, items] of grouped.entries()) {
-            const lineNos = items.map((i) => Number(i.line_no));
-            const rpc = await supabase.rpc('fn_v2_convert_reserva_linhas_to_emprestimo', {
-              p_reserva_id: Number(reservaId),
-              p_line_nos: lineNos,
-              p_due_at: null,
-              p_notes: 'Retirada presencial confirmada no painel.'
-            });
-            if (rpc.error) throw rpc.error;
-            created.push(Number(rpc.data || 0));
-          }
+        if (!v2Rows.length) {
+          throw new Error('As reservas selecionadas não estão disponíveis no fluxo v2 ativo do painel.');
         }
 
-        if (oldRows.length) {
-          for (const row of oldRows) {
-            const loanId = await confirmReservationToLoan(row.reserva_id);
-            created.push(loanId);
-          }
+        const grouped = groupBy(v2Rows, (r) => r.reserva_id);
+        for (const [reservaId, items] of grouped.entries()) {
+          const lineNos = items.map((i) => Number(i.line_no));
+          const rpc = await supabase.rpc('fn_v2_convert_reserva_linhas_to_emprestimo', {
+            p_reserva_id: Number(reservaId),
+            p_line_nos: lineNos,
+            p_due_at: null,
+            p_notes: 'Retirada presencial confirmada no painel.'
+          });
+          if (rpc.error) throw rpc.error;
+          created.push(Number(rpc.data || 0));
         }
 
         selectedReservaIds = new Set();
@@ -7441,33 +7374,22 @@ async function fetchActiveLoans(){
         if (!rows.length) return setStatus('statusRes', 'As reservas selecionadas já não estão ativas.', 'warn');
 
         const v2Rows = rows.filter((r) => r.source === 'v2');
-        const oldRows = rows.filter((r) => r.source !== 'v2');
         let total = 0;
 
-        if (v2Rows.length) {
-          const grouped = groupBy(v2Rows, (r) => r.reserva_id);
-          for (const [reservaId, items] of grouped.entries()) {
-            const lineNos = items.map((i) => Number(i.line_no));
-            const rpc = await supabase.rpc('fn_v2_cancel_reserva_linhas_as_biblioteca', {
-              p_reserva_id: Number(reservaId),
-              p_line_nos: lineNos,
-              p_notes: 'Cancelamento registrado pela biblioteca no painel.'
-            });
-            if (rpc.error) throw rpc.error;
-            total += Number(rpc.data || 0) || 0;
-          }
+        if (!v2Rows.length) {
+          throw new Error('As reservas selecionadas não estão disponíveis no fluxo v2 ativo do painel.');
         }
 
-        if (oldRows.length) {
-          const oldIds = oldRows.map((r) => Number(r.reserva_id));
-          for (const oldId of oldIds) {
-            const rpc = await supabase.rpc('fn_cancel_reserva_legacy_as_biblioteca', {
-              p_reserva_id: oldId,
-              p_notes: 'Cancelamento registrado pela biblioteca no painel.'
-            });
-            if (rpc.error) throw rpc.error;
-            total += Number(rpc.data || 0) || 0;
-          }
+        const grouped = groupBy(v2Rows, (r) => r.reserva_id);
+        for (const [reservaId, items] of grouped.entries()) {
+          const lineNos = items.map((i) => Number(i.line_no));
+          const rpc = await supabase.rpc('fn_v2_cancel_reserva_linhas_as_biblioteca', {
+            p_reserva_id: Number(reservaId),
+            p_line_nos: lineNos,
+            p_notes: 'Cancelamento registrado pela biblioteca no painel.'
+          });
+          if (rpc.error) throw rpc.error;
+          total += Number(rpc.data || 0) || 0;
         }
 
         selectedReservaIds = new Set([...selectedReservaIds].filter((id) => !ids.includes(id)));

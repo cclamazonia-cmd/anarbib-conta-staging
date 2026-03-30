@@ -2633,56 +2633,6 @@ async function resolveReservationLineNoForCurrentView(reservaId, rowHint = {}) {
       return null;
     }
 
-
-    async function tryCancelLegacyReservationRecord(reservaId) {
-      const rid = Number(reservaId);
-      if (!rid) return { data: null, error: null };
-
-      const cancelledAt = new Date().toISOString();
-      const payloads = [
-        {
-          status: "cancelled_by_reader",
-          cancelled_at: cancelledAt,
-          cancelled_reason: "Cancelamento solicitado pela conta do(a/e) leitor(a/e)."
-        },
-        {
-          status: "cancelled",
-          cancelled_at: cancelledAt,
-          cancelled_reason: "Cancelamento solicitado pela conta do(a/e) leitor(a/e)."
-        },
-        {
-          status: "cancelled_by_reader",
-          cancelled_at: cancelledAt
-        },
-        {
-          status: "cancelled",
-          cancelled_at: cancelledAt
-        }
-      ];
-
-      let lastError = null;
-
-      for (const payload of payloads) {
-        try {
-          const res = await supabase
-            .from("reservas")
-            .update(payload)
-            .eq("id", rid)
-            .eq("user_id", session.user.id)
-            .eq("status", "pending")
-            .select("id, status, cancelled_at, cancelled_reason")
-            .maybeSingle();
-
-          if (!res?.error && res?.data?.id) return res;
-          if (res?.error) lastError = res.error;
-        } catch (error) {
-          lastError = error;
-        }
-      }
-
-      return { data: null, error: lastError };
-    }
-
     async function cancelCurrentActiveReservation(reservaId, rowHint = {}) {
       const hintedReservaId = Number(reservaId || rowHint?.reserva_id || rowHint?.id);
       const directLineNo = Number(rowHint?.line_no);
@@ -2707,27 +2657,14 @@ async function resolveReservationLineNoForCurrentView(reservaId, rowHint = {}) {
         if (resolvedLineNo) {
           return await cancelReservaV2(hintedReservaId, resolvedLineNo);
         }
-
-        const legacyCancel = await tryCancelLegacyReservationRecord(hintedReservaId);
-        if (legacyCancel?.data?.id) return legacyCancel;
       }
 
-      let rpc = await supabase.rpc("cancel_my_reserva", { p_reserva_id: hintedReservaId });
-      if (rpc.error && /function|does not exist|não existe/i.test(String(rpc.error.message || ""))) {
-        rpc = await supabase.rpc("cancel_reserva", { p_reserva_id: hintedReservaId });
-      }
-      if (!rpc.error) return rpc;
-
-      if (/function|does not exist|não existe/i.test(String(rpc.error.message || ""))) {
-        return {
-          error: {
-            message: "Não foi possível localizar automaticamente o item cancelável desta reserva nesta visualização."
-          },
-          data: null
-        };
-      }
-
-      return rpc;
+      return {
+        error: {
+          message: "Não foi possível localizar automaticamente a linha ativa desta reserva nesta visualização."
+        },
+        data: null
+      };
     }
 
 
@@ -2869,398 +2806,14 @@ function reservationPickupReplyActions(row) {
       }
 
 
-      const currentQ = await supabase
-        .schema("api")
-        .from("my_reservations_active")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (!currentQ.error) {
-        const rowsData = currentQ.data || [];
-        const cancelCandidateRows = await loadCancelableReservationCandidateRows();
-        const resolvedRowsData = await Promise.all(rowsData.map(async (row) => {
-          const directReservaId = Number(row?.reserva_id || row?.id);
-          const directLineNo = Number(row?.line_no) || parseReservationLineNoFromSubId(row?.sub_id);
-          if (directReservaId > 0 && directLineNo > 0) {
-            return { ...row, reserva_id: directReservaId, line_no: directLineNo };
-          }
-
-          const resolvedTarget = resolveReservationCancelTargetFromCandidateRows(cancelCandidateRows, {
-            ...row,
-            reserva_id: directReservaId || row?.reserva_id,
-            id: directReservaId || row?.id
-          });
-          if (resolvedTarget?.reservaId > 0 && resolvedTarget?.lineNo > 0) {
-            return { ...row, reserva_id: resolvedTarget.reservaId, line_no: resolvedTarget.lineNo };
-          }
-
-          const resolvedLineNo = directReservaId > 0
-            ? await resolveReservationLineNoForCurrentView(directReservaId, row)
-            : null;
-          return resolvedLineNo
-            ? { ...row, reserva_id: directReservaId, line_no: resolvedLineNo }
-            : { ...row, reserva_id: directReservaId || row?.reserva_id };
-        }));
-        setActiveReservationBibRefs(resolvedRowsData);
-        if (!resolvedRowsData.length) {
-          setChipText(chipContaReservas, "Reservas ativas", "0");
-          return showEmpty(activeReservationsEl, "Você não tem reservas ativas no momento.");
-        }
-        setChipText(chipContaReservas, "Reservas ativas", String(resolvedRowsData.length));
-        const rotulosMap = await fetchRotulosMapByBibRefs(resolvedRowsData.map((r) => r.bib_ref));
-        const rows = resolvedRowsData.map((r) => {
-          const rotulo = rotulosMap.get(String(r.bib_ref || "").trim()) || "—";
-          const validade = addDays(r.reserved_at || r.created_at || Date.now(), 14);
-          const rid = Number(r.reserva_id || r.id);
-          const lineNo = Number(r.line_no);
-          const workflowRow = { ...r, reserva_id: rid || r.reserva_id, line_no: lineNo || r.line_no, item_status: r.item_status || r.status };
-          const actionHtml = rid && lineNo
-            ? reservationPickupReplyActions(workflowRow)
-            : (rid
-                ? reservationCancelOnlyAction(workflowRow)
-                : `<div class="reservation-actions">${actionSlotNote("Ação indisponível nesta visualização")}</div>`);
-          return `
-          <tr>
-            <td>#${escapeHtml(rid || r.id)}</td>
-            <td class="mono">${escapeHtml(r.sub_id || "—")}</td>
-            <td>${escapeHtml(r.titulo || "Livro")}${r.autor ? `<br><small>${escapeHtml(r.autor)}</small>` : ""}</td>
-            <td class="mono">${escapeHtml(r.bib_ref || "—")}</td>
-            <td class="mono">${escapeHtml(rotulo)}</td>
-            <td>${escapeHtml(fmtDateTimeBelem(r.reserved_at || r.created_at))} (Belém)</td>
-            <td>${escapeHtml(fmtDateTimeBelem(validade))} (Belém)</td>
-            <td><b>${escapeHtml(reservationStatusLabel(r.item_status || r.status, workflowRow))}</b>${r.library_name ? `<br><small>${escapeHtml(r.library_name)}</small>` : ""}</td>
-            <td>${actionHtml}</td>
-          </tr>`;
-        }).join("");
-        const mobileCards = resolvedRowsData.map((r) => {
-          const rotulo = rotulosMap.get(String(r.bib_ref || "").trim()) || "—";
-          const validade = addDays(r.reserved_at || r.created_at || Date.now(), 14);
-          const rid = Number(r.reserva_id || r.id);
-          const lineNo = Number(r.line_no);
-          const workflowRow = { ...r, reserva_id: rid || r.reserva_id, line_no: lineNo || r.line_no, item_status: r.item_status || r.status };
-          const actionHtml = rid && lineNo
-            ? reservationPickupReplyActions(workflowRow)
-            : (rid
-                ? reservationCancelOnlyAction(workflowRow)
-                : `<div class="reservation-actions">${actionSlotNote("Ação indisponível nesta visualização")}</div>`);
-          return `
-            <article class="mobile-card">
-              <h4>${escapeHtml(r.titulo || "Livro")}</h4>
-              ${r.autor ? `<p class="author">${escapeHtml(r.autor)}</p>` : ""}
-              <div class="mobile-kv">
-                <div class="k">Lote</div><div class="v">#${escapeHtml(rid || r.id)}</div>
-                <div class="k">Livro</div><div class="v mono">${escapeHtml(r.sub_id || "—")}</div>
-                <div class="k">Referência</div><div class="v mono">${escapeHtml(r.bib_ref || "—")}</div>
-                <div class="k">Rótulo</div><div class="v mono">${escapeHtml(rotulo)}</div>
-                <div class="k">Criada em</div><div class="v">${escapeHtml(fmtDateTimeBelem(r.reserved_at || r.created_at))} (Belém)</div>
-                <div class="k">Validade</div><div class="v"><b>${escapeHtml(fmtDateTimeBelem(validade))} (Belém)</b></div>
-                <div class="k">Situação</div><div class="v">${escapeHtml(reservationStatusLabel(r.item_status || r.status, workflowRow))}${r.library_name ? ` · ${escapeHtml(r.library_name)}` : ""}</div>
-              </div>
-              <div class="mobile-actions">${actionHtml}</div>
-            </article>`;
-        }).join("");
-
-        activeReservationsEl.innerHTML = `
-          <div class="desktop-only">
-            <div class="table-scroll">
-              <table class="list-table">
-                <thead>
-                  <tr><th>Lote</th><th>Livro</th><th>Título</th><th>Referência</th><th>Rótulo</th><th>Criada em</th><th>Validade</th><th>Situação</th><th>Ação</th></tr>
-                </thead>
-                <tbody>${rows}</tbody>
-              </table>
-            </div>
-          </div>
-          <div class="mobile-only mobile-cards">${mobileCards}</div>`;
-
-        activeReservationsEl.querySelectorAll("[data-cancel-current]").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const reservaId = Number(btn.getAttribute("data-cancel-current"));
-            const lineNo = Number(btn.getAttribute("data-cancel-current-line-no"));
-            const bibRef = normalizeBibRefValue(btn.getAttribute("data-cancel-current-bib-ref"));
-            const subId = String(btn.getAttribute("data-cancel-current-sub-id") || "").trim();
-            const title = String(btn.getAttribute("data-cancel-current-title") || "").trim();
-            if (!reservaId) return;
-            btn.disabled = true;
-            if (activeReserveMsg) activeReserveMsg.textContent = "Cancelando reserva...";
-            const rpc = await cancelCurrentActiveReservation(reservaId, { line_no: lineNo, bib_ref: bibRef, sub_id: subId, titulo: title });
-            if (rpc.error) {
-              activeReserveMsg.textContent = "Erro ao cancelar: " + rpc.error.message;
-              btn.disabled = false;
-              return;
-            }
-            activeReserveMsg.textContent = "Reserva cancelada.";
-            await renderActiveReservations();
-            await renderHistory();
-            writeContaStateSync('reservations');
-          });
-        });
-        activeReservationsEl.querySelectorAll("[data-cancel-v2]").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const [rid, lineNo] = String(btn.getAttribute("data-cancel-v2") || "").split("|").map(Number);
-            if (!rid || !lineNo) return;
-            btn.disabled = true;
-            if (activeReserveMsg) activeReserveMsg.textContent = "Cancelando reserva...";
-            const res = await cancelReservaV2(rid, lineNo);
-            if (res.error) {
-              activeReserveMsg.textContent = "Erro ao cancelar: " + res.error.message;
-              btn.disabled = false;
-              return;
-            }
-            activeReserveMsg.textContent = "Reserva cancelada.";
-            await renderActiveReservations();
-            await renderHistory();
-            writeContaStateSync('reservations');
-          });
-        });
-        activeReservationsEl.querySelectorAll("[data-pickup-reply]").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const [rid, lineNo, replyStatus] = String(btn.getAttribute("data-pickup-reply") || "").split("|");
-            const reservaId = Number(rid);
-            const reservaLineNo = Number(lineNo);
-            if (!reservaId || !reservaLineNo || !replyStatus) return;
-            const proceed = window.confirm(replyStatus === "confirmado_leitor"
-              ? "Confirma que poderá retirar o livro nesse horário?"
-              : "Confirma que você não poderá comparecer nesse horário?");
-            if (!proceed) return;
-            btn.disabled = true;
-            if (activeReserveMsg) activeReserveMsg.textContent = replyStatus === "confirmado_leitor"
-              ? "Registrando sua confirmação..."
-              : "Registrando sua resposta...";
-            const res = await setReservaPickupReply(reservaId, reservaLineNo, replyStatus, null);
-            if (res.error) {
-              activeReserveMsg.textContent = "Erro ao registrar sua resposta: " + res.error.message;
-              btn.disabled = false;
-              return;
-            }
-            activeReserveMsg.textContent = replyStatus === "confirmado_leitor"
-              ? "Horário confirmado. A biblioteca foi avisada."
-              : "Resposta registrada. A biblioteca foi avisada para propor outro horário.";
-            await renderActiveReservations();
-            await renderHistory();
-            writeContaStateSync('reservations');
-          });
-        });
-        return;
-      }
-
-      const v2 = await supabase
-        .schema("api")
-        .from("reserva_itens_followup_ui")
-        .select("reserva_id, sub_id, line_no, titulo, autor, bib_ref, rotulo, item_status, reserva_created_at, expires_at, reserva_status, emprestimo_item_id, workflow_stage_effective, workflow_note, pickup_scheduled_for, workflow_stage_updated_at_effective, pickup_reply_status, pickup_reply_note, pickup_reply_at")
-        .eq("user_id", session.user.id)
-        .eq("item_status", "ativa")
-        .order("reserva_id", { ascending: false })
-        .order("line_no", { ascending: true });
-
-      if (!v2.error && (v2.data || []).length) {
-        setActiveReservationBibRefs(v2.data || []);
-        setChipText(chipContaReservas, "Reservas ativas", String((v2.data || []).length));
-        const rotulosMap = await fetchRotulosMapByBibRefs((v2.data || []).map((r) => r.bib_ref));
-        const rows = v2.data.map((r) => {
-          const rotulo = r.rotulo || rotulosMap.get(String(r.bib_ref || "").trim()) || "—";
-          const validade = r.expires_at || addDays(r.reserva_created_at || Date.now(), 14);
-          const workflowLabel = reservationWorkflowLabel(r);
-          const workflowDetails = reservationWorkflowDetailLines(r);
-          return `
-          <tr>
-            <td>#${r.reserva_id}</td>
-            <td class="mono">${escapeHtml(r.sub_id)}</td>
-            <td>${escapeHtml(r.titulo || "Livro")} ${r.autor ? `<br><small>${escapeHtml(r.autor)}</small>` : ""}</td>
-            <td class="mono">${escapeHtml(r.bib_ref || "—")}</td>
-            <td class="mono">${escapeHtml(rotulo)}</td>
-            <td>${escapeHtml(fmtDateTimeBelem(r.reserva_created_at))} (Belém)</td>
-            <td>${escapeHtml(fmtDateTimeBelem(validade))} (Belém)</td>
-            <td><b>${escapeHtml(workflowLabel)}</b>${workflowDetails.length ? `<br><small>${workflowDetails.map((line) => escapeHtml(line)).join("<br>")}</small>` : ""}</td>
-            <td>${reservationPickupReplyActions(r)}</td>
-          </tr>`;
-        }).join("");
-        const mobileCards = v2.data.map((r) => {
-          const rotulo = r.rotulo || rotulosMap.get(String(r.bib_ref || "").trim()) || "—";
-          const validade = r.expires_at || addDays(r.reserva_created_at || Date.now(), 14);
-          const workflowLabel = reservationWorkflowLabel(r);
-          const workflowDetails = reservationWorkflowDetailLines(r);
-          return `
-            <article class="mobile-card">
-              <h4>${escapeHtml(r.titulo || "Livro")}</h4>
-              ${r.autor ? `<p class="author">${escapeHtml(r.autor)}</p>` : ""}
-              <div class="mobile-kv">
-                <div class="k">Lote</div><div class="v">#${escapeHtml(r.reserva_id)}</div>
-                <div class="k">Livro</div><div class="v mono">${escapeHtml(r.sub_id)}</div>
-                <div class="k">Referência</div><div class="v mono">${escapeHtml(r.bib_ref || "—")}</div>
-                <div class="k">Rótulo</div><div class="v mono">${escapeHtml(rotulo)}</div>
-                <div class="k">Criada em</div><div class="v">${escapeHtml(fmtDateTimeBelem(r.reserva_created_at))} (Belém)</div>
-                <div class="k">Validade</div><div class="v"><b>${escapeHtml(fmtDateTimeBelem(validade))} (Belém)</b></div>
-                <div class="k">Situação</div><div class="v"><b>${escapeHtml(workflowLabel)}</b>${workflowDetails.length ? `<br><small>${workflowDetails.map((line) => escapeHtml(line)).join("<br>")}</small>` : ""}</div>
-              </div>
-              <div class="mobile-actions">
-                ${reservationPickupReplyActions(r)}
-              </div>
-            </article>`;
-        }).join("");
-
-        activeReservationsEl.innerHTML = `
-          <div class="desktop-only">
-            <div class="table-scroll">
-              <table class="list-table">
-                <thead>
-                  <tr><th>Lote</th><th>Livro</th><th>Título</th><th>Referência</th><th>Rótulo</th><th>Criada em</th><th>Validade</th><th>Situação</th><th>Ação</th></tr>
-                </thead>
-                <tbody>${rows}</tbody>
-              </table>
-            </div>
-          </div>
-          <div class="mobile-only mobile-cards">${mobileCards}</div>`;
-
-        activeReservationsEl.querySelectorAll("[data-cancel-v2]").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const [rid, lineNo] = String(btn.getAttribute("data-cancel-v2") || "").split("|").map(Number);
-            if (!rid || !lineNo) return;
-            btn.disabled = true;
-            if (activeReserveMsg) activeReserveMsg.textContent = "Cancelando reserva...";
-            const res = await cancelReservaV2(rid, lineNo);
-            if (res.error) {
-              activeReserveMsg.textContent = "Erro ao cancelar: " + res.error.message;
-              btn.disabled = false;
-              return;
-            }
-            activeReserveMsg.textContent = "Reserva cancelada.";
-            await renderActiveReservations();
-            await renderHistory();
-            writeContaStateSync('reservations');
-          });
-        });
-        activeReservationsEl.querySelectorAll("[data-pickup-reply]").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const [rid, lineNo, replyStatus] = String(btn.getAttribute("data-pickup-reply") || "").split("|");
-            const reservaId = Number(rid);
-            const reservaLineNo = Number(lineNo);
-            if (!reservaId || !reservaLineNo || !replyStatus) return;
-            const proceed = window.confirm(replyStatus === "confirmado_leitor"
-              ? "Confirma que poderá retirar o livro nesse horário?"
-              : "Confirma que você não poderá comparecer nesse horário?");
-            if (!proceed) return;
-            btn.disabled = true;
-            if (activeReserveMsg) activeReserveMsg.textContent = replyStatus === "confirmado_leitor"
-              ? "Registrando sua confirmação..."
-              : "Registrando sua resposta...";
-            const res = await setReservaPickupReply(reservaId, reservaLineNo, replyStatus, null);
-            if (res.error) {
-              activeReserveMsg.textContent = "Erro ao registrar sua resposta: " + res.error.message;
-              btn.disabled = false;
-              return;
-            }
-            activeReserveMsg.textContent = replyStatus === "confirmado_leitor"
-              ? "Horário confirmado. A biblioteca foi avisada."
-              : "Resposta registrada. A biblioteca foi avisada para propor outro horário.";
-            await renderActiveReservations();
-            await renderHistory();
-            writeContaStateSync('reservations');
-          });
-        });
-        return;
-      }
-
-      const oldRes = await supabase
-        .schema("api")
-        .from("reservas")
-        .select("id, bib_ref, created_at, status, fulfilled_at, fulfilled_loan_id, cancelled_at, cancelled_reason")
-        .eq("user_id", session.user.id)
-        .eq("status", "pending")
-        .order("created_at", { ascending: false });
-
-      if (oldRes.error) {
-        console.error("renderActiveReservations error:", oldRes.error);
+      if (v2Priority.error) {
+        console.error("renderActiveReservations error:", v2Priority.error);
         return showEmpty(activeReservationsEl, "Não foi possível carregar suas reservas ativas.");
       }
-      if (!oldRes.data || !oldRes.data.length) {
-        setChipText(chipContaReservas, "Reservas ativas", "0");
-        return showEmpty(activeReservationsEl, "Você não tem reservas ativas no momento.");
-      }
 
-      setChipText(chipContaReservas, "Reservas ativas", String((oldRes.data || []).length));
-
-      const booksMap = await fetchBooksMapByBibRefs(oldRes.data.map((r) => r.bib_ref));
-      const rotulosMap = await fetchRotulosMapByBibRefs(oldRes.data.map((r) => r.bib_ref));
-      const rows = oldRes.data.map((r) => {
-        const book = booksMap.get(String(r.bib_ref)) || {};
-        const title = book.titulo || `Referência ${r.bib_ref}`;
-        const author = book.autor || "";
-        const rotulo = rotulosMap.get(String(r.bib_ref || "").trim()) || "—";
-        const validade = addDays(r.created_at || Date.now(), 14);
-        const canCancel = String(r.status || "") === "pending";
-        return `
-          <tr>
-            <td>#${r.id}</td>
-            <td class="mono">—</td>
-            <td>${escapeHtml(title)}${author ? `<br><small>${escapeHtml(author)}</small>` : ""}</td>
-            <td class="mono">${escapeHtml(r.bib_ref)}</td>
-            <td class="mono">${escapeHtml(rotulo)}</td>
-            <td>${escapeHtml(fmtDateOnly(r.created_at))}</td>
-            <td>${escapeHtml(fmtDateTimeBelem(validade))} (Belém)</td>
-            <td>${escapeHtml(reservationStatusLabel(r.status, r))}${r.cancelled_reason ? `<br><small>${escapeHtml(r.cancelled_reason)}</small>` : ""}</td>
-            <td>${canCancel ? buildActionGrid([actionSlotEmpty(), actionSlotEmpty(), `<button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-old="${r.id}">Cancelar</button>`], "reservation-actions") : `<div class="reservation-actions">${actionSlotNote("Sem ação")}</div>`}</td>
-          </tr>`;
-      }).join("");
-      const mobileCards = oldRes.data.map((r) => {
-        const book = booksMap.get(String(r.bib_ref)) || {};
-        const title = book.titulo || `Referência ${r.bib_ref}`;
-        const author = book.autor || "";
-        const rotulo = rotulosMap.get(String(r.bib_ref || "").trim()) || "—";
-        const validade = addDays(r.created_at || Date.now(), 14);
-        const canCancel = String(r.status || "") === "pending";
-        return `
-          <article class="mobile-card">
-            <h4>${escapeHtml(title)}</h4>
-            ${author ? `<p class="author">${escapeHtml(author)}</p>` : ""}
-            <div class="mobile-kv">
-              <div class="k">Lote</div><div class="v">#${escapeHtml(r.id)}</div>
-              <div class="k">Livro</div><div class="v mono">—</div>
-              <div class="k">Referência</div><div class="v mono">${escapeHtml(r.bib_ref || "—")}</div>
-              <div class="k">Rótulo</div><div class="v mono">${escapeHtml(rotulo)}</div>
-              <div class="k">Criada em</div><div class="v">${escapeHtml(fmtDateOnly(r.created_at))}</div>
-              <div class="k">Validade</div><div class="v"><b>${escapeHtml(fmtDateTimeBelem(validade))} (Belém)</b></div>
-              <div class="k">Situação</div><div class="v">${escapeHtml(reservationStatusLabel(r.status, r))}${r.cancelled_reason ? `<br><small>${escapeHtml(r.cancelled_reason)}</small>` : ""}</div>
-            </div>
-            <div class="mobile-actions">
-              ${canCancel ? buildActionGrid([actionSlotEmpty(), actionSlotEmpty(), `<button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-old="${r.id}">Cancelar</button>`], "reservation-actions") : `<div class="reservation-actions">${actionSlotNote("Sem ação")}</div>`}
-            </div>
-          </article>`;
-      }).join("");
-
-      activeReservationsEl.innerHTML = `
-        <div class="desktop-only">
-          <div class="table-scroll">
-            <table class="list-table">
-              <thead>
-                <tr><th>Lote</th><th>Livro</th><th>Título</th><th>Referência</th><th>Rótulo</th><th>Criada em</th><th>Validade</th><th>Situação</th><th>Ação</th></tr>
-              </thead>
-              <tbody>${rows}</tbody>
-            </table>
-          </div>
-        </div>
-        <div class="mobile-only mobile-cards">${mobileCards}</div>`;
-
-      activeReservationsEl.querySelectorAll("[data-cancel-old]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const reservaId = Number(btn.getAttribute("data-cancel-old"));
-          if (!reservaId) return;
-          btn.disabled = true;
-          activeReserveMsg.textContent = "Cancelando reserva...";
-          let rpc = await supabase.rpc("cancel_my_reserva", { p_reserva_id: reservaId });
-          if (rpc.error && /function|does not exist|não existe/i.test(String(rpc.error.message || ""))) {
-            rpc = await supabase.rpc("cancel_reserva", { p_reserva_id: reservaId });
-          }
-          if (rpc.error) {
-            activeReserveMsg.textContent = "Erro ao cancelar: " + rpc.error.message;
-            btn.disabled = false;
-            return;
-          }
-          activeReserveMsg.textContent = "Reserva cancelada.";
-          await renderActiveReservations();
-          await renderHistory();
-        });
-      });
+      setActiveReservationBibRefs([]);
+      setChipText(chipContaReservas, "Reservas ativas", "0");
+      return showEmpty(activeReservationsEl, "Você não tem reservas ativas no momento.");
     }
 
     async function tryRenewV2(loanId) {
@@ -3772,20 +3325,18 @@ function reservationPickupReplyActions(row) {
         historyEl.innerHTML = `<ul>${items.map((i) => i.html).join("")}</ul>`;
         return;
       }
-      const [v2Loans, oldLoans, v2Reservas, oldReservas] = await Promise.all([
+      const [v2Loans, oldLoans, v2Reservas] = await Promise.all([
         supabase.schema("api").from("emprestimo_itens_ui").select("emprestimo_id, line_no, sub_id, titulo, autor, bib_ref, rotulo, emprestimo_created_at, due_at, item_status, returned_at").eq("user_id", session.user.id).order("emprestimo_created_at", { ascending:false }).limit(200),
         supabase.schema("api").from("loans_detalhes").select("id, batch_id, due_date, checkout_date, returned_date, books").eq("user_id", session.user.id).order("checkout_date", { ascending:false }).limit(300),
-        supabase.schema("api").from("reserva_itens_ui").select("reserva_id, sub_id, titulo, autor, bib_ref, rotulo, reserva_created_at, expires_at, item_status, converted_at, cancelled_at").eq("user_id", session.user.id).neq("item_status", "ativa").order("reserva_created_at", { ascending:false }).limit(200),
-        supabase.schema("api").from("reservas").select("id, bib_ref, created_at, status, fulfilled_at, fulfilled_loan_id, cancelled_at, cancelled_reason").eq("user_id", session.user.id).neq("status", "pending").order("created_at", { ascending:false }).limit(100)
+        supabase.schema("api").from("reserva_itens_ui").select("reserva_id, sub_id, titulo, autor, bib_ref, rotulo, reserva_created_at, expires_at, item_status, converted_at, cancelled_at").eq("user_id", session.user.id).neq("item_status", "ativa").order("reserva_created_at", { ascending:false }).limit(200)
       ]);
       const items = [];
-      if (v2Loans.error || oldLoans.error || v2Reservas.error || oldReservas.error) {
-        console.error("renderHistory errors", { v2Loans: v2Loans.error, oldLoans: oldLoans.error, v2Reservas: v2Reservas.error, oldReservas: oldReservas.error });
+      if (v2Loans.error || oldLoans.error || v2Reservas.error) {
+        console.error("renderHistory errors", { v2Loans: v2Loans.error, oldLoans: oldLoans.error, v2Reservas: v2Reservas.error });
         const msgs = [];
         if (v2Loans.error) msgs.push("v2 empréstimos: " + (v2Loans.error.message || JSON.stringify(v2Loans.error)));
         if (oldLoans.error) msgs.push("loans antigos: " + (oldLoans.error.message || JSON.stringify(oldLoans.error)));
         if (v2Reservas.error) msgs.push("v2 reservas: " + (v2Reservas.error.message || JSON.stringify(v2Reservas.error)));
-        if (oldReservas.error) msgs.push("reservas antigas: " + (oldReservas.error.message || JSON.stringify(oldReservas.error)));
         if (historyMsg) historyMsg.textContent = "Diagnóstico histórico — " + msgs.join(" | ");
       }
       if (!v2Reservas.error) {
@@ -3793,16 +3344,6 @@ function reservationPickupReplyActions(row) {
           items.push({
             when: r.cancelled_at || r.converted_at || r.reserva_created_at,
             html: `<li><b>Reserva #${escapeHtml(r.reserva_id)}</b> — <span class="mono">${escapeHtml(r.sub_id)}</span> — ${escapeHtml(r.titulo || 'Livro')} — ${escapeHtml(reservationStatusLabel(r.item_status, r))}</li>`
-          });
-        }
-      }
-      if (!oldReservas.error) {
-        const booksMap = await fetchBooksMapByBibRefs((oldReservas.data || []).map((r) => r.bib_ref));
-        for (const r of (oldReservas.data || [])) {
-          const book = booksMap.get(String(r.bib_ref)) || {};
-          items.push({
-            when: r.cancelled_at || r.fulfilled_at || r.created_at,
-            html: `<li><b>Reserva #${escapeHtml(r.id)}</b> — ${escapeHtml(book.titulo || ('Referência ' + r.bib_ref))} — ${escapeHtml(reservationStatusLabel(r.status, r))}${r.cancelled_reason ? ` — ${escapeHtml(r.cancelled_reason)}` : ""}</li>`
           });
         }
       }
