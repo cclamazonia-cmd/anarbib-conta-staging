@@ -5434,6 +5434,7 @@ function belemNowParts(){
       const normalizeReservationWorkflowStageValue = (value) => {
         const raw = String(value || '').trim().toLowerCase();
         if (!raw || ['ativa', 'ativo', 'active'].includes(raw)) return 'solicitada';
+        if (['convertida_em_emprestimo', 'converted_to_loan'].includes(raw)) return 'retirada_efetivada';
         if (['solicitada', 'em_preparacao', 'pronta_para_retirada', 'retirada_a_combinar', 'retirada_agendada', 're-retirada_agendada', 'nao_retirada', 'liberada_para_circulacao', 'retirada_efetivada', 'cancelada_leitor', 'cancelada_biblioteca', 'expirada'].includes(raw)) return raw;
         return 'solicitada';
       };
@@ -5442,7 +5443,11 @@ function belemNowParts(){
         const stage = normalizeReservationWorkflowStageValue(
           firstFilledValue(row?.workflow_stage_effective, row?.workflow_stage, row?.stage, row?.item_status, row?.status, '')
         );
+        const itemStatus = String(firstFilledValue(row?.item_status, row?.status_item, '') || '').trim().toLowerCase();
         const globalStatus = String(firstFilledValue(row?.status_global, row?.reserva_status, row?.reservation_status, '') || '').trim().toLowerCase();
+        const emprestimoItemId = Number(firstFilledValue(row?.emprestimo_item_id, row?.loan_item_id, 0));
+        if (['convertida_em_emprestimo', 'converted_to_loan'].includes(itemStatus)) return false;
+        if (Number.isFinite(emprestimoItemId) && emprestimoItemId > 0) return false;
         if (globalStatus && !['aberta', 'aberto', 'ativa', 'ativo', 'active', 'pending', 'solicitada', 'em_preparacao', 'pronta_para_retirada', 'retirada_a_combinar', 'retirada_agendada', 're-retirada_agendada', 'nao_retirada'].includes(globalStatus)) {
           return false;
         }
