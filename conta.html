@@ -2445,9 +2445,7 @@ button[type="submit"] *,
     }
 
     function buildLoanRenewButtonOld(loanId, canRenew, reasonText) {
-      return canRenew
-        ? `<button type="button" class="secondary mini-btn" data-renew-old="${loanId}">Renovar (uma única vez)</button>`
-        : `<button type="button" class="secondary mini-btn" disabled>${escapeHtml(reasonText || "Renovação indisponível")}</button>`;
+      return `<button type="button" class="secondary mini-btn" disabled>${escapeHtml(reasonText || "Renovação indisponível neste fluxo")}</button>`;
     }
 
     function reservationCancelOnlyAction(row) {
@@ -2924,23 +2922,6 @@ function reservationPickupReplyActions(row) {
       return { error: lastErr, data: null };
     }
 
-    async function tryRenewOld(loanId) {
-      const candidates = [
-        ["renew_loan", { p_loan_id: loanId }],
-        ["extend_loan_once", { p_loan_id: loanId }]
-      ];
-      let lastErr = null;
-      for (const [fn, args] of candidates) {
-        const res = await supabase.rpc(fn, args);
-        if (!res.error) return res;
-        lastErr = res.error;
-        if (!/function|does not exist|não existe|No function matches/i.test(String(res.error.message || ""))) {
-          return res;
-        }
-      }
-      return { error: lastErr, data: null };
-    }
-
     function getReturnScheduleLabel(status) {
       switch (String(status || "").trim()) {
         case "devolucao_agendada": return "Devolução agendada";
@@ -3357,34 +3338,6 @@ function reservationPickupReplyActions(row) {
         });
       });
 
-      loansEl.querySelectorAll("[data-renew-old]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const loanId = Number(btn.getAttribute("data-renew-old"));
-          if (!loanId) return;
-          const proceed = window.confirm("Atenção: cada empréstimo só pode ser renovado uma única vez. Deseja continuar?");
-          if (!proceed) return;
-          btn.disabled = true;
-          setLoanMsgText("Processando renovação...");
-          const res = await tryRenewOld(loanId);
-          const row = Array.isArray(res.data) ? res.data[0] : res.data;
-          if (res.error) {
-            setLoanMsgText("Erro ao renovar: " + res.error.message, 2000);
-            btn.disabled = false;
-            return;
-          }
-          if (row?.ok === false) {
-            setLoanMsgText("Erro ao renovar: " + (row?.message || "Renovação indisponível."), 2000);
-            btn.disabled = false;
-            return;
-          }
-          const newDue = row?.due_date || row?.new_due_date;
-          const message = row?.message || (newDue ? "Renovação aplicada." : "Renovação concluída.");
-          setLoanMsgText(message + (newDue ? ` Nova devolução: ${fmtDateOnly(newDue)}.` : ""), 2000);
-          await renderLoans();
-          await renderHistory();
-          writeContaStateSync('loans');
-        });
-      });
     }
 
     async function renderHistory() {
