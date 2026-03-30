@@ -7155,16 +7155,20 @@ async function fetchActiveLoans(){
 
         let count = 0;
 
-        if (batch?.source === 'v2') {
+        if (batch) {
+          if (batch.source !== 'v2') {
+            throw new Error('Os empréstimos antigos desta base já não aceitam devolução manual pelo fluxo legacy no painel. Usa apenas os empréstimos atuais do fluxo v2.');
+          }
           const rpc = await supabase.rpc('fn_v2_return_emprestimo_total', {
             p_emprestimo_id: Number(batch.emprestimo_id),
             p_notes: 'Devolução total registrada no painel.'
           });
           if (rpc.error) throw rpc.error;
           count = Number(rpc.data || 0) || 0;
-        } else if (batch) {
-          count = await markLoansReturned(batch.loan_ids);
-        } else if (single?.source === 'v2') {
+        } else if (single) {
+          if (single.source !== 'v2') {
+            throw new Error('Os empréstimos antigos desta base já não aceitam devolução manual pelo fluxo legacy no painel. Usa apenas os empréstimos atuais do fluxo v2.');
+          }
           const rpc = await supabase.rpc('fn_v2_return_emprestimo_linhas', {
             p_emprestimo_id: Number(single.emprestimo_id),
             p_line_nos: [Number(single.line_no)],
@@ -7172,8 +7176,6 @@ async function fetchActiveLoans(){
           });
           if (rpc.error) throw rpc.error;
           count = Number(rpc.data || 0) || 0;
-        } else if (single) {
-          count = await markLoansReturned([single.loan_id]);
         } else {
           const rpc = await supabase.rpc('fn_v2_return_emprestimo_total', {
             p_emprestimo_id: id,
@@ -7214,27 +7216,21 @@ async function fetchActiveLoans(){
           throw new Error('ID(s) do item não encontrado(s): ' + missing.join(', '));
         }
 
-        const v2Rows = matched.filter((r) => r.source === 'v2');
-        const oldRows = matched.filter((r) => r.source !== 'v2');
-
-        let total = 0;
-
-        if (oldRows.length) {
-          total += await markLoansReturned(oldRows.map((r) => r.loan_id));
+        if (matched.some((r) => r.source !== 'v2')) {
+          throw new Error('Os empréstimos antigos desta base já não aceitam devolução parcial manual pelo fluxo legacy no painel. Usa apenas os itens atuais do fluxo v2.');
         }
 
-        if (v2Rows.length) {
-          const grouped = groupBy(v2Rows, (r) => r.emprestimo_id);
-          for (const [emprestimoId, items] of grouped.entries()) {
-            const lineNos = items.map((i) => Number(i.line_no));
-            const rpc = await supabase.rpc('fn_v2_return_emprestimo_linhas', {
-              p_emprestimo_id: Number(emprestimoId),
-              p_line_nos: lineNos,
-              p_notes: 'Devolução parcial registrada no painel.'
-            });
-            if (rpc.error) throw rpc.error;
-            total += Number(rpc.data || 0) || 0;
-          }
+        let total = 0;
+        const grouped = groupBy(matched, (r) => r.emprestimo_id);
+        for (const [emprestimoId, items] of grouped.entries()) {
+          const lineNos = items.map((i) => Number(i.line_no));
+          const rpc = await supabase.rpc('fn_v2_return_emprestimo_linhas', {
+            p_emprestimo_id: Number(emprestimoId),
+            p_line_nos: lineNos,
+            p_notes: 'Devolução parcial registrada no painel.'
+          });
+          if (rpc.error) throw rpc.error;
+          total += Number(rpc.data || 0) || 0;
         }
 
         setStatus('statusDev', `Devolução parcial registrada. Itens processados: ${total}.`, 'ok');
