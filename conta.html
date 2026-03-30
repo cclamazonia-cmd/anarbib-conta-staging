@@ -1499,6 +1499,70 @@ button[type="submit"] *,
       return refs.filter((ref) => activeReservationBibRefs.has(normalizeBibRefValue(ref)));
     }
 
+    function resolveContaReservationLibraryId() {
+      return normalizeLibraryId(currentContaIdentity?.library_id || currentContaIdentity?.default_library_id);
+    }
+
+    function isMissingHoldingReservaFunctionError(error) {
+      const msg = String(error?.message || error || "");
+      return /function|does not exist|not exist|schema cache|fn_v2_create_reserva_by_holdings/i.test(msg);
+    }
+
+    function canFallbackContaHoldingResolutionError(error) {
+      const msg = String(error?.message || error || "");
+      return /permission|policy|not exist|does not exist|relation|schema cache|column|book_holdings/i.test(msg);
+    }
+
+    async function tryResolveContaReservationHoldingIds(refs) {
+      const cleanRefs = Array.from(new Set((refs || []).map((ref) => normalizeBibRefValue(ref)).filter(Boolean)));
+      if (!cleanRefs.length) return { resolved: false, reason: "empty-refs" };
+
+      const libraryId = resolveContaReservationLibraryId();
+      if (!libraryId) return { resolved: false, reason: "no-library-id" };
+
+      const lookup = await supabase
+        .from("book_holdings")
+        .select("id,library_id,local_bib_ref")
+        .eq("library_id", libraryId)
+        .in("local_bib_ref", cleanRefs)
+        .limit(Math.max(cleanRefs.length + 2, 10));
+
+      if (lookup.error) {
+        if (canFallbackContaHoldingResolutionError(lookup.error)) {
+          return { resolved: false, reason: "holding-resolution-unavailable", error: lookup.error };
+        }
+        throw lookup.error;
+      }
+
+      const rows = Array.isArray(lookup.data) ? lookup.data : [];
+      if (!rows.length) return { resolved: false, reason: "holding-not-found", libraryId };
+
+      const exactMap = new Map();
+      for (const row of rows) {
+        const refKey = normalizeBibRefValue(row?.local_bib_ref);
+        const holdingId = Number(row?.id || 0);
+        if (!refKey || !Number.isFinite(holdingId) || holdingId <= 0) continue;
+        if (!exactMap.has(refKey)) exactMap.set(refKey, []);
+        exactMap.get(refKey).push(holdingId);
+      }
+
+      const holdingIds = [];
+      for (const ref of cleanRefs) {
+        const matches = exactMap.get(ref) || [];
+        if (matches.length !== 1) {
+          return { resolved: false, reason: matches.length > 1 ? "ambiguous-holding" : "missing-holding", libraryId, ref };
+        }
+        holdingIds.push(matches[0]);
+      }
+
+      return {
+        resolved: true,
+        source: "book_holdings",
+        libraryId,
+        holdingIds
+      };
+    }
+
     let mustChangePassword = false;
     let userIsRestricted = false;
     let isLibrarian = false;
@@ -2249,9 +2313,34 @@ button[type="submit"] *,
     }
 
     async function createReservaV2(bibRefs) {
+      const cleanRefs = Array.from(new Set((bibRefs || []).map((ref) => normalizeBibRefValue(ref)).filter(Boolean)));
+      if (!cleanRefs.length) {
+        return { data: null, error: { message: "Nenhuma referência informada." } };
+      }
+
+      try {
+        const holdingAttempt = await tryResolveContaReservationHoldingIds(cleanRefs);
+        if (holdingAttempt?.resolved && Array.isArray(holdingAttempt.holdingIds) && holdingAttempt.holdingIds.length === cleanRefs.length) {
+          const holdingRpc = await supabase.rpc("fn_v2_create_reserva_by_holdings", {
+            p_user_id: session.user.id,
+            p_holding_ids: holdingAttempt.holdingIds,
+            p_expires_at: null,
+            p_notes: "Reserva criada pela conta do(a/e) leitor(a/e)."
+          });
+          if (!holdingRpc.error) return holdingRpc;
+          if (!isMissingHoldingReservaFunctionError(holdingRpc.error) && !canFallbackContaHoldingResolutionError(holdingRpc.error)) {
+            return holdingRpc;
+          }
+        }
+      } catch (error) {
+        if (!canFallbackContaHoldingResolutionError(error)) {
+          return { data: null, error };
+        }
+      }
+
       const rpc = await supabase.rpc("fn_v2_create_reserva_by_bib_refs", {
         p_user_id: session.user.id,
-        p_bib_refs: bibRefs,
+        p_bib_refs: cleanRefs,
         p_expires_at: null,
         p_notes: "Reserva criada pela conta do(a/e) leitor(a/e)."
       });
