@@ -6327,9 +6327,7 @@ async function fetchActiveLoans(){
 
       const stageLabel = translateReservationWorkflowStage(stage);
       const skippedMsg = skipped.length ? ` ${skipped.length} item(ns) sem identificador compatível foram ignorados.` : '';
-      const compatCount = cleanRows.filter((r) => r && r.source !== 'v2').length;
-      const compatMsg = compatCount ? ` ${compatCount} item(ns) do fluxo visível foram tratados em modo compatível.` : '';
-      setStatus(targetStatusId, `${stageLabel} aplicado para ${processed} item(ns).${compatMsg}${skippedMsg}`, 'ok');
+      setStatus(targetStatusId, `${stageLabel} aplicado para ${processed} item(ns).${skippedMsg}`, 'ok');
       await refreshReservationsOnly({silent:true});
     }
 
@@ -6359,7 +6357,7 @@ async function fetchActiveLoans(){
             <td>${esc(r.titulo)}${r.autor ? `<br><span class="mini subtle">${esc(r.autor)}</span>` : ''}</td>
             <td class="mono">${esc(r.bib_ref)}</td>
             <td>${esc(r.rotulo || '—')}</td>
-            <td>${esc(fmtDateTimeBelem(r.reserva_em))} (Belém)<br><span class="pill ${esc(reservationWorkflowStageClass(r.workflow_stage))}">${esc(workflowLabel)}</span>${r.workflow_stage_updated_at ? `<br><span class="mini subtle">Atualizado: ${esc(fmtDateTimeBelem(r.workflow_stage_updated_at))} (Belém)</span>` : ''}${workflowDetail ? `<br><span class="mini subtle">${esc(workflowDetail)}</span>` : ''}${r.source !== 'v2' ? `<br><span class="mini subtle">Fluxo visível antigo: o painel tentará aplicar a etapa em modo compatível.</span>` : ''}</td>
+            <td>${esc(fmtDateTimeBelem(r.reserva_em))} (Belém)<br><span class="pill ${esc(reservationWorkflowStageClass(r.workflow_stage))}">${esc(workflowLabel)}</span>${r.workflow_stage_updated_at ? `<br><span class="mini subtle">Atualizado: ${esc(fmtDateTimeBelem(r.workflow_stage_updated_at))} (Belém)</span>` : ''}${workflowDetail ? `<br><span class="mini subtle">${esc(workflowDetail)}</span>` : ''}</td>
             <td>${esc(fmtDateTimeBelem(r.validade))} (Belém)<br><span class="pill ${esc(followUp.className)}">${esc(followUp.label)}</span><br><span class="mini subtle">${esc(followUp.detail)}</span></td>
           </tr>`;
       }).join('');
