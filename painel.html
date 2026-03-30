@@ -7240,22 +7240,7 @@ async function fetchActiveLoans(){
 
 
     async function renewLoan(loanId, targetStatusId='statusLoans'){
-      try {
-        setStatus(targetStatusId, 'Processando renovação...', 'warn', false);
-        let res = await supabase.rpc('renew_loan', { p_loan_id: loanId });
-        if (res.error && /function|not exist|não existe/i.test(String(res.error.message || ''))) {
-          res = await supabase.rpc('extend_loan_once', { p_loan_id: loanId });
-        }
-        if (res.error) throw res.error;
-        const row = Array.isArray(res.data) ? res.data[0] : res.data;
-        const newDue = row?.due_date || row?.new_due_date;
-        const message = row?.message || (newDue ? 'Renovação aplicada.' : 'Renovação concluída.');
-        setStatus(targetStatusId, message + (newDue ? ` Nova devolução: ${fmtDate(newDue)}.` : ''), 'ok');
-        await refreshLoansOnly({silent:true});
-        writePainelStateSync('loans');
-      } catch (e) {
-        setStatus(targetStatusId, 'Erro ao renovar: ' + (e.message || String(e)), 'bad', false);
-      }
+      setStatus(targetStatusId, 'Os empréstimos antigos desta base já não aceitam renovação individual pelo fluxo legacy no painel. Usa apenas as ações canônicas dos empréstimos atuais.', 'bad', false);
     }
 
     async function renewEmprestimoV2(emprestimoId, targetStatusId='statusLoans'){
