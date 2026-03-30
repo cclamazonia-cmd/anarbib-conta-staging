@@ -2445,7 +2445,9 @@ button[type="submit"] *,
     }
 
     function buildLoanRenewButtonOld(loanId, canRenew, reasonText) {
-      return `<button type="button" class="secondary mini-btn" disabled>${escapeHtml(reasonText || "Renovação indisponível neste fluxo")}</button>`;
+      return canRenew
+        ? `<button type="button" class="secondary mini-btn" data-renew-old="${loanId}">Renovar (uma única vez)</button>`
+        : `<button type="button" class="secondary mini-btn" disabled>${escapeHtml(reasonText || "Renovação indisponível")}</button>`;
     }
 
     function reservationCancelOnlyAction(row) {
@@ -2922,6 +2924,23 @@ function reservationPickupReplyActions(row) {
       return { error: lastErr, data: null };
     }
 
+    async function tryRenewOld(loanId) {
+      const candidates = [
+        ["renew_loan", { p_loan_id: loanId }],
+        ["extend_loan_once", { p_loan_id: loanId }]
+      ];
+      let lastErr = null;
+      for (const [fn, args] of candidates) {
+        const res = await supabase.rpc(fn, args);
+        if (!res.error) return res;
+        lastErr = res.error;
+        if (!/function|does not exist|não existe|No function matches/i.test(String(res.error.message || ""))) {
+          return res;
+        }
+      }
+      return { error: lastErr, data: null };
+    }
+
     function getReturnScheduleLabel(status) {
       switch (String(status || "").trim()) {
         case "devolucao_agendada": return "Devolução agendada";
@@ -3007,40 +3026,20 @@ function reservationPickupReplyActions(row) {
         .order("emprestimo_id", { ascending: false })
         .order("line_no", { ascending: true });
 
-      let oldQ = { data: [], error: null };
-      let shouldQueryLegacyLoans = false;
-      if (v2.error) {
-        shouldQueryLegacyLoans = true;
-      } else if (!(v2.data || []).length) {
-        shouldQueryLegacyLoans = true;
-      }
-
-      if (shouldQueryLegacyLoans) {
-        oldQ = await supabase
-          .schema("api")
-          .from("loans_detalhes")
-          .select("id, due_date, checkout_date, returned_date, extended_once, books")
-          .eq("user_id", session.user.id)
-          .is("returned_date", null)
-          .order("due_date", { ascending: true });
-      }
+      // fallback legacy removido
 
       let sections = [];
       let activeLoanCount = 0;
 
-      if (v2.error || oldQ.error) {
-        console.error("renderLoans errors", { v2: v2.error, oldQ: oldQ.error });
-        const bothMissing = isMissingRelationError(v2.error) && (!shouldQueryLegacyLoans || isMissingRelationError(oldQ.error));
-        if (bothMissing) {
+      if (v2.error) {
+        console.error("renderLoans errors", { v2: v2.error });
+        if (isMissingRelationError(v2.error)) {
           setChipText(chipContaEmprestimos, "Empréstimos em curso", "0");
           if (loanMsg) loanMsg.textContent = "Informação de empréstimos ainda não disponível neste ambiente.";
           loansEl.innerHTML = "<p>Os empréstimos em curso ainda não estão disponíveis neste ambiente de staging.</p>";
           return;
         }
-        const msgs = [];
-        if (v2.error) msgs.push("v2: " + (v2.error.message || JSON.stringify(v2.error)));
-        if (oldQ.error) msgs.push("loans: " + (oldQ.error.message || JSON.stringify(oldQ.error)));
-        if (loanMsg) loanMsg.textContent = "Diagnóstico empréstimos — " + msgs.join(" | ");
+        if (loanMsg) loanMsg.textContent = "Diagnóstico empréstimos — v2: " + (v2.error.message || JSON.stringify(v2.error));
       }
 
       if (!v2.error && (v2.data || []).length) {
@@ -3137,76 +3136,7 @@ function reservationPickupReplyActions(row) {
         sections.push(`<section class="mobile-section"><div class="panel-head"><h3 style="margin:0 0 6px;">Empréstimos por lote</h3><p class="small" style="margin:0;">Visualização por lote e por livro, com prazos previstos e situação detalhada. Cada empréstimo só pode ser renovado uma única vez.</p></div><div class="desktop-only"><div class="table-scroll"><table class="list-table"><thead><tr><th>Lote</th><th>Livro</th><th>Título</th><th>Referência</th><th>Rótulo</th><th>Saída em</th><th>Prazo</th><th>Situação</th><th>Ação</th></tr></thead><tbody>${rows}</tbody></table></div></div><div class="mobile-only mobile-cards">${mobileCards}</div></section>`);
       }
 
-      if (shouldQueryLegacyLoans && !oldQ.error && (oldQ.data || []).length) {
-        activeLoanCount += (oldQ.data || []).length;
-        const rows = oldQ.data.map((l) => {
-          const book = Array.isArray(l.books) ? l.books[0] : l.books;
-          const title = book?.titulo || "Livro";
-          const author = book?.autor || "";
-          const bibRef = book?.bib_ref || "";
-          const dueDate = l.due_date ? new Date(l.due_date) : null;
-          const today = new Date();
-          const today0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-          const due0 = dueDate ? new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate()) : null;
-          const diffDays = due0 ? Math.round((due0 - today0) / 86400000) : 0;
-          const overdue = diffDays < 0 ? Math.abs(diffDays) : 0;
-          const statusLine = overdue > 0 ? `Atraso: ${overdue} dia(s)` : `Faltam ${Math.max(diffDays, 0)} dia(s)`;
-          const canRenew = !userIsRestricted && !l.extended_once && overdue === 0;
-          const renewReason = userIsRestricted ? "Renovação bloqueada" : (l.extended_once ? "Renovação já utilizada" : (overdue > 0 ? "Renovação indisponível: atraso" : "Renovação indisponível"));
-          const actionHtml = buildActionGrid([
-            buildLoanRenewButtonOld(l.id, canRenew, renewReason),
-            actionSlotEmpty(),
-            actionSlotEmpty()
-          ]);
-          return `<tr>
-            <td>#${l.id}</td>
-            <td class="mono">—</td>
-            <td>${escapeHtml(title)}${author ? `<br><small>${escapeHtml(author)}</small>` : ""}</td>
-            <td class="mono">${escapeHtml(bibRef || "—")}</td>
-            <td class="mono">—</td>
-            <td>${escapeHtml(fmtDateOnly(l.checkout_date))}</td>
-            <td><b>${escapeHtml(fmtDateOnly(l.due_date))}</b></td>
-            <td>${escapeHtml(statusLine)}</td>
-            <td>${actionHtml}</td>
-          </tr>`;
-        }).join("");
-        const mobileCards = oldQ.data.map((l) => {
-          const book = Array.isArray(l.books) ? l.books[0] : l.books;
-          const title = book?.titulo || "Livro";
-          const author = book?.autor || "";
-          const bibRef = book?.bib_ref || "";
-          const dueDate = l.due_date ? new Date(l.due_date) : null;
-          const today = new Date();
-          const today0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-          const due0 = dueDate ? new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate()) : null;
-          const diffDays = due0 ? Math.round((due0 - today0) / 86400000) : 0;
-          const overdue = diffDays < 0 ? Math.abs(diffDays) : 0;
-          const statusLine = overdue > 0 ? `Atraso: ${overdue} dia(s)` : `Faltam ${Math.max(diffDays, 0)} dia(s)`;
-          const canRenew = !userIsRestricted && !l.extended_once && overdue === 0;
-          const renewReason = userIsRestricted ? "Renovação bloqueada" : (l.extended_once ? "Renovação já utilizada" : (overdue > 0 ? "Renovação indisponível: atraso" : "Renovação indisponível"));
-          const actionHtml = buildActionGrid([
-            buildLoanRenewButtonOld(l.id, canRenew, renewReason),
-            actionSlotEmpty(),
-            actionSlotEmpty()
-          ]);
-          return `
-            <article class="mobile-card">
-              <h4>${escapeHtml(title)}</h4>
-              ${author ? `<p class="author">${escapeHtml(author)}</p>` : ""}
-              <div class="mobile-kv">
-                <div class="k">Lote</div><div class="v">#${escapeHtml(l.id)}</div>
-                <div class="k">Livro</div><div class="v mono">—</div>
-                <div class="k">Referência</div><div class="v mono">${escapeHtml(bibRef || "—")}</div>
-                <div class="k">Rótulo</div><div class="v mono">—</div>
-                <div class="k">Saída em</div><div class="v">${escapeHtml(fmtDateOnly(l.checkout_date))}</div>
-                <div class="k">Prazo</div><div class="v"><b>${escapeHtml(fmtDateOnly(l.due_date))}</b></div>
-                <div class="k">Situação</div><div class="v">${escapeHtml(statusLine)}</div>
-              </div>
-              <div class="mobile-actions">${actionHtml}</div>
-            </article>`;
-        }).join("");
-        sections.push(`<section class="mobile-section"><div class="panel-head" style="margin-top:${sections.length ? '16px' : '0'};"><h3 style="margin:0 0 6px;">Outros empréstimos</h3></div><div class="desktop-only"><div class="table-scroll"><table class="list-table"><thead><tr><th>Lote</th><th>Livro</th><th>Título</th><th>Referência</th><th>Rótulo</th><th>Saída em</th><th>Prazo</th><th>Situação</th><th>Ação</th></tr></thead><tbody>${rows}</tbody></table></div></div><div class="mobile-only mobile-cards">${mobileCards}</div></section>`);
-      }
+      // fallback legacy removido
 
       if (!sections.length) {
         setChipText(chipContaEmprestimos, "Empréstimos em curso", "0");
@@ -3338,6 +3268,34 @@ function reservationPickupReplyActions(row) {
         });
       });
 
+      loansEl.querySelectorAll("[data-renew-old]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const loanId = Number(btn.getAttribute("data-renew-old"));
+          if (!loanId) return;
+          const proceed = window.confirm("Atenção: cada empréstimo só pode ser renovado uma única vez. Deseja continuar?");
+          if (!proceed) return;
+          btn.disabled = true;
+          setLoanMsgText("Processando renovação...");
+          const res = await tryRenewOld(loanId);
+          const row = Array.isArray(res.data) ? res.data[0] : res.data;
+          if (res.error) {
+            setLoanMsgText("Erro ao renovar: " + res.error.message, 2000);
+            btn.disabled = false;
+            return;
+          }
+          if (row?.ok === false) {
+            setLoanMsgText("Erro ao renovar: " + (row?.message || "Renovação indisponível."), 2000);
+            btn.disabled = false;
+            return;
+          }
+          const newDue = row?.due_date || row?.new_due_date;
+          const message = row?.message || (newDue ? "Renovação aplicada." : "Renovação concluída.");
+          setLoanMsgText(message + (newDue ? ` Nova devolução: ${fmtDateOnly(newDue)}.` : ""), 2000);
+          await renderLoans();
+          await renderHistory();
+          writeContaStateSync('loans');
+        });
+      });
     }
 
     async function renderHistory() {
