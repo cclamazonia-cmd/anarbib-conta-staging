@@ -7131,17 +7131,7 @@ async function fetchActiveLoans(){
       const ids = Array.from(new Set((loanIds || []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0)));
       if (!ids.length) return 0;
 
-      const rpc = await supabase.rpc('fn_return_loans_by_ids', {
-        p_loan_ids: ids,
-        p_notes: note
-      });
-      if (!rpc.error) return Number(rpc.data || 0) || 0;
-
-      const msg = String(rpc.error?.message || '');
-      if (/function|not exist|não existe/i.test(msg)) {
-        throw new Error('A devolução do fluxo legado não está disponível nesta base. Para os empréstimos v2, usa as ações canônicas do painel.');
-      }
-      throw rpc.error;
+      throw new Error('Os empréstimos antigos desta base já não aceitam devolução pelo fluxo legacy no painel. Usa apenas as ações canônicas dos empréstimos atuais.');
     }
 
     async function returnTotalById(){
