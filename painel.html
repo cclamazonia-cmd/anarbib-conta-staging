@@ -6378,10 +6378,10 @@ async function fetchActiveLoans(){
       tbody.innerHTML = rows.map((l) => {
         const renewBtn = l.source === 'v2'
           ? `<button class="btn mini" type="button" data-renew-emp-v2="${esc(l.emprestimo_id)}">Renovar</button>`
-          : '';
+          : `<button class="btn mini" type="button" data-renew-loan="${esc(l.loan_id)}" ${l.can_renew ? '' : 'disabled'}>Renovar</button>`;
         const returnBtn = l.source === 'v2'
           ? `<button class="btn mini" type="button" data-return-emp-v2="${esc(l.emprestimo_id)}" data-return-line-v2="${esc(l.line_no)}">Devolver</button>`
-          : '';
+          : `<button class="btn mini" type="button" data-return-loan="${esc(l.loan_id)}">Devolver</button>`;
         const scheduleLabel = getReturnScheduleActionLabel(l);
         const returnLabel = l.source === 'v2' ? translateReturnScheduleStatus(l.return_schedule_status) : '';
         const returnDetail = l.source === 'v2' ? getReturnScheduleDetail(l) : '';
@@ -6415,10 +6415,10 @@ async function fetchActiveLoans(){
       tbody.innerHTML = rows.map((b) => {
         const renewBtn = b.source === 'v2'
           ? `<button class="btn mini" type="button" data-renew-batch-v2="${esc(b.emprestimo_id)}" ${b.can_renew ? '' : 'disabled'}>Renovar empréstimo</button>`
-          : '';
+          : `<button class="btn mini" type="button" data-renew-batch-old="${esc((b.loan_ids || []).join(','))}" ${b.can_renew ? '' : 'disabled'}>Renovar empréstimo</button>`;
         const returnBtn = b.source === 'v2'
           ? `<button class="btn mini" type="button" data-return-batch-v2="${esc(b.emprestimo_id)}">Devolver empréstimo</button>`
-          : '';
+          : `<button class="btn mini" type="button" data-return-batch-old="${esc((b.loan_ids || []).join(','))}">Devolver empréstimo</button>`;
         const scheduleLabel = getReturnScheduleActionLabel(b);
         const returnLabel = b.source === 'v2' ? translateReturnScheduleStatus(b.return_schedule_status) : '';
         const returnDetail = b.source === 'v2' ? getReturnScheduleDetail(b) : '';
@@ -6639,7 +6639,8 @@ async function fetchActiveLoans(){
                      <button class="btn mini" type="button" data-schedule-return-emp-v2="${l.emprestimo_id}" data-schedule-return-line-v2="${l.line_no}">${esc(scheduleLabel)}</button>
                      ${l.return_scheduled_for ? `<button class="btn mini" type="button" data-clear-return-schedule-emp-v2="${l.emprestimo_id}" data-clear-return-schedule-line-v2="${l.line_no}">Cancelar agendamento</button>` : ''}
                      <button class="btn mini" type="button" data-missed-return-emp-v2="${l.emprestimo_id}" data-missed-return-line-v2="${l.line_no}">Não realizado</button>`
-                  : ''}
+                  : `<button class="btn mini" type="button" data-renew-loan="${l.loan_id}" ${l.can_renew ? '' : 'disabled'}>Renovar</button>
+                     <button class="btn mini" type="button" data-return-loan="${l.loan_id}">Devolver</button>`}
               </div>
             </td>
           </tr>`;
@@ -7130,7 +7131,17 @@ async function fetchActiveLoans(){
       const ids = Array.from(new Set((loanIds || []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0)));
       if (!ids.length) return 0;
 
-      throw new Error('Os empréstimos antigos desta base já não aceitam devolução pelo fluxo legacy no painel. Usa apenas as ações canônicas dos empréstimos atuais.');
+      const rpc = await supabase.rpc('fn_return_loans_by_ids', {
+        p_loan_ids: ids,
+        p_notes: note
+      });
+      if (!rpc.error) return Number(rpc.data || 0) || 0;
+
+      const msg = String(rpc.error?.message || '');
+      if (/function|not exist|não existe/i.test(msg)) {
+        throw new Error('A devolução do fluxo legado não está disponível nesta base. Para os empréstimos v2, usa as ações canônicas do painel.');
+      }
+      throw rpc.error;
     }
 
     async function returnTotalById(){
@@ -7239,7 +7250,22 @@ async function fetchActiveLoans(){
 
 
     async function renewLoan(loanId, targetStatusId='statusLoans'){
-      setStatus(targetStatusId, 'Os empréstimos antigos desta base já não aceitam renovação individual pelo fluxo legacy no painel. Usa apenas as ações canônicas dos empréstimos atuais.', 'bad', false);
+      try {
+        setStatus(targetStatusId, 'Processando renovação...', 'warn', false);
+        let res = await supabase.rpc('renew_loan', { p_loan_id: loanId });
+        if (res.error && /function|not exist|não existe/i.test(String(res.error.message || ''))) {
+          res = await supabase.rpc('extend_loan_once', { p_loan_id: loanId });
+        }
+        if (res.error) throw res.error;
+        const row = Array.isArray(res.data) ? res.data[0] : res.data;
+        const newDue = row?.due_date || row?.new_due_date;
+        const message = row?.message || (newDue ? 'Renovação aplicada.' : 'Renovação concluída.');
+        setStatus(targetStatusId, message + (newDue ? ` Nova devolução: ${fmtDate(newDue)}.` : ''), 'ok');
+        await refreshLoansOnly({silent:true});
+        writePainelStateSync('loans');
+      } catch (e) {
+        setStatus(targetStatusId, 'Erro ao renovar: ' + (e.message || String(e)), 'bad', false);
+      }
     }
 
     async function renewEmprestimoV2(emprestimoId, targetStatusId='statusLoans'){
@@ -7263,7 +7289,27 @@ async function fetchActiveLoans(){
     async function renewBatchOld(loanIds, targetStatusId='statusBatches'){
       const ids = Array.from(new Set((loanIds || []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0)));
       if (!ids.length) return setStatus(targetStatusId, 'Nenhum item válido nesse empréstimo.', 'warn');
-      setStatus(targetStatusId, 'Os empréstimos antigos desta base já não aceitam renovação agrupada pelo fluxo legacy no painel. Usa apenas as ações canônicas dos empréstimos atuais.', 'bad', false);
+      try {
+        setStatus(targetStatusId, 'Processando renovação do empréstimo...', 'warn', false);
+        let renewed = 0;
+        let lastDue = null;
+        for (const loanId of ids) {
+          let res = await supabase.rpc('renew_loan', { p_loan_id: loanId });
+          if (res.error && /function|not exist|não existe/i.test(String(res.error.message || ''))) {
+            res = await supabase.rpc('extend_loan_once', { p_loan_id: loanId });
+          }
+          if (res.error) throw res.error;
+          const row = Array.isArray(res.data) ? res.data[0] : res.data;
+          if (row?.ok === false) throw new Error(row?.message || 'Renovação recusada.');
+          renewed += 1;
+          lastDue = row?.due_date || row?.new_due_date || lastDue;
+        }
+        setStatus(targetStatusId, `Renovação do empréstimo aplicada. Itens processados: ${renewed}.` + (lastDue ? ` Nova devolução: ${fmtDate(lastDue)}.` : ''), 'ok');
+        await refreshLoansOnly({silent:true});
+        if (renewed > 0) writePainelStateSync('loans');
+      } catch (e) {
+        setStatus(targetStatusId, 'Erro ao renovar empréstimo: ' + (e.message || String(e)), 'bad', false);
+      }
     }
 
     async function returnBatchOld(loanIds, targetStatusId='statusBatches'){
@@ -7585,17 +7631,7 @@ async function fetchActiveLoans(){
           return;
         }
 
-        const renewBatchOldBtn = ev.target.closest('[data-renew-batch-old]');
-        if (renewBatchOldBtn) {
-          const loanIds = String(renewBatchOldBtn.getAttribute('data-renew-batch-old') || '').split(',').map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0);
-          if (!loanIds.length || renewBatchOldBtn.disabled) return;
-          renewBatchOldBtn.disabled = true;
-          await renewBatchOld(loanIds, 'statusBatches');
-          renewBatchOldBtn.disabled = false;
-          return;
-        }
-
-        const returnBatchV2Btn = ev.target.closest('[data-return-batch-v2]');
+const returnBatchV2Btn = ev.target.closest('[data-return-batch-v2]');
         if (returnBatchV2Btn) {
           const emprestimoId = Number(returnBatchV2Btn.getAttribute('data-return-batch-v2'));
           if (!emprestimoId) return;
@@ -7618,17 +7654,7 @@ async function fetchActiveLoans(){
           return;
         }
 
-        const returnBatchOldBtn = ev.target.closest('[data-return-batch-old]');
-        if (returnBatchOldBtn) {
-          const loanIds = String(returnBatchOldBtn.getAttribute('data-return-batch-old') || '').split(',').map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0);
-          if (!loanIds.length) return;
-          returnBatchOldBtn.disabled = true;
-          await returnBatchOld(loanIds, 'statusBatches');
-          returnBatchOldBtn.disabled = false;
-          return;
-        }
-
-        const renewV2Btn = ev.target.closest('[data-renew-emp-v2]');
+const renewV2Btn = ev.target.closest('[data-renew-emp-v2]');
         if (renewV2Btn) {
           const emprestimoId = Number(renewV2Btn.getAttribute('data-renew-emp-v2'));
           if (!emprestimoId || renewV2Btn.disabled) return;
@@ -7639,18 +7665,7 @@ async function fetchActiveLoans(){
           return;
         }
 
-        const renewBtn = ev.target.closest('[data-renew-loan]');
-        if (renewBtn) {
-          const loanId = Number(renewBtn.getAttribute('data-renew-loan'));
-          if (!loanId || renewBtn.disabled) return;
-          renewBtn.disabled = true;
-          const target = renewBtn.closest('#profilePaneEmprestimos') ? 'statusPerfil' : 'statusLoans';
-          await renewLoan(loanId, target);
-          renewBtn.disabled = false;
-          return;
-        }
-
-        const returnV2Btn = ev.target.closest('[data-return-emp-v2]');
+const returnV2Btn = ev.target.closest('[data-return-emp-v2]');
         if (returnV2Btn) {
           const emprestimoId = Number(returnV2Btn.getAttribute('data-return-emp-v2'));
           const lineNo = Number(returnV2Btn.getAttribute('data-return-line-v2'));
@@ -7677,27 +7692,7 @@ async function fetchActiveLoans(){
           return;
         }
 
-        const returnBtn = ev.target.closest('[data-return-loan]');
-        if (returnBtn) {
-          const loanId = Number(returnBtn.getAttribute('data-return-loan'));
-          if (!loanId) return;
-          returnBtn.disabled = true;
-          try {
-            const total = await markLoansReturned([loanId]);
-            const target = returnBtn.closest('#profilePaneEmprestimos') ? 'statusPerfil' : 'statusLoans';
-            setStatus(target, `Devolução registrada. Itens processados: ${total}.`, 'ok');
-            await refreshLoansOnly({silent:true});
-            if (total > 0) writePainelStateSync('loans');
-          } catch (e) {
-            const target = returnBtn.closest('#profilePaneEmprestimos') ? 'statusPerfil' : 'statusLoans';
-            setStatus(target, e.message || String(e), 'bad', false);
-          } finally {
-            returnBtn.disabled = false;
-          }
-          return;
-        }
-
-        const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
+const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
         if (confirmProfile) {
           const id = Number(confirmProfile.getAttribute('data-profile-confirm-reserva'));
           if (!id) return;
