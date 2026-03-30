@@ -2444,10 +2444,6 @@ button[type="submit"] *,
         : `<button type="button" class="secondary mini-btn" disabled>Renovação bloqueada</button>`;
     }
 
-    function buildLoanRenewButtonOld(loanId, canRenew, reasonText) {
-      return `<button type="button" class="secondary mini-btn" disabled>${escapeHtml(reasonText || "Renovação indisponível neste fluxo")}</button>`;
-    }
-
     function reservationCancelOnlyAction(row) {
       const reservaId = Number(row?.reserva_id || row?.id);
       const bibRef = normalizeBibRefValue(row?.bib_ref);
