@@ -5564,7 +5564,6 @@ function belemNowParts(){
       const normalizeReservationWorkflowStageValue = (value) => {
         const raw = String(value || '').trim().toLowerCase();
         if (!raw || ['ativa', 'ativo', 'active'].includes(raw)) return 'solicitada';
-        if (['aviso_enviado'].includes(raw)) return 'pronta_para_retirada';
         if (['convertida_em_emprestimo', 'converted_to_loan'].includes(raw)) return 'retirada_efetivada';
         if (['solicitada', 'em_preparacao', 'pronta_para_retirada', 'retirada_a_combinar', 'retirada_agendada', 're-retirada_agendada', 'nao_retirada', 'liberada_para_circulacao', 'retirada_efetivada', 'cancelada_leitor', 'cancelada_biblioteca', 'expirada'].includes(raw)) return raw;
         return 'solicitada';
@@ -5585,19 +5584,15 @@ function belemNowParts(){
         return !['liberada_para_circulacao', 'retirada_efetivada', 'cancelada_leitor', 'cancelada_biblioteca', 'expirada'].includes(stage);
       };
 
-      const buildReservationSyntheticId = (reservaId, lineNo, fallbackId, index) => {
-        const direct = Number(fallbackId);
-        if (Number.isFinite(direct) && direct > 0) return direct;
-        const rid = Number(reservaId);
-        const line = Number(lineNo);
-        if (Number.isFinite(rid) && rid > 0 && Number.isFinite(line) && line > 0) {
-          return Number(`${rid}${String(line).padStart(3, '0')}`);
-        }
-        return Number(index + 1);
-      };
+      const buildReservationSyntheticId = (reservaId, lineNo) => Number(`${reservaId}${String(lineNo).padStart(3, '0')}`);
 
       const mapV2ReservationRows = async (rows, sourceName) => {
-        const filteredRows = (rows || []).filter(reservationLooksActiveForWorkflow);
+        const filteredRows = (rows || []).filter((row) => {
+          if (!reservationLooksActiveForWorkflow(row)) return false;
+          const reservaId = Number(firstFilledValue(row?.reserva_id, row?.reservation_id, row?.id, 0));
+          const lineNo = Number(firstFilledValue(row?.line_no, row?.reservation_line_no, row?.item_no, 1)) || 1;
+          return Number.isFinite(reservaId) && reservaId > 0 && Number.isFinite(lineNo) && lineNo > 0;
+        });
         const profileIds = filteredRows.map((row) => firstFilledValue(row?.user_id, row?.reader_id, row?.profile_id, row?.user_uuid, row?.reader_uuid, null)).filter(Boolean);
         const profilesMap = await loadProfilesByIds(profileIds);
         return filteredRows.map((row, index) => {
@@ -5611,7 +5606,7 @@ function belemNowParts(){
           const workflowUpdatedAt = firstFilledValue(row?.workflow_stage_updated_at, row?.last_stage_changed_at, row?.updated_at, createdAt, null) || createdAt;
           const validadeRaw = firstFilledValue(row?.validade, row?.valid_until, row?.expires_at, row?.pickup_until, row?.pickup_expires_at, row?.deadline_at, null);
           return {
-            id: buildReservationSyntheticId(reservaId, lineNo, row?.id, index),
+            id: buildReservationSyntheticId(reservaId, lineNo),
             reserva_id: reservaId,
             sub_id: String(firstFilledValue(row?.sub_id, row?.reservation_sub_id, row?.item_sub_id, `${reservaId}.${lineNo}`)),
             line_no: lineNo,
@@ -6155,24 +6150,10 @@ async function fetchActiveLoans(){
       return payload;
     }
 
-    function reservationCanUseV2WorkflowCompat(row){
-      if (!row || row.source !== 'v2') return false;
-      const reservaId = Number(row?.reserva_id);
-      const lineNo = Number(row?.line_no || 1);
-      return Number.isFinite(reservaId)
-        && reservaId > 0
-        && Number.isFinite(lineNo)
-        && lineNo > 0;
-    }
-
     async function setReservationWorkflowStage(stage, rows, { note='', pickupScheduledFor=null, targetStatusId='statusRes' } = {}){
-      const cleanRows = (rows || []).filter((r) => reservationCanUseV2WorkflowCompat(r));
-      const skipped = (rows || []).filter((r) => !reservationCanUseV2WorkflowCompat(r));
+      const cleanRows = (rows || []).filter((r) => r && r.source === 'v2');
       if (!cleanRows.length) {
-        const msg = skipped.length
-          ? 'As etapas intermediárias precisam de linhas com identificador de reserva compatível. As linhas selecionadas não puderam ser preparadas para o fluxo v2.'
-          : 'Selecione pelo menos 1 reserva ativa.';
-        setStatus(targetStatusId, msg, 'warn');
+        setStatus(targetStatusId, 'Selecione pelo menos 1 reserva ativa.', 'warn');
         return;
       }
       if (!reservationCanMoveToStage(cleanRows, stage)) {
@@ -6201,8 +6182,7 @@ async function fetchActiveLoans(){
       }
 
       const stageLabel = translateReservationWorkflowStage(stage);
-      const skippedMsg = skipped.length ? ` ${skipped.length} item(ns) sem identificador compatível foram ignorados.` : '';
-      setStatus(targetStatusId, `${stageLabel} aplicado para ${processed} item(ns).${skippedMsg}`, 'ok');
+      setStatus(targetStatusId, `${stageLabel} aplicado para ${processed} item(ns).`, 'ok');
       await refreshReservationsOnly({silent:true});
     }
 
