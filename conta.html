@@ -2189,8 +2189,7 @@ button[type="submit"] *,
       const clean = Array.from(new Set((refs || []).map((r) => String(r || "").trim()).filter(Boolean)));
       if (!clean.length) return new Map();
       const { data } = await supabase
-        .schema("api")
-        .from("books_public")
+        .from("v_book_detail_public_v2")
         .select("bib_ref, titulo, autor, editora, ano")
         .in("bib_ref", clean);
       return new Map((data || []).map((row) => [String(row.bib_ref), row]));
