@@ -151,6 +151,10 @@
     }
     .small{color:#cfcfcf;font-size:.9rem}
     .rowbtn{display:flex;gap:10px;align-items:center;justify-content:flex-start;flex-wrap:wrap}
+    .auth-inline-actions{display:flex;gap:16px;align-items:center;justify-content:flex-start;flex-wrap:nowrap;margin-top:10px}
+    .auth-inline-actions > button,.auth-inline-actions > .btn{width:auto;flex:0 0 auto}
+    .auth-inline-actions > .btn{min-width:160px}
+    .auth-inline-actions > button[type="submit"]{min-width:140px}
     .msg{
       margin-top:10px;
       font-size:.92rem;
@@ -167,6 +171,8 @@
       .actions{width:100%}
       .actions .btn, .actions button{width:auto;max-width:100%}
       .rowbtn > *{width:100%}
+      .auth-inline-actions{gap:12px;flex-wrap:wrap}
+      .auth-inline-actions > button,.auth-inline-actions > .btn{width:auto}
     }
   </style>
 
@@ -216,11 +222,10 @@
         <label for="password">Senha</label>
         <input type="password" id="password" autocomplete="current-password" required />
 
-        <div class="rowbtn" style="margin-top:10px;">
+        <div class="auth-inline-actions">
+          <button type="submit">Entrar</button>
           <button type="button" id="toggleLoginPw" class="btn">Mostrar senha</button>
         </div>
-
-        <button type="submit">Entrar</button>
       </form>
 
       <p id="msg" class="msg" aria-live="polite"></p>
