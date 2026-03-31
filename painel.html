@@ -8047,6 +8047,8 @@ function initPartnerProbeUi() {
     const hasBaseUrl = !!state.baseUrl;
     const hasReport = !!String(reportEl.value || '').trim();
     const hasSeed = !!String(seedEl.value || '').trim();
+    const missingCoreFieldsMessage = 'Preenche nome público, slug e base URL primeiro.';
+    const currentMessage = String(document.getElementById('partnerProbeMessage')?.textContent || '').trim();
 
     if (generateBtn) generateBtn.disabled = partnerActionBusy || !hasCoreFields;
     if (saveBtn) saveBtn.disabled = partnerActionBusy || !hasCoreFields;
@@ -8054,6 +8056,12 @@ function initPartnerProbeUi() {
     if (openBaseBtn) openBaseBtn.disabled = !hasBaseUrl;
     if (copyReportBtn) copyReportBtn.disabled = !hasReport;
     if (copySeedBtn) copySeedBtn.disabled = !hasSeed;
+
+    if (!partnerActionBusy && !hasCoreFields && currentMessage !== missingCoreFieldsMessage) {
+      setPartnerProbeMessage(missingCoreFieldsMessage, 'warn');
+    } else if (!partnerActionBusy && hasCoreFields && currentMessage === missingCoreFieldsMessage) {
+      setPartnerProbeMessage('', 'info');
+    }
   }
 
   function updatePartnerGovernanceReadout() {
@@ -8072,7 +8080,7 @@ function initPartnerProbeUi() {
       if (!keepLiveResults || !currentPartnerCapabilityRows.length) reportEl.value = '';
       seedEl.value = '';
       updatePartnerGovernanceReadout();
-      setPartnerProbeMessage('Preenche pelo menos nome público, slug e base URL.', 'warn');
+      setPartnerProbeMessage('Preenche nome público, slug e base URL primeiro.', 'warn');
       return null;
     }
 
