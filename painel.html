@@ -5561,18 +5561,10 @@ function belemNowParts(){
     }
 
     async function fetchActiveReservations(){
-      const isMissingReservationSourceError = (error) => {
-        const msg = String(error?.message || error?.details || error || '').toLowerCase();
-        return msg.includes('does not exist')
-          || msg.includes('could not find')
-          || msg.includes('relation')
-          || msg.includes('schema cache')
-          || msg.includes('permission denied');
-      };
-
       const normalizeReservationWorkflowStageValue = (value) => {
         const raw = String(value || '').trim().toLowerCase();
         if (!raw || ['ativa', 'ativo', 'active'].includes(raw)) return 'solicitada';
+        if (['aviso_enviado'].includes(raw)) return 'pronta_para_retirada';
         if (['convertida_em_emprestimo', 'converted_to_loan'].includes(raw)) return 'retirada_efetivada';
         if (['solicitada', 'em_preparacao', 'pronta_para_retirada', 'retirada_a_combinar', 'retirada_agendada', 're-retirada_agendada', 'nao_retirada', 'liberada_para_circulacao', 'retirada_efetivada', 'cancelada_leitor', 'cancelada_biblioteca', 'expirada'].includes(raw)) return raw;
         return 'solicitada';
@@ -5647,40 +5639,12 @@ function belemNowParts(){
         }).sort((a, b) => String(b.reserva_em || '').localeCompare(String(a.reserva_em || '')));
       };
 
-      const tryReservationV2Sources = [
-        { schema: 'api', relation: 'reserva_itens_followup_ui' },
-        { schema: 'api', relation: 'reserva_itens_ui' },
-        { schema: 'public', relation: 'v_reservas_ativas_v2' },
-        { schema: 'public', relation: 'v_reserva_itens_v2' },
-        { schema: 'public', relation: 'v_reserva_linhas_v2' },
-        { schema: 'public', relation: 'reserva_linhas_v2' },
-      ];
-
-      let v2SourceResolved = false;
-      for (const sourceDef of tryReservationV2Sources) {
-        const sourceName = sourceDef?.schema === 'api'
-          ? `api.${sourceDef.relation}`
-          : String(sourceDef?.relation || sourceDef || '').trim();
-        const sourceQuery = sourceDef?.schema === 'api'
-          ? apiFrom('api', sourceDef.relation)
-          : supabase.from(sourceName);
-        const attempt = await sourceQuery
-          .select('*')
-          .limit(800);
-        if (attempt.error) {
-          if (isMissingReservationSourceError(attempt.error)) continue;
-          throw attempt.error;
-        }
-        const mapped = await mapV2ReservationRows(attempt.data || [], sourceName);
-        if (!mapped.length) continue;
-        activeReservations = mapped;
-        v2SourceResolved = true;
-        break;
-      }
-
-      if (!v2SourceResolved) {
-        activeReservations = [];
-      }
+      const sourceName = 'api.reserva_itens_followup_ui';
+      const attempt = await apiFrom('api', 'reserva_itens_followup_ui')
+        .select('*')
+        .limit(800);
+      if (attempt.error) throw attempt.error;
+      activeReservations = await mapV2ReservationRows(attempt.data || [], sourceName);
       clearStatus('statusRes');
 
       selectedReservaIds = new Set(
@@ -5851,7 +5815,6 @@ async function fetchActiveLoans(){
       return ({
         solicitada: 'Solicitada',
         em_preparacao: 'Em preparação',
-        aviso_enviado: 'Livro pronto para retirada (legado)',
         retirada_a_combinar: 'Retirada a combinar',
         retirada_agendada: 'Retirada agendada',
         're-retirada_agendada': 'Retirada reagendada',
@@ -5869,7 +5832,6 @@ async function fetchActiveLoans(){
       return ({
         solicitada: 'warn',
         em_preparacao: 'warn',
-        aviso_enviado: 'ok',
         retirada_a_combinar: 'warn',
         retirada_agendada: 'ok',
         're-retirada_agendada': 'ok',
@@ -5940,7 +5902,6 @@ async function fetchActiveLoans(){
         're-retirada_agendada': ['re-retirada_agendada', 'retirada_a_combinar', 'nao_retirada'],
         nao_retirada: ['retirada_a_combinar', 're-retirada_agendada', 'liberada_para_circulacao'],
         liberada_para_circulacao: [],
-        aviso_enviado: ['pronta_para_retirada'],
       };
       return matrix[current] || [];
     }
@@ -6214,10 +6175,6 @@ async function fetchActiveLoans(){
         setStatus(targetStatusId, msg, 'warn');
         return;
       }
-      if (String(stage || '') === 'aviso_enviado') {
-        setStatus(targetStatusId, 'A etapa “Aviso enviado” foi retirada do fluxo vivo. Use “Pronta para retirada”.', 'warn');
-        return;
-      }
       if (!reservationCanMoveToStage(cleanRows, stage)) {
         setStatus(targetStatusId, `A etapa selecionada não é válida para o estado atual das reservas selecionadas.`, 'warn');
         return;
@@ -6229,69 +6186,18 @@ async function fetchActiveLoans(){
 
       const groups = groupBy(cleanRows, (r) => r.reserva_id);
       let processed = 0;
-      const rpcAttempts = [
-        {
-          name: 'fn_v2_set_reserva_linhas_workflow',
-          args: (reservaId, lineNos) => ({
-            p_reserva_id: Number(reservaId),
-            p_line_nos: lineNos,
-            p_stage: stage,
-            p_note: note || null,
-            p_pickup_scheduled_for: pickupScheduledFor || null,
-          })
-        },
-        {
-          name: 'fn_v2_set_reserva_linhas_workflow_stage',
-          args: (reservaId, lineNos) => ({
-            p_reserva_id: Number(reservaId),
-            p_line_nos: lineNos,
-            p_workflow_stage: stage,
-            p_workflow_note: note || null,
-            p_pickup_scheduled_for: pickupScheduledFor || null,
-          })
-        }
-      ];
 
       for (const [reservaId, items] of groups.entries()) {
         const lineNos = items.map((i) => Number(i.line_no));
-        let done = false;
-        let lastErr = null;
-
-        for (const rpcAttempt of rpcAttempts) {
-          const rpc = await supabase.rpc(rpcAttempt.name, rpcAttempt.args(reservaId, lineNos));
-          if (!rpc.error) {
-            processed += Array.isArray(rpc.data) ? (rpc.data.length || lineNos.length) : (Number(rpc.data || 0) || lineNos.length);
-            done = true;
-            break;
-          }
-          lastErr = rpc.error;
-          if (!isMissingFunctionError(rpc.error) && !canUseDirectReservationWorkflowFallback(stage, rpc.error)) throw rpc.error;
-        }
-
-        if (done) continue;
-
-        if (!canUseDirectReservationWorkflowFallback(stage, lastErr)) {
-          if (String(stage || '') === 're-retirada_agendada') {
-            throw new Error('Reagendar retirada ainda não está disponível no backend atual via RPC. O painel não pode gravar isso direto na tabela protegida.');
-          }
-          throw (lastErr || new Error('Não foi possível aplicar a etapa selecionada.'));
-        }
-
-        const base = workflowPayloadForStage(stage, note, pickupScheduledFor);
-        const rowsToUpsert = lineNos.map((lineNo) => ({
-          reserva_id: Number(reservaId),
-          line_no: Number(lineNo),
-          created_at: nowISO(),
-          created_by: session?.user?.id || null,
-          ...base,
-        }));
-
-        const up = await supabase
-          .from('reserva_item_workflow_v2')
-          .upsert(rowsToUpsert, { onConflict: 'reserva_id,line_no' })
-          .select('reserva_id,line_no');
-        if (up.error) throw (lastErr && !isMissingFunctionError(lastErr) ? lastErr : up.error);
-        processed += (up.data || []).length || lineNos.length;
+        const rpc = await supabase.rpc('fn_v2_set_reserva_linhas_workflow', {
+          p_reserva_id: Number(reservaId),
+          p_line_nos: lineNos,
+          p_stage: stage,
+          p_note: note || null,
+          p_pickup_scheduled_for: pickupScheduledFor || null,
+        });
+        if (rpc.error) throw rpc.error;
+        processed += Array.isArray(rpc.data) ? (rpc.data.length || lineNos.length) : (Number(rpc.data || 0) || lineNos.length);
       }
 
       const stageLabel = translateReservationWorkflowStage(stage);
@@ -6815,19 +6721,6 @@ async function fetchActiveLoans(){
     function isMissingFunctionError(error){
       const msg = String(error?.message || error || '');
       return /function|does not exist|not exist|não existe|Could not find the function/i.test(msg);
-    }
-
-    function canFallbackReservationWorkflowStageError(error, stage){
-      const normalizedStage = String(stage || '');
-      if (normalizedStage !== 'pronta_para_retirada') return false;
-      const msg = String(error?.message || error || '');
-      return /invalid input value|enum|constraint|check constraint|violates|workflow[_ ]stage|p_stage|p_workflow_stage/i.test(msg);
-    }
-
-    function canUseDirectReservationWorkflowFallback(stage, error){
-      const normalizedStage = String(stage || '');
-      if (normalizedStage !== 'pronta_para_retirada') return false;
-      return isMissingFunctionError(error) || canFallbackReservationWorkflowStageError(error, normalizedStage);
     }
 
     async function loadBooksForLoanBibRefs(refs){
