@@ -6723,58 +6723,7 @@ async function fetchActiveLoans(){
       return /function|does not exist|not exist|não existe|Could not find the function/i.test(msg);
     }
 
-    async function loadBooksForLoanBibRefs(refs){
-      const clean = Array.from(new Set((refs || []).map((r) => String(r || '').trim()).filter(Boolean)));
-      if (!clean.length) throw new Error('Nenhum livro informado para o empréstimo.');
-      const { data, error } = await supabase
-        .from('books')
-        .select('id,bib_ref,titulo,loanable')
-        .in('bib_ref', clean);
-      if (error) throw error;
-      const rows = data || [];
-      const byRef = new Map(rows.map((row) => [String(row.bib_ref), row]));
-      const missing = clean.filter((ref) => !byRef.has(ref));
-      if (missing.length) throw new Error('Livros não encontrados para empréstimo: ' + missing.join(', '));
-      const unloanable = clean.filter((ref) => byRef.get(ref)?.loanable !== true);
-      if (unloanable.length) throw new Error('Livros indisponíveis para empréstimo: ' + unloanable.join(', '));
-      return clean.map((ref) => byRef.get(ref));
-    }
-
-    async function ensureBooksCurrentlyAvailable(bookIds, bibRefs){
-      return await ensureBooksCurrentlyAvailableHybrid(bookIds, bibRefs);
-    }
-
     async function countOpenLoansForUser(userId){
-      return await countOpenLoansForUserHybrid(userId);
-    }
-
-    async function insertCurrentLoansForUser(userId, bibRefs, note='Saída registrada no painel.', dueAt=null){
-      return await insertCurrentLoansForUserV2First(userId, bibRefs, note, dueAt);
-    }
-
-
-    async function ensureBooksCurrentlyAvailableHybrid(bookIds, bibRefs){
-      const cleanRefs = Array.from(new Set((bibRefs || []).map((v) => String(v || '').trim()).filter(Boolean)));
-      if (!cleanRefs.length) return;
-
-      const v2 = await apiFrom('api', 'emprestimo_itens_ui')
-        .select('bib_ref')
-        .in('bib_ref', cleanRefs)
-        .eq('item_status', 'aberto');
-
-      if (v2.error) throw v2.error;
-
-      const unavailable = new Set();
-      (v2.data || []).forEach((row) => {
-        const ref = String(row?.bib_ref || '').trim();
-        if (ref) unavailable.add(ref);
-      });
-
-      const conflictRefs = Array.from(unavailable).filter(Boolean);
-      if (conflictRefs.length) throw new Error('Livros indisponíveis para empréstimo: ' + conflictRefs.join(', '));
-    }
-
-    async function countOpenLoansForUserHybrid(userId){
       const v2 = await apiFrom('api', 'emprestimo_itens_ui')
         .select('emprestimo_item_id', { count: 'exact', head: true })
         .eq('user_id', userId)
@@ -6891,19 +6840,6 @@ async function fetchActiveLoans(){
       throw res.error;
     }
 
-    async function tryCreateEmprestimoV2ByBibRefs(userId, bibRefs, note='Saída registrada no painel.', dueDate=null){
-      const res = await supabase.rpc('fn_v2_create_emprestimo_by_bib_refs', {
-        p_user_id: userId,
-        p_bib_refs: bibRefs,
-        p_due_at: dueDate,
-        p_notes: note
-      });
-      if (!res.error) return normalizeEmprestimoV2CreateResult(res.data, dueDate);
-      if (isMissingFunctionError(res.error)) {
-        throw new Error('A função canônica de criação de empréstimo v2 não está disponível: fn_v2_create_emprestimo_by_bib_refs(p_user_id, p_bib_refs, p_due_at, p_notes).');
-      }
-      throw res.error;
-    }
 
     async function insertCurrentLoansForUserV2First(userId, bibRefs, note='Saída registrada no painel.', dueAt=null){
       const cleanRefs = Array.from(new Set((bibRefs || []).map((r) => String(r || '').trim()).filter(Boolean)));
@@ -6928,7 +6864,7 @@ async function fetchActiveLoans(){
           throw new Error('Não há exemplar disponível no momento para esta referência na biblioteca ativa: ' + unavailable.join(', '));
         }
 
-        const openCount = await countOpenLoansForUserHybrid(userId);
+        const openCount = await countOpenLoansForUser(userId);
         if (openCount + localRows.length > 5) {
           throw new Error('Limite de empréstimos ativos = 5: devolva algo antes de registrar nova saída.');
         }
@@ -6942,15 +6878,15 @@ async function fetchActiveLoans(){
         );
       }
 
-      const books = await loadBooksForLoanBibRefs(cleanRefs);
-      const canonicalRefs = books.map((b) => String(b.bib_ref));
-      await ensureBooksCurrentlyAvailableHybrid(books.map((b) => b.id), canonicalRefs);
-      const openCount = await countOpenLoansForUserHybrid(userId);
-      if (openCount + books.length > 5) {
-        throw new Error('Limite de empréstimos ativos = 5: devolva algo antes de registrar nova saída.');
+      if (localHoldingAttempt?.reason === 'holding-resolution-unavailable') {
+        throw new Error('A resolução local por holdings não está disponível nesta base. O painel agora exige a cadeia canônica holdings-first para registrar saídas.');
       }
-      const dueDate = dueAt || addDays(todayISO(), loanDaysByCount(books.length));
-      return await tryCreateEmprestimoV2ByBibRefs(userId, canonicalRefs, note, dueDate);
+
+      if (localHoldingAttempt?.reason === 'local-ref-not-found') {
+        throw new Error('Referência(s) local(is) sem holding correspondente na biblioteca ativa: ' + (localHoldingAttempt.missing || []).join(', '));
+      }
+
+      throw new Error('Não foi possível resolver as holdings locais para registrar a saída pelo fluxo canônico atual.');
     }
 
     async function registerLoan(){
