@@ -5649,6 +5649,11 @@ function belemNowParts(){
 
       const tryReservationV2Sources = [
         { schema: 'api', relation: 'reserva_itens_followup_ui' },
+        { schema: 'api', relation: 'reserva_itens_ui' },
+        { schema: 'public', relation: 'v_reservas_ativas_v2' },
+        { schema: 'public', relation: 'v_reserva_itens_v2' },
+        { schema: 'public', relation: 'v_reserva_linhas_v2' },
+        { schema: 'public', relation: 'reserva_linhas_v2' },
       ];
 
       let v2SourceResolved = false;
@@ -5811,94 +5816,7 @@ async function fetchActiveLoans(){
         return;
       }
 
-      let qv2 = await apiFrom('api', 'emprestimo_itens_ui')
-        .select('*')
-        .eq('item_status', 'aberto')
-        .order('due_at', { ascending:true })
-        .order('emprestimo_id', { ascending:true })
-        .order('line_no', { ascending:true })
-        .limit(800);
-
-
-      if (!qv2.error && (qv2.data || []).length) {
-        const rows = qv2.data || [];
-        const profilesMap = await loadProfilesByIds(rows.map((r) => r.user_id));
-
-        const mappedV2Loans = rows.map((r) => {
-          const user = profilesMap.get(String(r.user_id)) || {};
-          const dueSource = r.extended_until || r.due_at;
-          const due = dueSource ? new Date(String(dueSource) + 'T00:00:00') : null;
-          const today = new Date(todayISO() + 'T00:00:00');
-          const overdueDays = due ? Math.floor((today - due) / 86400000) : 0;
-          return {
-            id: Number(`${r.emprestimo_id}${String(r.line_no).padStart(2, '0')}`),
-            loan_id: Number(`${r.emprestimo_id}${String(r.line_no).padStart(2, '0')}`),
-            source: 'v2',
-            emprestimo_id: Number(r.emprestimo_id),
-            line_no: Number(r.line_no),
-            batch_key: `v2-${r.emprestimo_id}`,
-            batch_label: String(r.emprestimo_id),
-            sub_id: r.sub_id || `${r.emprestimo_id}.${r.line_no}`,
-            user_id: r.user_id,
-            user_name: profileNameWithPublicId(user),
-            user_email: user.email || '—',
-            titulo: r.titulo || 'Livro',
-            autor: r.autor || '',
-            bib_ref: r.bib_ref || '—',
-            checkout_date: r.emprestimo_created_at,
-            due_date: dueSource,
-            extended_until: r.extended_until || r.due_at || null,
-            extension_note: r.extension_note || '',
-            returned_date: r.returned_at,
-            return_scheduled_for: r.return_scheduled_for || null,
-            return_schedule_status: r.return_schedule_status || (r.returned_at ? 'devolucao_realizada' : 'sem_agendamento'),
-            return_completed_at: r.return_completed_at || null,
-            return_missed_at: r.return_missed_at || null,
-            extended_once: !!r.extended_once,
-            can_renew: overdueDays <= 0 && !r.extended_once,
-            status_text: overdueDays > 0 ? `Atrasado (${overdueDays} dia(s))` : (r.extended_once ? 'Renovado' : 'Em curso'),
-            status_class: overdueDays > 0 ? 'bad' : (r.extended_once ? 'warn' : 'ok'),
-            raw: r,
-          };
-        });
-
-        activeLoans = dedupeBy(mappedV2Loans, (x) => `${x.source}|${x.emprestimo_id}|${x.line_no}|${x.sub_id}`);
-
-        const groups = groupBy(activeLoans, (x) => x.emprestimo_id);
-        activeBatches = Array.from(groups.entries()).map(([emprestimoId, items]) => {
-          const returnStatuses = dedupeBy(items.map((x) => x.return_schedule_status || 'sem_agendamento'), (x) => x);
-          const returnMoments = dedupeBy(items.map((x) => x.return_scheduled_for || ''), (x) => x).filter(Boolean);
-          const extensionNotes = dedupeBy(items.map((x) => x.extension_note || '').filter(Boolean), (x) => x);
-          return {
-            batch_key: `v2-${emprestimoId}`,
-            batch_label: String(emprestimoId),
-            user_id: items[0]?.user_id || null,
-            user_name: items[0]?.user_name || '—',
-            user_email: items[0]?.user_email || '—',
-            quantity: items.length,
-            sub_ids: dedupeBy(items.map((x) => x.sub_id), (x) => x),
-            line_nos: dedupeBy(items.map((x) => x.line_no), (x) => x),
-            bib_refs: dedupeBy(items.map((x) => x.bib_ref), (x) => x),
-            checkout_date: items[0]?.checkout_date || null,
-            due_date: items[0]?.due_date || null,
-            extended_until: items[0]?.extended_until || items[0]?.due_date || null,
-            extension_note: extensionNotes.join(' · '),
-            return_schedule_status: returnStatuses.length === 1 ? returnStatuses[0] : null,
-            return_schedule_mixed: returnStatuses.length > 1 || returnMoments.length > 1,
-            return_scheduled_for: returnMoments.length === 1 ? returnMoments[0] : null,
-            status_text: items.some((x) => x.status_class === 'bad') ? 'Com atraso' : (items.some((x) => x.extended_once) ? 'Renovado' : 'Em curso'),
-            status_class: items.some((x) => x.status_class === 'bad') ? 'bad' : (items.some((x) => x.extended_once) ? 'warn' : 'ok'),
-            can_renew: items.every((x) => !!x.can_renew),
-            source: 'v2',
-            loan_ids: dedupeBy(items.map((x) => x.loan_id), (x) => x),
-            emprestimo_id: Number(emprestimoId),
-          };
-        });
-
-        return;
-      }
-
-      // fallback legacy removido
+      // fallback ui_fix removido
       activeLoans = [];
       activeBatches = [];
     }
@@ -6946,11 +6864,10 @@ async function fetchActiveLoans(){
       const cleanRefs = Array.from(new Set((bibRefs || []).map((v) => String(v || '').trim()).filter(Boolean)));
       if (!cleanRefs.length) return;
 
-      let v2 = await apiFrom('api', 'emprestimo_itens_ui')
+      const v2 = await apiFrom('api', 'emprestimo_itens_ui')
         .select('bib_ref')
         .in('bib_ref', cleanRefs)
         .eq('item_status', 'aberto');
-
 
       if (v2.error) throw v2.error;
 
@@ -6965,7 +6882,7 @@ async function fetchActiveLoans(){
     }
 
     async function countOpenLoansForUserHybrid(userId){
-      let v2 = await apiFrom('api', 'emprestimo_itens_ui')
+      const v2 = await apiFrom('api', 'emprestimo_itens_ui')
         .select('emprestimo_item_id', { count: 'exact', head: true })
         .eq('user_id', userId)
         .eq('item_status', 'aberto');
