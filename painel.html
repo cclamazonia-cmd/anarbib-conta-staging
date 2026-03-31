@@ -5819,16 +5819,6 @@ async function fetchActiveLoans(){
         .order('line_no', { ascending:true })
         .limit(800);
 
-      if (qv2.error && isMissingReservationSourceError(qv2.error)) {
-        qv2 = await supabase
-          .from('v_emprestimo_itens_v2_ui_fix')
-          .select('*')
-          .eq('item_status', 'aberto')
-          .order('due_at', { ascending:true })
-          .order('emprestimo_id', { ascending:true })
-          .order('line_no', { ascending:true })
-          .limit(800);
-      }
 
       if (!qv2.error && (qv2.data || []).length) {
         const rows = qv2.data || [];
@@ -6961,13 +6951,6 @@ async function fetchActiveLoans(){
         .in('bib_ref', cleanRefs)
         .eq('item_status', 'aberto');
 
-      if (v2.error && isMissingReservationSourceError(v2.error)) {
-        v2 = await supabase
-          .from('v_emprestimo_itens_v2_ui_fix')
-          .select('bib_ref')
-          .in('bib_ref', cleanRefs)
-          .eq('item_status', 'aberto');
-      }
 
       if (v2.error) throw v2.error;
 
@@ -6986,13 +6969,6 @@ async function fetchActiveLoans(){
         .select('emprestimo_item_id', { count: 'exact', head: true })
         .eq('user_id', userId)
         .eq('item_status', 'aberto');
-      if (v2.error && isMissingReservationSourceError(v2.error)) {
-        v2 = await supabase
-          .from('v_emprestimo_itens_v2_ui_fix')
-          .select('emprestimo_item_id', { count: 'exact', head: true })
-          .eq('user_id', userId)
-          .eq('item_status', 'aberto');
-      }
       if (v2.error) throw v2.error;
       return Number(v2.count || 0);
     }
