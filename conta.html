@@ -2926,7 +2926,7 @@ function reservationPickupReplyActions(row) {
 
       const currentHistory = await supabase
         .schema("api")
-        .from("my_reservations_history")
+        .from("my_reservations_history_v2")
         .select("id, library_name, bib_ref, titulo, autor, status, reserved_at, created_at, updated_at, cancelled_at, fulfilled_at, expired_at, closed_at")
         .order("closed_at", { ascending: false })
         .limit(200);
