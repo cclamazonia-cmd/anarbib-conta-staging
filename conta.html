@@ -2871,22 +2871,9 @@ function reservationPickupReplyActions(row) {
     }
 
     async function tryRenewV2(loanId) {
-      const candidates = [
-        ["fn_v2_extend_emprestimo_once", { p_emprestimo_id: loanId }],
-        ["fn_v2_renew_emprestimo", { p_emprestimo_id: loanId }],
-        ["renew_emprestimo_v2", { p_emprestimo_id: loanId }],
-        ["extend_loan_once_v2", { p_emprestimo_id: loanId }]
-      ];
-      let lastErr = null;
-      for (const [fn, args] of candidates) {
-        const res = await supabase.rpc(fn, args);
-        if (!res.error) return res;
-        lastErr = res.error;
-        if (!/function|does not exist|não existe|No function matches/i.test(String(res.error.message || ""))) {
-          return res;
-        }
-      }
-      return { error: lastErr, data: null };
+      return await supabase.rpc("fn_v2_extend_emprestimo_once", {
+        p_emprestimo_id: loanId
+      });
     }
 
 
