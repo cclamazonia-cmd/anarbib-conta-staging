@@ -2535,20 +2535,6 @@ button[type="submit"] *,
           .eq("user_id", session.user.id)
           .order("reserva_id", { ascending: false })
           .order("line_no", { ascending: true })
-          .limit(300),
-        () => supabase
-          .schema("api")
-          .from("reserva_itens_followup_ui")
-          .select("reserva_id, line_no, bib_ref, sub_id, titulo, item_status, status, workflow_stage_effective, workflow_stage")
-          .order("reserva_id", { ascending: false })
-          .order("line_no", { ascending: true })
-          .limit(300),
-        () => supabase
-          .schema("api")
-          .from("reserva_itens_ui")
-          .select("reserva_id, line_no, bib_ref, sub_id, titulo, item_status, status, workflow_stage_effective, workflow_stage")
-          .order("reserva_id", { ascending: false })
-          .order("line_no", { ascending: true })
           .limit(300)
       ];
 
@@ -2663,20 +2649,6 @@ async function resolveReservationLineNoForCurrentView(reservaId, rowHint = {}) {
           .from("reserva_itens_ui")
           .select("reserva_id, line_no, bib_ref, sub_id, item_status, status, workflow_stage_effective, workflow_stage")
           .eq("user_id", session.user.id)
-          .eq("reserva_id", rid)
-          .order("line_no", { ascending: true })
-          .limit(50),
-        () => supabase
-          .schema("api")
-          .from("reserva_itens_followup_ui")
-          .select("reserva_id, line_no, bib_ref, sub_id, item_status, status, workflow_stage_effective, workflow_stage")
-          .eq("reserva_id", rid)
-          .order("line_no", { ascending: true })
-          .limit(50),
-        () => supabase
-          .schema("api")
-          .from("reserva_itens_ui")
-          .select("reserva_id, line_no, bib_ref, sub_id, item_status, status, workflow_stage_effective, workflow_stage")
           .eq("reserva_id", rid)
           .order("line_no", { ascending: true })
           .limit(50)
