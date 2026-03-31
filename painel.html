@@ -6934,7 +6934,7 @@ async function fetchActiveLoans(){
       const clean = Array.from(new Set((refs || []).map((r) => String(r || '').trim()).filter(Boolean)));
       if (!clean.length) throw new Error('Nenhum livro informado para o empréstimo.');
       const { data, error } = await supabase
-        .from('books_public')
+        .from('books')
         .select('id,bib_ref,titulo,loanable')
         .in('bib_ref', clean);
       if (error) throw error;
