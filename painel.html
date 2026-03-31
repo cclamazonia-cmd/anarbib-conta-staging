@@ -1942,6 +1942,12 @@
 
     const $ = (id) => document.getElementById(id);
     const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+    function apiFrom(schema, relation) {
+      if (typeof supabase?.schema === 'function') {
+        return supabase.schema(schema).from(relation);
+      }
+      return supabase.from(`${schema}.${relation}`);
+    }
 
     applyPageChrome("painel", {
       logoId: "brandLogo",
@@ -5642,19 +5648,26 @@ function belemNowParts(){
       };
 
       const tryReservationV2Sources = [
-        'v_reserva_linhas_v2_ui_fix',
-        'v_reserva_itens_v2_ui_fix',
-        'v_reservas_v2_ui_fix',
-        'v_reservas_ativas_v2',
-        'v_reserva_itens_v2',
-        'v_reserva_linhas_v2',
-        'reserva_linhas_v2'
+        { schema: 'api', relation: 'reserva_itens_followup_ui' },
+        { schema: 'api', relation: 'reserva_itens_ui' },
+        { schema: 'public', relation: 'v_reserva_linhas_v2_ui_fix' },
+        { schema: 'public', relation: 'v_reserva_itens_v2_ui_fix' },
+        { schema: 'public', relation: 'v_reservas_v2_ui_fix' },
+        { schema: 'public', relation: 'v_reservas_ativas_v2' },
+        { schema: 'public', relation: 'v_reserva_itens_v2' },
+        { schema: 'public', relation: 'v_reserva_linhas_v2' },
+        { schema: 'public', relation: 'reserva_linhas_v2' }
       ];
 
       let v2SourceResolved = false;
-      for (const sourceName of tryReservationV2Sources) {
-        const attempt = await supabase
-          .from(sourceName)
+      for (const sourceDef of tryReservationV2Sources) {
+        const sourceName = sourceDef?.schema === 'api'
+          ? `api.${sourceDef.relation}`
+          : String(sourceDef?.relation || sourceDef || '').trim();
+        const sourceQuery = sourceDef?.schema === 'api'
+          ? apiFrom('api', sourceDef.relation)
+          : supabase.from(sourceName);
+        const attempt = await sourceQuery
           .select('*')
           .limit(800);
         if (attempt.error) {
@@ -5806,14 +5819,24 @@ async function fetchActiveLoans(){
         return;
       }
 
-      const qv2 = await supabase
-        .from('v_emprestimo_itens_v2_ui_fix')
+      let qv2 = await apiFrom('api', 'emprestimo_itens_ui')
         .select('*')
         .eq('item_status', 'aberto')
         .order('due_at', { ascending:true })
         .order('emprestimo_id', { ascending:true })
         .order('line_no', { ascending:true })
         .limit(800);
+
+      if (qv2.error && isMissingReservationSourceError(qv2.error)) {
+        qv2 = await supabase
+          .from('v_emprestimo_itens_v2_ui_fix')
+          .select('*')
+          .eq('item_status', 'aberto')
+          .order('due_at', { ascending:true })
+          .order('emprestimo_id', { ascending:true })
+          .order('line_no', { ascending:true })
+          .limit(800);
+      }
 
       if (!qv2.error && (qv2.data || []).length) {
         const rows = qv2.data || [];
@@ -6941,11 +6964,18 @@ async function fetchActiveLoans(){
       const cleanRefs = Array.from(new Set((bibRefs || []).map((v) => String(v || '').trim()).filter(Boolean)));
       if (!cleanRefs.length) return;
 
-      const v2 = await supabase
-        .from('v_emprestimo_itens_v2_ui_fix')
+      let v2 = await apiFrom('api', 'emprestimo_itens_ui')
         .select('bib_ref')
         .in('bib_ref', cleanRefs)
         .eq('item_status', 'aberto');
+
+      if (v2.error && isMissingReservationSourceError(v2.error)) {
+        v2 = await supabase
+          .from('v_emprestimo_itens_v2_ui_fix')
+          .select('bib_ref')
+          .in('bib_ref', cleanRefs)
+          .eq('item_status', 'aberto');
+      }
 
       if (v2.error) throw v2.error;
 
@@ -6960,11 +6990,17 @@ async function fetchActiveLoans(){
     }
 
     async function countOpenLoansForUserHybrid(userId){
-      const v2 = await supabase
-        .from('v_emprestimo_itens_v2_ui_fix')
+      let v2 = await apiFrom('api', 'emprestimo_itens_ui')
         .select('emprestimo_item_id', { count: 'exact', head: true })
         .eq('user_id', userId)
         .eq('item_status', 'aberto');
+      if (v2.error && isMissingReservationSourceError(v2.error)) {
+        v2 = await supabase
+          .from('v_emprestimo_itens_v2_ui_fix')
+          .select('emprestimo_item_id', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('item_status', 'aberto');
+      }
       if (v2.error) throw v2.error;
       return Number(v2.count || 0);
     }
