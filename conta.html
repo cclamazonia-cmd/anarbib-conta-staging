@@ -3241,30 +3241,21 @@ function reservationPickupReplyActions(row) {
         }
       }
 
-      const reservationFallbackPromise = currentHistory.error
-        ? supabase.schema("api").from("reserva_itens_ui").select("reserva_id, sub_id, titulo, autor, bib_ref, rotulo, reserva_created_at, expires_at, item_status, converted_at, cancelled_at").eq("user_id", session.user.id).neq("item_status", "ativa").order("reserva_created_at", { ascending:false }).limit(200)
-        : Promise.resolve({ data: [], error: null });
+      const v2Loans = await supabase
+        .schema("api")
+        .from("emprestimo_itens_ui")
+        .select("emprestimo_id, line_no, sub_id, titulo, autor, bib_ref, rotulo, emprestimo_created_at, due_at, item_status, returned_at")
+        .eq("user_id", session.user.id)
+        .order("emprestimo_created_at", { ascending:false })
+        .limit(200);
 
-      const [v2Loans, v2Reservas] = await Promise.all([
-        supabase.schema("api").from("emprestimo_itens_ui").select("emprestimo_id, line_no, sub_id, titulo, autor, bib_ref, rotulo, emprestimo_created_at, due_at, item_status, returned_at").eq("user_id", session.user.id).order("emprestimo_created_at", { ascending:false }).limit(200),
-        reservationFallbackPromise
-      ]);
       const items = [...reservationHistoryItems];
-      if (v2Loans.error || v2Reservas.error) {
-        console.error("renderHistory errors", { currentHistory: currentHistory.error, v2Loans: v2Loans.error, v2Reservas: v2Reservas.error });
+      if (currentHistory.error || v2Loans.error) {
+        console.error("renderHistory errors", { currentHistory: currentHistory.error, v2Loans: v2Loans.error });
         const msgs = [];
         if (currentHistory.error) msgs.push("reservas atuais: " + (currentHistory.error.message || JSON.stringify(currentHistory.error)));
         if (v2Loans.error) msgs.push("v2 empréstimos: " + (v2Loans.error.message || JSON.stringify(v2Loans.error)));
-        if (v2Reservas.error) msgs.push("v2 reservas: " + (v2Reservas.error.message || JSON.stringify(v2Reservas.error)));
         if (historyMsg) historyMsg.textContent = "Diagnóstico histórico — " + msgs.join(" | ");
-      }
-      if (currentHistory.error && !v2Reservas.error) {
-        for (const r of (v2Reservas.data || [])) {
-          items.push({
-            when: r.cancelled_at || r.converted_at || r.reserva_created_at,
-            html: `<li><b>Reserva #${escapeHtml(r.reserva_id)}</b> — <span class="mono">${escapeHtml(r.sub_id)}</span> — ${escapeHtml(r.titulo || 'Livro')} — ${escapeHtml(reservationStatusLabel(r.item_status, r))}</li>`
-          });
-        }
       }
       if (!v2Loans.error) {
         const loanGroups = new Map();
