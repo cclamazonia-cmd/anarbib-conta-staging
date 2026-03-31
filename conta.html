@@ -1502,13 +1502,7 @@ button[type="submit"] *,
     function resolveContaReservationLibraryId() {
       return normalizeLibraryId(currentContaIdentity?.library_id || currentContaIdentity?.default_library_id);
     }
-
-    function isMissingHoldingReservaFunctionError(error) {
-      const msg = String(error?.message || error || "");
-      return /function|does not exist|not exist|schema cache|fn_v2_create_reserva_by_holdings/i.test(msg);
-    }
-
-    function canFallbackContaHoldingResolutionError(error) {
+    function isHoldingResolutionUnavailableError(error) {
       const msg = String(error?.message || error || "");
       return /permission|policy|not exist|does not exist|relation|schema cache|column|book_holdings/i.test(msg);
     }
@@ -1528,7 +1522,7 @@ button[type="submit"] *,
         .limit(Math.max(cleanRefs.length + 2, 10));
 
       if (lookup.error) {
-        if (canFallbackContaHoldingResolutionError(lookup.error)) {
+        if (isHoldingResolutionUnavailableError(lookup.error)) {
           return { resolved: false, reason: "holding-resolution-unavailable", error: lookup.error };
         }
         throw lookup.error;
@@ -2317,33 +2311,32 @@ button[type="submit"] *,
         return { data: null, error: { message: "Nenhuma referência informada." } };
       }
 
-      try {
-        const holdingAttempt = await tryResolveContaReservationHoldingIds(cleanRefs);
-        if (holdingAttempt?.resolved && Array.isArray(holdingAttempt.holdingIds) && holdingAttempt.holdingIds.length === cleanRefs.length) {
-          const holdingRpc = await supabase.rpc("fn_v2_create_reserva_by_holdings", {
-            p_user_id: session.user.id,
-            p_holding_ids: holdingAttempt.holdingIds,
-            p_expires_at: null,
-            p_notes: "Reserva criada pela conta do(a/e) leitor(a/e)."
-          });
-          if (!holdingRpc.error) return holdingRpc;
-          if (!isMissingHoldingReservaFunctionError(holdingRpc.error) && !canFallbackContaHoldingResolutionError(holdingRpc.error)) {
-            return holdingRpc;
+      const holdingAttempt = await tryResolveContaReservationHoldingIds(cleanRefs);
+      if (!holdingAttempt?.resolved || !Array.isArray(holdingAttempt.holdingIds) || holdingAttempt.holdingIds.length !== cleanRefs.length) {
+        const reason = String(holdingAttempt?.reason || "holding-resolution-unavailable");
+        const ref = String(holdingAttempt?.ref || "").trim();
+        const messages = {
+          "no-library-id": "Não foi possível identificar a biblioteca de vínculo da sua conta para criar a reserva.",
+          "holding-resolution-unavailable": "A resolução dos exemplares desta biblioteca não está disponível neste ambiente.",
+          "holding-not-found": "Não foi possível localizar exemplar disponível para a(s) referência(s) informada(s).",
+          "missing-holding": ref ? `Não foi possível localizar exemplar para a referência ${ref}.` : "Não foi possível localizar exemplar para uma das referências informadas.",
+          "ambiguous-holding": ref ? `Há mais de um exemplar possível para a referência ${ref}. Peça apoio à biblioteca para concluir a reserva.` : "Há mais de um exemplar possível para uma das referências informadas. Peça apoio à biblioteca para concluir a reserva.",
+          "empty-refs": "Nenhuma referência informada."
+        };
+        return {
+          data: null,
+          error: {
+            message: messages[reason] || "Não foi possível preparar a reserva para a sua biblioteca de vínculo."
           }
-        }
-      } catch (error) {
-        if (!canFallbackContaHoldingResolutionError(error)) {
-          return { data: null, error };
-        }
+        };
       }
 
-      const rpc = await supabase.rpc("fn_v2_create_reserva_by_bib_refs", {
+      return await supabase.rpc("fn_v2_create_reserva_by_holdings", {
         p_user_id: session.user.id,
-        p_bib_refs: cleanRefs,
+        p_holding_ids: holdingAttempt.holdingIds,
         p_expires_at: null,
         p_notes: "Reserva criada pela conta do(a/e) leitor(a/e)."
       });
-      return rpc;
     }
 
     async function cancelReservaV2(reservaId, lineNo) {
@@ -2442,285 +2435,6 @@ button[type="submit"] *,
         ? `<button type="button" class="secondary mini-btn" data-renew-v2="${emprestimoId}">Renovar (uma única vez)</button>`
         : `<button type="button" class="secondary mini-btn" disabled>Renovação bloqueada</button>`;
     }
-
-    function reservationCancelOnlyAction(row) {
-      const reservaId = Number(row?.reserva_id || row?.id);
-      const bibRef = normalizeBibRefValue(row?.bib_ref);
-      const subId = String(row?.sub_id || "").trim();
-      const title = String(row?.titulo || "").trim();
-      return buildActionGrid([
-        actionSlotEmpty(),
-        actionSlotEmpty(),
-        `<button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-current="${escapeHtml(reservaId || "")}" data-cancel-current-line-no="${escapeHtml(Number(row?.line_no) || "")}" data-cancel-current-bib-ref="${escapeHtml(bibRef)}" data-cancel-current-sub-id="${escapeHtml(subId)}" data-cancel-current-title="${escapeHtml(title)}">Cancelar</button>`
-      ], "reservation-actions");
-    }
-
-    function parseReservationLineNoFromSubId(subId) {
-      const raw = String(subId || "").trim();
-      if (!raw) return null;
-
-      const dotPart = raw.split(".").pop();
-      if (raw.includes(".") && /^\d+$/.test(dotPart) && Number(dotPart) > 0) {
-        return Number(dotPart);
-      }
-
-      const separatorMatch = raw.match(/(?:^|[-\/#])(\d+)$/);
-      if (separatorMatch && Number(separatorMatch[1]) > 0) {
-        return Number(separatorMatch[1]);
-      }
-
-      const labeledMatch = raw.match(/(?:item|linha|line)\s*(\d+)$/i);
-      if (labeledMatch && Number(labeledMatch[1]) > 0) {
-        return Number(labeledMatch[1]);
-      }
-
-      return null;
-    }
-
-    function reservationLineLooksActiveEnough(row) {
-      const itemStatus = String(row?.item_status || row?.status || "").trim().toLowerCase();
-      const workflowStage = String(row?.workflow_stage_effective || row?.workflow_stage || "").trim().toLowerCase();
-
-      const terminalStatuses = new Set([
-        "cancelada_leitor",
-        "cancelada_biblioteca",
-        "cancelled_by_reader",
-        "cancelled_by_staff",
-        "cancelled",
-        "expirada",
-        "expired",
-        "convertida_em_emprestimo",
-        "fulfilled",
-        "returned",
-        "devolvido"
-      ]);
-
-      const terminalStages = new Set([
-        "cancelada_leitor",
-        "cancelada_biblioteca",
-        "expirada",
-        "retirada_efetivada",
-        "liberada_para_circulacao"
-      ]);
-
-      if (itemStatus && terminalStatuses.has(itemStatus)) return false;
-      if (workflowStage && terminalStages.has(workflowStage)) return false;
-      return true;
-    }
-
-    
-    function normalizeReservationTitleForMatch(value) {
-      return String(value || "")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase()
-        .replace(/\s+/g, " ")
-        .trim();
-    }
-
-    async function loadCancelableReservationCandidateRows() {
-      const attempts = [
-        () => supabase
-          .schema("api")
-          .from("reserva_itens_followup_ui")
-          .select("reserva_id, line_no, bib_ref, sub_id, titulo, item_status, status, workflow_stage_effective, workflow_stage")
-          .eq("user_id", session.user.id)
-          .order("reserva_id", { ascending: false })
-          .order("line_no", { ascending: true })
-          .limit(300),
-        () => supabase
-          .schema("api")
-          .from("reserva_itens_ui")
-          .select("reserva_id, line_no, bib_ref, sub_id, titulo, item_status, status, workflow_stage_effective, workflow_stage")
-          .eq("user_id", session.user.id)
-          .order("reserva_id", { ascending: false })
-          .order("line_no", { ascending: true })
-          .limit(300)
-      ];
-
-      const merged = new Map();
-      for (const run of attempts) {
-        try {
-          const res = await run();
-          if (res?.error || !(res?.data || []).length) continue;
-          for (const row of (res.data || [])) {
-            const reservaId = Number(row?.reserva_id);
-            const lineNo = Number(row?.line_no);
-            if (!(reservaId > 0) || !(lineNo > 0)) continue;
-            const key = `${reservaId}|${lineNo}|${normalizeBibRefValue(row?.bib_ref)}|${String(row?.sub_id || "").trim()}`;
-            if (!merged.has(key)) merged.set(key, row);
-          }
-        } catch (_err) {}
-      }
-      return Array.from(merged.values());
-    }
-
-    function resolveReservationCancelTargetFromCandidateRows(candidateRows, rowHint = {}) {
-      let matches = (Array.isArray(candidateRows) ? candidateRows : []).filter((row) => {
-        return Number(row?.reserva_id) > 0 && Number(row?.line_no) > 0;
-      });
-
-      if (!matches.length) return null;
-
-      const activeEnough = matches.filter((row) => reservationLineLooksActiveEnough(row));
-      if (activeEnough.length) matches = activeEnough;
-
-      const hintedReservaId = Number(rowHint?.reserva_id || rowHint?.id);
-      const hintedBibRef = normalizeBibRefValue(rowHint?.bib_ref);
-      const hintedSubId = String(rowHint?.sub_id || "").trim();
-      const hintedLineNo = Number(rowHint?.line_no) || parseReservationLineNoFromSubId(hintedSubId);
-      const hintedTitle = normalizeReservationTitleForMatch(rowHint?.titulo);
-
-      const targets = new Map();
-
-      for (const row of matches) {
-        const reservaId = Number(row?.reserva_id);
-        const lineNo = Number(row?.line_no);
-        const key = `${reservaId}|${lineNo}`;
-        if (!targets.has(key)) {
-          targets.set(key, {
-            reservaId,
-            lineNo,
-            score: 0,
-            rows: []
-          });
-        }
-        const target = targets.get(key);
-        target.rows.push(row);
-
-        if (hintedSubId && String(row?.sub_id || "").trim() === hintedSubId) target.score += 100;
-        if (hintedLineNo > 0 && lineNo === hintedLineNo) target.score += 80;
-        if (hintedBibRef && normalizeBibRefValue(row?.bib_ref) === hintedBibRef) target.score += 60;
-        if (hintedTitle && normalizeReservationTitleForMatch(row?.titulo) === hintedTitle) target.score += 40;
-        if (hintedReservaId > 0 && reservaId === hintedReservaId) target.score += 20;
-        if (reservationLineLooksActiveEnough(row)) target.score += 5;
-      }
-
-      const ranked = Array.from(targets.values()).sort((a, b) => b.score - a.score);
-
-      if (ranked.length === 1) {
-        return { reservaId: ranked[0].reservaId, lineNo: ranked[0].lineNo };
-      }
-
-      const best = ranked[0];
-      const second = ranked[1];
-
-      if (best && best.score > 0 && (!second || best.score > second.score)) {
-        return { reservaId: best.reservaId, lineNo: best.lineNo };
-      }
-
-      const exactSubMatches = ranked.filter((target) => target.rows.some((row) => hintedSubId && String(row?.sub_id || "").trim() === hintedSubId));
-      if (exactSubMatches.length === 1) {
-        return { reservaId: exactSubMatches[0].reservaId, lineNo: exactSubMatches[0].lineNo };
-      }
-
-      const exactBibMatches = ranked.filter((target) => target.rows.some((row) => hintedBibRef && normalizeBibRefValue(row?.bib_ref) === hintedBibRef));
-      if (exactBibMatches.length === 1) {
-        return { reservaId: exactBibMatches[0].reservaId, lineNo: exactBibMatches[0].lineNo };
-      }
-
-      const exactTitleMatches = ranked.filter((target) => target.rows.some((row) => hintedTitle && normalizeReservationTitleForMatch(row?.titulo) === hintedTitle));
-      if (exactTitleMatches.length === 1) {
-        return { reservaId: exactTitleMatches[0].reservaId, lineNo: exactTitleMatches[0].lineNo };
-      }
-
-      return null;
-    }
-
-async function resolveReservationLineNoForCurrentView(reservaId, rowHint = {}) {
-      const rid = Number(reservaId);
-      if (!rid) return null;
-      const bibRef = normalizeBibRefValue(rowHint?.bib_ref);
-      const subId = String(rowHint?.sub_id || "").trim();
-      const parsedLineNo = parseReservationLineNoFromSubId(subId);
-      if (parsedLineNo) return parsedLineNo;
-
-      const attempts = [
-        () => supabase
-          .schema("api")
-          .from("reserva_itens_followup_ui")
-          .select("reserva_id, line_no, bib_ref, sub_id, item_status, status, workflow_stage_effective, workflow_stage")
-          .eq("user_id", session.user.id)
-          .eq("reserva_id", rid)
-          .order("line_no", { ascending: true })
-          .limit(50),
-        () => supabase
-          .schema("api")
-          .from("reserva_itens_ui")
-          .select("reserva_id, line_no, bib_ref, sub_id, item_status, status, workflow_stage_effective, workflow_stage")
-          .eq("user_id", session.user.id)
-          .eq("reserva_id", rid)
-          .order("line_no", { ascending: true })
-          .limit(50)
-      ];
-
-      for (const run of attempts) {
-        try {
-          const res = await run();
-          if (res?.error || !(res?.data || []).length) continue;
-
-          let matches = (res.data || []).filter((row) => Number(row?.line_no) > 0);
-
-          if (bibRef) {
-            const scopedByBib = matches.filter((row) => normalizeBibRefValue(row?.bib_ref) === bibRef);
-            if (scopedByBib.length) matches = scopedByBib;
-          }
-
-          if (subId) {
-            const scopedBySubId = matches.filter((row) => String(row?.sub_id || "").trim() === subId);
-            if (scopedBySubId.length) matches = scopedBySubId;
-          }
-
-          const activeEnough = matches.filter((row) => reservationLineLooksActiveEnough(row));
-          if (activeEnough.length) matches = activeEnough;
-
-          const uniqueLineNos = Array.from(new Set(matches.map((row) => Number(row?.line_no)).filter((value) => Number.isFinite(value) && value > 0)));
-          if (uniqueLineNos.length === 1) return uniqueLineNos[0];
-
-          if (!bibRef && !subId && matches.length === 1) {
-            const onlyLine = Number(matches[0]?.line_no);
-            if (onlyLine > 0) return onlyLine;
-          }
-        } catch (_err) {}
-      }
-
-      return null;
-    }
-
-    async function cancelCurrentActiveReservation(reservaId, rowHint = {}) {
-      const hintedReservaId = Number(reservaId || rowHint?.reserva_id || rowHint?.id);
-      const directLineNo = Number(rowHint?.line_no);
-
-      if (hintedReservaId > 0 && directLineNo > 0) {
-        return await cancelReservaV2(hintedReservaId, directLineNo);
-      }
-
-      const candidateRows = await loadCancelableReservationCandidateRows();
-      const resolvedTarget = resolveReservationCancelTargetFromCandidateRows(candidateRows, {
-        ...rowHint,
-        reserva_id: hintedReservaId || rowHint?.reserva_id,
-        id: hintedReservaId || rowHint?.id
-      });
-
-      if (resolvedTarget?.reservaId > 0 && resolvedTarget?.lineNo > 0) {
-        return await cancelReservaV2(resolvedTarget.reservaId, resolvedTarget.lineNo);
-      }
-
-      if (hintedReservaId > 0) {
-        const resolvedLineNo = await resolveReservationLineNoForCurrentView(hintedReservaId, rowHint);
-        if (resolvedLineNo) {
-          return await cancelReservaV2(hintedReservaId, resolvedLineNo);
-        }
-      }
-
-      return {
-        error: {
-          message: "Não foi possível localizar automaticamente a linha ativa desta reserva nesta visualização."
-        },
-        data: null
-      };
-    }
-
 
 function reservationPickupReplyActions(row) {
       const cancelBtn = `<button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-v2="${row.reserva_id}|${row.line_no}">Cancelar</button>`;
