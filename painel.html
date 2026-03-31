@@ -5537,7 +5537,7 @@ function belemNowParts(){
     async function loadBooksByBibRefs(refs){
       const clean = Array.from(new Set((refs || []).map((r) => String(r || '').trim()).filter(Boolean)));
       if (!clean.length) return new Map();
-      const { data, error } = await supabase.from('books_public').select('id,bib_ref,titulo,autor,editora,ano,loanable').in('bib_ref', clean);
+      const { data, error } = await supabase.from('books').select('id,bib_ref,titulo,autor,editora,ano,loanable').in('bib_ref', clean);
       if (error) throw error;
       return new Map((data || []).map((row) => [String(row.bib_ref), row]));
     }
@@ -6934,7 +6934,7 @@ async function fetchActiveLoans(){
       const clean = Array.from(new Set((refs || []).map((r) => String(r || '').trim()).filter(Boolean)));
       if (!clean.length) throw new Error('Nenhum livro informado para o empréstimo.');
       const { data, error } = await supabase
-        .from('books')
+        .from('books_public')
         .select('id,bib_ref,titulo,loanable')
         .in('bib_ref', clean);
       if (error) throw error;
@@ -7071,7 +7071,7 @@ async function fetchActiveLoans(){
       let booksById = new Map();
       if (bookIds.length) {
         const booksRes = await supabase
-          .from('books')
+          .from('books_public')
           .select('id,bib_ref,titulo,loanable')
           .in('id', bookIds);
 
