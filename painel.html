@@ -962,7 +962,7 @@
                   <div class="card" id="partnerProbeCard" style="margin-bottom:16px;">
                     <h4>Catálogos parceiros</h4>
                     <p class="hint" style="margin:0 0 12px;">
-                      Registra a parceria, qualifica o estado relacional e testa o acesso técnico, sem importar catálogo nenhum automaticamente.
+                      Gera endpoints prováveis e um seed SQL para parceiras PMB e Koha, sem fazer requisições cruzadas no navegador.
                     </p>
 
                     <div id="partnerProbeMessage" class="hint" style="margin:0 0 12px;"></div>
@@ -1022,58 +1022,17 @@
                       </div>
                     </div>
 
-                    <div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:12px;">
-                      <div class="field">
-                        <label for="partnerRelationshipStatusSelect">Situação relacional</label>
-                        <select id="partnerRelationshipStatusSelect" class="select">
-                          <option value="identificada">Identificada</option>
-                          <option value="contatada">Contatada</option>
-                          <option value="em_discussao">Em discussão</option>
-                          <option value="acordo_parcial">Acordo parcial</option>
-                          <option value="acordo_tecnico">Acordo técnico</option>
-                          <option value="importacao_autorizada">Importação autorizada</option>
-                          <option value="mutualizacao_autorizada">Mutualização autorizada</option>
-                        </select>
-                      </div>
-
-                      <div class="field">
-                        <label for="partnerLastProbeAtInput">Último teste técnico</label>
-                        <input id="partnerLastProbeAtInput" class="input" type="text" readonly placeholder="Ainda não testado">
-                      </div>
-
-                      <div class="field">
-                        <label for="partnerKnownStateInput">Último estado conhecido</label>
-                        <input id="partnerKnownStateInput" class="input" type="text" readonly placeholder="Sem leitura ainda">
-                      </div>
-
-                      <div class="field">
-                        <label for="partnerProbeDecisionInput">Próximo passo</label>
-                        <input id="partnerProbeDecisionInput" class="input" type="text" readonly placeholder="Registrar ou testar o parceiro">
-                      </div>
-                    </div>
-
-                    <div class="field" style="margin-bottom:12px;">
-                      <label for="partnerRelationshipNotesInput">Notas relacionais / histórico de contato</label>
-                      <textarea id="partnerRelationshipNotesInput" class="textarea" rows="4" placeholder="Ex.: primeiro contato feito por e-mail; aguarda retorno; interesse mútuo em comparação local; parceria ainda sem acordo técnico."></textarea>
-                    </div>
-
                     <div class="actions">
-                      <button id="partnerSaveBtn" class="btn primary" type="button">Salvar parceiro na base</button>
-                      <button id="partnerOpenBaseBtn" class="btn" type="button">Abrir base URL</button>
-                      <button id="partnerGenerateBtn" class="btn" type="button">Gerar endpoints e seed</button>
-                      <button id="partnerTestBtn" class="btn" type="button">Testar endpoints</button>
+                      <button id="partnerGenerateBtn" class="btn primary" type="button">Gerar endpoints e seed</button>
                       <button id="partnerCopyReportBtn" class="btn" type="button">Copiar relatório</button>
                       <button id="partnerCopySeedBtn" class="btn" type="button">Copiar SQL</button>
-                    </div>
-
-                    <div class="muted-box" id="partnerPoliticalNoticeBox" style="margin-top:12px;">
-                      <div class="mini" id="partnerPoliticalNotice">Nenhum teste executado ainda. Registrar ou testar um parceiro não importa catálogo nenhum: isso só documenta a relação e o estado técnico atual.</div>
+                      <button id="partnerOpenBaseBtn" class="btn" type="button">Abrir base URL</button>
                     </div>
 
                     <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px;">
                       <div class="field">
-                        <label for="partnerProbeOutput">Leitura técnica atual</label>
-                        <textarea id="partnerProbeOutput" class="textarea mono" rows="14" readonly placeholder="Os endpoints prováveis e, depois do teste, o retorno técnico mais recente aparecerão aqui."></textarea>
+                        <label for="partnerProbeOutput">Endpoints prováveis</label>
+                        <textarea id="partnerProbeOutput" class="textarea mono" rows="14" readonly placeholder="Os endpoints prováveis aparecerão aqui."></textarea>
                       </div>
 
                       <div class="field">
@@ -7792,155 +7751,6 @@ function setPartnerProbeMessage(msg = '', kind = 'info') {
     '#d1d1d1';
 }
 
-const PARTNER_RELATIONSHIP_STATUS_LABELS = {
-  identificada: 'Identificada',
-  contatada: 'Contatada',
-  em_discussao: 'Em discussão',
-  acordo_parcial: 'Acordo parcial',
-  acordo_tecnico: 'Acordo técnico',
-  importacao_autorizada: 'Importação autorizada',
-  mutualizacao_autorizada: 'Mutualização autorizada'
-};
-
-function normalizePartnerRelationshipStatus(value) {
-  const raw = String(value || '').trim().toLowerCase();
-  if (!raw) return 'identificada';
-
-  const normalized = raw
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-
-  const aliases = {
-    reperee: 'identificada',
-    reperada: 'identificada',
-    identificada: 'identificada',
-    contactee: 'contatada',
-    contactada: 'contatada',
-    contatada: 'contatada',
-    em_discussao: 'em_discussao',
-    discussion: 'em_discussao',
-    acordo_parcial: 'acordo_parcial',
-    accord_partiel: 'acordo_parcial',
-    acordo_tecnico: 'acordo_tecnico',
-    accord_technique: 'acordo_tecnico',
-    import_autorise: 'importacao_autorizada',
-    importacao_autorizada: 'importacao_autorizada',
-    import_autorizado: 'importacao_autorizada',
-    mutualisation_autorisee: 'mutualizacao_autorizada',
-    mutualizacao_autorizada: 'mutualizacao_autorizada'
-  };
-
-  return aliases[normalized] || 'identificada';
-}
-
-
-function formatPartnerDateTime(value) {
-  if (!value) return '';
-  try {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return String(value);
-    return new Intl.DateTimeFormat('pt-BR', {
-      dateStyle: 'short',
-      timeStyle: 'short'
-    }).format(date);
-  } catch (_) {
-    return String(value);
-  }
-}
-
-function formatPartnerTechnicalState(rows = []) {
-  const okCount = rows.filter((row) => row?.last_probe_ok === true).length;
-  const failCount = rows.filter((row) => row?.last_probe_ok === false).length;
-  const otherCount = rows.length - okCount - failCount;
-
-  if (!rows.length) return 'Sem leitura técnica salva';
-  const parts = [];
-  if (okCount) parts.push(`${okCount} OK`);
-  if (failCount) parts.push(`${failCount} com erro`);
-  if (otherCount) parts.push(`${otherCount} sem resposta conclusiva`);
-  return parts.join(' · ');
-}
-
-function getPartnerLastCheckedAt(rows = []) {
-  const timestamps = rows
-    .map((row) => row?.last_checked_at || row?.checked_at || row?.updated_at || '')
-    .filter(Boolean)
-    .map((value) => new Date(value))
-    .filter((date) => !Number.isNaN(date.getTime()))
-    .sort((a, b) => b.getTime() - a.getTime());
-  return timestamps.length ? timestamps[0].toISOString() : '';
-}
-
-function buildPartnerPoliticalNotice(status, rows = []) {
-  const normalizedStatus = normalizePartnerRelationshipStatus(status);
-  const hasProbe = Array.isArray(rows) && rows.length > 0;
-  const comparisonAllowed = ['acordo_tecnico', 'importacao_autorizada', 'mutualizacao_autorizada'].includes(normalizedStatus);
-  const importAllowed = ['importacao_autorizada', 'mutualizacao_autorizada'].includes(normalizedStatus);
-  const mutualizationAllowed = normalizedStatus === 'mutualizacao_autorizada';
-
-  const intro = hasProbe
-    ? 'Teste técnico concluído.'
-    : 'Nenhum teste técnico executado ainda.';
-
-  const baseline = 'Nada foi importado: o módulo apenas registra a relação parceira e o estado técnico atual.';
-  const political = 'A próxima etapa continua sendo uma decisão humana e política entre bibliotecas.';
-  const gating = mutualizationAllowed
-    ? 'A mutualização já está autorizada por estatuto, mas isso não libera mudanças livres nas notices da parceira.'
-    : importAllowed
-      ? 'A importação controlada já pode ser preparada, mas nunca como importação global cega.'
-      : comparisonAllowed
-        ? 'A comparação documental já pode ser preparada, mas a importação continua bloqueada.'
-        : 'A comparação ativa e qualquer importação documental continuam bloqueadas neste estatuto.';
-
-  return `${intro} ${baseline} ${gating} ${political}`;
-}
-
-function buildPartnerDecisionSummary(status, rows = []) {
-  const normalizedStatus = normalizePartnerRelationshipStatus(status);
-  const hasProbe = Array.isArray(rows) && rows.length > 0;
-
-  if (!hasProbe) return 'Registrar a parceria e executar o teste técnico';
-  if (normalizedStatus === 'mutualizacao_autorizada') return 'Cooperação autorizada: manter comparação e mutualização sob controle humano';
-  if (normalizedStatus === 'importacao_autorizada') return 'Comparar e importar de modo controlado, sem mutualização automática';
-  if (normalizedStatus === 'acordo_tecnico') return 'Comparação possível; importação ainda bloqueada';
-  return 'Levar o resultado técnico para decisão política antes de qualquer integração documental';
-}
-
-function formatPartnerLiveProbeReport(rows = []) {
-  if (!Array.isArray(rows) || !rows.length) return '';
-
-  const sortedRows = [...rows].sort((a, b) => {
-    const keyA = String(a?.capability_key || a?.capability || a?.key || '').toLowerCase();
-    const keyB = String(b?.capability_key || b?.capability || b?.key || '').toLowerCase();
-    return keyA.localeCompare(keyB, 'pt-BR');
-  });
-
-  return sortedRows.map((row) => {
-    const capabilityKey = String(row?.capability_key || row?.capability || row?.key || 'capability').trim();
-    const endpointUrl = String(row?.endpoint_url || row?.url || row?.probe_url || row?.candidate_url || '').trim();
-    const httpStatus = row?.last_http_status ?? row?.http_status ?? '—';
-    const okValue = row?.last_probe_ok;
-    const outcome = okValue === true ? 'OK' : okValue === false ? 'Erro' : 'Sem conclusão';
-    const contentType = String(row?.last_content_type || row?.content_type || '—').trim() || '—';
-    const checkedAt = formatPartnerDateTime(row?.last_checked_at || row?.checked_at || row?.updated_at || '');
-    const errorText = String(row?.last_error || row?.error || '').trim();
-    const excerpt = String(row?.last_response_excerpt || row?.response_excerpt || '').trim();
-
-    const lines = [
-      `${capabilityKey}: ${outcome} · HTTP ${httpStatus}`,
-      endpointUrl ? `URL: ${endpointUrl}` : '',
-      contentType && contentType !== '—' ? `Content-Type: ${contentType}` : '',
-      checkedAt ? `Última verificação: ${checkedAt}` : '',
-      errorText ? `Erro: ${errorText}` : '',
-      excerpt ? `Trecho: ${excerpt}` : ''
-    ].filter(Boolean);
-
-    return lines.join('\n');
-  }).join('\n\n');
-}
-
 async function copyPartnerTextFrom(id, successMessage) {
   const el = document.getElementById(id);
   const value = String(el?.value || '').trim();
@@ -7968,12 +7778,6 @@ function initPartnerProbeUi() {
   const confidenceEl = document.getElementById('partnerConfidenceSelect');
   const countryEl = document.getElementById('partnerCountryCodeInput');
   const notesEl = document.getElementById('partnerNotesInput');
-  const relationshipStatusEl = document.getElementById('partnerRelationshipStatusSelect');
-  const relationshipNotesEl = document.getElementById('partnerRelationshipNotesInput');
-  const lastProbeAtEl = document.getElementById('partnerLastProbeAtInput');
-  const knownStateEl = document.getElementById('partnerKnownStateInput');
-  const decisionEl = document.getElementById('partnerProbeDecisionInput');
-  const politicalNoticeEl = document.getElementById('partnerPoliticalNotice');
   const reportEl = document.getElementById('partnerProbeOutput');
   const seedEl = document.getElementById('partnerSeedOutput');
   const generateBtn = document.getElementById('partnerGenerateBtn');
@@ -7985,16 +7789,10 @@ function initPartnerProbeUi() {
 
   if (
     !presetEl || !displayEl || !slugEl || !baseUrlEl || !familyEl ||
-    !confidenceEl || !countryEl || !notesEl || !relationshipStatusEl ||
-    !relationshipNotesEl || !lastProbeAtEl || !knownStateEl || !decisionEl ||
-    !politicalNoticeEl || !reportEl || !seedEl
+    !confidenceEl || !countryEl || !notesEl || !reportEl || !seedEl
   ) {
     return;
   }
-
-  let currentPartnerRow = null;
-  let currentPartnerCapabilityRows = [];
-  let relationshipPersistenceFallbackWarned = false;
 
   if (!presetEl.dataset.loaded) {
     PARTNER_PRESETS.forEach((preset) => {
@@ -8014,14 +7812,11 @@ function initPartnerProbeUi() {
     const softwareConfidence = String(confidenceEl.value || 'unknown').trim() || 'unknown';
     const countryCode = String(countryEl.value || '').trim().toUpperCase();
     const notes = String(notesEl.value || '').trim();
-    const relationshipStatus = normalizePartnerRelationshipStatus(relationshipStatusEl.value);
-    const relationshipNotes = String(relationshipNotesEl.value || '').trim();
 
     displayEl.value = displayName;
     baseUrlEl.value = baseUrl;
     slugEl.value = slug;
     countryEl.value = countryCode;
-    relationshipStatusEl.value = relationshipStatus;
 
     return {
       displayName,
@@ -8030,51 +7825,35 @@ function initPartnerProbeUi() {
       softwareFamily,
       softwareConfidence,
       countryCode,
-      notes,
-      relationshipStatus,
-      relationshipNotes
+      notes
     };
   }
 
-  function updatePartnerGovernanceReadout() {
+  function updatePartnerActionAvailability({ showGuidance = false } = {}) {
     const state = collectPartnerFormState();
-    knownStateEl.value = formatPartnerTechnicalState(currentPartnerCapabilityRows);
-    lastProbeAtEl.value = formatPartnerDateTime(getPartnerLastCheckedAt(currentPartnerCapabilityRows)) || 'Ainda não testado';
-    decisionEl.value = buildPartnerDecisionSummary(state.relationshipStatus, currentPartnerCapabilityRows);
-    politicalNoticeEl.textContent = buildPartnerPoliticalNotice(state.relationshipStatus, currentPartnerCapabilityRows);
-  }
+    const hasRequiredFields = !!(state.displayName && state.slug && state.baseUrl);
+    const hasBaseUrl = !!state.baseUrl;
+    const hasReport = !!String(reportEl.value || '').trim();
+    const hasSeed = !!String(seedEl.value || '').trim();
 
-  function renderPartnerArtifacts({ keepLiveResults = true } = {}) {
-    const state = collectPartnerFormState();
+    if (generateBtn) generateBtn.disabled = !hasRequiredFields;
+    if (saveBtn) saveBtn.disabled = !hasRequiredFields;
+    if (testBtn) testBtn.disabled = !hasRequiredFields;
+    if (openBaseBtn) openBaseBtn.disabled = !hasBaseUrl;
+    if (copyReportBtn) copyReportBtn.disabled = !hasReport;
+    if (copySeedBtn) copySeedBtn.disabled = !hasSeed;
 
-    if (!state.displayName || !state.baseUrl || !state.slug) {
-      if (!keepLiveResults || !currentPartnerCapabilityRows.length) reportEl.value = '';
-      seedEl.value = '';
-      updatePartnerGovernanceReadout();
-      setPartnerProbeMessage('Preenche pelo menos nome público, slug e base URL.', 'warn');
-      return null;
+    if (showGuidance && !hasRequiredFields) {
+      setPartnerProbeMessage('Preenche nome público, slug e base URL primeiro.', 'warn');
     }
 
-    const probes = buildCapabilityProbe(state.baseUrl);
-    const generatedReport = formatProbeReport(probes);
-    const liveReport = keepLiveResults ? formatPartnerLiveProbeReport(currentPartnerCapabilityRows) : '';
+    return { ...state, hasRequiredFields, hasBaseUrl, hasReport, hasSeed };
+  }
 
-    reportEl.value = liveReport
-      ? `${liveReport}\n\n---\n\nEndpoints prováveis\n${generatedReport}`
-      : generatedReport;
-
-    seedEl.value = buildPartnerSeedSql({
-      slug: state.slug,
-      displayName: state.displayName,
-      baseUrl: state.baseUrl,
-      softwareFamily: state.softwareFamily,
-      softwareConfidence: state.softwareConfidence,
-      countryCode: state.countryCode,
-      notes: state.notes
-    });
-
-    updatePartnerGovernanceReadout();
-    return state;
+  function invalidatePartnerArtifacts() {
+    reportEl.value = '';
+    seedEl.value = '';
+    updatePartnerActionAvailability();
   }
 
   function applyPreset(presetSlug) {
@@ -8089,246 +7868,54 @@ function initPartnerProbeUi() {
     countryEl.value = preset.countryCode || '';
     notesEl.value = preset.notes || '';
 
-    renderPartnerArtifacts({ keepLiveResults: false });
+    invalidatePartnerArtifacts();
     setPartnerProbeMessage(`Preset carregado: ${preset.label}`, 'ok');
   }
 
-  function applySavedPartnerRow(row) {
-    if (!row || typeof row !== 'object') return;
-    currentPartnerRow = row;
+  function generatePartnerArtifacts() {
+    const state = collectPartnerFormState();
 
-    displayEl.value = String(row.display_name || row.name || row.partner_name || displayEl.value || '').trim();
-    slugEl.value = normalizePartnerSlug(row.slug || slugEl.value || '');
-    baseUrlEl.value = normalizePartnerBaseUrl(row.base_url || row.baseUrl || row.url || baseUrlEl.value || '');
-    familyEl.value = String(row.software_family || row.family || familyEl.value || 'unknown').trim() || 'unknown';
-    confidenceEl.value = String(row.software_confidence || row.confidence || confidenceEl.value || 'unknown').trim() || 'unknown';
-    countryEl.value = String(row.country_code || row.country || countryEl.value || '').trim().toUpperCase();
-    notesEl.value = String(row.notes || notesEl.value || '').trim();
-    relationshipStatusEl.value = normalizePartnerRelationshipStatus(
-      row.relationship_status ||
-      row.partner_relationship_status ||
-      row.status ||
-      relationshipStatusEl.value
-    );
-    relationshipNotesEl.value = String(
-      row.relationship_notes ||
-      row.partner_relationship_notes ||
-      relationshipNotesEl.value ||
-      ''
-    ).trim();
-  }
-
-  async function loadPartnerCapabilityRows(partnerRow) {
-    const partnerId = String(partnerRow?.id || currentPartnerRow?.id || '').trim();
-    if (!partnerId) {
-      currentPartnerCapabilityRows = [];
-      renderPartnerArtifacts();
-      return [];
+    if (!state.displayName || !state.baseUrl || !state.slug) {
+      reportEl.value = '';
+      seedEl.value = '';
+      updatePartnerActionAvailability({ showGuidance: true });
+      return;
     }
 
-    let data = null;
-    let error = null;
-
-    ({ data, error } = await supabase
-      .from('catalog_partner_capabilities')
-      .select('*')
-      .eq('partner_id', partnerId));
-
-    if (error && /column/i.test(String(error.message || ''))) {
-      ({ data, error } = await supabase
-        .from('catalog_partner_capabilities')
-        .select('*')
-        .eq('catalog_partner_id', partnerId));
-    }
-
-    if (error) {
-      console.error('Não consegui carregar as capacidades do parceiro:', error);
-      currentPartnerCapabilityRows = [];
-      renderPartnerArtifacts();
-      return [];
-    }
-
-    currentPartnerCapabilityRows = Array.isArray(data) ? data : [];
-    renderPartnerArtifacts();
-    return currentPartnerCapabilityRows;
-  }
-
-  async function loadPartnerFromDatabaseBySlug(slug, { silent = false } = {}) {
-    const normalizedSlug = normalizePartnerSlug(slug);
-    if (!normalizedSlug) return null;
-
-    const { data, error } = await supabase
-      .from('catalog_partners')
-      .select('*')
-      .eq('slug', normalizedSlug)
-      .limit(1);
-
-    if (error) {
-      if (!silent) {
-        console.error('Não consegui carregar o parceiro salvo:', error);
-        setPartnerProbeMessage('Não consegui ler o parceiro salvo na base.', 'error');
-      }
-      return null;
-    }
-
-    const row = Array.isArray(data) && data.length ? data[0] : null;
-    if (!row) {
-      currentPartnerRow = null;
-      currentPartnerCapabilityRows = [];
-      renderPartnerArtifacts({ keepLiveResults: false });
-      if (!silent) setPartnerProbeMessage('Nenhum parceiro salvo ainda com este slug.', 'warn');
-      return null;
-    }
-
-    applySavedPartnerRow(row);
-    await loadPartnerCapabilityRows(row);
-    if (!silent) setPartnerProbeMessage('Parceiro carregado da base.', 'ok');
-    return row;
-  }
-
-  async function savePartnerToDatabase({ silent = false } = {}) {
-    const state = renderPartnerArtifacts({ keepLiveResults: true });
-    if (!state) return null;
-
-    const payload = {
+    const probes = buildCapabilityProbe(state.baseUrl);
+    reportEl.value = formatProbeReport(probes);
+    seedEl.value = buildPartnerSeedSql({
       slug: state.slug,
-      display_name: state.displayName,
-      base_url: state.baseUrl,
-      software_family: state.softwareFamily,
-      software_confidence: state.softwareConfidence,
-      country_code: state.countryCode || null,
-      notes: state.notes || null,
-      relationship_status: state.relationshipStatus,
-      relationship_notes: state.relationshipNotes || null
-    };
+      displayName: state.displayName,
+      baseUrl: state.baseUrl,
+      softwareFamily: state.softwareFamily,
+      softwareConfidence: state.softwareConfidence,
+      countryCode: state.countryCode,
+      notes: state.notes
+    });
 
-    let data = null;
-    let error = null;
-
-    ({ data, error } = await supabase
-      .from('catalog_partners')
-      .upsert(payload, { onConflict: 'slug' })
-      .select('*')
-      .limit(1));
-
-    if (error && /column/i.test(String(error.message || ''))) {
-      const fallbackPayload = {
-        slug: state.slug,
-        display_name: state.displayName,
-        base_url: state.baseUrl,
-        software_family: state.softwareFamily,
-        software_confidence: state.softwareConfidence,
-        country_code: state.countryCode || null,
-        notes: state.notes || null
-      };
-
-      ({ data, error } = await supabase
-        .from('catalog_partners')
-        .upsert(fallbackPayload, { onConflict: 'slug' })
-        .select('*')
-        .limit(1));
-
-      if (!error && !relationshipPersistenceFallbackWarned) {
-        relationshipPersistenceFallbackWarned = true;
-        setPartnerProbeMessage('Parceiro salvo, mas o backend ainda não confirmou colunas próprias para o estatuto e as notas relacionais.', 'warn');
-      }
-    }
-
-    if (error) {
-      console.error('Não consegui salvar o parceiro na base:', error);
-      if (!silent) setPartnerProbeMessage('Não consegui salvar o parceiro na base.', 'error');
-      throw error;
-    }
-
-    const row = Array.isArray(data) && data.length ? data[0] : null;
-    if (row) applySavedPartnerRow(row);
-    await loadPartnerCapabilityRows(row || currentPartnerRow);
-    if (!silent) setPartnerProbeMessage('Parceiro salvo na base.', 'ok');
-    return row || currentPartnerRow;
-  }
-
-  async function runPartnerProbe() {
-    const state = renderPartnerArtifacts({ keepLiveResults: true });
-    if (!state) return;
-
-    testBtn.disabled = true;
-    saveBtn.disabled = true;
-
-    try {
-      const savedRow = await savePartnerToDatabase({ silent: true });
-
-      const probePayload = {
-        id: savedRow?.id || null,
-        partner_id: savedRow?.id || null,
-        slug: state.slug,
-        partner_slug: state.slug,
-        partnerSlug: state.slug,
-        base_url: state.baseUrl,
-        baseUrl: state.baseUrl,
-        display_name: state.displayName,
-        displayName: state.displayName
-      };
-
-      const { error } = await supabase.functions.invoke('probe-partner-catalog', {
-        body: probePayload
-      });
-
-      if (error) throw error;
-
-      await loadPartnerCapabilityRows(savedRow || currentPartnerRow);
-      renderPartnerArtifacts({ keepLiveResults: true });
-      setPartnerProbeMessage('Teste técnico executado. Nenhuma importação foi feita.', 'ok');
-    } catch (error) {
-      console.error('Não consegui testar os endpoints do parceiro:', error);
-      setPartnerProbeMessage('Não consegui executar o teste técnico do parceiro.', 'error');
-    } finally {
-      testBtn.disabled = false;
-      saveBtn.disabled = false;
-      updatePartnerGovernanceReadout();
-    }
-  }
-
-  presetEl.addEventListener('change', async () => {
-    if (!presetEl.value) return;
-    applyPreset(presetEl.value);
-    await loadPartnerFromDatabaseBySlug(presetEl.value, { silent: true });
-  });
-
-  slugEl.addEventListener('change', async () => {
-    const normalizedSlug = normalizePartnerSlug(slugEl.value);
-    if (!normalizedSlug) return;
-    slugEl.value = normalizedSlug;
-    await loadPartnerFromDatabaseBySlug(normalizedSlug, { silent: true });
-  });
-
-  relationshipStatusEl.addEventListener('change', () => {
-    relationshipStatusEl.value = normalizePartnerRelationshipStatus(relationshipStatusEl.value);
-    updatePartnerGovernanceReadout();
-  });
-
-  [displayEl, baseUrlEl, familyEl, confidenceEl, countryEl, notesEl, relationshipNotesEl].forEach((el) => {
-    el?.addEventListener('change', () => renderPartnerArtifacts({ keepLiveResults: true }));
-  });
-
-  generateBtn?.addEventListener('click', () => {
-    renderPartnerArtifacts({ keepLiveResults: true });
+    updatePartnerActionAvailability();
     setPartnerProbeMessage('Endpoints prováveis e seed SQL gerados.', 'ok');
-  });
+  }
 
-  saveBtn?.addEventListener('click', async () => {
-    try {
-      saveBtn.disabled = true;
-      await savePartnerToDatabase();
-    } catch (_) {
-      // mensagem já tratada na função
-    } finally {
-      saveBtn.disabled = false;
+  presetEl.addEventListener('change', () => {
+    if (presetEl.value) {
+      applyPreset(presetEl.value);
+      return;
     }
+    invalidatePartnerArtifacts();
+    setPartnerProbeMessage('', 'info');
   });
 
-  testBtn?.addEventListener('click', async () => {
-    await runPartnerProbe();
+  [displayEl, slugEl, baseUrlEl, countryEl, notesEl].forEach((el) => {
+    el?.addEventListener('input', invalidatePartnerArtifacts);
   });
+
+  [familyEl, confidenceEl].forEach((el) => {
+    el?.addEventListener('change', invalidatePartnerArtifacts);
+  });
+
+  generateBtn?.addEventListener('click', generatePartnerArtifacts);
 
   copyReportBtn?.addEventListener('click', async () => {
     await copyPartnerTextFrom('partnerProbeOutput', 'Relatório copiado.');
@@ -8347,7 +7934,7 @@ function initPartnerProbeUi() {
     window.open(url, '_blank', 'noopener,noreferrer');
   });
 
-  renderPartnerArtifacts({ keepLiveResults: true });
+  updatePartnerActionAvailability();
 }
 
     function setupRefreshHooks(){
