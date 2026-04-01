@@ -597,7 +597,11 @@
                 </button>
                 <button class="biblioteca-subtab-btn" id="btnBibliotecaGestaoCompleta" type="button" data-biblioteca-subtab="gestao-completa" role="tab" aria-selected="false" aria-controls="bibliotecaSubtabGestaoCompleta">
                   Biblioteca — gestão completa
-                  <span class="hint">Governança, interbibliotecas, tema e regimento</span>
+                  <span class="hint">Tema visual, regimento e parâmetros locais avançados</span>
+                </button>
+                <button class="biblioteca-subtab-btn" id="btnBibliotecaRelacoesExternas" type="button" data-biblioteca-subtab="relacoes-externas" role="tab" aria-selected="false" aria-controls="bibliotecaSubtabRelacoesExternas">
+                  Biblioteca — relações externas
+                  <span class="hint">Governança documental, interbibliotecas e parceiras externas</span>
                 </button>
               </div>
 
@@ -793,6 +797,105 @@
                   <div class="card">
                     <div class="section-head">
                       <div>
+                        <h2>Tema visual da biblioteca</h2>
+                        <div class="mini">Imagem de fundo, paleta e conjunto tipográfico da biblioteca, dentro de opções controladas.</div>
+                      </div>
+                    </div>
+                    <div class="row" style="margin-top:12px">
+                      <div>
+                        <label for="libraryThemeBackground">Imagem de fundo (1920 × 1080 recomendado)</label>
+                        <input class="input" id="libraryThemeBackground" type="text" placeholder="URL pública da imagem de fundo">
+                      </div>
+                      <div>
+                        <label for="libraryThemePalette">Paleta</label>
+                        <select class="select" id="libraryThemePalette">
+                          <option value="default">Padrão AnarBib</option>
+                          <option value="contraste_suave">Contraste suave</option>
+                          <option value="vermelho_escuro">Vermelho escuro</option>
+                          <option value="cinza_vermelho">Cinza e vermelho</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="row" style="margin-top:12px">
+                      <div>
+                        <label for="libraryThemeFontPack">Conjunto tipográfico</label>
+                        <select class="select" id="libraryThemeFontPack">
+                          <option value="default">Padrão AnarBib</option>
+                          <option value="inter_merriweather">Inter + Merriweather</option>
+                          <option value="inter_source">Inter + Source Serif</option>
+                          <option value="system">Sistema</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label for="libraryThemePreviewNote">Pré-visualização</label>
+                        <input class="input" id="libraryThemePreviewNote" type="text" value="" placeholder="Resumo do tema atual." readonly>
+                      </div>
+                    </div>
+                    <div class="actions">
+                      <button class="btn" id="btnSaveLibraryTheme" type="button">Salvar tema</button>
+                      <button class="btn" id="btnResetLibraryTheme" type="button">Restaurar tema padrão</button>
+                    </div>
+                    <div class="status" id="libraryThemeMsg"></div>
+                  </div>
+
+                  <div class="card">
+                    <div class="section-head">
+                      <div>
+                        <h2>Regimento da biblioteca</h2>
+                        <div class="mini">Mantém um rascunho privado e, quando quiseres, publica uma cópia pública do regimento ativo desta biblioteca.</div>
+                      </div>
+                    </div>
+                    <div class="row" style="margin-top:12px">
+                      <div>
+                        <label for="libraryRegimentoVersion">Versão / etiqueta</label>
+                        <input class="input" id="libraryRegimentoVersion" type="text" placeholder="Ex.: 2026.1 / março de 2026">
+                      </div>
+                      <div>
+                        <label for="libraryRegimentoFile">Arquivo PDF</label>
+                        <input class="input" id="libraryRegimentoFile" type="file" accept="application/pdf">
+                      </div>
+                    </div>
+                    <div class="row" style="margin-top:12px">
+                      <div>
+                        <label for="libraryRegimentoCurrent">Rascunho privado atual</label>
+                        <input class="input mono" id="libraryRegimentoCurrent" type="text" value="" placeholder="Nenhum rascunho privado salvo." readonly>
+                      </div>
+                      <div>
+                        <label for="libraryRegimentoPublicUrl">URL pública publicada</label>
+                        <input class="input mono" id="libraryRegimentoPublicUrl" type="text" value="" placeholder="Será resolvida automaticamente quando houver versão publicada." readonly>
+                      </div>
+                    </div>
+                    <div style="margin-top:12px">
+                      <label for="libraryRegimentoStateNote">Situação atual</label>
+                      <input class="input" id="libraryRegimentoStateNote" type="text" value="" placeholder="Sem regimento publicado." readonly>
+                    </div>
+                    <div class="actions">
+                      <button class="btn" id="btnOpenLibraryRegimento" type="button">Abrir regimento</button>
+                      <button class="btn" id="btnSaveLibraryRegimentoDraft" type="button">Salvar rascunho</button>
+                      <button class="btn primary" id="btnPublishLibraryRegimento" type="button">Publicar regimento</button>
+                      <button class="btn" id="btnDepublishLibraryRegimento" type="button">Despublicar regimento</button>
+                    </div>
+                    <div class="status" id="libraryRegimentoMsg"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="biblioteca-subtab-panel" id="bibliotecaSubtabRelacoesExternas" data-biblioteca-subtab-panel="relacoes-externas" role="tabpanel" aria-labelledby="btnBibliotecaRelacoesExternas">
+                <div class="grid">
+                  <div class="card">
+                    <div class="section-head">
+                      <div>
+                        <h2>Relações externas</h2>
+                        <div class="mini">Camada de gestão e probe para governança documental, solicitações entre bibliotecas e leitura técnica de parceiras externas.</div>
+                      </div>
+                    </div>
+                    <div class="muted-box" style="margin-top:12px">
+                      <div class="mini">Aqui tu registras regras, pedidos e testes. Nada nesta área importa catálogo automaticamente, não muda sozinha o estatuto político de uma parceira e não substitui a decisão local da biblioteca.</div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="section-head">
+                      <div>
                         <h2>Governança documental</h2>
                         <div class="mini">Define o que esta biblioteca pode editar diretamente, o que deve virar proposta de correção, o que pode ser retomado localmente e como a mutualização começa por padrão.</div>
                       </div>
@@ -958,7 +1061,6 @@
                     <div class="status" id="interlibRequestsMsg"></div>
                   </div>
 
-                  
                   <div class="card" id="partnerProbeCard" style="margin-bottom:16px;">
                     <h4>Catálogos parceiros</h4>
                     <p class="hint" style="margin:0 0 12px;">
@@ -1081,90 +1183,6 @@
                         <textarea id="partnerSeedOutput" class="textarea mono" rows="14" readonly placeholder="O insert em public.catalog_partners aparecerá aqui."></textarea>
                       </div>
                     </div>
-                  </div>
-
-                  <div class="card">
-                    <div class="section-head">
-                      <div>
-                        <h2>Tema visual da biblioteca</h2>
-                        <div class="mini">Imagem de fundo, paleta e conjunto tipográfico da biblioteca, dentro de opções controladas.</div>
-                      </div>
-                    </div>
-                    <div class="row" style="margin-top:12px">
-                      <div>
-                        <label for="libraryThemeBackground">Imagem de fundo (1920 × 1080 recomendado)</label>
-                        <input class="input" id="libraryThemeBackground" type="text" placeholder="URL pública da imagem de fundo">
-                      </div>
-                      <div>
-                        <label for="libraryThemePalette">Paleta</label>
-                        <select class="select" id="libraryThemePalette">
-                          <option value="default">Padrão AnarBib</option>
-                          <option value="contraste_suave">Contraste suave</option>
-                          <option value="vermelho_escuro">Vermelho escuro</option>
-                          <option value="cinza_vermelho">Cinza e vermelho</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div class="row" style="margin-top:12px">
-                      <div>
-                        <label for="libraryThemeFontPack">Conjunto tipográfico</label>
-                        <select class="select" id="libraryThemeFontPack">
-                          <option value="default">Padrão AnarBib</option>
-                          <option value="inter_merriweather">Inter + Merriweather</option>
-                          <option value="inter_source">Inter + Source Serif</option>
-                          <option value="system">Sistema</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label for="libraryThemePreviewNote">Pré-visualização</label>
-                        <input class="input" id="libraryThemePreviewNote" type="text" value="" placeholder="Resumo do tema atual." readonly>
-                      </div>
-                    </div>
-                    <div class="actions">
-                      <button class="btn" id="btnSaveLibraryTheme" type="button">Salvar tema</button>
-                      <button class="btn" id="btnResetLibraryTheme" type="button">Restaurar tema padrão</button>
-                    </div>
-                    <div class="status" id="libraryThemeMsg"></div>
-                  </div>
-
-                  <div class="card">
-                    <div class="section-head">
-                      <div>
-                        <h2>Regimento da biblioteca</h2>
-                        <div class="mini">Mantém um rascunho privado e, quando quiseres, publica uma cópia pública do regimento ativo desta biblioteca.</div>
-                      </div>
-                    </div>
-                    <div class="row" style="margin-top:12px">
-                      <div>
-                        <label for="libraryRegimentoVersion">Versão / etiqueta</label>
-                        <input class="input" id="libraryRegimentoVersion" type="text" placeholder="Ex.: 2026.1 / março de 2026">
-                      </div>
-                      <div>
-                        <label for="libraryRegimentoFile">Arquivo PDF</label>
-                        <input class="input" id="libraryRegimentoFile" type="file" accept="application/pdf">
-                      </div>
-                    </div>
-                    <div class="row" style="margin-top:12px">
-                      <div>
-                        <label for="libraryRegimentoCurrent">Rascunho privado atual</label>
-                        <input class="input mono" id="libraryRegimentoCurrent" type="text" value="" placeholder="Nenhum rascunho privado salvo." readonly>
-                      </div>
-                      <div>
-                        <label for="libraryRegimentoPublicUrl">URL pública publicada</label>
-                        <input class="input mono" id="libraryRegimentoPublicUrl" type="text" value="" placeholder="Será resolvida automaticamente quando houver versão publicada." readonly>
-                      </div>
-                    </div>
-                    <div style="margin-top:12px">
-                      <label for="libraryRegimentoStateNote">Situação atual</label>
-                      <input class="input" id="libraryRegimentoStateNote" type="text" value="" placeholder="Sem regimento publicado." readonly>
-                    </div>
-                    <div class="actions">
-                      <button class="btn" id="btnOpenLibraryRegimento" type="button">Abrir regimento</button>
-                      <button class="btn" id="btnSaveLibraryRegimentoDraft" type="button">Salvar rascunho</button>
-                      <button class="btn primary" id="btnPublishLibraryRegimento" type="button">Publicar regimento</button>
-                      <button class="btn" id="btnDepublishLibraryRegimento" type="button">Despublicar regimento</button>
-                    </div>
-                    <div class="status" id="libraryRegimentoMsg"></div>
                   </div>
                 </div>
               </div>
