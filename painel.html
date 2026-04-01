@@ -6088,73 +6088,6 @@ function belemNowParts(){
         lastError = error;
       }
 
-      const sessionAppMeta = session?.user?.app_metadata || {};
-      const sessionUserMeta = session?.user?.user_metadata || {};
-      const sessionRoles = [
-        sessionAppMeta?.role,
-        ...(Array.isArray(sessionAppMeta?.roles) ? sessionAppMeta.roles : []),
-        sessionUserMeta?.role,
-        ...(Array.isArray(sessionUserMeta?.roles) ? sessionUserMeta.roles : []),
-      ]
-        .map((value) => String(value || '').trim().toLowerCase())
-        .filter(Boolean);
-      const jwtSaysLibrarian = sessionAppMeta?.is_librarian === true
-        || sessionUserMeta?.is_librarian === true
-        || sessionRoles.includes('librarian');
-
-      if (jwtSaysLibrarian) {
-        pushRows([{
-          ...(profileRow || {}),
-          id: profileRow?.id || userId,
-          user_id: userId,
-          role: 'librarian',
-          status: 'active',
-          is_primary: true,
-          can_access_painel: true,
-          is_librarian: true,
-          is_restricted: !!profileRow?.is_restricted,
-          library_id: normalizeLibraryId(firstFilledValue(
-            sessionAppMeta?.library_id,
-            sessionUserMeta?.library_id,
-            profileRow?.default_library_id,
-            profileRow?.library_id,
-            ''
-          )),
-          library_slug: String(firstFilledValue(
-            sessionAppMeta?.library_slug,
-            sessionUserMeta?.library_slug,
-            profileRow?.default_library_slug,
-            profileRow?.library_slug,
-            ''
-          ) || '').trim(),
-          library_name: String(firstFilledValue(
-            sessionAppMeta?.library_name,
-            sessionUserMeta?.library_name,
-            profileRow?.default_library_name,
-            profileRow?.library_name,
-            ''
-          ) || '').trim(),
-          default_library_id: normalizeLibraryId(firstFilledValue(
-            sessionAppMeta?.default_library_id,
-            sessionUserMeta?.default_library_id,
-            profileRow?.default_library_id,
-            ''
-          )),
-          default_library_slug: String(firstFilledValue(
-            sessionAppMeta?.default_library_slug,
-            sessionUserMeta?.default_library_slug,
-            profileRow?.default_library_slug,
-            ''
-          ) || '').trim(),
-          default_library_name: String(firstFilledValue(
-            sessionAppMeta?.default_library_name,
-            sessionUserMeta?.default_library_name,
-            profileRow?.default_library_name,
-            ''
-          ) || '').trim(),
-        }]);
-      }
-
       if (profileRow) pushRows([profileRow]);
       return { data: collectedRows, error: lastError };
     }
@@ -6191,8 +6124,7 @@ function belemNowParts(){
         }
       }
 
-      const backendHint = ' Suspeita principal: backend/RLS/leitura das vistas api.my_access / api.my_session_context ou da tabela user_library_memberships.';
-      setStatus('statusLoans', 'Não consegui verificar o acesso da biblioteca' + (lastErrorMessage ? ': ' + lastErrorMessage : '.') + backendHint, 'bad', false);
+      setStatus('statusLoans', 'Não consegui verificar o acesso da biblioteca' + (lastErrorMessage ? ': ' + lastErrorMessage : '.'), 'bad', false);
       return false;
     }
     async function fillHeader(){
@@ -6212,10 +6144,49 @@ function belemNowParts(){
       if (accessPublicId) helloParts.push('ID ' + accessPublicId);
       if (libraryLabel) helloParts.push(libraryLabel);
       if (!helloParts.length && accessEmail) helloParts.push(accessEmail);
-      $('helloLine').textContent = helloParts.length ? ('Conectad@: ' + helloParts.join(' · ')) : '';
+      const helloLineText = helloParts.length ? ('Conectad@: ' + helloParts.join(' · ')) : '';
+      if ($('helloLine')) {
+        $('helloLine').dataset.baseText = helloLineText;
+        $('helloLine').textContent = helloLineText;
+      }
       $('btnModoLeitor').classList.toggle('hidden', !isLibrarian);
       updateTopbarAuthButton(!!session?.user?.id);
       renderActiveLibraryLogo(currentLibraryRow || identity || {});
+    }
+
+    function setPainelSessionOpenNotice(message=''){
+      const el = $('helloLine');
+      if (!el) return;
+      const baseText = String(el.dataset.baseText || el.textContent || '').trim();
+      const note = String(message || '').trim();
+      el.textContent = note ? (baseText ? `${baseText} · ${note}` : note) : baseText;
+    }
+
+    async function runPainelPostAuthLoads({ syncId } = {}){
+      const steps = [
+        ['loadLibraryServiceState', () => loadLibraryServiceState()],
+        ['loadLibraryIdentity', () => loadLibraryIdentity()],
+        ['loadLibraryTheme', () => loadLibraryTheme()],
+        ['loadDocGovernance', () => loadDocGovernance()],
+        ['loadInterlibraryRequests', () => loadInterlibraryRequests({ silent:true })],
+        ['loadLibrarySchedule', () => loadLibrarySchedule()],
+        ['loadLocalRules', () => loadLocalRules()],
+        ['loadLibraryRegimento', () => loadLibraryRegimento()],
+        ['loadInternalTaskLibrarians', () => loadInternalTaskLibrarians()],
+        ['loadInternalTasks', () => loadInternalTasks({ silent:true })],
+        ['refreshCollections', () => refreshCollections()],
+      ];
+      const failures = [];
+      for (const [label, run] of steps) {
+        try {
+          await run();
+        } catch (error) {
+          failures.push({ label, error });
+          console.warn(`Falha ao carregar ${label} durante a abertura da sessão do painel.`, error);
+        }
+      }
+      if (syncId === authSyncSerial) setupRefreshHooks();
+      return failures;
     }
 
     async function loadProfilesByIds(userIds){
@@ -9174,19 +9145,18 @@ function initPartnerProbeUi() {
           return false;
         }
         await fillHeader();
-        if (!reloadData) return true;
-        await loadLibraryServiceState();
-        await loadLibraryIdentity();
-        await loadLibraryTheme();
-        await loadDocGovernance();
-        await loadInterlibraryRequests({ silent:true });
-        await loadLibrarySchedule();
-        await loadLocalRules();
-        await loadLibraryRegimento();
-        await loadInternalTaskLibrarians();
-        await loadInternalTasks({ silent:true });
-        await refreshCollections();
-        if (syncId === authSyncSerial) setupRefreshHooks();
+        if (!reloadData) {
+          setPainelSessionOpenNotice('');
+          return true;
+        }
+        const loadFailures = await runPainelPostAuthLoads({ syncId });
+        if (loadFailures.length) {
+          const failedLabels = loadFailures.map((entry) => entry.label).join(', ');
+          setPainelSessionOpenNotice('sessão aberta; algumas seções ainda falharam');
+          console.warn('Sessão do painel aberta com falhas parciais de carregamento:', failedLabels);
+        } else {
+          setPainelSessionOpenNotice('');
+        }
         return true;
       } catch (error) {
         console.warn('Não consegui sincronizar a sessão do painel.', error);
