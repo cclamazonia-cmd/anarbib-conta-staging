@@ -1003,6 +1003,31 @@
                       <textarea class="textarea" id="docGovAuthorizedPartners" placeholder="Ex.: btl, cira, csl-milano"></textarea>
                       <div class="hint">Usa slugs, siglas ou identificadores curtos separados por vírgula, um por linha ou por ponto e vírgula.</div>
                     </div>
+                    <div class="row3" style="margin-top:12px">
+                      <div>
+                        <label for="docGovPermissionScopeMode">Escopo das permissões entre bibliotecas</label>
+                        <select class="select" id="docGovPermissionScopeMode">
+                          <option value="parceiras_selecionadas">Só parceiras selecionadas</option>
+                          <option value="todas_ativas">Todas as bibliotecas ativas</option>
+                          <option value="por_pais">Por país</option>
+                          <option value="por_rede_ou_grupo">Por rede / grupo</option>
+                          <option value="misto">Combinação mista</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label for="docGovAuthorizedCountries">Países autorizados</label>
+                        <input class="input" id="docGovAuthorizedCountries" type="text" placeholder="Ex.: BR, AR, UY">
+                      </div>
+                      <div>
+                        <label for="docGovAuthorizedNetworks">Redes / grupos autorizados</label>
+                        <input class="input" id="docGovAuthorizedNetworks" type="text" placeholder="Ex.: FICEDL, rede-anarquista">
+                      </div>
+                    </div>
+                    <div style="margin-top:12px">
+                      <label for="docGovScopeNote">Nota de escopo (preparatória)</label>
+                      <textarea class="textarea" id="docGovScopeNote" placeholder="Ex.: correções abertas às bibliotecas BR escolhidas; edição direta reservada às bibliotecas da FICEDL; mutualização mais ampla do que a correção."></textarea>
+                      <div class="hint">Nesta etapa, o painel já grava este escopo na governança documental da biblioteca. A aplicação automática fina por país, rede ou comunidade ainda precisa ser ligada depois em catalogação e nas outras superfícies.</div>
+                    </div>
                     <div style="margin-top:12px">
                       <label for="docGovInternalNote">Nota interna de governança</label>
                       <textarea class="textarea" id="docGovInternalNote" placeholder="Ex.: notices BTL só podem receber proposta de correção; PDFs locais podem ser ligados a notices mutualizadas."></textarea>
@@ -1106,7 +1131,7 @@
                   </div>
 
                   <div class="card" id="partnerProbeCard" style="margin-bottom:16px;">
-                    <h4>Catálogos parceiros</h4>
+                    <h4>Catálogos de parceiras externas</h4>
                     <p class="hint" style="margin:0 0 12px;">
                       Registra a parceria, qualifica o estado relacional e testa o acesso técnico, sem importar catálogo nenhum automaticamente.
                     </p>
@@ -1115,7 +1140,7 @@
 
                     <div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:12px;">
                       <div class="field">
-                        <label for="partnerPresetSelect">Parceiro conhecido</label>
+                        <label for="partnerPresetSelect">Parceira conhecida</label>
                         <select id="partnerPresetSelect" class="select">
                           <option value="">Seleciona um preset (opcional)</option>
                         </select>
@@ -1194,7 +1219,7 @@
 
                       <div class="field">
                         <label for="partnerProbeDecisionInput">Próximo passo</label>
-                        <input id="partnerProbeDecisionInput" class="input" type="text" readonly placeholder="Registrar ou testar o parceiro">
+                        <input id="partnerProbeDecisionInput" class="input" type="text" readonly placeholder="Registrar ou testar a parceira">
                       </div>
                     </div>
 
@@ -1204,7 +1229,7 @@
                     </div>
 
                     <div class="actions">
-                      <button id="partnerSaveBtn" class="btn primary" type="button">Salvar parceiro na base</button>
+                      <button id="partnerSaveBtn" class="btn primary" type="button">Salvar parceira na base</button>
                       <button id="partnerOpenBaseBtn" class="btn" type="button">Abrir base URL</button>
                       <button id="partnerGenerateBtn" class="btn" type="button">Gerar endpoints e seed</button>
                       <button id="partnerTestBtn" class="btn" type="button">Testar endpoints</button>
@@ -1213,7 +1238,7 @@
                     </div>
 
                     <div class="muted-box" id="partnerPoliticalNoticeBox" style="margin-top:12px;">
-                      <div class="mini" id="partnerPoliticalNotice">Nenhum teste executado ainda. Registrar ou testar um parceiro não importa catálogo nenhum: isso só documenta a relação e o estado técnico atual.</div>
+                      <div class="mini" id="partnerPoliticalNotice">Nenhum teste executado ainda. Registrar ou testar uma parceira não importa catálogo nenhum: isso só documenta a relação e o estado técnico atual.</div>
                     </div>
 
                     <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px;">
@@ -3961,6 +3986,10 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         default_mutualization: 'local',
         local_items_only: true,
         authorized_partners: [],
+        permission_scope_mode: 'parceiras_selecionadas',
+        authorized_countries: [],
+        authorized_networks: [],
+        scope_note: '',
         internal_note: ''
       };
     }
@@ -3980,6 +4009,20 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
           .map((item) => String(item || '').trim())
           .filter(Boolean)
       ));
+    }
+
+    function parseDocGovCountryCodes(value){
+      const raw = Array.isArray(value) ? value : String(value || '').split(/[\n,;]+/);
+      return Array.from(new Set(raw
+        .map((item) => String(item || '').trim().toUpperCase())
+        .filter(Boolean)));
+    }
+
+    function parseDocGovNetworks(value){
+      const raw = Array.isArray(value) ? value : String(value || '').split(/[\n,;]+/);
+      return Array.from(new Set(raw
+        .map((item) => String(item || '').trim())
+        .filter(Boolean)));
     }
 
     function normalizeDocGovernance(value){
@@ -4028,6 +4071,31 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
           obj.partner_slugs,
           ''
         )),
+        permission_scope_mode: normalizeDocGovSelect(firstFilledValue(
+          obj.permission_scope_mode,
+          obj.permissions_scope_mode,
+          obj.scope_mode,
+          ''
+        ), ['parceiras_selecionadas', 'todas_ativas', 'por_pais', 'por_rede_ou_grupo', 'misto'], base.permission_scope_mode),
+        authorized_countries: parseDocGovCountryCodes(firstFilledValue(
+          obj.authorized_countries,
+          obj.country_scopes,
+          obj.authorized_country_codes,
+          ''
+        )),
+        authorized_networks: parseDocGovNetworks(firstFilledValue(
+          obj.authorized_networks,
+          obj.network_scopes,
+          obj.authorized_groups,
+          obj.authorized_network_tags,
+          ''
+        )),
+        scope_note: String(firstFilledValue(
+          obj.scope_note,
+          obj.permissions_scope_note,
+          obj.authorized_scope_note,
+          ''
+        ) || '').trim(),
         internal_note: String(firstFilledValue(
           obj.internal_note,
           obj.document_governance_note,
@@ -4081,6 +4149,10 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         default_mutualization: governance.default_mutualization,
         local_items_only: !!governance.local_items_only,
         authorized_partners: parseDocGovPartners(governance.authorized_partners),
+        permission_scope_mode: governance.permission_scope_mode,
+        authorized_countries: parseDocGovCountryCodes(governance.authorized_countries),
+        authorized_networks: parseDocGovNetworks(governance.authorized_networks),
+        scope_note: String(governance.scope_note || '').trim(),
         internal_note: String(governance.internal_note || '').trim(),
       };
     }
@@ -4121,7 +4193,14 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         emprestimo_interbib: 'novas notices com empréstimo inter-bibs por padrão'
       })[governance.default_mutualization] || 'mutualização sem regra';
       const partners = governance.authorized_partners.length ? `parceiras: ${governance.authorized_partners.join(', ')}` : 'sem parceiras autorizadas';
-      return [direct, localCopy, mutual, partners].join(' · ');
+      const scope = ({
+        parceiras_selecionadas: 'escopo por parceiras selecionadas',
+        todas_ativas: 'escopo aberto a todas as bibliotecas ativas',
+        por_pais: governance.authorized_countries.length ? `escopo por país: ${governance.authorized_countries.join(', ')}` : 'escopo por país ainda sem países definidos',
+        por_rede_ou_grupo: governance.authorized_networks.length ? `escopo por rede / grupo: ${governance.authorized_networks.join(', ')}` : 'escopo por rede / grupo ainda sem grupos definidos',
+        misto: 'escopo misto entre parceiras, países ou redes'
+      })[governance.permission_scope_mode] || 'escopo sem regra';
+      return [direct, localCopy, mutual, partners, scope].join(' · ');
     }
 
     function renderDocGovernance(governance){
@@ -4133,6 +4212,10 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
       $('docGovDefaultMutualization').value = normalized.default_mutualization;
       $('docGovLocalItemsOnly').checked = !!normalized.local_items_only;
       $('docGovAuthorizedPartners').value = normalized.authorized_partners.join(', ');
+      $('docGovPermissionScopeMode').value = normalized.permission_scope_mode;
+      $('docGovAuthorizedCountries').value = normalized.authorized_countries.join(', ');
+      $('docGovAuthorizedNetworks').value = normalized.authorized_networks.join(', ');
+      $('docGovScopeNote').value = normalized.scope_note;
       $('docGovInternalNote').value = normalized.internal_note;
       $('docGovStateNote').value = buildDocGovernanceSummary(normalized);
       currentDocGovernanceState = normalized;
@@ -4147,6 +4230,10 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         default_mutualization: $('docGovDefaultMutualization')?.value,
         local_items_only: !!$('docGovLocalItemsOnly')?.checked,
         authorized_partners: $('docGovAuthorizedPartners')?.value,
+        permission_scope_mode: $('docGovPermissionScopeMode')?.value,
+        authorized_countries: $('docGovAuthorizedCountries')?.value,
+        authorized_networks: $('docGovAuthorizedNetworks')?.value,
+        scope_note: $('docGovScopeNote')?.value,
         internal_note: $('docGovInternalNote')?.value,
       });
     }
@@ -8092,7 +8179,7 @@ async function copyPartnerTextFrom(id, successMessage) {
     await navigator.clipboard.writeText(value);
     setPartnerProbeMessage(successMessage, 'ok');
   } catch (error) {
-    console.error('Falha ao copiar texto do parceiro:', error);
+    console.error('Falha ao copiar texto da parceira:', error);
     setPartnerProbeMessage('Não consegui copiar automaticamente. Copia manualmente o conteúdo do campo.', 'error');
   }
 }
@@ -8309,7 +8396,7 @@ function initPartnerProbeUi() {
     }
 
     if (error) {
-      console.error('Não consegui carregar as capacidades do parceiro:', error);
+      console.error('Não consegui carregar as capacidades da parceira:', error);
       currentPartnerCapabilityRows = [];
       renderPartnerArtifacts();
       return [];
@@ -8332,8 +8419,8 @@ function initPartnerProbeUi() {
 
     if (error) {
       if (!silent) {
-        console.error('Não consegui carregar o parceiro salvo:', error);
-        setPartnerProbeMessage('Não consegui ler o parceiro salvo na base.', 'error');
+        console.error('Não consegui carregar a parceira salva:', error);
+        setPartnerProbeMessage('Não consegui ler a parceira salva na base.', 'error');
       }
       return null;
     }
@@ -8343,13 +8430,13 @@ function initPartnerProbeUi() {
       currentPartnerRow = null;
       currentPartnerCapabilityRows = [];
       renderPartnerArtifacts({ keepLiveResults: false });
-      if (!silent) setPartnerProbeMessage('Nenhum parceiro salvo ainda com este slug.', 'warn');
+      if (!silent) setPartnerProbeMessage('Nenhuma parceira salva ainda com este slug.', 'warn');
       return null;
     }
 
     applySavedPartnerRow(row);
     await loadPartnerCapabilityRows(row);
-    if (!silent) setPartnerProbeMessage('Parceiro carregado da base.', 'ok');
+    if (!silent) setPartnerProbeMessage('Parceira carregada da base.', 'ok');
     return row;
   }
 
@@ -8397,20 +8484,20 @@ function initPartnerProbeUi() {
 
       if (!error && !relationshipPersistenceFallbackWarned) {
         relationshipPersistenceFallbackWarned = true;
-        setPartnerProbeMessage('Parceiro salvo, mas o backend ainda não confirmou colunas próprias para o estatuto e as notas relacionais.', 'warn');
+        setPartnerProbeMessage('Parceira salva, mas o backend ainda não confirmou colunas próprias para o estatuto e as notas relacionais.', 'warn');
       }
     }
 
     if (error) {
-      console.error('Não consegui salvar o parceiro na base:', error);
-      if (!silent) setPartnerProbeMessage('Não consegui salvar o parceiro na base.', 'error');
+      console.error('Não consegui salvar a parceira na base:', error);
+      if (!silent) setPartnerProbeMessage('Não consegui salvar a parceira na base.', 'error');
       throw error;
     }
 
     const row = Array.isArray(data) && data.length ? data[0] : null;
     if (row) applySavedPartnerRow(row);
     await loadPartnerCapabilityRows(row || currentPartnerRow);
-    if (!silent) setPartnerProbeMessage('Parceiro salvo na base.', 'ok');
+    if (!silent) setPartnerProbeMessage('Parceira salva na base.', 'ok');
     return row || currentPartnerRow;
   }
 
@@ -8446,8 +8533,8 @@ function initPartnerProbeUi() {
       renderPartnerArtifacts({ keepLiveResults: true });
       setPartnerProbeMessage('Teste técnico executado. Nenhuma importação foi feita.', 'ok');
     } catch (error) {
-      console.error('Não consegui testar os endpoints do parceiro:', error);
-      setPartnerProbeMessage('Não consegui executar o teste técnico do parceiro.', 'error');
+      console.error('Não consegui testar os endpoints da parceira:', error);
+      setPartnerProbeMessage('Não consegui executar o teste técnico da parceira.', 'error');
     } finally {
       partnerActionBusy = false;
       updatePartnerGovernanceReadout();
