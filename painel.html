@@ -3281,7 +3281,11 @@
       updateTopbarAuthButton(false);
       hideActiveLibraryLogo();
       $('btnModoLeitor')?.classList.add('hidden');
-      $('helloLine').textContent = '';
+      const hello = $('helloLine');
+      if (hello) {
+        hello.dataset.baseText = '';
+        hello.textContent = '';
+      }
       setChip('chipFuncao', 'Função: —');
       setChip('chipEmail', 'E-mail: —');
     }
@@ -6227,7 +6231,8 @@ function belemNowParts(){
     let currentIdentityRow = null;
 
     function isPainelHeaderHydrated(){
-      return !!String($('helloLine')?.dataset?.baseText || '').trim();
+      const hello = $('helloLine');
+      return !!String(hello?.dataset?.baseText || hello?.textContent || '').trim();
     }
 
     function adoptPainelBootstrapState(){
@@ -6395,7 +6400,12 @@ function belemNowParts(){
       if (accessPublicId) helloParts.push('ID ' + accessPublicId);
       if (libraryLabel) helloParts.push(libraryLabel);
       if (!helloParts.length && accessEmail) helloParts.push(accessEmail);
-      $('helloLine').textContent = helloParts.length ? ('Conectad@: ' + helloParts.join(' · ')) : '';
+      const helloText = helloParts.length ? ('Conectad@: ' + helloParts.join(' · ')) : '';
+      const hello = $('helloLine');
+      if (hello) {
+        hello.dataset.baseText = helloText;
+        hello.textContent = helloText;
+      }
       $('btnModoLeitor').classList.toggle('hidden', !isLibrarian);
       updateTopbarAuthButton(!!session?.user?.id);
       renderActiveLibraryLogo(currentLibraryRow || identity || {});
