@@ -2473,71 +2473,80 @@
       return payload;
     }
 
-    const bootAuthButton = $boot('btnSair');
-    if (bootAuthButton && !bootAuthButton.dataset.minAuthBound) {
-      bootAuthButton.dataset.minAuthBound = 'true';
-      bootAuthButton.addEventListener('click', async (event) => {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        const targetHref = bootResolveCadastroHref();
-        const authMode = String(bootAuthButton.dataset.authMode || 'login').trim().toLowerCase();
-        if (authMode !== 'logout') {
-          window.location.href = targetHref;
+    const PAINEL_BOOTSTRAP_AUTH_ACTIVE = false;
+    /*
+      Bootstrap auth local explicitement neutralisé ici.
+      Raison : ce fichier contenait encore deux pilotes auth concurrents
+      pour btnSair + session + header.
+      Le module principal du bas reste désormais la seule autorité.
+    */
+    if (PAINEL_BOOTSTRAP_AUTH_ACTIVE) {
+      const bootAuthButton = $boot('btnSair');
+      if (bootAuthButton && !bootAuthButton.dataset.minAuthBound) {
+        bootAuthButton.dataset.minAuthBound = 'true';
+        bootAuthButton.addEventListener('click', async (event) => {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          const targetHref = bootResolveCadastroHref();
+          const authMode = String(bootAuthButton.dataset.authMode || 'login').trim().toLowerCase();
+          if (authMode !== 'logout') {
+            window.location.href = targetHref;
+            return;
+          }
+          bootAuthButton.disabled = true;
+          bootAuthButton.setAttribute('aria-busy', 'true');
+          try {
+            await Promise.race([
+              supabase.auth.signOut(),
+              new Promise((resolve) => setTimeout(resolve, 2500))
+            ]);
+          } catch (error) {
+            console.warn('Bootstrap mínimo do painel: signOut falhou; seguindo mesmo assim.', error);
+          } finally {
+            bootUpdateTopbarAuthButton(false);
+            bootResetPainelChrome();
+            bootAuthButton.disabled = false;
+            bootAuthButton.setAttribute('aria-busy', 'false');
+            window.location.href = targetHref;
+          }
+        });
+      }
+
+      /* pageshow hook removed on request */
+      /* focus hook removed on request */
+      /* visibilitychange hook removed on request */
+      /* removed condition: document.visibilityState === 'visible' */
+      /* removed auth bootstrap passive recheck */
+      /* storage hook removed on request */
+      /* removed key inspection for auth/bootstrap storage events */
+      /* removed auth bootstrap passive recheck */
+      /* end removed passive auth hooks */
+
+      supabase.auth.onAuthStateChange(async (event, nextSession) => {
+        const eventName = String(event || '').trim().toUpperCase();
+        if (nextSession?.user?.id) {
+          await bootHydratePainelAuthChrome(nextSession);
           return;
         }
-        bootAuthButton.disabled = true;
-        bootAuthButton.setAttribute('aria-busy', 'true');
-        try {
-          await Promise.race([
-            supabase.auth.signOut(),
-            new Promise((resolve) => setTimeout(resolve, 2500))
-          ]);
-        } catch (error) {
-          console.warn('Bootstrap mínimo do painel: signOut falhou; seguindo mesmo assim.', error);
-        } finally {
+        if (eventName === 'SIGNED_OUT') {
+          if (painelMinBoot?.session?.user?.id || painelMinBoot?.hydrated) { bootUpdateTopbarAuthButton(true); return; }
           bootUpdateTopbarAuthButton(false);
           bootResetPainelChrome();
-          bootAuthButton.disabled = false;
-          bootAuthButton.setAttribute('aria-busy', 'false');
-          window.location.href = targetHref;
+          return;
+        }
+        const recovered = await bootResolveSession(4, 120);
+        if (recovered?.user?.id) {
+          await bootHydratePainelAuthChrome(recovered);
+          return;
+        }
+        if (!painelMinBoot?.session?.user?.id && !painelMinBoot?.hydrated) {
+          bootUpdateTopbarAuthButton(false);
+          bootResetPainelChrome();
         }
       });
+
+      await bootHydratePainelAuthChrome();
     }
-
-    /* pageshow hook removed on request */
-    /* focus hook removed on request */
-    /* visibilitychange hook removed on request */
-    /* removed condition: document.visibilityState === 'visible' */
-    /* removed auth bootstrap passive recheck */
-    /* storage hook removed on request */
-    /* removed key inspection for auth/bootstrap storage events */
-    /* removed auth bootstrap passive recheck */
-    /* end removed passive auth hooks */
-
-    supabase.auth.onAuthStateChange(async (event, nextSession) => {
-      const eventName = String(event || '').trim().toUpperCase();
-      if (nextSession?.user?.id) {
-        await bootHydratePainelAuthChrome(nextSession);
-        return;
-      }
-      if (eventName === 'SIGNED_OUT') {
-        if (painelMinBoot?.session?.user?.id || painelMinBoot?.hydrated) { bootUpdateTopbarAuthButton(true); return; }
-        bootUpdateTopbarAuthButton(false);
-        bootResetPainelChrome();
-        return;
-      }
-      const recovered = await bootResolveSession(4, 120);
-      if (recovered?.user?.id) {
-        await bootHydratePainelAuthChrome(recovered);
-        return;
-      }
-      if (!painelMinBoot?.session?.user?.id && !painelMinBoot?.hydrated) {
-        bootUpdateTopbarAuthButton(false);
-        bootResetPainelChrome();
-      }
-    });
-
-    await bootHydratePainelAuthChrome();
   </script>
 
   <script type="module">
