@@ -2425,9 +2425,20 @@
       bootApplyActiveLibraryLogo(payload?.currentLibraryRow || identity || {});
     }
 
-    async function bootHydratePainelAuthChrome(nextSession = null) {
+    async function bootHydratePainelAuthChrome(nextSession = null, { allowAnonymousReset = false } = {}) {
+      const previousSession = painelMinBoot?.session;
       const session = nextSession?.user?.id ? nextSession : await bootResolveSession();
       if (!session?.user?.id) {
+        if (previousSession?.user?.id && !allowAnonymousReset) {
+          bootUpdateTopbarAuthButton(true);
+          return {
+            session: previousSession,
+            rows: Array.isArray(painelMinBoot?.rows) ? [...painelMinBoot.rows] : [],
+            currentIdentityRow: painelMinBoot?.currentIdentityRow || null,
+            currentAccessRow: painelMinBoot?.currentAccessRow || null,
+            currentLibraryRow: painelMinBoot?.currentLibraryRow || null,
+          };
+        }
         bootUpdateTopbarAuthButton(false);
         bootResetPainelChrome();
         return null;
@@ -2462,6 +2473,37 @@
       return payload;
     }
 
+    const bootAuthButton = $boot('btnSair');
+    if (bootAuthButton && !bootAuthButton.dataset.minAuthBound) {
+      bootAuthButton.dataset.minAuthBound = 'true';
+      bootAuthButton.addEventListener('click', async (event) => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const targetHref = bootResolveCadastroHref();
+        const authMode = String(bootAuthButton.dataset.authMode || 'login').trim().toLowerCase();
+        if (authMode !== 'logout') {
+          window.location.href = targetHref;
+          return;
+        }
+        bootAuthButton.disabled = true;
+        bootAuthButton.setAttribute('aria-busy', 'true');
+        try {
+          await Promise.race([
+            supabase.auth.signOut(),
+            new Promise((resolve) => setTimeout(resolve, 2500))
+          ]);
+        } catch (error) {
+          console.warn('Bootstrap mínimo do painel: signOut falhou; seguindo mesmo assim.', error);
+        } finally {
+          bootUpdateTopbarAuthButton(false);
+          bootResetPainelChrome();
+          bootAuthButton.disabled = false;
+          bootAuthButton.setAttribute('aria-busy', 'false');
+          window.location.href = targetHref;
+        }
+      });
+    }
+
     window.addEventListener('pageshow', () => { void bootHydratePainelAuthChrome(); });
     window.addEventListener('focus', () => { void bootHydratePainelAuthChrome(); });
     document.addEventListener('visibilitychange', () => {
@@ -2474,10 +2516,23 @@
       }
     });
 
-    supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+    supabase.auth.onAuthStateChange(async (event, nextSession) => {
+      const eventName = String(event || '').trim().toUpperCase();
       if (nextSession?.user?.id) {
         await bootHydratePainelAuthChrome(nextSession);
-      } else {
+        return;
+      }
+      if (eventName === 'SIGNED_OUT') {
+        bootUpdateTopbarAuthButton(false);
+        bootResetPainelChrome();
+        return;
+      }
+      const recovered = await bootResolveSession(4, 120);
+      if (recovered?.user?.id) {
+        await bootHydratePainelAuthChrome(recovered);
+        return;
+      }
+      if (!painelMinBoot?.session?.user?.id && !painelMinBoot?.hydrated) {
         bootUpdateTopbarAuthButton(false);
         bootResetPainelChrome();
       }
@@ -3200,7 +3255,7 @@
       btn.setAttribute('aria-label', label);
       btn.title = 'Aguarda a verificação da sessão.';
       btn.setAttribute('aria-busy', 'true');
-      btn.disabled = true;
+      btn.disabled = false;
     }
 
     function updateTopbarAuthButton(isLoggedIn){
