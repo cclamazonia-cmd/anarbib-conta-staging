@@ -1573,7 +1573,7 @@ button[type="submit"] *,
 
     function canFallbackContaHoldingResolutionError(error) {
       const msg = String(error?.message || error || "");
-      return /permission|policy|not exist|does not exist|relation|schema cache|column|book_holdings/i.test(msg);
+      return /permission|policy|not exist|does not exist|relation|schema cache|column|book_holdings|fn_v2_resolve_catalog_refs_for_current_user|catalog_books_public_session_v2/i.test(msg);
     }
 
 
@@ -1597,147 +1597,71 @@ button[type="submit"] *,
       const cleanRefs = Array.from(new Set((refs || []).map((ref) => normalizeBibRefValue(ref)).filter(Boolean)));
       if (!cleanRefs.length) return { resolved: false, reason: "empty-refs" };
 
-      const libraryId = resolveContaReservationLibraryId();
-      if (!libraryId) return { resolved: false, reason: "no-library-id" };
+      const rpcRes = await supabase.rpc("fn_v2_resolve_catalog_refs_for_current_user", {
+        p_refs: cleanRefs
+      });
 
-      const candidateMap = new Map(cleanRefs.map((ref) => [ref, buildLocalBibRefCandidates(ref)]));
-      const lookupRefs = Array.from(new Set(Array.from(candidateMap.values()).flat().filter(Boolean)));
-      const mergedMatches = new Map();
-
-      const registerMatches = (rows) => {
-        for (const row of (Array.isArray(rows) ? rows : [])) {
-          const holdingId = Number(row?.session_holding_id || row?.holding_id || row?.id || 0);
-          if (!(holdingId > 0)) continue;
-
-          const localBibRef = normalizeBibRefValue(row?.session_local_bib_ref || row?.local_bib_ref);
-          const bookBibRef = normalizeBibRefValue(row?.bib_ref);
-          const dedupeKey = `${holdingId}|${localBibRef}|${bookBibRef}`;
-          if (mergedMatches.has(dedupeKey)) continue;
-
-          mergedMatches.set(dedupeKey, {
-            holding_id: holdingId,
-            local_bib_ref: localBibRef || bookBibRef,
-            book_bib_ref: bookBibRef,
-            loanable: row?.session_loanable === true || row?.loanable === true,
-            raw_loanable: typeof row?.session_loanable === "boolean" ? row.session_loanable : row?.loanable,
-            book_id: Number(row?.book_id || 0) || null,
-            library_id: normalizeLibraryId(row?.session_library_id || row?.library_id || libraryId)
-          });
+      if (rpcRes.error) {
+        const rpcMsg = String(rpcRes.error?.message || "").toLowerCase();
+        if (rpcMsg.includes("biblioteca de vínculo ativa") || rpcMsg.includes("biblioteca de vinculo ativa")) {
+          return { resolved: false, reason: "no-library-id", error: rpcRes.error };
         }
-      };
-
-      const [sessionByLocal, sessionByBook] = await Promise.all([
-        supabase
-          .schema("api")
-          .from("catalog_books_public_session_v2")
-          .select("book_id,bib_ref,session_holding_id,session_local_bib_ref,session_loanable,session_library_id")
-          .in("session_local_bib_ref", lookupRefs)
-          .limit(Math.max(lookupRefs.length * 2, 20)),
-        supabase
-          .schema("api")
-          .from("catalog_books_public_session_v2")
-          .select("book_id,bib_ref,session_holding_id,session_local_bib_ref,session_loanable,session_library_id")
-          .in("bib_ref", lookupRefs)
-          .limit(Math.max(lookupRefs.length * 2, 20))
-      ]);
-
-      if (sessionByLocal.error || sessionByBook.error) {
-        const firstError = sessionByLocal.error || sessionByBook.error;
-        if (!canFallbackContaHoldingResolutionError(firstError)) {
-          throw firstError;
-        }
-      } else {
-        registerMatches(sessionByLocal.data);
-        registerMatches(sessionByBook.data);
+        throw rpcRes.error;
       }
 
-      const directLookup = await supabase
-        .from("book_holdings")
-        .select("id,library_id,local_bib_ref,loanable,book_id")
-        .eq("library_id", libraryId)
-        .in("local_bib_ref", lookupRefs)
-        .limit(Math.max(lookupRefs.length + 2, 10));
-
-      if (directLookup.error) {
-        if (canFallbackContaHoldingResolutionError(directLookup.error)) {
-          if (!mergedMatches.size) {
-            return { resolved: false, reason: "holding-resolution-unavailable", error: directLookup.error };
-          }
-        } else {
-          throw directLookup.error;
-        }
-      } else {
-        registerMatches(directLookup.data);
+      const rowsData = Array.isArray(rpcRes.data) ? rpcRes.data : [];
+      if (!rowsData.length) {
+        return { resolved: false, reason: "holding-not-found" };
       }
 
-      const rows = Array.from(mergedMatches.values());
-      if (!rows.length) return { resolved: false, reason: "holding-not-found", libraryId };
+      const rowsByInputRef = new Map();
+      for (const row of rowsData) {
+        const inputRef = normalizeBibRefValue(row?.input_ref || row?.ref_trimmed);
+        if (!inputRef || rowsByInputRef.has(inputRef)) continue;
+        rowsByInputRef.set(inputRef, row);
+      }
 
-      const chooseUniqueMatch = (matches, ref) => {
-        const unique = [];
-        const seenHoldingIds = new Set();
-        for (const match of matches) {
-          if (!match || !(match.holding_id > 0) || seenHoldingIds.has(match.holding_id)) continue;
-          seenHoldingIds.add(match.holding_id);
-          unique.push(match);
-        }
-        if (unique.length !== 1) {
-          return { ok: false, reason: unique.length > 1 ? "ambiguous-holding" : "missing-holding", ref };
-        }
-        return { ok: true, match: unique[0] };
-      };
-
+      const resolvedRows = [];
       const holdingIds = [];
-      const holdingRows = [];
       for (const ref of cleanRefs) {
-        const candidates = candidateMap.get(ref) || [ref];
-
-        const exactLocal = chooseUniqueMatch(rows.filter((row) => row.local_bib_ref === candidates[0]), ref);
-        if (exactLocal.ok) {
-          holdingIds.push(exactLocal.match.holding_id);
-          holdingRows.push(exactLocal.match);
-          continue;
-        }
-        if (exactLocal.reason === "ambiguous-holding") {
-          return { resolved: false, reason: exactLocal.reason, libraryId, ref };
+        const row = rowsByInputRef.get(ref);
+        if (!row) {
+          return { resolved: false, reason: "missing-holding", ref };
         }
 
-        const exactBook = chooseUniqueMatch(rows.filter((row) => row.book_bib_ref === candidates[0]), ref);
-        if (exactBook.ok) {
-          holdingIds.push(exactBook.match.holding_id);
-          holdingRows.push(exactBook.match);
-          continue;
-        }
-        if (exactBook.reason === "ambiguous-holding") {
-          return { resolved: false, reason: exactBook.reason, libraryId, ref };
-        }
-
-        const fallbackMatches = [];
-        const seenFallbackHoldingIds = new Set();
-        for (const candidate of candidates.slice(1)) {
-          for (const row of rows) {
-            if (row.local_bib_ref !== candidate && row.book_bib_ref !== candidate) continue;
-            if (seenFallbackHoldingIds.has(row.holding_id)) continue;
-            seenFallbackHoldingIds.add(row.holding_id);
-            fallbackMatches.push(row);
+        const rowMessage = String(row?.message || "");
+        const holdingId = Number(row?.session_holding_id || 0);
+        if (row?.matched !== true || !(holdingId > 0)) {
+          const messageLower = rowMessage.toLowerCase();
+          if (messageLower.includes("ambígua") || messageLower.includes("ambigua")) {
+            return { resolved: false, reason: "ambiguous-holding", ref, message: rowMessage };
           }
+          if (messageLower.includes("biblioteca de vínculo ativa") || messageLower.includes("biblioteca de vinculo ativa")) {
+            return { resolved: false, reason: "no-library-id", ref, message: rowMessage };
+          }
+          return { resolved: false, reason: "holding-not-found", ref, message: rowMessage };
         }
 
-        const fallback = chooseUniqueMatch(fallbackMatches, ref);
-        if (!fallback.ok) {
-          return { resolved: false, reason: fallback.reason, libraryId, ref };
-        }
-
-        holdingIds.push(fallback.match.holding_id);
-        holdingRows.push(fallback.match);
+        holdingIds.push(holdingId);
+        resolvedRows.push({
+          holding_id: holdingId,
+          local_bib_ref: normalizeBibRefValue(row?.session_local_bib_ref) || normalizeBibRefValue(row?.bib_ref) || ref,
+          book_bib_ref: normalizeBibRefValue(row?.bib_ref) || normalizeBibRefValue(row?.session_local_bib_ref) || ref,
+          loanable: row?.session_loanable === true,
+          raw_loanable: row?.session_loanable,
+          book_id: Number(row?.book_id || 0) || null,
+          library_id: resolveContaReservationLibraryId(),
+          status_hint: String(row?.session_status_hint || "").trim(),
+          resolution_message: rowMessage
+        });
       }
 
       return {
         resolved: true,
-        source: "book_holdings",
-        libraryId,
+        source: "fn_v2_resolve_catalog_refs_for_current_user",
+        libraryId: resolveContaReservationLibraryId(),
         holdingIds,
-        rows: holdingRows
+        rows: resolvedRows
       };
     }
 
