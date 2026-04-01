@@ -2104,183 +2104,386 @@
     </div>
   </div>
 
-  <script type="module">
-    (() => {
-      const btn = document.getElementById('btnSair');
-      if (!btn) return;
 
-      const boot = window.__ANARBIB_PAINEL_TOPBAR_AUTH__ = window.__ANARBIB_PAINEL_TOPBAR_AUTH__ || { installed: true };
-      const fallbackHref = String(
-        btn.getAttribute('data-auth-href') ||
+  <script type="module">
+    import { supabase } from "./js/blmf-supabase.js";
+
+    const painelMinBoot = window.__ANARBIB_PAINEL_BOOTSTRAP_STATE__ = window.__ANARBIB_PAINEL_BOOTSTRAP_STATE__ || { hydrated: false, hasAccess: false };
+
+    const $boot = (id) => document.getElementById(id);
+
+    function bootNormalizeLibraryId(value) {
+      const v = String(value || '').trim();
+      return v || null;
+    }
+
+    function bootSetChip(id, value) {
+      const el = $boot(id);
+      if (el) el.textContent = value;
+    }
+
+    function bootResolveCadastroHref() {
+      const btn = $boot('btnSair');
+      return String(
+        btn?.dataset?.authHref ||
+        btn?.getAttribute('data-auth-href') ||
         'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html'
       ).trim() || 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html';
+    }
 
-      let authClientPromise = null;
-      let refreshPromise = null;
-      let authStateBridgeBound = false;
-      const AUTH_BRIDGE_EVENT = 'anarbib:painel-auth-bootstrap';
+    function bootUpdateTopbarAuthButton(isLoggedIn) {
+      const btn = $boot('btnSair');
+      if (!btn) return;
+      btn.dataset.authMode = isLoggedIn ? 'logout' : 'login';
+      btn.dataset.authHref = bootResolveCadastroHref();
+      btn.textContent = isLoggedIn ? 'Logout' : 'Login';
+      btn.setAttribute('aria-label', isLoggedIn ? 'Logout' : 'Login');
+      btn.setAttribute('aria-busy', 'false');
+      btn.title = isLoggedIn ? 'Encerrar sessão e voltar ao cadastro' : 'Ir para o cadastro / login';
+      btn.disabled = false;
+    }
 
-      const resolveHref = () => String(btn.dataset.authHref || btn.getAttribute('data-auth-href') || fallbackHref).trim() || fallbackHref;
+    function bootHideActiveLibraryLogo() {
+      const logo = $boot('activeLibraryLogo');
+      if (!logo) return;
+      logo.classList.add('hidden');
+      logo.removeAttribute('src');
+      logo.dataset.candidates = '[]';
+      logo.dataset.candidateIndex = '0';
+    }
 
-      function emitPainelAuthBridge(reason = 'refresh', session = null) {
-        const detail = {
-          reason: String(reason || 'refresh').trim() || 'refresh',
-          hasSession: !!session?.user?.id,
-          userId: String(session?.user?.id || '').trim(),
-          email: String(session?.user?.email || '').trim()
-        };
-        boot.lastSession = detail;
-        window.dispatchEvent(new CustomEvent(AUTH_BRIDGE_EVENT, { detail }));
-        return detail;
+    function bootKnownLibraryLogosBySlug(slug) {
+      const normalized = String(slug || '').trim().toLowerCase();
+      if (!normalized) return [];
+      const localPath = `./assets/img/libraries/${normalized}/logo-${normalized}.png`;
+      const bySlug = {
+        anarbib: [localPath, 'https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png'],
+        blmf: [localPath, 'https://cclamazonia.noblogs.org/files/2026/03/logo_detoure_BLMF.png'],
+        btl: [localPath, 'https://cclamazonia.noblogs.org/files/2026/03/logo-btl.png']
+      };
+      return Array.isArray(bySlug[normalized]) ? bySlug[normalized] : [localPath];
+    }
+
+    function bootLogoCandidates(row) {
+      const direct = [
+        row?.logo_url,
+        row?.public_logo_url,
+        row?.logo_public_url,
+        row?.brand_logo_url,
+        row?.header_logo_url,
+        row?.theme_logo_url,
+        row?.ui_logo_url,
+      ].map((value) => String(value || '').trim()).filter(Boolean);
+      const slug = row?.slug || row?.library_slug || row?.default_library_slug || '';
+      return Array.from(new Set([...direct, ...bootKnownLibraryLogosBySlug(slug)])).filter(Boolean);
+    }
+
+    function bootApplyActiveLibraryLogo(row) {
+      const logo = $boot('activeLibraryLogo');
+      if (!logo) return;
+      const candidates = bootLogoCandidates(row || {});
+      if (!candidates.length) {
+        bootHideActiveLibraryLogo();
+        return;
       }
-
-      function applyState({ mode = 'login', label = 'Login', disabled = false, busy = false, title = '' } = {}) {
-        btn.dataset.authMode = mode;
-        btn.dataset.authHref = resolveHref();
-        btn.textContent = label;
-        btn.disabled = !!disabled;
-        btn.setAttribute('aria-busy', busy ? 'true' : 'false');
-        btn.setAttribute('aria-label', label);
-        btn.title = title || (mode === 'logout' ? 'Encerrar sessão e voltar ao cadastro' : 'Ir para o cadastro / login');
-      }
-
-      async function loadSupabaseClient() {
-        if (!authClientPromise) {
-          authClientPromise = import('./js/blmf-supabase.js')
-            .then((mod) => mod?.supabase || null)
-            .catch((error) => {
-              console.warn('Não consegui carregar o cliente de auth do painel.', error);
-              return null;
-            });
+      const libraryName = String(
+        row?.short_name ||
+        row?.library_short_name ||
+        row?.name ||
+        row?.library_name ||
+        row?.slug ||
+        row?.library_slug ||
+        'biblioteca ativa'
+      ).trim();
+      logo.alt = `Logo de ${libraryName}`;
+      logo.dataset.candidates = JSON.stringify(candidates);
+      logo.dataset.candidateIndex = '0';
+      logo.onerror = () => {
+        let list = [];
+        try { list = JSON.parse(logo.dataset.candidates || '[]'); } catch (_e) { list = []; }
+        const nextIndex = Number(logo.dataset.candidateIndex || '0') + 1;
+        if (!Array.isArray(list) || nextIndex >= list.length) {
+          bootHideActiveLibraryLogo();
+          return;
         }
-        return authClientPromise;
+        logo.dataset.candidateIndex = String(nextIndex);
+        logo.classList.remove('hidden');
+        logo.src = String(list[nextIndex] || '').trim();
+      };
+      logo.classList.remove('hidden');
+      logo.src = String(candidates[0] || '').trim();
+    }
+
+    function bootResetPainelChrome() {
+      painelMinBoot.session = null;
+      painelMinBoot.rows = [];
+      painelMinBoot.currentAccessRow = null;
+      painelMinBoot.currentIdentityRow = null;
+      painelMinBoot.currentLibraryRow = null;
+      painelMinBoot.hydrated = false;
+      painelMinBoot.hasAccess = false;
+      const hello = $boot('helloLine');
+      if (hello) {
+        hello.dataset.baseText = '';
+        hello.textContent = '';
       }
+      bootSetChip('chipFuncao', 'Função: —');
+      bootSetChip('chipEmail', 'E-mail: —');
+      const btnModoLeitor = $boot('btnModoLeitor');
+      if (btnModoLeitor) btnModoLeitor.classList.add('hidden');
+      bootHideActiveLibraryLogo();
+    }
 
-      async function resolveSession() {
-        const client = await loadSupabaseClient();
-        if (!client?.auth) return null;
+    function bootPickCurrentLibrarianAccess(rows) {
+      const normalizedRows = Array.isArray(rows) ? rows : [];
+      const activeRows = normalizedRows.filter((row) => String(row?.status || 'active').toLowerCase() === 'active');
+      const librarianRows = activeRows.filter((row) => {
+        const role = String(row?.role || '').toLowerCase();
+        return (role === 'librarian' || row?.is_librarian === true) && row?.is_restricted !== true && row?.can_access_painel !== false;
+      });
+      return librarianRows.find((row) => row?.is_primary === true) || librarianRows[0] || null;
+    }
 
+    async function bootResolveSession(attempts = 10, delayMs = 180) {
+      for (let i = 0; i < attempts; i += 1) {
         try {
-          const { data: { session } = {} } = await client.auth.getSession();
+          const { data: { session } = {} } = await supabase.auth.getSession();
           if (session?.user?.id) return session;
         } catch (error) {
-          console.warn('getSession falhou no bootstrap leve do auth do painel.', error);
+          console.warn('Bootstrap mínimo do painel: getSession falhou.', error);
         }
-
         try {
-          const { data } = await client.auth.getUser();
+          const { data } = await supabase.auth.getUser();
           if (data?.user?.id) {
-            const { data: { session } = {} } = await client.auth.getSession();
+            const { data: { session } = {} } = await supabase.auth.getSession();
             if (session?.user?.id) return session;
           }
         } catch (error) {
-          console.warn('getUser falhou no bootstrap leve do auth do painel.', error);
+          console.warn('Bootstrap mínimo do painel: getUser falhou.', error);
         }
+        if (i < attempts - 1) await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+      return null;
+    }
 
+    async function bootFetchPainelAccess(userId) {
+      const rows = [];
+      const seen = new Set();
+      let profileRow = null;
+
+      const pushRows = (input) => {
+        const normalizedRows = Array.isArray(input) ? input : (input ? [input] : []);
+        for (const row of normalizedRows) {
+          if (!row || typeof row !== 'object') continue;
+          const key = JSON.stringify([
+            String(row?.user_id || row?.id || userId || '').trim(),
+            String(row?.library_id || row?.library_slug || row?.default_library_slug || '').trim(),
+            String(row?.role || '').trim(),
+            String(row?.status || '').trim(),
+          ]);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          rows.push(row);
+        }
+      };
+
+      const directAttempts = [
+        () => (typeof supabase.schema === 'function' ? supabase.schema('api').from('my_access').select('*') : supabase.from('api.my_access').select('*')),
+        () => (typeof supabase.schema === 'function' ? supabase.schema('api').from('my_session_context').select('*').limit(1) : supabase.from('api.my_session_context').select('*').limit(1)),
+        () => supabase.from('my_access').select('*'),
+        () => supabase.from('my_session_context').select('*').limit(1),
+      ];
+
+      for (const run of directAttempts) {
+        try {
+          const res = await run();
+          if (!res?.error) pushRows(Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []));
+        } catch (error) {
+          console.warn('Bootstrap mínimo do painel: leitura de acesso falhou.', error);
+        }
+      }
+
+      try {
+        const profileRes = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+        if (!profileRes?.error && profileRes?.data) {
+          profileRow = profileRes.data;
+          pushRows([profileRow]);
+        }
+      } catch (error) {
+        console.warn('Bootstrap mínimo do painel: leitura do perfil falhou.', error);
+      }
+
+      try {
+        const membershipRes = await supabase
+          .from('user_library_memberships')
+          .select('user_id,library_id,role,status,is_primary')
+          .eq('user_id', userId)
+          .eq('status', 'active');
+
+        if (!membershipRes?.error) {
+          const membershipRows = Array.isArray(membershipRes?.data) ? membershipRes.data : [];
+          if (membershipRows.length) {
+            const libraryIds = Array.from(new Set(membershipRows.map((row) => bootNormalizeLibraryId(row?.library_id)).filter(Boolean)));
+            let librariesById = new Map();
+            if (libraryIds.length) {
+              const librariesRes = await supabase.from('libraries').select('id,slug,name,short_name').in('id', libraryIds);
+              if (!librariesRes?.error) {
+                librariesById = new Map((librariesRes.data || []).map((row) => [bootNormalizeLibraryId(row.id), row]));
+              }
+            }
+            const mergedRows = membershipRows.map((row) => {
+              const lib = librariesById.get(bootNormalizeLibraryId(row?.library_id)) || {};
+              return {
+                ...(profileRow || {}),
+                ...row,
+                library_name: lib?.name || profileRow?.default_library_name || '',
+                library_slug: lib?.slug || profileRow?.default_library_slug || '',
+                library_short_name: lib?.short_name || '',
+                can_access_painel: String(row?.role || '').toLowerCase() === 'librarian',
+                is_librarian: String(row?.role || '').toLowerCase() === 'librarian',
+                is_restricted: !!profileRow?.is_restricted,
+              };
+            });
+            pushRows(mergedRows);
+          }
+        }
+      } catch (error) {
+        console.warn('Bootstrap mínimo do painel: leitura dos vínculos falhou.', error);
+      }
+
+      const currentIdentityRow = rows.find((row) => String(row?.id || row?.user_id || '').trim() === String(userId || '').trim()) || rows[0] || null;
+      let currentAccessRow = bootPickCurrentLibrarianAccess(rows);
+      if (!currentAccessRow && currentIdentityRow?.is_librarian === true && currentIdentityRow?.is_restricted !== true) {
+        currentAccessRow = {
+          ...currentIdentityRow,
+          role: 'librarian',
+          status: 'active',
+          can_access_painel: true
+        };
+      }
+
+      let currentLibraryRow = null;
+      const libraryId = bootNormalizeLibraryId(
+        currentAccessRow?.library_id ||
+        currentIdentityRow?.library_id ||
+        currentAccessRow?.default_library_id ||
+        currentIdentityRow?.default_library_id
+      );
+      if (libraryId) {
+        try {
+          const libraryRes = await supabase
+            .from('libraries')
+            .select('id,slug,name,short_name,logo_url,public_logo_url,logo_public_url,brand_logo_url,header_logo_url,theme_logo_url,ui_logo_url')
+            .eq('id', libraryId)
+            .maybeSingle();
+          if (!libraryRes?.error && libraryRes?.data) currentLibraryRow = libraryRes.data;
+        } catch (error) {
+          console.warn('Bootstrap mínimo do painel: leitura da biblioteca falhou.', error);
+        }
+      }
+
+      return { rows, currentIdentityRow, currentAccessRow, currentLibraryRow };
+    }
+
+    function bootRenderPainelChrome(payload) {
+      const identity = { ...(payload?.currentIdentityRow || {}), ...(payload?.currentAccessRow || {}) };
+      const accessEmail = String(identity?.email || payload?.session?.user?.email || '').trim();
+      const accessPublicId = String(identity?.public_id || '').trim();
+      const firstName = String(identity?.first_name || '').trim();
+      const lastName = String(identity?.last_name || '').trim();
+      const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
+      const libraryLabel = String(
+        identity?.library_name ||
+        identity?.default_library_name ||
+        identity?.library_slug ||
+        identity?.default_library_slug ||
+        payload?.currentLibraryRow?.name ||
+        payload?.currentLibraryRow?.short_name ||
+        payload?.currentLibraryRow?.slug ||
+        ''
+      ).trim();
+      const isLibraryUser = identity?.is_librarian === true || String(identity?.role || '').toLowerCase() === 'librarian';
+
+      bootSetChip('chipEmail', 'E-mail: ' + (accessEmail || '—'));
+      bootSetChip('chipFuncao', 'Função: ' + (isLibraryUser ? 'bibliotecário(a/e)' : '—'));
+
+      const helloParts = [];
+      if (fullName) helloParts.push(fullName);
+      if (accessPublicId) helloParts.push('ID ' + accessPublicId);
+      if (libraryLabel) helloParts.push(libraryLabel);
+      if (!helloParts.length && accessEmail) helloParts.push(accessEmail);
+      const helloText = helloParts.length ? ('Conectad@: ' + helloParts.join(' · ')) : '';
+
+      const hello = $boot('helloLine');
+      if (hello) {
+        hello.dataset.baseText = helloText;
+        hello.textContent = helloText;
+      }
+
+      const btnModoLeitor = $boot('btnModoLeitor');
+      if (btnModoLeitor) btnModoLeitor.classList.toggle('hidden', !isLibraryUser);
+      bootApplyActiveLibraryLogo(payload?.currentLibraryRow || identity || {});
+    }
+
+    async function bootHydratePainelAuthChrome(nextSession = null) {
+      const session = nextSession?.user?.id ? nextSession : await bootResolveSession();
+      if (!session?.user?.id) {
+        bootUpdateTopbarAuthButton(false);
+        bootResetPainelChrome();
         return null;
       }
 
-      async function refreshFromClient() {
-        if (refreshPromise) return refreshPromise;
+      bootUpdateTopbarAuthButton(true);
+      const accessState = await bootFetchPainelAccess(session.user.id);
+      const payload = {
+        session,
+        rows: accessState.rows || [],
+        currentIdentityRow: accessState.currentIdentityRow || null,
+        currentAccessRow: accessState.currentAccessRow || null,
+        currentLibraryRow: accessState.currentLibraryRow || null,
+      };
 
-        refreshPromise = (async () => {
-          const currentMode = String(btn.dataset.authMode || 'login').trim().toLowerCase();
-          if (currentMode !== 'logout') {
-            applyState({ mode: 'boot', label: 'Conectando...', disabled: false, busy: true, title: 'Verificando a sessão atual.' });
-          }
+      painelMinBoot.session = payload.session;
+      painelMinBoot.rows = payload.rows;
+      painelMinBoot.currentIdentityRow = payload.currentIdentityRow;
+      painelMinBoot.currentAccessRow = payload.currentAccessRow;
+      painelMinBoot.currentLibraryRow = payload.currentLibraryRow;
+      painelMinBoot.hydrated = true;
+      painelMinBoot.hasAccess = !!payload.currentAccessRow;
 
-          const session = await resolveSession();
-          if (session?.user?.id) {
-            applyState({ mode: 'logout', label: 'Logout', disabled: false, busy: false });
-          } else {
-            applyState({ mode: 'login', label: 'Login', disabled: false, busy: false });
-          }
-          emitPainelAuthBridge('refresh', session);
-          return session;
-        })().finally(() => {
-          refreshPromise = null;
-        });
+      bootRenderPainelChrome(payload);
+      window.dispatchEvent(new CustomEvent('anarbib:painel-bootstrap-hydrated', {
+        detail: {
+          hasSession: true,
+          hasAccess: !!payload.currentAccessRow,
+          userId: String(session?.user?.id || '').trim()
+        }
+      }));
+      return payload;
+    }
 
-        return refreshPromise;
+    window.addEventListener('pageshow', () => { void bootHydratePainelAuthChrome(); });
+    window.addEventListener('focus', () => { void bootHydratePainelAuthChrome(); });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') void bootHydratePainelAuthChrome();
+    });
+    window.addEventListener('storage', (event) => {
+      const key = String(event?.key || '');
+      if (!key || /auth|supabase|sb-.*-auth-token/i.test(key)) {
+        void bootHydratePainelAuthChrome();
       }
+    });
 
-      async function bindAuthStateBridge() {
-        if (authStateBridgeBound) return;
-        authStateBridgeBound = true;
-        const client = await loadSupabaseClient();
-        if (!client?.auth?.onAuthStateChange) return;
-
-        client.auth.onAuthStateChange(async (event, nextSession) => {
-          const eventName = String(event || '').trim().toUpperCase() || 'AUTH';
-          if (nextSession?.user?.id) {
-            applyState({ mode: 'logout', label: 'Logout', disabled: false, busy: false });
-            emitPainelAuthBridge(eventName, nextSession);
-            return;
-          }
-          if (eventName === 'SIGNED_OUT') {
-            applyState({ mode: 'login', label: 'Login', disabled: false, busy: false });
-            emitPainelAuthBridge(eventName, null);
-            return;
-          }
-          const refreshedSession = await refreshFromClient();
-          emitPainelAuthBridge(eventName, refreshedSession);
-        });
+    supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+      if (nextSession?.user?.id) {
+        await bootHydratePainelAuthChrome(nextSession);
+      } else {
+        bootUpdateTopbarAuthButton(false);
+        bootResetPainelChrome();
       }
+    });
 
-      btn.addEventListener('click', async (event) => {
-        event.preventDefault();
-        const targetHref = resolveHref();
-        const authMode = String(btn.dataset.authMode || 'login').trim().toLowerCase();
-
-        if (authMode !== 'logout') {
-          window.location.href = targetHref;
-          return;
-        }
-
-        applyState({ mode: 'logout', label: 'Saindo...', disabled: true, busy: true, title: 'Encerrando a sessão.' });
-        try {
-          const client = await loadSupabaseClient();
-          if (client?.auth?.signOut) {
-            await Promise.race([
-              client.auth.signOut(),
-              new Promise((resolve) => setTimeout(resolve, 2500))
-            ]);
-          }
-        } catch (error) {
-          console.warn('Não consegui encerrar a sessão no bootstrap leve do painel.', error);
-        } finally {
-          applyState({ mode: 'login', label: 'Login', disabled: false, busy: false });
-          window.location.href = targetHref;
-        }
-      });
-
-      window.addEventListener('pageshow', () => { void refreshFromClient(); });
-      window.addEventListener('focus', () => { void refreshFromClient(); });
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') void refreshFromClient();
-      });
-      window.addEventListener('storage', (event) => {
-        const key = String(event?.key || '');
-        if (!key || /auth|supabase|sb-.*-auth-token/i.test(key)) {
-          void refreshFromClient();
-        }
-      });
-
-      boot.refresh = refreshFromClient;
-      boot.applyState = applyState;
-      boot.resolveHref = resolveHref;
-      boot.emit = emitPainelAuthBridge;
-
-      void bindAuthStateBridge();
-
-      applyState({
-        mode: String(btn.dataset.authMode || 'login').trim().toLowerCase() || 'login',
-        label: String(btn.textContent || 'Login').trim() || 'Login',
-        disabled: false,
-        busy: false
-      });
-      void refreshFromClient();
-    })();
+    await bootHydratePainelAuthChrome();
   </script>
 
   <script type="module">
@@ -2398,7 +2601,6 @@
     const PAINEL_STATE_SYNC_KEY = 'anarbib_state_sync_v1';
     let painelLastAppliedStateSyncTs = 0;
     let painelStateSyncHooksBound = false;
-    let painelAuthBootstrapBridgeBound = false;
 
     function clearStatus(id){
       const el = $(id);
@@ -2998,7 +3200,7 @@
       btn.setAttribute('aria-label', label);
       btn.title = 'Aguarda a verificação da sessão.';
       btn.setAttribute('aria-busy', 'true');
-      btn.disabled = false;
+      btn.disabled = true;
     }
 
     function updateTopbarAuthButton(isLoggedIn){
@@ -3035,27 +3237,6 @@
       await syncPainelAuthState(recovered, { reloadData, allowAnonymousReset: false });
       initializePainelUiOnce();
       return true;
-    }
-
-    function bindPainelAuthBootstrapBridge(){
-      if (painelAuthBootstrapBridgeBound) return;
-      painelAuthBootstrapBridgeBound = true;
-
-      window.addEventListener('anarbib:painel-auth-bootstrap', async (event) => {
-        const detail = event?.detail || {};
-        const hasSession = detail?.hasSession === true;
-        const reason = String(detail?.reason || '').trim().toUpperCase();
-
-        if (!hasSession) {
-          if (reason === 'SIGNED_OUT') {
-            await syncPainelAuthState(null, { reloadData: false, allowAnonymousReset: true });
-            initializePainelUiOnce();
-          }
-          return;
-        }
-
-        await recheckPainelSessionAndSync({ reloadData: true });
-      });
     }
 
     function applyActiveLibraryLogoCandidate(index=0){
@@ -5989,6 +6170,23 @@ function belemNowParts(){
     }
     let currentAccessRow = null;
     let currentIdentityRow = null;
+
+    function isPainelHeaderHydrated(){
+      return !!String($('helloLine')?.dataset?.baseText || '').trim();
+    }
+
+    function adoptPainelBootstrapState(){
+      const boot = window.__ANARBIB_PAINEL_BOOTSTRAP_STATE__;
+      if (!boot?.session?.user?.id) return false;
+      const bootUserId = String(boot?.session?.user?.id || '').trim();
+      const sessionUserId = String(session?.user?.id || '').trim();
+      if (sessionUserId && bootUserId && sessionUserId !== bootUserId) return false;
+      if (!session?.user?.id && boot?.session?.user?.id) session = boot.session;
+      if (boot?.currentIdentityRow) currentIdentityRow = { ...boot.currentIdentityRow };
+      if (boot?.currentAccessRow) currentAccessRow = { ...boot.currentAccessRow };
+      if (boot?.currentLibraryRow) currentLibraryRow = { ...(currentLibraryRow || {}), ...boot.currentLibraryRow };
+      return !!currentAccessRow;
+    }
     async function fetchMyAccessRows(userId){
       let lastError = null;
       const collectedRows = [];
@@ -6010,8 +6208,6 @@ function belemNowParts(){
       };
 
       const directAttempts = [
-        () => apiFrom('api', 'my_access').select('*'),
-        () => apiFrom('api', 'my_session_context').select('*').limit(1),
         () => supabase.from('my_access').select('*'),
         () => supabase.from('my_session_context').select('*').limit(1),
       ];
@@ -6127,43 +6323,6 @@ function belemNowParts(){
       setStatus('statusLoans', 'Não consegui verificar o acesso da biblioteca' + (lastErrorMessage ? ': ' + lastErrorMessage : '.'), 'bad', false);
       return false;
     }
-    function isPainelHeaderHydrated(){
-      const hello = String($('helloLine')?.textContent || '').trim();
-      const chipEmail = String($('chipEmail')?.textContent || '').trim();
-      const chipFuncao = String($('chipFuncao')?.textContent || '').trim();
-      return !!hello && chipEmail !== 'E-mail: —' && chipFuncao !== 'Função: —';
-    }
-
-    async function hydratePainelAccessAndHeader({ attempts = 4, delayMs = 180 } = {}){
-      if (!session?.user?.id) return false;
-      for (let i = 0; i < attempts; i += 1) {
-        const accessRead = await fetchMyAccessRows(session.user.id);
-        const accessRows = accessRead?.data || [];
-        currentIdentityRow = accessRows.find((row) => String(row?.id || row?.user_id || '') === String(session?.user?.id || '')) || accessRows[0] || currentIdentityRow || null;
-        currentAccessRow = pickCurrentLibrarianAccess(accessRows) || currentAccessRow || null;
-
-        if (!currentAccessRow && currentIdentityRow?.is_librarian === true && currentIdentityRow?.is_restricted !== true) {
-          currentAccessRow = {
-            ...currentIdentityRow,
-            role: 'librarian',
-            status: 'active',
-            can_access_painel: true
-          };
-        }
-
-        if (currentAccessRow) {
-          isLibrarian = true;
-          await fillHeader();
-          if (isPainelHeaderHydrated()) return true;
-        }
-
-        if (i < attempts - 1) {
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
-        }
-      }
-      return isPainelHeaderHydrated();
-    }
-
     async function fillHeader(){
       const identity = { ...(currentIdentityRow || {}), ...(currentAccessRow || {}) };
       const accessEmail = String(identity?.email || session?.user?.email || '').trim();
@@ -6181,49 +6340,10 @@ function belemNowParts(){
       if (accessPublicId) helloParts.push('ID ' + accessPublicId);
       if (libraryLabel) helloParts.push(libraryLabel);
       if (!helloParts.length && accessEmail) helloParts.push(accessEmail);
-      const helloLineText = helloParts.length ? ('Conectad@: ' + helloParts.join(' · ')) : '';
-      if ($('helloLine')) {
-        $('helloLine').dataset.baseText = helloLineText;
-        $('helloLine').textContent = helloLineText;
-      }
+      $('helloLine').textContent = helloParts.length ? ('Conectad@: ' + helloParts.join(' · ')) : '';
       $('btnModoLeitor').classList.toggle('hidden', !isLibrarian);
       updateTopbarAuthButton(!!session?.user?.id);
       renderActiveLibraryLogo(currentLibraryRow || identity || {});
-    }
-
-    function setPainelSessionOpenNotice(message=''){
-      const el = $('helloLine');
-      if (!el) return;
-      const baseText = String(el.dataset.baseText || el.textContent || '').trim();
-      const note = String(message || '').trim();
-      el.textContent = note ? (baseText ? `${baseText} · ${note}` : note) : baseText;
-    }
-
-    async function runPainelPostAuthLoads({ syncId } = {}){
-      const steps = [
-        ['loadLibraryServiceState', () => loadLibraryServiceState()],
-        ['loadLibraryIdentity', () => loadLibraryIdentity()],
-        ['loadLibraryTheme', () => loadLibraryTheme()],
-        ['loadDocGovernance', () => loadDocGovernance()],
-        ['loadInterlibraryRequests', () => loadInterlibraryRequests({ silent:true })],
-        ['loadLibrarySchedule', () => loadLibrarySchedule()],
-        ['loadLocalRules', () => loadLocalRules()],
-        ['loadLibraryRegimento', () => loadLibraryRegimento()],
-        ['loadInternalTaskLibrarians', () => loadInternalTaskLibrarians()],
-        ['loadInternalTasks', () => loadInternalTasks({ silent:true })],
-        ['refreshCollections', () => refreshCollections()],
-      ];
-      const failures = [];
-      for (const [label, run] of steps) {
-        try {
-          await run();
-        } catch (error) {
-          failures.push({ label, error });
-          console.warn(`Falha ao carregar ${label} durante a abertura da sessão do painel.`, error);
-        }
-      }
-      if (syncId === authSyncSerial) setupRefreshHooks();
-      return failures;
     }
 
     async function loadProfilesByIds(userIds){
@@ -8460,32 +8580,30 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
         setStatus('statusPerfil', e.message || String(e), 'bad', false);
       }
     });
-    if (!window.__ANARBIB_PAINEL_TOPBAR_AUTH__?.installed) {
-      $('btnSair').addEventListener('click', async (event) => {
-        const btn = $('btnSair');
-        const targetHref = String(btn?.dataset?.authHref || resolveCadastroHref()).trim() || resolveCadastroHref();
-        const authMode = String(btn?.dataset?.authMode || 'login').trim().toLowerCase();
-        if (authMode !== 'logout') {
-          event.preventDefault();
-          window.location.href = targetHref;
-          return;
-        }
+    $('btnSair').addEventListener('click', async (event) => {
+      const btn = $('btnSair');
+      const targetHref = String(btn?.dataset?.authHref || resolveCadastroHref()).trim() || resolveCadastroHref();
+      const authMode = String(btn?.dataset?.authMode || 'login').trim().toLowerCase();
+      if (authMode !== 'logout') {
+        event.preventDefault();
+        window.location.href = targetHref;
+        return;
+      }
 
-        btn.disabled = true;
-        try {
-          await Promise.race([
-            supabase.auth.signOut(),
-            new Promise((resolve) => setTimeout(resolve, 2500))
-          ]);
-        } catch (error) {
-          console.warn('Não consegui encerrar a sessão do painel; seguindo para o cadastro mesmo assim.', error);
-        } finally {
-          resetPainelAuthChrome();
-          btn.disabled = false;
-          window.location.href = targetHref;
-        }
-      });
-    }
+      btn.disabled = true;
+      try {
+        await Promise.race([
+          supabase.auth.signOut(),
+          new Promise((resolve) => setTimeout(resolve, 2500))
+        ]);
+      } catch (error) {
+        console.warn('Não consegui encerrar a sessão do painel; seguindo para o cadastro mesmo assim.', error);
+      } finally {
+        resetPainelAuthChrome();
+        btn.disabled = false;
+        window.location.href = targetHref;
+      }
+    });
 
 
 function setPartnerProbeMessage(msg = '', kind = 'info') {
@@ -9172,43 +9290,39 @@ function initPartnerProbeUi() {
       updateTopbarAuthButton(true);
 
       try {
-        isLibrarian = await requireBibliotecaOrRedirect({ attempts: 8, delayMs: 220 });
-        if (!isLibrarian) {
-          const recoveredAccess = await hydratePainelAccessAndHeader({ attempts: 4, delayMs: 180 });
-          isLibrarian = recoveredAccess === true;
+        const adoptedBootstrapAccess = adoptPainelBootstrapState();
+        isLibrarian = adoptedBootstrapAccess ? true : await requireBibliotecaOrRedirect({ attempts: 8, delayMs: 220 });
+        if (!isLibrarian && adoptPainelBootstrapState()) {
+          isLibrarian = true;
         }
         if (!isLibrarian) {
-          if (session?.user?.id) {
-            setTimeout(() => { void recheckPainelSessionAndSync({ reloadData: true }); }, 900);
-          }
           hideActiveLibraryLogo();
           $('btnModoLeitor')?.classList.add('hidden');
           return false;
         }
         await fillHeader();
-        if (!isPainelHeaderHydrated()) {
-          await hydratePainelAccessAndHeader({ attempts: 3, delayMs: 160 });
+        if (!isPainelHeaderHydrated() && adoptPainelBootstrapState()) {
+          await fillHeader();
         }
-        if (!reloadData) {
-          setPainelSessionOpenNotice('');
-          return true;
-        }
-        const loadFailures = await runPainelPostAuthLoads({ syncId });
-        if (loadFailures.length) {
-          const failedLabels = loadFailures.map((entry) => entry.label).join(', ');
-          setPainelSessionOpenNotice('sessão aberta; algumas seções ainda falharam');
-          console.warn('Sessão do painel aberta com falhas parciais de carregamento:', failedLabels);
-        } else {
-          setPainelSessionOpenNotice('');
-        }
+        if (!reloadData) return true;
+        await loadLibraryServiceState();
+        await loadLibraryIdentity();
+        await loadLibraryTheme();
+        await loadDocGovernance();
+        await loadInterlibraryRequests({ silent:true });
+        await loadLibrarySchedule();
+        await loadLocalRules();
+        await loadLibraryRegimento();
+        await loadInternalTaskLibrarians();
+        await loadInternalTasks({ silent:true });
+        await refreshCollections();
+        if (syncId === authSyncSerial) setupRefreshHooks();
         return true;
       } catch (error) {
         console.warn('Não consegui sincronizar a sessão do painel.', error);
         return false;
       }
     }
-
-    bindPainelAuthBootstrapBridge();
 
     session = await requireSession({ attempts: 40, delayMs: 150 });
     painelAuthBootstrapping = false;
@@ -9224,20 +9338,20 @@ function initPartnerProbeUi() {
       initializePainelUiOnce();
     });
 
-    if (!session?.user?.id) {
+    if (!session?.user?.id || !isPainelHeaderHydrated()) {
       setTimeout(async () => {
         await recheckPainelSessionAndSync({ reloadData: true });
       }, 700);
     }
 
     window.addEventListener('pageshow', async () => {
-      if (!session?.user?.id) await recheckPainelSessionAndSync({ reloadData: true });
+      if (!session?.user?.id || !isPainelHeaderHydrated()) await recheckPainelSessionAndSync({ reloadData: true });
     });
     window.addEventListener('focus', async () => {
-      if (!session?.user?.id) await recheckPainelSessionAndSync({ reloadData: true });
+      if (!session?.user?.id || !isPainelHeaderHydrated()) await recheckPainelSessionAndSync({ reloadData: true });
     });
     document.addEventListener('visibilitychange', async () => {
-      if (document.visibilityState === 'visible' && !session?.user?.id) {
+      if (document.visibilityState === 'visible' && (!session?.user?.id || !isPainelHeaderHydrated())) {
         await recheckPainelSessionAndSync({ reloadData: true });
       }
     });
