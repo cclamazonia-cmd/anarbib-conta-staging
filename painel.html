@@ -1549,7 +1549,6 @@
                 <div class="mini">Pedidos ativos de consulta no local, separados do fluxo de empréstimo.</div>
               </div>
               <div class="actions" style="margin-top:0">
-                <button class="btn" id="btnCancelarConsultasSelecionadas" type="button">Cancelar pedido</button>
                 <button class="btn" id="btnRecarregarConsultas" type="button">Recarregar</button>
               </div>
             </div>
@@ -8343,6 +8342,7 @@ async function fetchActiveLoans(){
         setStatus('statusRes', e.message || String(e), 'bad', false);
       } finally {
         $('btnConfirmarSelecionados').disabled = false;
+        updateBulkSelectionButtons();
       }
     }
 
@@ -8386,31 +8386,6 @@ async function fetchActiveLoans(){
       }
     }
 
-    async function cancelConsultations(consultationIds){
-      const ids = Array.from(new Set((consultationIds || []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0)));
-      if (!ids.length) return setStatus('statusConsultas', 'Selecione pelo menos 1 pedido de consulta.', 'warn');
-      $('btnCancelarConsultasSelecionadas').disabled = true;
-      try {
-        const rows = activeConsultations.filter((c) => ids.includes(c.id));
-        if (!rows.length) return setStatus('statusConsultas', 'Os pedidos selecionados já não estão ativos.', 'warn');
-
-        await setConsultationWorkflowStage('cancelada_biblioteca', rows, {
-          note: 'Cancelamento registrado pela biblioteca no painel.',
-          consultationScheduledFor: null,
-          targetStatusId: 'statusConsultas'
-        });
-
-        selectedConsultaIds = new Set([...selectedConsultaIds].filter((id) => !ids.includes(id)));
-        await refreshConsultationsOnly({silent:true});
-        writePainelStateSync('consultations');
-      } catch (e) {
-        setStatus('statusConsultas', e.message || String(e), 'bad', false);
-      } finally {
-        $('btnCancelarConsultasSelecionadas').disabled = false;
-        updateBulkSelectionButtons();
-      }
-    }
-
     function updateBulkSelectionButtons(){
       const reservationCount = selectedReservaIds.size;
       const consultationCount = selectedConsultaIds.size;
@@ -8420,6 +8395,8 @@ async function fetchActiveLoans(){
       if ($('btnApplyResWorkflowStage')) $('btnApplyResWorkflowStage').disabled = reservationCount < 1;
       if ($('btnApplyConsultWorkflowStage')) $('btnApplyConsultWorkflowStage').disabled = consultationCount < 1;
     }
+
+    window.__anarbibPainelUpdateBulkSelectionButtons = updateBulkSelectionButtons;
 
     window.__anarbibToggleReservaSelection = (id, checked) => {
       const numericId = Number(id);
@@ -8438,22 +8415,15 @@ async function fetchActiveLoans(){
     };
 
     function bindReservationSelection(){
-      const tbody = $('tbodyRes');
-      if (!tbody || tbody.dataset.selectionBound === 'true') return;
-      tbody.dataset.selectionBound = 'true';
-
-      tbody.addEventListener('change', (ev) => {
+      $('tbodyRes').addEventListener('click', (ev) => {
         const check = ev.target.closest('[data-reserva-check]');
-        if (!check) return;
-        const id = Number(check.getAttribute('data-reserva-check'));
-        if (!Number.isFinite(id)) return;
-        if (check.checked) selectedReservaIds.add(id); else selectedReservaIds.delete(id);
-        renderReservationTable();
-        updateBulkSelectionButtons();
-      });
-
-      tbody.addEventListener('click', (ev) => {
-        if (ev.target.closest('input, button, a, label, select, textarea')) return;
+        if (check) {
+          const id = Number(check.getAttribute('data-reserva-check'));
+          if (check.checked) selectedReservaIds.add(id); else selectedReservaIds.delete(id);
+          renderReservationTable();
+          updateBulkSelectionButtons();
+          return;
+        }
         const row = ev.target.closest('[data-reserva-row]');
         if (!row) return;
         const id = Number(row.getAttribute('data-reserva-row'));
@@ -8465,22 +8435,15 @@ async function fetchActiveLoans(){
     }
 
     function bindConsultationSelection(){
-      const tbody = $('tbodyConsultas');
-      if (!tbody || tbody.dataset.selectionBound === 'true') return;
-      tbody.dataset.selectionBound = 'true';
-
-      tbody.addEventListener('change', (ev) => {
+      $('tbodyConsultas')?.addEventListener('click', (ev) => {
         const check = ev.target.closest('[data-consulta-check]');
-        if (!check) return;
-        const id = Number(check.getAttribute('data-consulta-check'));
-        if (!Number.isFinite(id)) return;
-        if (check.checked) selectedConsultaIds.add(id); else selectedConsultaIds.delete(id);
-        renderConsultationTable();
-        updateBulkSelectionButtons();
-      });
-
-      tbody.addEventListener('click', (ev) => {
-        if (ev.target.closest('input, button, a, label, select, textarea')) return;
+        if (check) {
+          const id = Number(check.getAttribute('data-consulta-check'));
+          if (check.checked) selectedConsultaIds.add(id); else selectedConsultaIds.delete(id);
+          renderConsultationTable();
+          updateBulkSelectionButtons();
+          return;
+        }
         const row = ev.target.closest('[data-consulta-row]');
         if (!row) return;
         const id = Number(row.getAttribute('data-consulta-row'));
@@ -8787,8 +8750,6 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
     $('btnDevolverSubIds').addEventListener('click', returnPartialBySubIds);
     $('btnConfirmarSelecionados').addEventListener('click', () => confirmReservations([...selectedReservaIds]));
     $('btnCancelarSelecionados').addEventListener('click', () => cancelReservations([...selectedReservaIds]));
-    $('btnCancelarConsultasSelecionadas')?.addEventListener('click', () => cancelConsultations([...selectedConsultaIds]));
-    updateBulkSelectionButtons();
     const reservationStageNeedsSchedule = (stage) => isReservationPickupScheduledStage(stage);
     $('btnApplyResWorkflowStage')?.addEventListener('click', async () => {
       const stage = $('resWorkflowStage')?.value || '';
@@ -8836,16 +8797,8 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
         setStatus('statusConsultas', error?.message || 'Erro ao aplicar etapa.', 'bad');
       }
     });
-    const btnRecarregarRes = $('btnRecarregarRes');
-    if (btnRecarregarRes) {
-      btnRecarregarRes.dataset.mainReloadBound = 'true';
-      btnRecarregarRes.addEventListener('click', () => refreshReservationsOnly());
-    }
-    const btnRecarregarConsultas = $('btnRecarregarConsultas');
-    if (btnRecarregarConsultas) {
-      btnRecarregarConsultas.dataset.mainReloadBound = 'true';
-      btnRecarregarConsultas.addEventListener('click', () => refreshConsultationsOnly());
-    }
+    $('btnRecarregarRes').addEventListener('click', () => refreshReservationsOnly());
+    $('btnRecarregarConsultas')?.addEventListener('click', () => refreshConsultationsOnly());
     $('btnRecarregarTrabalhoDia')?.addEventListener('click', () => { renderTrabalhoDoDia(); setStatus('statusTrabalhoDia', 'Prioridades recalculadas.', 'ok'); });
     $('btnAddInternalTask')?.addEventListener('click', async () => {
       const btn = $('btnAddInternalTask');
@@ -8855,16 +8808,8 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
       finally { btn.disabled = false; }
     });
     $('btnClearInternalTaskForm')?.addEventListener('click', clearInternalTaskForm);
-    const btnRecarregarLoans = $('btnRecarregarLoans');
-    if (btnRecarregarLoans) {
-      btnRecarregarLoans.dataset.mainReloadBound = 'true';
-      btnRecarregarLoans.addEventListener('click', () => refreshLoansOnly());
-    }
-    const btnRecarregarLotes = $('btnRecarregarLotes');
-    if (btnRecarregarLotes) {
-      btnRecarregarLotes.dataset.mainReloadBound = 'true';
-      btnRecarregarLotes.addEventListener('click', () => refreshLoansOnly());
-    }
+    $('btnRecarregarLoans').addEventListener('click', () => refreshLoansOnly());
+    $('btnRecarregarLotes').addEventListener('click', () => refreshLoansOnly());
     $('btnBuscarPerfil').addEventListener('click', async () => {
       const btn = $('btnBuscarPerfil');
       if (!btn || btn.disabled) return;
@@ -9723,12 +9668,6 @@ function initPartnerProbeUi() {
 
   const $r = (id) => document.getElementById(id);
   const $$r = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-  function apiFromR(schema, relation) {
-    if (typeof supabase?.schema === 'function') {
-      return supabase.schema(schema).from(relation);
-    }
-    return supabase.from(`${schema}.${relation}`);
-  }
   const escR = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmtDateR = (v) => {
     if (!v) return '—';
@@ -9955,7 +9894,10 @@ function initPartnerProbeUi() {
       const reservaId = Number(firstFilledR(row?.reserva_id, row?.id, 0));
       const lineNo = Number(firstFilledR(row?.line_no, 1)) || 1;
       return {
-        id: `${reservaId}.${lineNo}`,
+        id: Number(`${reservaId}${String(lineNo).padStart(3, '0')}`),
+        reserva_id: reservaId,
+        line_no: lineNo,
+        source: 'v2',
         sub_id: String(firstFilledR(row?.sub_id, `${reservaId}.${lineNo}`)),
         user_name: firstFilledR(row?.user_name, profileNameR(user)),
         user_email: firstFilledR(row?.user_email, user?.email, '—'),
@@ -9975,85 +9917,25 @@ function initPartnerProbeUi() {
     if (!libraryId) return [];
     let rows = [];
     try {
-      const { data, error } = await apiFromR('api', 'consulta_itens_followup_ui')
+      const { data, error } = await supabase
+        .from('api.consulta_itens_followup_ui')
         .select('*')
         .eq('library_id', libraryId)
         .eq('item_status', 'ativa')
         .limit(800);
       if (!error) rows = data || [];
     } catch (_e) {}
-
-    if (!rows.length) {
-      try {
-        const { data: consultas, error: e1 } = await supabase
-          .from('consultas_locais_v2')
-          .select('id,user_id,library_id,created_at,updated_at,status_global')
-          .eq('library_id', libraryId)
-          .order('created_at', { ascending: false })
-          .limit(400);
-        if (e1) throw e1;
-        const consultaIds = (consultas || []).map((row) => Number(row?.id)).filter((id) => Number.isFinite(id) && id > 0);
-        if (consultaIds.length) {
-          const { data: linhas, error: e2 } = await supabase
-            .from('consulta_linhas_v2')
-            .select('id,consulta_id,line_no,sub_id,book_id,holding_id,bib_ref,titulo_cache,autor_cache,editora_cache,ano_cache,item_status,expires_at,notes,updated_at')
-            .in('consulta_id', consultaIds);
-          if (e2) throw e2;
-          const { data: workflows, error: e3 } = await supabase
-            .from('consulta_item_workflow_v2')
-            .select('consulta_id,line_no,workflow_stage,workflow_note,consultation_scheduled_for,updated_at')
-            .in('consulta_id', consultaIds)
-            .order('updated_at', { ascending: false });
-          if (e3) throw e3;
-          const latestWorkflow = new Map();
-          for (const workflowRow of (workflows || [])) {
-            const key = `${workflowRow?.consulta_id}|${workflowRow?.line_no}`;
-            if (!latestWorkflow.has(key)) latestWorkflow.set(key, workflowRow);
-          }
-          const consultasById = new Map((consultas || []).map((row) => [Number(row.id), row]));
-          rows = (linhas || []).map((linha) => {
-            const consulta = consultasById.get(Number(linha?.consulta_id)) || {};
-            const workflow = latestWorkflow.get(`${linha?.consulta_id}|${linha?.line_no}`) || {};
-            return {
-              consulta_id: linha?.consulta_id,
-              consulta_item_id: linha?.id,
-              line_no: linha?.line_no,
-              sub_id: linha?.sub_id,
-              user_id: consulta?.user_id,
-              library_id: consulta?.library_id,
-              consulta_created_at: consulta?.created_at,
-              consulta_updated_at: consulta?.updated_at,
-              consulta_status: consulta?.status_global,
-              book_id: linha?.book_id,
-              holding_id: linha?.holding_id,
-              bib_ref: linha?.bib_ref,
-              rotulo: null,
-              autor: linha?.autor_cache,
-              titulo: linha?.titulo_cache,
-              editora: linha?.editora_cache,
-              ano: linha?.ano_cache,
-              item_status: linha?.item_status,
-              expires_at: linha?.expires_at,
-              workflow_stage_effective: workflow?.workflow_stage || null,
-              workflow_note: workflow?.workflow_note || null,
-              consultation_scheduled_for: workflow?.consultation_scheduled_for || null,
-              workflow_stage_updated_at_effective: workflow?.updated_at || linha?.updated_at || consulta?.updated_at || consulta?.created_at || null,
-            };
-          });
-        }
-      } catch (_e) {}
-    }
-
     if (!rows.length) return [];
-    const filtered = (rows || []).filter((row) => String(firstFilledR(row?.item_status, row?.status, '')).trim().toLowerCase() === 'ativa');
-    const profiles = await loadProfilesMapR(filtered.map((r) => firstFilledR(r?.user_id, null)));
-    return filtered.map((row) => {
+    const profiles = await loadProfilesMapR(rows.map((r) => firstFilledR(r?.user_id, null)));
+    return rows.map((row) => {
       const user = profiles.get(String(firstFilledR(row?.user_id, ''))) || {};
       const consultaId = Number(firstFilledR(row?.consulta_id, row?.id, 0));
       const lineNo = Number(firstFilledR(row?.line_no, 1)) || 1;
       return {
-        id: `${consultaId}.${lineNo}`,
+        id: Number(`${consultaId}${String(lineNo).padStart(3, '0')}`),
         consulta_id: consultaId,
+        line_no: lineNo,
+        source: 'v2',
         sub_id: String(firstFilledR(row?.sub_id, `${consultaId}.${lineNo}`)),
         user_name: firstFilledR(row?.user_name, profileNameR(user)),
         user_email: firstFilledR(row?.user_email, user?.email, '—'),
@@ -10066,7 +9948,6 @@ function initPartnerProbeUi() {
       };
     });
   }
-
 
   async function fetchLoansR() {
     const libraryId = await resolveLibraryIdR();
@@ -10136,11 +10017,14 @@ function initPartnerProbeUi() {
     if (!tbody) return;
     if (!rows.length) {
       tbody.innerHTML = '<tr><td colspan="8">Sem reservas ativas.</td></tr>';
+      window.__anarbibPainelUpdateBulkSelectionButtons && window.__anarbibPainelUpdateBulkSelectionButtons();
       return;
     }
-    tbody.innerHTML = rows.map((r) => `
-      <tr>
-        <td><input type="checkbox" disabled aria-label="Selecionar ${escR(r.sub_id)}"></td>
+    tbody.innerHTML = rows.map((r) => {
+      const checked = '';
+      return `
+      <tr data-reserva-row="${escR(r.id)}" class="clickable-row">
+        <td><input type="checkbox" ${checked} data-reserva-check="${escR(r.id)}" aria-label="Selecionar ${escR(r.sub_id)}" onclick="event.stopPropagation()" onchange="window.__anarbibToggleReservaSelection && window.__anarbibToggleReservaSelection(${escR(r.id)}, this.checked)"></td>
         <td class="mono">${escR(r.sub_id)}</td>
         <td>${escR(r.user_name)}${r.user_email && r.user_email !== '—' ? `<br><span class="mini subtle">${escR(r.user_email)}</span>` : ''}</td>
         <td>${escR(r.titulo)}${r.autor ? `<br><span class="mini subtle">${escR(r.autor)}</span>` : ''}</td>
@@ -10148,8 +10032,9 @@ function initPartnerProbeUi() {
         <td>${escR(r.rotulo || '—')}</td>
         <td>${escR(fmtDateTimeR(r.reserva_em))}<br><span class="pill warn">${escR(r.workflow || 'solicitada')}</span></td>
         <td>${escR(fmtDateTimeR(r.validade))}</td>
-      </tr>
-    `).join('');
+      </tr>`;
+    }).join('');
+    window.__anarbibPainelUpdateBulkSelectionButtons && window.__anarbibPainelUpdateBulkSelectionButtons();
   }
 
   function renderConsultationsR(rows) {
@@ -10157,11 +10042,14 @@ function initPartnerProbeUi() {
     if (!tbody) return;
     if (!rows.length) {
       tbody.innerHTML = '<tr><td colspan="9">Sem consultas locais ativas.</td></tr>';
+      window.__anarbibPainelUpdateBulkSelectionButtons && window.__anarbibPainelUpdateBulkSelectionButtons();
       return;
     }
-    tbody.innerHTML = rows.map((c) => `
-      <tr>
-        <td><input type="checkbox" disabled aria-label="Selecionar ${escR(c.sub_id)}"></td>
+    tbody.innerHTML = rows.map((c) => {
+      const checked = '';
+      return `
+      <tr data-consulta-row="${escR(c.id)}" class="clickable-row">
+        <td><input type="checkbox" ${checked} data-consulta-check="${escR(c.id)}" aria-label="Selecionar ${escR(c.sub_id)}" onclick="event.stopPropagation()" onchange="window.__anarbibToggleConsultaSelection && window.__anarbibToggleConsultaSelection(${escR(c.id)}, this.checked)"></td>
         <td>#${escR(c.consulta_id)}</td>
         <td class="mono">${escR(c.sub_id)}</td>
         <td>${escR(c.user_name)}${c.user_email && c.user_email !== '—' ? `<br><span class="mini subtle">${escR(c.user_email)}</span>` : ''}</td>
@@ -10170,8 +10058,9 @@ function initPartnerProbeUi() {
         <td>${escR(fmtDateTimeR(c.consulta_em))}</td>
         <td><span class="pill warn">${escR(c.workflow || 'solicitada')}</span></td>
         <td>${escR(fmtDateTimeR(c.validade))}</td>
-      </tr>
-    `).join('');
+      </tr>`;
+    }).join('');
+    window.__anarbibPainelUpdateBulkSelectionButtons && window.__anarbibPainelUpdateBulkSelectionButtons();
   }
 
   function renderLoansR(items, batches) {
@@ -10242,7 +10131,7 @@ function initPartnerProbeUi() {
     ];
     map.forEach(([id, fn]) => {
       const el = $r(id);
-      if (!el || el.dataset.mainReloadBound === 'true' || el.dataset.rescueReloadBound === 'true') return;
+      if (!el || el.dataset.rescueReloadBound === 'true') return;
       el.dataset.rescueReloadBound = 'true';
       el.addEventListener('click', () => fn());
     });
