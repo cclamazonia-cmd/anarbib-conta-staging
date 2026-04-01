@@ -9618,6 +9618,480 @@ function initPartnerProbeUi() {
       console.warn('Falha ao inicializar o bloco de parceiras; o restante do painel segue ativo.', error);
     }
   </script>
+
+<script type="module">
+  import { supabase } from "./js/blmf-supabase.js";
+
+  const FALLBACK_KEY = '__ANARBIB_PAINEL_RESCUE__';
+  if (!window[FALLBACK_KEY]) {
+    window[FALLBACK_KEY] = { started: true };
+  }
+
+  const $r = (id) => document.getElementById(id);
+  const $$r = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  const escR = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmtDateR = (v) => {
+    if (!v) return '—';
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return String(v).slice(0, 10) || '—';
+    return d.toLocaleDateString('pt-BR', { timeZone: 'America/Belem' });
+  };
+  const fmtDateTimeR = (v) => {
+    if (!v) return '—';
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return String(v);
+    return d.toLocaleString('pt-BR', {
+      timeZone: 'America/Belem',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  };
+  const setChipR = (id, value) => { const el = $r(id); if (el) el.textContent = value; };
+
+  function firstFilledR(...values) {
+    for (const value of values) {
+      if (value === 0) return value;
+      if (typeof value === 'string' && value.trim()) return value.trim();
+      if (value !== null && value !== undefined && value !== '') return value;
+    }
+    return '';
+  }
+
+  function normalizeLibraryIdR(value) {
+    const v = String(value || '').trim();
+    return v || null;
+  }
+
+  async function resolveLibraryIdR() {
+    const boot = window.__ANARBIB_PAINEL_BOOTSTRAP_STATE__ || {};
+    const direct = [
+      boot?.currentLibraryRow?.id,
+      boot?.currentAccessRow?.library_id,
+      boot?.currentIdentityRow?.library_id,
+      boot?.currentAccessRow?.default_library_id,
+      boot?.currentIdentityRow?.default_library_id
+    ].map(normalizeLibraryIdR).filter(Boolean);
+    if (direct.length) return direct[0];
+
+    try {
+      const { data } = await supabase.from('api.my_access').select('*').limit(1);
+      const row = Array.isArray(data) ? data[0] : null;
+      const libraryId = normalizeLibraryIdR(row?.library_id || row?.default_library_id);
+      if (libraryId) return libraryId;
+    } catch (_e) {}
+
+    try {
+      const { data } = await supabase.from('my_access').select('*').limit(1);
+      const row = Array.isArray(data) ? data[0] : null;
+      const libraryId = normalizeLibraryIdR(row?.library_id || row?.default_library_id);
+      if (libraryId) return libraryId;
+    } catch (_e) {}
+
+    return null;
+  }
+
+  async function loadProfilesMapR(userIds) {
+    const ids = Array.from(new Set((userIds || []).map((v) => String(v || '').trim()).filter(Boolean)));
+    if (!ids.length) return new Map();
+    try {
+      const { data, error } = await supabase.from('profiles').select('id,first_name,last_name,email,public_id').in('id', ids);
+      if (error) throw error;
+      return new Map((data || []).map((row) => [String(row.id), row]));
+    } catch (_e) {
+      return new Map();
+    }
+  }
+
+  function profileNameR(row) {
+    const first = String(row?.first_name || '').trim();
+    const last = String(row?.last_name || '').trim();
+    const full = [first, last].filter(Boolean).join(' ').trim();
+    return full || String(row?.email || row?.public_id || '—');
+  }
+
+  function setupMainTabsRescue() {
+    const btns = $$r('.tab-btn[data-tab]');
+    const panels = $$r('.tab-panel[data-tab]');
+    if (!btns.length || !panels.length) return;
+    const valid = new Set(btns.map((b) => b.dataset.tab).filter(Boolean));
+    const activate = (tab, { pushHash = true } = {}) => {
+      const next = valid.has(tab) ? tab : 'funcionamento';
+      btns.forEach((btn) => {
+        const active = btn.dataset.tab === next;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      panels.forEach((panel) => panel.classList.toggle('active', panel.dataset.tab === next));
+      try { sessionStorage.setItem('anarbib_painel_active_tab', next); } catch (_e) {}
+      if (pushHash) location.hash = `#${next}`;
+    };
+    btns.forEach((btn) => {
+      if (btn.dataset.rescueBound === 'true') return;
+      btn.dataset.rescueBound = 'true';
+      btn.addEventListener('click', () => activate(btn.dataset.tab || 'funcionamento'));
+    });
+    if (!window.__anarbibPainelRescueHashBound) {
+      window.__anarbibPainelRescueHashBound = true;
+      window.addEventListener('hashchange', () => {
+        const current = (location.hash || '').replace('#', '');
+        if (valid.has(current)) activate(current, { pushHash: false });
+      });
+    }
+    let stored = '';
+    try { stored = sessionStorage.getItem('anarbib_painel_active_tab') || ''; } catch (_e) {}
+    const initial = (location.hash || '').replace('#', '') || stored;
+    activate(valid.has(initial) ? initial : 'funcionamento', { pushHash: false });
+  }
+
+  function setupBibliotecaSubtabsRescue() {
+    const btns = $$r('.biblioteca-subtab-btn[data-biblioteca-subtab]');
+    const panels = $$r('.biblioteca-subtab-panel[data-biblioteca-subtab-panel]');
+    if (!btns.length || !panels.length) return;
+    const valid = new Set(btns.map((b) => b.dataset.bibliotecaSubtab).filter(Boolean));
+    const activate = (tab) => {
+      const next = valid.has(tab) ? tab : 'essencial';
+      btns.forEach((btn) => {
+        const active = btn.dataset.bibliotecaSubtab === next;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      panels.forEach((panel) => panel.classList.toggle('active', panel.dataset.bibliotecaSubtabPanel === next));
+      try { sessionStorage.setItem('anarbib_painel_biblioteca_subtab', next); } catch (_e) {}
+    };
+    btns.forEach((btn) => {
+      if (btn.dataset.rescueBound === 'true') return;
+      btn.dataset.rescueBound = 'true';
+      btn.addEventListener('click', () => activate(btn.dataset.bibliotecaSubtab || 'essencial'));
+    });
+    let stored = '';
+    try { stored = sessionStorage.getItem('anarbib_painel_biblioteca_subtab') || ''; } catch (_e) {}
+    activate(valid.has(stored) ? stored : 'essencial');
+  }
+
+  function setupProfileTabsRescue() {
+    const map = {
+      Dados: { btn: $r('profileTabBtnDados'), pane: $r('profilePaneDados') },
+      Reservas: { btn: $r('profileTabBtnReservas'), pane: $r('profilePaneReservas') },
+      Emprestimos: { btn: $r('profileTabBtnEmprestimos'), pane: $r('profilePaneEmprestimos') },
+    };
+    const activate = (name) => {
+      const next = map[name] ? name : 'Dados';
+      Object.entries(map).forEach(([key, cfg]) => {
+        if (!cfg.btn || !cfg.pane) return;
+        const active = key === next;
+        cfg.btn.classList.toggle('active', active);
+        cfg.pane.classList.toggle('active', active);
+      });
+      try { sessionStorage.setItem('anarbib_painel_profile_tab', next); } catch (_e) {}
+    };
+    Object.entries(map).forEach(([key, cfg]) => {
+      if (!cfg.btn || cfg.btn.dataset.rescueBound === 'true') return;
+      cfg.btn.dataset.rescueBound = 'true';
+      cfg.btn.addEventListener('click', () => activate(key));
+    });
+    let stored = '';
+    try { stored = sessionStorage.getItem('anarbib_painel_profile_tab') || ''; } catch (_e) {}
+    activate(map[stored] ? stored : 'Dados');
+  }
+
+  async function fetchReservationsR() {
+    const libraryId = await resolveLibraryIdR();
+    if (!libraryId) return [];
+    let rows = [];
+    try {
+      const { data, error } = await supabase.from('api.reserva_itens_followup_ui').select('*').eq('library_id', libraryId).limit(800);
+      if (!error) rows = data || [];
+    } catch (_e) {}
+    if (!rows.length) {
+      try {
+        const { data: reservas, error: er1 } = await supabase
+          .from('reservas_v2')
+          .select('id,user_id,library_id,created_at,updated_at,status_global')
+          .eq('library_id', libraryId)
+          .order('created_at', { ascending: false })
+          .limit(400);
+        if (er1) throw er1;
+        const reservaIds = (reservas || []).map((r) => Number(r.id)).filter((n) => Number.isFinite(n) && n > 0);
+        if (reservaIds.length) {
+          const { data: linhas, error: er2 } = await supabase
+            .from('reserva_linhas_v2')
+            .select('id,reserva_id,line_no,sub_id,bib_ref,rotulo_cache,autor_cache,titulo_cache,item_status,expires_at,updated_at,emprestimo_item_id')
+            .in('reserva_id', reservaIds);
+          if (er2) throw er2;
+          const reservaMap = new Map((reservas || []).map((r) => [Number(r.id), r]));
+          rows = (linhas || []).map((linha) => {
+            const reserva = reservaMap.get(Number(linha?.reserva_id)) || {};
+            return {
+              reserva_id: linha?.reserva_id,
+              line_no: linha?.line_no,
+              sub_id: linha?.sub_id,
+              user_id: reserva?.user_id,
+              bib_ref: linha?.bib_ref,
+              rotulo: linha?.rotulo_cache,
+              autor: linha?.autor_cache,
+              titulo: linha?.titulo_cache,
+              reserva_created_at: reserva?.created_at,
+              expires_at: linha?.expires_at,
+              item_status: linha?.item_status,
+              emprestimo_item_id: linha?.emprestimo_item_id
+            };
+          });
+        }
+      } catch (_e) {}
+    }
+    const filtered = (rows || []).filter((row) => {
+      const status = String(firstFilledR(row?.item_status, row?.status, row?.workflow_stage_effective, '')).trim().toLowerCase();
+      const emprestimoItemId = Number(firstFilledR(row?.emprestimo_item_id, 0));
+      if (Number.isFinite(emprestimoItemId) && emprestimoItemId > 0) return false;
+      return !['convertida_em_emprestimo', 'retirada_efetivada', 'cancelada_leitor', 'cancelada_biblioteca', 'expirada', 'liberada_para_circulacao'].includes(status);
+    });
+    const profiles = await loadProfilesMapR(filtered.map((r) => firstFilledR(r?.user_id, null)));
+    return filtered.map((row) => {
+      const user = profiles.get(String(firstFilledR(row?.user_id, ''))) || {};
+      const reservaId = Number(firstFilledR(row?.reserva_id, row?.id, 0));
+      const lineNo = Number(firstFilledR(row?.line_no, 1)) || 1;
+      return {
+        id: `${reservaId}.${lineNo}`,
+        sub_id: String(firstFilledR(row?.sub_id, `${reservaId}.${lineNo}`)),
+        user_name: firstFilledR(row?.user_name, profileNameR(user)),
+        user_email: firstFilledR(row?.user_email, user?.email, '—'),
+        bib_ref: firstFilledR(row?.bib_ref, ''),
+        titulo: firstFilledR(row?.titulo, row?.title, row?.book_title, '—'),
+        autor: firstFilledR(row?.autor, row?.author, ''),
+        rotulo: firstFilledR(row?.rotulo, row?.label, '—'),
+        reserva_em: firstFilledR(row?.reserva_created_at, row?.created_at, row?.requested_at, null),
+        validade: firstFilledR(row?.validade, row?.expires_at, row?.valid_until, null),
+        workflow: String(firstFilledR(row?.workflow_stage_effective, row?.workflow_stage, row?.item_status, 'solicitada') || 'solicitada')
+      };
+    });
+  }
+
+  async function fetchConsultationsR() {
+    const libraryId = await resolveLibraryIdR();
+    if (!libraryId) return [];
+    let rows = [];
+    try {
+      const { data, error } = await supabase
+        .from('api.consulta_itens_followup_ui')
+        .select('*')
+        .eq('library_id', libraryId)
+        .eq('item_status', 'ativa')
+        .limit(800);
+      if (!error) rows = data || [];
+    } catch (_e) {}
+    if (!rows.length) return [];
+    const profiles = await loadProfilesMapR(rows.map((r) => firstFilledR(r?.user_id, null)));
+    return rows.map((row) => {
+      const user = profiles.get(String(firstFilledR(row?.user_id, ''))) || {};
+      const consultaId = Number(firstFilledR(row?.consulta_id, row?.id, 0));
+      const lineNo = Number(firstFilledR(row?.line_no, 1)) || 1;
+      return {
+        id: `${consultaId}.${lineNo}`,
+        consulta_id: consultaId,
+        sub_id: String(firstFilledR(row?.sub_id, `${consultaId}.${lineNo}`)),
+        user_name: firstFilledR(row?.user_name, profileNameR(user)),
+        user_email: firstFilledR(row?.user_email, user?.email, '—'),
+        bib_ref: firstFilledR(row?.bib_ref, ''),
+        titulo: firstFilledR(row?.titulo, row?.title, '—'),
+        autor: firstFilledR(row?.autor, row?.author, ''),
+        consulta_em: firstFilledR(row?.consulta_created_at, row?.requested_at, row?.created_at, null),
+        validade: firstFilledR(row?.validade, row?.expires_at, null),
+        workflow: String(firstFilledR(row?.workflow_stage_effective, row?.workflow_stage, row?.item_status, 'solicitada') || 'solicitada')
+      };
+    });
+  }
+
+  async function fetchLoansR() {
+    const libraryId = await resolveLibraryIdR();
+    if (!libraryId) return { items: [], batches: [] };
+    const { data: emprestimos, error: e1 } = await supabase
+      .from('emprestimos_v2')
+      .select('id,user_id,library_id,status_global,due_at,created_at')
+      .eq('library_id', libraryId)
+      .eq('status_global', 'aberto')
+      .order('created_at', { ascending: false })
+      .limit(400);
+    if (e1) throw e1;
+    const emprestimoIds = (emprestimos || []).map((r) => Number(r.id)).filter((n) => Number.isFinite(n) && n > 0);
+    if (!emprestimoIds.length) return { items: [], batches: [] };
+    const { data: itens, error: e2 } = await supabase
+      .from('emprestimo_itens_v2')
+      .select('id,emprestimo_id,line_no,sub_id,bib_ref,rotulo_cache,autor_cache,titulo_cache,item_status,due_at,extended_until,extension_note,created_at,return_scheduled_for,return_schedule_status')
+      .in('emprestimo_id', emprestimoIds)
+      .eq('item_status', 'aberto')
+      .order('emprestimo_id', { ascending: false })
+      .order('line_no', { ascending: true })
+      .limit(800);
+    if (e2) throw e2;
+    const emprestimoMap = new Map((emprestimos || []).map((r) => [Number(r.id), r]));
+    const profiles = await loadProfilesMapR((emprestimos || []).map((r) => r.user_id));
+    const items = (itens || []).map((row) => {
+      const emp = emprestimoMap.get(Number(row.emprestimo_id)) || {};
+      const user = profiles.get(String(emp.user_id || '')) || {};
+      return {
+        emprestimo_id: Number(row.emprestimo_id),
+        sub_id: String(firstFilledR(row?.sub_id, `${row?.emprestimo_id}.${row?.line_no}`)),
+        batch_label: String(row?.emprestimo_id || '—'),
+        user_name: profileNameR(user),
+        user_email: firstFilledR(user?.email, '—'),
+        bib_ref: firstFilledR(row?.bib_ref, ''),
+        titulo: firstFilledR(row?.titulo_cache, '—'),
+        autor: firstFilledR(row?.autor_cache, ''),
+        checkout_date: firstFilledR(row?.created_at, emp?.created_at, null),
+        due_date: firstFilledR(row?.extended_until, row?.due_at, emp?.due_at, null),
+        status_text: 'Aberto'
+      };
+    });
+    const batchesMap = new Map();
+    items.forEach((item) => {
+      const key = String(item.emprestimo_id);
+      const arr = batchesMap.get(key) || [];
+      arr.push(item);
+      batchesMap.set(key, arr);
+    });
+    const batches = Array.from(batchesMap.entries()).map(([empId, arr]) => ({
+      emprestimo_id: Number(empId),
+      batch_label: empId,
+      user_name: arr[0]?.user_name || '—',
+      user_email: arr[0]?.user_email || '—',
+      quantity: arr.length,
+      sub_ids: arr.map((i) => i.sub_id),
+      bib_refs: arr.map((i) => i.bib_ref).filter(Boolean),
+      checkout_date: arr[0]?.checkout_date || null,
+      due_date: arr[0]?.due_date || null,
+      status_text: 'Aberto'
+    }));
+    return { items, batches };
+  }
+
+  function renderReservationsR(rows) {
+    const tbody = $r('tbodyRes');
+    if (!tbody) return;
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="8">Sem reservas ativas.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map((r) => `
+      <tr>
+        <td><input type="checkbox" disabled aria-label="Selecionar ${escR(r.sub_id)}"></td>
+        <td class="mono">${escR(r.sub_id)}</td>
+        <td>${escR(r.user_name)}${r.user_email && r.user_email !== '—' ? `<br><span class="mini subtle">${escR(r.user_email)}</span>` : ''}</td>
+        <td>${escR(r.titulo)}${r.autor ? `<br><span class="mini subtle">${escR(r.autor)}</span>` : ''}</td>
+        <td class="mono">${escR(r.bib_ref || '—')}</td>
+        <td>${escR(r.rotulo || '—')}</td>
+        <td>${escR(fmtDateTimeR(r.reserva_em))}<br><span class="pill warn">${escR(r.workflow || 'solicitada')}</span></td>
+        <td>${escR(fmtDateTimeR(r.validade))}</td>
+      </tr>
+    `).join('');
+  }
+
+  function renderConsultationsR(rows) {
+    const tbody = $r('tbodyConsultas');
+    if (!tbody) return;
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="9">Sem consultas locais ativas.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map((c) => `
+      <tr>
+        <td><input type="checkbox" disabled aria-label="Selecionar ${escR(c.sub_id)}"></td>
+        <td>#${escR(c.consulta_id)}</td>
+        <td class="mono">${escR(c.sub_id)}</td>
+        <td>${escR(c.user_name)}${c.user_email && c.user_email !== '—' ? `<br><span class="mini subtle">${escR(c.user_email)}</span>` : ''}</td>
+        <td>${escR(c.titulo)}${c.autor ? `<br><span class="mini subtle">${escR(c.autor)}</span>` : ''}</td>
+        <td class="mono">${escR(c.bib_ref || '—')}</td>
+        <td>${escR(fmtDateTimeR(c.consulta_em))}</td>
+        <td><span class="pill warn">${escR(c.workflow || 'solicitada')}</span></td>
+        <td>${escR(fmtDateTimeR(c.validade))}</td>
+      </tr>
+    `).join('');
+  }
+
+  function renderLoansR(items, batches) {
+    const tbodyLoans = $r('tbodyLoans');
+    const tbodyBatches = $r('tbodyBatches');
+    if (tbodyLoans) {
+      tbodyLoans.innerHTML = items.length ? items.map((l) => `
+        <tr>
+          <td class="mono">${escR(l.sub_id)}</td>
+          <td class="mono">#${escR(l.batch_label)}</td>
+          <td>${escR(l.user_name)}${l.user_email && l.user_email !== '—' ? `<br><span class="mini subtle">${escR(l.user_email)}</span>` : ''}</td>
+          <td>${escR(l.titulo)}${l.autor ? `<br><span class="mini subtle">${escR(l.autor)}</span>` : ''}</td>
+          <td class="mono">${escR(l.bib_ref || '—')}</td>
+          <td>${escR(fmtDateR(l.checkout_date))}</td>
+          <td>${escR(fmtDateR(l.due_date))}</td>
+          <td><span class="pill ok">${escR(l.status_text || 'Aberto')}</span></td>
+          <td><span class="mini subtle">Ações indisponíveis neste modo de recuperação.</span></td>
+        </tr>
+      `).join('') : '<tr><td colspan="9">Sem empréstimos ativos.</td></tr>';
+    }
+    if (tbodyBatches) {
+      tbodyBatches.innerHTML = batches.length ? batches.map((b) => `
+        <tr>
+          <td class="mono">#${escR(b.batch_label)}</td>
+          <td>${escR(b.user_name)}${b.user_email && b.user_email !== '—' ? `<br><span class="mini subtle">${escR(b.user_email)}</span>` : ''}</td>
+          <td>${escR(b.quantity)}</td>
+          <td class="mono">${escR((b.sub_ids || []).join(', '))}</td>
+          <td class="mono">${escR((b.bib_refs || []).join(', '))}</td>
+          <td>${escR(fmtDateR(b.checkout_date))}</td>
+          <td>${escR(fmtDateR(b.due_date))}</td>
+          <td><span class="pill ok">${escR(b.status_text || 'Aberto')}</span></td>
+          <td><span class="mini subtle">Ações indisponíveis neste modo de recuperação.</span></td>
+        </tr>
+      `).join('') : '<tr><td colspan="9">Sem empréstimos agrupados ativos.</td></tr>';
+    }
+  }
+
+  async function reloadPainelRescueData() {
+    try {
+      const [reservations, consultations, loans] = await Promise.all([
+        fetchReservationsR(),
+        fetchConsultationsR(),
+        fetchLoansR()
+      ]);
+      renderReservationsR(reservations);
+      renderConsultationsR(consultations);
+      renderLoansR(loans.items, loans.batches);
+      setChipR('chipResCount', `Reservas ativas: ${reservations.length}`);
+      setChipR('chipConsultCount', `Consultas locais: ${consultations.length}`);
+      setChipR('chipLoanCount', `Empréstimos ativos: ${loans.items.length}`);
+      setChipR('chipBatchCount', `Empréstimos agrupados: ${loans.batches.length}`);
+    } catch (error) {
+      console.warn('Rescue do painel: falha ao recarregar dados.', error);
+      const msg = String(error?.message || error || 'Erro ao carregar os dados do painel.');
+      if ($r('tbodyRes')) $r('tbodyRes').innerHTML = `<tr><td colspan="8">${escR(msg)}</td></tr>`;
+      if ($r('tbodyConsultas')) $r('tbodyConsultas').innerHTML = `<tr><td colspan="9">${escR(msg)}</td></tr>`;
+      if ($r('tbodyLoans')) $r('tbodyLoans').innerHTML = `<tr><td colspan="9">${escR(msg)}</td></tr>`;
+      if ($r('tbodyBatches')) $r('tbodyBatches').innerHTML = `<tr><td colspan="9">${escR(msg)}</td></tr>`;
+    }
+  }
+
+  function bindReloadButtonsRescue() {
+    const map = [
+      ['btnRecarregarRes', reloadPainelRescueData],
+      ['btnRecarregarConsultas', reloadPainelRescueData],
+      ['btnRecarregarLoans', reloadPainelRescueData],
+      ['btnRecarregarLotes', reloadPainelRescueData]
+    ];
+    map.forEach(([id, fn]) => {
+      const el = $r(id);
+      if (!el || el.dataset.rescueReloadBound === 'true') return;
+      el.dataset.rescueReloadBound = 'true';
+      el.addEventListener('click', () => fn());
+    });
+  }
+
+  setupMainTabsRescue();
+  setupBibliotecaSubtabsRescue();
+  setupProfileTabsRescue();
+  bindReloadButtonsRescue();
+  await reloadPainelRescueData();
+</script>
+
 </body>
 
 <!-- padding retained line count 01 -->
