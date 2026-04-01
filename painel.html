@@ -6404,6 +6404,27 @@ function belemNowParts(){
       renderActiveLibraryLogo(currentLibraryRow || identity || {});
     }
 
+    async function resolvePainelLibraryIdForData(){
+      const candidates = [
+        currentAccessRow?.library_id,
+        currentIdentityRow?.library_id,
+        currentAccessRow?.default_library_id,
+        currentIdentityRow?.default_library_id,
+        currentLibraryRow?.id,
+        currentLibraryRow?.library_id,
+        window.__ANARBIB_PAINEL_BOOTSTRAP_STATE__?.currentAccessRow?.library_id,
+        window.__ANARBIB_PAINEL_BOOTSTRAP_STATE__?.currentIdentityRow?.library_id,
+        window.__ANARBIB_PAINEL_BOOTSTRAP_STATE__?.currentLibraryRow?.id,
+      ].map(normalizeLibraryId).filter(Boolean);
+      if (candidates.length) return candidates[0];
+      try {
+        const resolved = await resolveCurrentLibraryIdentity();
+        const fallbackId = normalizeLibraryId(resolved?.id || resolved?.row?.id || resolved?.row?.library_id);
+        if (fallbackId) return fallbackId;
+      } catch (_error) {}
+      throw new Error('Biblioteca ativa não identificada para carregar os dados do painel.');
+    }
+
     async function loadProfilesByIds(userIds){
       const ids = Array.from(new Set((userIds || []).map((v) => String(v || '').trim()).filter(Boolean)));
       if (!ids.length) return new Map();
@@ -6473,15 +6494,15 @@ function belemNowParts(){
         });
         const profileIds = filteredRows.map((row) => firstFilledValue(row?.user_id, row?.reader_id, row?.profile_id, row?.user_uuid, row?.reader_uuid, null)).filter(Boolean);
         const profilesMap = await loadProfilesByIds(profileIds);
-        return filteredRows.map((row, index) => {
+        return filteredRows.map((row) => {
           const reservaId = Number(firstFilledValue(row?.reserva_id, row?.reservation_id, row?.id, 0));
           const lineNo = Number(firstFilledValue(row?.line_no, row?.reservation_line_no, row?.item_no, 1)) || 1;
           const userId = firstFilledValue(row?.user_id, row?.reader_id, row?.profile_id, row?.user_uuid, row?.reader_uuid, null);
           const user = profilesMap.get(String(userId)) || {};
           const book = extractBook(row) || {};
-          const createdAt = firstFilledValue(row?.created_at, row?.requested_at, row?.reserva_em, row?.inserted_at, null) || null;
+          const createdAt = firstFilledValue(row?.reserva_created_at, row?.created_at, row?.requested_at, row?.reserva_em, row?.inserted_at, null) || null;
           const workflowStage = normalizeReservationWorkflowStageValue(firstFilledValue(row?.workflow_stage_effective, row?.workflow_stage, row?.stage, row?.item_status, row?.status, 'solicitada'));
-          const workflowUpdatedAt = firstFilledValue(row?.workflow_stage_updated_at, row?.last_stage_changed_at, row?.updated_at, createdAt, null) || createdAt;
+          const workflowUpdatedAt = firstFilledValue(row?.workflow_stage_updated_at_effective, row?.workflow_stage_updated_at, row?.last_stage_changed_at, row?.updated_at, createdAt, null) || createdAt;
           const validadeRaw = firstFilledValue(row?.validade, row?.valid_until, row?.expires_at, row?.pickup_until, row?.pickup_expires_at, row?.deadline_at, null);
           return {
             id: buildReservationSyntheticId(reservaId, lineNo),
@@ -6512,17 +6533,95 @@ function belemNowParts(){
         }).sort((a, b) => String(b.reserva_em || '').localeCompare(String(a.reserva_em || '')));
       };
 
-      const sourceName = 'api.reserva_itens_followup_ui';
+      const libraryId = await resolvePainelLibraryIdForData();
+      let rows = [];
+      let sourceName = 'api.reserva_itens_followup_ui';
+
       const attempt = await apiFrom('api', 'reserva_itens_followup_ui')
         .select('*')
+        .eq('library_id', libraryId)
         .limit(800);
-      if (attempt.error) throw attempt.error;
-      activeReservations = await mapV2ReservationRows(attempt.data || [], sourceName);
-      clearStatus('statusRes');
+      if (attempt.error) {
+        console.warn('Painel: leitura api.reserva_itens_followup_ui falhou; tentando fallback local.', attempt.error);
+      } else {
+        rows = attempt.data || [];
+      }
 
-      selectedReservaIds = new Set(
-        [...selectedReservaIds].filter((id) => activeReservations.some((r) => r.id === id))
-      );
+      if (!rows.length) {
+        sourceName = 'public.reservas_v2+reserva_linhas_v2';
+        const reservasRes = await supabase
+          .from('reservas_v2')
+          .select('id,user_id,library_id,created_at,updated_at,status_global')
+          .eq('library_id', libraryId)
+          .order('created_at', { ascending:false })
+          .limit(400);
+        if (reservasRes.error) throw reservasRes.error;
+        const reservas = reservasRes.data || [];
+        const reservaIds = reservas.map((row) => Number(row?.id)).filter((id) => Number.isFinite(id) && id > 0);
+        if (reservaIds.length) {
+          const linhasRes = await supabase
+            .from('reserva_linhas_v2')
+            .select('id,reserva_id,line_no,sub_id,book_id,item_id,bib_ref,rotulo_cache,autor_cache,titulo_cache,editora_cache,ano_cache,item_status,expires_at,cancelled_at,converted_at,expired_at,emprestimo_item_id,notes,updated_at')
+            .in('reserva_id', reservaIds);
+          if (linhasRes.error) throw linhasRes.error;
+
+          const workflowsRes = await supabase
+            .from('reserva_item_workflow_v2')
+            .select('reserva_id,line_no,workflow_stage,workflow_note,pickup_scheduled_for,updated_at,pickup_reply_status,pickup_reply_note,pickup_reply_at')
+            .in('reserva_id', reservaIds)
+            .order('updated_at', { ascending:false });
+          if (workflowsRes.error) throw workflowsRes.error;
+
+          const latestWorkflow = new Map();
+          for (const workflowRow of (workflowsRes.data || [])) {
+            const key = `${workflowRow?.reserva_id}|${workflowRow?.line_no}`;
+            if (!latestWorkflow.has(key)) latestWorkflow.set(key, workflowRow);
+          }
+
+          const reservasById = new Map(reservas.map((row) => [Number(row.id), row]));
+          rows = (linhasRes.data || []).map((linha) => {
+            const reserva = reservasById.get(Number(linha?.reserva_id)) || {};
+            const workflow = latestWorkflow.get(`${linha?.reserva_id}|${linha?.line_no}`) || {};
+            return {
+              reserva_id: linha?.reserva_id,
+              reserva_item_id: linha?.id,
+              line_no: linha?.line_no,
+              sub_id: linha?.sub_id,
+              user_id: reserva?.user_id,
+              library_id: reserva?.library_id,
+              reserva_created_at: reserva?.created_at,
+              reserva_updated_at: reserva?.updated_at,
+              reserva_status: reserva?.status_global,
+              book_id: linha?.book_id,
+              item_id: linha?.item_id,
+              bib_ref: linha?.bib_ref,
+              rotulo: linha?.rotulo_cache,
+              autor: linha?.autor_cache,
+              titulo: linha?.titulo_cache,
+              editora: linha?.editora_cache,
+              ano: linha?.ano_cache,
+              item_status: linha?.item_status,
+              expires_at: linha?.expires_at,
+              cancelled_at: linha?.cancelled_at,
+              converted_at: linha?.converted_at,
+              expired_at: linha?.expired_at,
+              emprestimo_item_id: linha?.emprestimo_item_id,
+              item_notes: linha?.notes,
+              workflow_stage_effective: workflow?.workflow_stage || null,
+              workflow_note: workflow?.workflow_note || null,
+              pickup_scheduled_for: workflow?.pickup_scheduled_for || null,
+              workflow_stage_updated_at_effective: workflow?.updated_at || linha?.updated_at || reserva?.updated_at || reserva?.created_at || null,
+              pickup_reply_status: workflow?.pickup_reply_status || null,
+              pickup_reply_note: workflow?.pickup_reply_note || null,
+              pickup_reply_at: workflow?.pickup_reply_at || null,
+            };
+          });
+        }
+      }
+
+      activeReservations = await mapV2ReservationRows(rows || [], sourceName);
+      clearStatus('statusRes');
+      selectedReservaIds = new Set([...selectedReservaIds].filter((id) => activeReservations.some((r) => r.id === id)));
     }
 
     function consultationLooksActiveForWorkflow(row){
@@ -6692,150 +6791,203 @@ function belemNowParts(){
         }).sort((a, b) => String(b.consulta_em || '').localeCompare(String(a.consulta_em || '')));
       };
 
-      const sourceName = 'api.consulta_itens_followup_ui';
+      const libraryId = await resolvePainelLibraryIdForData();
+      let rows = [];
+      let sourceName = 'api.consulta_itens_followup_ui';
       const attempt = await apiFrom('api', 'consulta_itens_followup_ui')
         .select('*')
+        .eq('library_id', libraryId)
         .eq('item_status', 'ativa')
         .limit(800);
-      if (attempt.error) throw attempt.error;
-      activeConsultations = await mapConsultaRows(attempt.data || [], sourceName);
-      selectedConsultaIds = new Set(
-        [...selectedConsultaIds].filter((id) => activeConsultations.some((c) => c.id === id))
-      );
+      if (attempt.error) {
+        console.warn('Painel: leitura api.consulta_itens_followup_ui falhou; tentando fallback local.', attempt.error);
+      } else {
+        rows = attempt.data || [];
+      }
+
+      if (!rows.length) {
+        sourceName = 'public.consultas_locais_v2+consulta_linhas_v2';
+        const consultasRes = await supabase
+          .from('consultas_locais_v2')
+          .select('id,user_id,library_id,created_at,updated_at,status_global')
+          .eq('library_id', libraryId)
+          .order('created_at', { ascending:false })
+          .limit(400);
+        if (consultasRes.error) throw consultasRes.error;
+        const consultas = consultasRes.data || [];
+        const consultaIds = consultas.map((row) => Number(row?.id)).filter((id) => Number.isFinite(id) && id > 0);
+        if (consultaIds.length) {
+          const linhasRes = await supabase
+            .from('consulta_linhas_v2')
+            .select('id,consulta_id,line_no,sub_id,book_id,holding_id,bib_ref,titulo_cache,autor_cache,editora_cache,ano_cache,item_status,expires_at,notes,updated_at')
+            .in('consulta_id', consultaIds);
+          if (linhasRes.error) throw linhasRes.error;
+          const workflowsRes = await supabase
+            .from('consulta_item_workflow_v2')
+            .select('consulta_id,line_no,workflow_stage,workflow_note,consultation_scheduled_for,updated_at')
+            .in('consulta_id', consultaIds)
+            .order('updated_at', { ascending:false });
+          if (workflowsRes.error) throw workflowsRes.error;
+          const latestWorkflow = new Map();
+          for (const workflowRow of (workflowsRes.data || [])) {
+            const key = `${workflowRow?.consulta_id}|${workflowRow?.line_no}`;
+            if (!latestWorkflow.has(key)) latestWorkflow.set(key, workflowRow);
+          }
+          const consultasById = new Map(consultas.map((row) => [Number(row.id), row]));
+          rows = (linhasRes.data || []).map((linha) => {
+            const consulta = consultasById.get(Number(linha?.consulta_id)) || {};
+            const workflow = latestWorkflow.get(`${linha?.consulta_id}|${linha?.line_no}`) || {};
+            return {
+              consulta_id: linha?.consulta_id,
+              consulta_item_id: linha?.id,
+              line_no: linha?.line_no,
+              sub_id: linha?.sub_id,
+              user_id: consulta?.user_id,
+              library_id: consulta?.library_id,
+              consulta_created_at: consulta?.created_at,
+              consulta_updated_at: consulta?.updated_at,
+              consulta_status: consulta?.status_global,
+              book_id: linha?.book_id,
+              holding_id: linha?.holding_id,
+              bib_ref: linha?.bib_ref,
+              rotulo: null,
+              autor: linha?.autor_cache,
+              titulo: linha?.titulo_cache,
+              editora: linha?.editora_cache,
+              ano: linha?.ano_cache,
+              item_status: linha?.item_status,
+              expires_at: linha?.expires_at,
+              workflow_stage_effective: workflow?.workflow_stage || null,
+              workflow_note: workflow?.workflow_note || null,
+              consultation_scheduled_for: workflow?.consultation_scheduled_for || null,
+              workflow_stage_updated_at_effective: workflow?.updated_at || linha?.updated_at || consulta?.updated_at || consulta?.created_at || null,
+            };
+          });
+        }
+      }
+
+      activeConsultations = await mapConsultaRows(rows || [], sourceName);
+      selectedConsultaIds = new Set([...selectedConsultaIds].filter((id) => activeConsultations.some((c) => c.id === id)));
       clearStatus('statusConsultas');
     }
 
 
 async function fetchActiveLoans(){
-      const qPainelItems = await supabase
-        .schema('api')
-        .from('emprestimo_itens_painel_ui')
-        .select('*')
-        .eq('item_status', 'aberto')
-        .order('emprestimo_created_at', { ascending:false })
-        .order('emprestimo_id', { ascending:false })
-        .order('line_no', { ascending:true })
-        .limit(800);
+      const libraryId = await resolvePainelLibraryIdForData();
+      let rows = [];
+      let sourceName = 'api.emprestimo_itens_painel_ui';
 
-      if (!qPainelItems.error && (qPainelItems.data || []).length) {
-        const rows = qPainelItems.data || [];
+      const qPainelEmprestimos = await supabase
+        .from('emprestimos_v2')
+        .select('id,user_id,library_id,status_global,due_at,extended_once,created_at,updated_at')
+        .eq('library_id', libraryId)
+        .eq('status_global', 'aberto')
+        .order('created_at', { ascending:false })
+        .limit(400);
+      if (qPainelEmprestimos.error) throw qPainelEmprestimos.error;
+      const emprestimosRows = qPainelEmprestimos.data || [];
+      const emprestimoIds = emprestimosRows.map((row) => Number(row?.id)).filter((id) => Number.isFinite(id) && id > 0);
 
-        const mappedV2Loans = rows.map((r) => {
-          const dueSource = r.extended_until || r.due_at;
-          const due = dueSource ? new Date(String(dueSource) + 'T00:00:00') : null;
-          const today = new Date(todayISO() + 'T00:00:00');
-          const overdueDays = due ? Math.floor((today - due) / 86400000) : 0;
-          const fallbackIdentity = {
-            full_name: r.user_name,
-            public_id: r.user_public_id,
-            email: r.user_email,
-          };
-          return {
-            id: Number(`${r.emprestimo_id}${String(r.line_no).padStart(2, '0')}`),
-            loan_id: Number(`${r.emprestimo_id}${String(r.line_no).padStart(2, '0')}`),
-            source: 'v2',
-            emprestimo_id: Number(r.emprestimo_id),
-            line_no: Number(r.line_no),
-            batch_key: `v2-${r.emprestimo_id}`,
-            batch_label: String(r.emprestimo_id),
-            sub_id: r.sub_id || `${r.emprestimo_id}.${r.line_no}`,
-            user_id: r.user_id,
-            user_name: String(r.user_name || '').trim() || profileNameWithPublicId(fallbackIdentity),
-            user_email: r.user_email || '—',
-            titulo: r.titulo || 'Livro',
-            autor: r.autor || '',
-            bib_ref: r.bib_ref || '—',
-            checkout_date: r.emprestimo_created_at,
-            due_date: dueSource,
-            extended_until: r.extended_until || r.due_at || null,
-            extension_note: r.extension_note || '',
-            returned_date: r.returned_at,
-            return_scheduled_for: r.return_scheduled_for || null,
-            return_schedule_status: r.return_schedule_status || (r.returned_at ? 'devolucao_realizada' : 'sem_agendamento'),
-            return_completed_at: r.return_completed_at || null,
-            return_missed_at: r.return_missed_at || null,
-            extended_once: !!r.extended_once,
-            can_renew: overdueDays <= 0 && !r.extended_once,
-            status_text: overdueDays > 0 ? `Atrasado (${overdueDays} dia(s))` : (r.extended_once ? 'Renovado' : 'Em curso'),
-            status_class: overdueDays > 0 ? 'bad' : (r.extended_once ? 'warn' : 'ok'),
-            raw: r,
-          };
-        });
-
-        activeLoans = dedupeBy(mappedV2Loans, (x) => `${x.source}|${x.emprestimo_id}|${x.line_no}|${x.sub_id}`);
-
-        const qPainelBatches = await supabase
-          .schema('api')
-          .from('emprestimo_lotes_painel_ui')
-          .select('*')
-          .order('emprestimo_created_at', { ascending:false })
+      if (emprestimoIds.length) {
+        const qPainelItems = await supabase
+          .from('emprestimo_itens_v2')
+          .select('id,emprestimo_id,line_no,sub_id,user_id,book_id,item_id,bib_ref,rotulo_cache,autor_cache,titulo_cache,editora_cache,ano_cache,item_status,due_at,extended_until,extension_note,returned_at,return_scheduled_for,return_scheduled_by,return_scheduled_at,return_schedule_status,return_completed_at,return_missed_at,created_at,updated_at')
+          .in('emprestimo_id', emprestimoIds)
+          .eq('item_status', 'aberto')
           .order('emprestimo_id', { ascending:false })
+          .order('line_no', { ascending:true })
           .limit(800);
+        if (qPainelItems.error) throw qPainelItems.error;
+        rows = qPainelItems.data || [];
+      }
 
-        if (!qPainelBatches.error && (qPainelBatches.data || []).length) {
-          activeBatches = (qPainelBatches.data || []).map((b) => ({
-            batch_key: `v2-${b.emprestimo_id}`,
-            batch_label: String(b.emprestimo_id),
-            user_id: b.user_id || null,
-            user_name: String(b.user_name || '').trim() || profileNameWithPublicId({ full_name: b.user_name, public_id: b.user_public_id, email: b.user_email }),
-            user_email: b.user_email || '—',
-            quantity: Number(b.quantity || 0) || 0,
-            sub_ids: Array.isArray(b.sub_ids) ? b.sub_ids : [],
-            line_nos: Array.isArray(b.line_nos) ? b.line_nos.map((x) => Number(x)).filter((x) => Number.isFinite(x) && x > 0) : [],
-            bib_refs: Array.isArray(b.bib_refs) ? b.bib_refs : [],
-            checkout_date: b.emprestimo_created_at || null,
-            due_date: b.due_at_effective || b.first_due_at || null,
-            extended_until: b.due_at_effective || b.first_due_at || null,
-            extension_note: '',
-            return_schedule_status: b.return_schedule_status || 'sem_agendamento',
-            return_schedule_mixed: !b.return_schedule_status && !b.return_scheduled_for,
-            return_scheduled_for: b.return_scheduled_for || null,
-            status_text: b.status_text || 'Em curso',
-            status_class: b.status_class || 'ok',
-            can_renew: !(String(b.status_class || '').trim() === 'bad') && !b.extended_once,
-            source: 'v2',
-            loan_ids: [Number(b.emprestimo_id)],
-            emprestimo_id: Number(b.emprestimo_id),
-          }));
-        } else {
-          const groups = groupBy(activeLoans, (x) => x.emprestimo_id);
-          activeBatches = Array.from(groups.entries()).map(([emprestimoId, items]) => {
-            const returnStatuses = dedupeBy(items.map((x) => x.return_schedule_status || 'sem_agendamento'), (x) => x);
-            const returnMoments = dedupeBy(items.map((x) => x.return_scheduled_for || ''), (x) => x).filter(Boolean);
-            const extensionNotes = dedupeBy(items.map((x) => x.extension_note || '').filter(Boolean), (x) => x);
-            return {
-              batch_key: `v2-${emprestimoId}`,
-              batch_label: String(emprestimoId),
-              user_id: items[0]?.user_id || null,
-              user_name: items[0]?.user_name || '—',
-              user_email: items[0]?.user_email || '—',
-              quantity: items.length,
-              sub_ids: dedupeBy(items.map((x) => x.sub_id), (x) => x),
-              line_nos: dedupeBy(items.map((x) => x.line_no), (x) => x),
-              bib_refs: dedupeBy(items.map((x) => x.bib_ref), (x) => x),
-              checkout_date: items[0]?.checkout_date || null,
-              due_date: items[0]?.due_date || null,
-              extended_until: items[0]?.extended_until || items[0]?.due_date || null,
-              extension_note: extensionNotes.join(' · '),
-              return_schedule_status: returnStatuses.length === 1 ? returnStatuses[0] : null,
-              return_schedule_mixed: returnStatuses.length > 1 || returnMoments.length > 1,
-              return_scheduled_for: returnMoments.length === 1 ? returnMoments[0] : null,
-              status_text: items.some((x) => x.status_class === 'bad') ? 'Com atraso' : (items.some((x) => x.extended_once) ? 'Renovado' : 'Em curso'),
-              status_class: items.some((x) => x.status_class === 'bad') ? 'bad' : (items.some((x) => x.extended_once) ? 'warn' : 'ok'),
-              can_renew: items.every((x) => !!x.can_renew),
-              source: 'v2',
-              loan_ids: dedupeBy(items.map((x) => x.loan_id), (x) => x),
-              emprestimo_id: Number(emprestimoId),
-            };
-          });
-        }
-
+      if (!rows.length) {
+        activeLoans = [];
+        activeBatches = [];
         return;
       }
 
-      // fallback ui_fix removido
-      activeLoans = [];
-      activeBatches = [];
+      const emprestimosById = new Map(emprestimosRows.map((row) => [Number(row.id), row]));
+      const profileIds = Array.from(new Set(emprestimosRows.map((row) => String(row?.user_id || '').trim()).filter(Boolean)));
+      const profilesMap = await loadProfilesByIds(profileIds);
+
+      const mappedV2Loans = rows.map((r) => {
+        const emprestimo = emprestimosById.get(Number(r?.emprestimo_id)) || {};
+        const profile = profilesMap.get(String(emprestimo?.user_id || '')) || {};
+        const dueSource = r.extended_until || r.due_at || emprestimo?.due_at || null;
+        const due = dueSource ? new Date(String(dueSource) + 'T00:00:00') : null;
+        const today = new Date(todayISO() + 'T00:00:00');
+        const overdueDays = due ? Math.floor((today - due) / 86400000) : 0;
+        const fallbackIdentity = {
+          full_name: [profile?.first_name, profile?.last_name].filter(Boolean).join(' '),
+          public_id: profile?.public_id,
+          email: profile?.email,
+        };
+        return {
+          id: Number(`${r.emprestimo_id}${String(r.line_no).padStart(2, '0')}`),
+          loan_id: Number(`${r.emprestimo_id}${String(r.line_no).padStart(2, '0')}`),
+          source: 'v2',
+          loan_source_name: sourceName,
+          emprestimo_id: Number(r.emprestimo_id),
+          line_no: Number(r.line_no),
+          batch_key: `v2-${r.emprestimo_id}`,
+          batch_label: String(r.emprestimo_id),
+          sub_id: r.sub_id || `${r.emprestimo_id}.${r.line_no}`,
+          user_id: emprestimo?.user_id || null,
+          user_name: profileNameWithPublicId(fallbackIdentity),
+          user_email: profile?.email || '—',
+          titulo: r.titulo_cache || 'Livro',
+          autor: r.autor_cache || '',
+          bib_ref: r.bib_ref || '—',
+          checkout_date: emprestimo?.created_at || r.created_at || null,
+          due_date: dueSource,
+          extended_until: r.extended_until || r.due_at || emprestimo?.due_at || null,
+          extension_note: r.extension_note || '',
+          returned_date: r.returned_at || null,
+          return_scheduled_for: r.return_scheduled_for || null,
+          return_schedule_status: r.return_schedule_status || (r.returned_at ? 'devolucao_realizada' : 'sem_agendamento'),
+          return_completed_at: r.return_completed_at || null,
+          return_missed_at: r.return_missed_at || null,
+          extended_once: !!emprestimo?.extended_once || !!r.extended_until,
+          can_renew: overdueDays <= 0 && !(!!emprestimo?.extended_once || !!r.extended_until),
+          status_text: overdueDays > 0 ? `Atrasado (${overdueDays} dia(s))` : ((!!emprestimo?.extended_once || !!r.extended_until) ? 'Renovado' : 'Em curso'),
+          status_class: overdueDays > 0 ? 'bad' : ((!!emprestimo?.extended_once || !!r.extended_until) ? 'warn' : 'ok'),
+          raw: { ...emprestimo, ...r },
+        };
+      });
+
+      activeLoans = dedupeBy(mappedV2Loans, (x) => `${x.source}|${x.emprestimo_id}|${x.line_no}|${x.sub_id}`);
+      const groups = groupBy(activeLoans, (x) => x.emprestimo_id);
+      activeBatches = Array.from(groups.entries()).map(([emprestimoId, items]) => {
+        const returnStatuses = dedupeBy(items.map((x) => x.return_schedule_status || 'sem_agendamento'), (x) => x);
+        const returnMoments = dedupeBy(items.map((x) => x.return_scheduled_for || ''), (x) => x).filter(Boolean);
+        const extensionNotes = dedupeBy(items.map((x) => x.extension_note || '').filter(Boolean), (x) => x);
+        return {
+          batch_key: `v2-${emprestimoId}`,
+          batch_label: String(emprestimoId),
+          user_id: items[0]?.user_id || null,
+          user_name: items[0]?.user_name || '—',
+          user_email: items[0]?.user_email || '—',
+          quantity: items.length,
+          sub_ids: dedupeBy(items.map((x) => x.sub_id), (x) => x),
+          line_nos: dedupeBy(items.map((x) => x.line_no), (x) => x),
+          bib_refs: dedupeBy(items.map((x) => x.bib_ref), (x) => x),
+          checkout_date: items[0]?.checkout_date || null,
+          due_date: items[0]?.due_date || null,
+          extended_until: items[0]?.extended_until || items[0]?.due_date || null,
+          extension_note: extensionNotes.join(' · '),
+          return_schedule_status: returnStatuses.length === 1 ? returnStatuses[0] : null,
+          return_schedule_mixed: returnStatuses.length > 1 || returnMoments.length > 1,
+          return_scheduled_for: returnMoments.length === 1 ? returnMoments[0] : null,
+          status_text: items.some((x) => x.status_class === 'bad') ? 'Com atraso' : (items.some((x) => x.extended_once) ? 'Renovado' : 'Em curso'),
+          status_class: items.some((x) => x.status_class === 'bad') ? 'bad' : (items.some((x) => x.extended_once) ? 'warn' : 'ok'),
+          can_renew: items.every((x) => !!x.can_renew),
+          source: 'v2',
+          loan_source_name: 'public.emprestimos_v2+emprestimo_itens_v2',
+          loan_ids: dedupeBy(items.map((x) => x.loan_id), (x) => x),
+          emprestimo_id: Number(emprestimoId),
+        };
+      });
     }
 
     function renderCounts(){
