@@ -147,7 +147,7 @@
       white-space:nowrap !important;
       overflow-wrap:normal !important;
       word-break:normal !important;
-      min-width:112px !important;
+      min-width:148px !important;
       padding-left:14px !important;
       padding-right:14px !important;
       color:#ffffff !important;
@@ -162,6 +162,15 @@
     }
     .reservation-actions{
       grid-template-columns:repeat(3, minmax(120px, 1fr));
+    }
+    .reservation-actions.single-action{
+      grid-template-columns:minmax(168px, max-content);
+      justify-content:start;
+    }
+    .reservation-actions.single-action .mini-btn{
+      width:auto;
+      min-width:168px;
+      white-space:nowrap;
     }
     .loan-actions{ margin-left:0; }
     .loan-actions > *,
@@ -2662,19 +2671,11 @@ button[type="submit"] *,
       const bibRef = normalizeBibRefValue(row?.bib_ref);
       const subId = String(row?.sub_id || "").trim();
       const title = String(row?.titulo || "").trim();
-      return buildActionGrid([
-        actionSlotEmpty(),
-        actionSlotEmpty(),
-        `<button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-current="${escapeHtml(reservaId || "")}" data-cancel-current-line-no="${escapeHtml(Number(row?.line_no) || "")}" data-cancel-current-bib-ref="${escapeHtml(bibRef)}" data-cancel-current-sub-id="${escapeHtml(subId)}" data-cancel-current-title="${escapeHtml(title)}">Cancelar reserva</button>`
-      ], "reservation-actions");
+      return `<div class="reservation-actions single-action"><button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-current="${escapeHtml(reservaId || "")}" data-cancel-current-line-no="${escapeHtml(Number(row?.line_no) || "")}" data-cancel-current-bib-ref="${escapeHtml(bibRef)}" data-cancel-current-sub-id="${escapeHtml(subId)}" data-cancel-current-title="${escapeHtml(title)}">Cancelar reserva</button></div>`;
     }
 
     function consultationCancelOnlyAction(row) {
-      return buildActionGrid([
-        actionSlotEmpty(),
-        actionSlotEmpty(),
-        `<button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-consulta-v2="${escapeHtml(Number(row?.consulta_id) || "")}|${escapeHtml(Number(row?.line_no) || "")}">Cancelar reserva</button>`
-      ], "reservation-actions");
+      return `<div class="reservation-actions single-action"><button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-consulta-v2="${escapeHtml(Number(row?.consulta_id) || "")}|${escapeHtml(Number(row?.line_no) || "")}">Cancelar reserva</button></div>`;
     }
 
     function parseReservationLineNoFromSubId(subId) {

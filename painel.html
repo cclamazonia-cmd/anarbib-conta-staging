@@ -1549,6 +1549,7 @@
                 <div class="mini">Pedidos ativos de consulta no local, separados do fluxo de empréstimo.</div>
               </div>
               <div class="actions" style="margin-top:0">
+                <button class="btn" id="btnCancelarConsultasSelecionadas" type="button">Cancelar pedido</button>
                 <button class="btn" id="btnRecarregarConsultas" type="button">Recarregar</button>
               </div>
             </div>
@@ -7425,11 +7426,13 @@ async function fetchActiveLoans(){
       updateReservationWorkflowStageOptions();
       if (!activeReservations.length){
         tbody.innerHTML = '<tr><td colspan="8">Sem reservas ativas.</td></tr>';
+        updateBulkSelectionButtons();
         return;
       }
       const rows = activeReservations.filter(reservationMatchesFilter);
       if (!rows.length){
         tbody.innerHTML = '<tr><td colspan="8">Nenhuma reserva neste recorte.</td></tr>';
+        updateBulkSelectionButtons();
         return;
       }
       tbody.innerHTML = rows.map((r) => {
@@ -7439,7 +7442,7 @@ async function fetchActiveLoans(){
         const workflowDetail = reservationWorkflowDetail(r);
         return `
           <tr data-reserva-row="${esc(r.id)}" class="${checked ? 'is-selected clickable-row' : 'clickable-row'}">
-            <td><input type="checkbox" ${checked} data-reserva-check="${esc(r.id)}" aria-label="Selecionar ${esc(r.sub_id)}"></td>
+            <td><input type="checkbox" ${checked} data-reserva-check="${esc(r.id)}" aria-label="Selecionar ${esc(r.sub_id)}" onclick="event.stopPropagation()"></td>
             <td class="mono">${esc(r.sub_id)}</td>
             <td>${esc(r.user_name)}${r.user_email && r.user_email !== '—' ? `<br><span class="mini subtle">${esc(r.user_email)}</span>` : ''}</td>
             <td>${esc(r.titulo)}${r.autor ? `<br><span class="mini subtle">${esc(r.autor)}</span>` : ''}</td>
@@ -7449,6 +7452,7 @@ async function fetchActiveLoans(){
             <td>${esc(fmtDateTimeBelem(r.validade))} (Belém)<br><span class="pill ${esc(followUp.className)}">${esc(followUp.label)}</span><br><span class="mini subtle">${esc(followUp.detail)}</span></td>
           </tr>`;
       }).join('');
+      updateBulkSelectionButtons();
     }
 
     function renderConsultationTable(){
@@ -7457,6 +7461,7 @@ async function fetchActiveLoans(){
       updateConsultationWorkflowStageOptions();
       if (!activeConsultations.length){
         tbody.innerHTML = '<tr><td colspan="9">Sem consultas locais ativas.</td></tr>';
+        updateBulkSelectionButtons();
         return;
       }
       tbody.innerHTML = activeConsultations.map((c) => {
@@ -7466,7 +7471,7 @@ async function fetchActiveLoans(){
         const validity = c.validade ? `${esc(fmtDateTimeBelem(c.validade))} (Belém)` : '—';
         return `
           <tr data-consulta-row="${esc(c.id)}" class="${checked ? 'is-selected clickable-row' : 'clickable-row'}">
-            <td><input type="checkbox" ${checked} data-consulta-check="${esc(c.id)}" aria-label="Selecionar ${esc(c.sub_id)}"></td>
+            <td><input type="checkbox" ${checked} data-consulta-check="${esc(c.id)}" aria-label="Selecionar ${esc(c.sub_id)}" onclick="event.stopPropagation()"></td>
             <td>#${esc(c.consulta_id)}</td>
             <td class="mono">${esc(c.sub_id)}</td>
             <td>${esc(c.user_name)}${c.user_email && c.user_email !== '—' ? `<br><span class="mini subtle">${esc(c.user_email)}</span>` : ''}</td>
@@ -7477,6 +7482,7 @@ async function fetchActiveLoans(){
             <td>${validity}</td>
           </tr>`;
       }).join('');
+      updateBulkSelectionButtons();
     }
 
     function renderLoansTable(){
@@ -8376,42 +8382,96 @@ async function fetchActiveLoans(){
         setStatus('statusRes', e.message || String(e), 'bad', false);
       } finally {
         $('btnCancelarSelecionados').disabled = false;
+        updateBulkSelectionButtons();
       }
     }
 
+    async function cancelConsultations(consultationIds){
+      const ids = Array.from(new Set((consultationIds || []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0)));
+      if (!ids.length) return setStatus('statusConsultas', 'Selecione pelo menos 1 pedido de consulta.', 'warn');
+      $('btnCancelarConsultasSelecionadas').disabled = true;
+      try {
+        const rows = activeConsultations.filter((c) => ids.includes(c.id));
+        if (!rows.length) return setStatus('statusConsultas', 'Os pedidos selecionados já não estão ativos.', 'warn');
+
+        await setConsultationWorkflowStage('cancelada_biblioteca', rows, {
+          note: 'Cancelamento registrado pela biblioteca no painel.',
+          consultationScheduledFor: null,
+          targetStatusId: 'statusConsultas'
+        });
+
+        selectedConsultaIds = new Set([...selectedConsultaIds].filter((id) => !ids.includes(id)));
+        await refreshConsultationsOnly({silent:true});
+        writePainelStateSync('consultations');
+      } catch (e) {
+        setStatus('statusConsultas', e.message || String(e), 'bad', false);
+      } finally {
+        $('btnCancelarConsultasSelecionadas').disabled = false;
+        updateBulkSelectionButtons();
+      }
+    }
+
+    function updateBulkSelectionButtons(){
+      const reservationCount = selectedReservaIds.size;
+      const consultationCount = selectedConsultaIds.size;
+      if ($('btnConfirmarSelecionados')) $('btnConfirmarSelecionados').disabled = reservationCount < 1;
+      if ($('btnCancelarSelecionados')) $('btnCancelarSelecionados').disabled = reservationCount < 1;
+      if ($('btnCancelarConsultasSelecionadas')) $('btnCancelarConsultasSelecionadas').disabled = consultationCount < 1;
+      if ($('btnApplyResWorkflowStage')) $('btnApplyResWorkflowStage').disabled = reservationCount < 1;
+      if ($('btnApplyConsultWorkflowStage')) $('btnApplyConsultWorkflowStage').disabled = consultationCount < 1;
+    }
+
     function bindReservationSelection(){
-      $('tbodyRes').addEventListener('click', (ev) => {
+      const tbody = $('tbodyRes');
+      if (!tbody || tbody.dataset.selectionBound === 'true') return;
+      tbody.dataset.selectionBound = 'true';
+
+      tbody.addEventListener('change', (ev) => {
         const check = ev.target.closest('[data-reserva-check]');
-        if (check) {
-          const id = Number(check.getAttribute('data-reserva-check'));
-          if (check.checked) selectedReservaIds.add(id); else selectedReservaIds.delete(id);
-          renderReservationTable();
-          return;
-        }
+        if (!check) return;
+        const id = Number(check.getAttribute('data-reserva-check'));
+        if (!Number.isFinite(id)) return;
+        if (check.checked) selectedReservaIds.add(id); else selectedReservaIds.delete(id);
+        renderReservationTable();
+        updateBulkSelectionButtons();
+      });
+
+      tbody.addEventListener('click', (ev) => {
+        if (ev.target.closest('input, button, a, label, select, textarea')) return;
         const row = ev.target.closest('[data-reserva-row]');
         if (!row) return;
         const id = Number(row.getAttribute('data-reserva-row'));
         if (!Number.isFinite(id)) return;
         if (selectedReservaIds.has(id)) selectedReservaIds.delete(id); else selectedReservaIds.add(id);
         renderReservationTable();
+        updateBulkSelectionButtons();
       });
     }
 
     function bindConsultationSelection(){
-      $('tbodyConsultas')?.addEventListener('click', (ev) => {
+      const tbody = $('tbodyConsultas');
+      if (!tbody || tbody.dataset.selectionBound === 'true') return;
+      tbody.dataset.selectionBound = 'true';
+
+      tbody.addEventListener('change', (ev) => {
         const check = ev.target.closest('[data-consulta-check]');
-        if (check) {
-          const id = Number(check.getAttribute('data-consulta-check'));
-          if (check.checked) selectedConsultaIds.add(id); else selectedConsultaIds.delete(id);
-          renderConsultationTable();
-          return;
-        }
+        if (!check) return;
+        const id = Number(check.getAttribute('data-consulta-check'));
+        if (!Number.isFinite(id)) return;
+        if (check.checked) selectedConsultaIds.add(id); else selectedConsultaIds.delete(id);
+        renderConsultationTable();
+        updateBulkSelectionButtons();
+      });
+
+      tbody.addEventListener('click', (ev) => {
+        if (ev.target.closest('input, button, a, label, select, textarea')) return;
         const row = ev.target.closest('[data-consulta-row]');
         if (!row) return;
         const id = Number(row.getAttribute('data-consulta-row'));
         if (!Number.isFinite(id)) return;
         if (selectedConsultaIds.has(id)) selectedConsultaIds.delete(id); else selectedConsultaIds.add(id);
         renderConsultationTable();
+        updateBulkSelectionButtons();
       });
     }
 
@@ -8711,6 +8771,8 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
     $('btnDevolverSubIds').addEventListener('click', returnPartialBySubIds);
     $('btnConfirmarSelecionados').addEventListener('click', () => confirmReservations([...selectedReservaIds]));
     $('btnCancelarSelecionados').addEventListener('click', () => cancelReservations([...selectedReservaIds]));
+    $('btnCancelarConsultasSelecionadas')?.addEventListener('click', () => cancelConsultations([...selectedConsultaIds]));
+    updateBulkSelectionButtons();
     const reservationStageNeedsSchedule = (stage) => isReservationPickupScheduledStage(stage);
     $('btnApplyResWorkflowStage')?.addEventListener('click', async () => {
       const stage = $('resWorkflowStage')?.value || '';
