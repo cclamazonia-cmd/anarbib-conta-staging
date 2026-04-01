@@ -1598,12 +1598,15 @@ button[type="submit"] *,
       const libraryId = resolveContaReservationLibraryId();
       if (!libraryId) return { resolved: false, reason: "no-library-id" };
 
+      const candidateMap = new Map(cleanRefs.map((ref) => [ref, buildLocalBibRefCandidates(ref)]));
+      const lookupRefs = Array.from(new Set(Array.from(candidateMap.values()).flat().filter(Boolean)));
+
       const lookup = await supabase
         .from("book_holdings")
         .select("id,library_id,local_bib_ref,loanable,book_id")
         .eq("library_id", libraryId)
-        .in("local_bib_ref", cleanRefs)
-        .limit(Math.max(cleanRefs.length + 2, 10));
+        .in("local_bib_ref", lookupRefs)
+        .limit(Math.max(lookupRefs.length + 2, 10));
 
       if (lookup.error) {
         if (canFallbackContaHoldingResolutionError(lookup.error)) {
@@ -1634,12 +1637,33 @@ button[type="submit"] *,
       const holdingIds = [];
       const holdingRows = [];
       for (const ref of cleanRefs) {
-        const matches = exactMap.get(ref) || [];
-        if (matches.length !== 1) {
-          return { resolved: false, reason: matches.length > 1 ? "ambiguous-holding" : "missing-holding", libraryId, ref };
+        const candidates = candidateMap.get(ref) || [ref];
+        const exactMatches = exactMap.get(candidates[0]) || [];
+        if (exactMatches.length > 1) {
+          return { resolved: false, reason: "ambiguous-holding", libraryId, ref };
         }
-        holdingIds.push(matches[0].holding_id);
-        holdingRows.push(matches[0]);
+        if (exactMatches.length === 1) {
+          holdingIds.push(exactMatches[0].holding_id);
+          holdingRows.push(exactMatches[0]);
+          continue;
+        }
+
+        const fallbackMatches = [];
+        const seenHoldingIds = new Set();
+        for (const candidate of candidates.slice(1)) {
+          for (const match of (exactMap.get(candidate) || [])) {
+            if (seenHoldingIds.has(match.holding_id)) continue;
+            seenHoldingIds.add(match.holding_id);
+            fallbackMatches.push(match);
+          }
+        }
+
+        if (fallbackMatches.length !== 1) {
+          return { resolved: false, reason: fallbackMatches.length > 1 ? "ambiguous-holding" : "missing-holding", libraryId, ref };
+        }
+
+        holdingIds.push(fallbackMatches[0].holding_id);
+        holdingRows.push(fallbackMatches[0]);
       }
 
       return {
@@ -1977,19 +2001,35 @@ button[type="submit"] *,
     function normalizeOneRef(input) {
       const raw = String(input || "").trim();
       if (!raw) return "";
-      const cleaned = raw
+      return raw
         .replace(/^biblivre[-:\s]*/i, "")
         .replace(/^bib[_\s-]*ref\s*:?\s*/i, "")
+        .replace(/[\u2013\u2014]/g, "-")
+        .replace(/^["'“”‘’\s]+|["'“”‘’\s]+$/g, "")
+        .replace(/\s+/g, " ")
         .trim();
-      const m = cleaned.match(/(\d{3,})/);
-      if (m) return m[1];
-      return cleaned.replace(/\s+/g, " ").trim();
+    }
+
+    function buildLocalBibRefCandidates(ref) {
+      const exact = normalizeBibRefValue(ref);
+      if (!exact) return [];
+      const candidates = [exact];
+
+      if (/^[0-9]+$/.test(exact)) {
+        const numeric = String(Number(exact));
+        if (numeric && numeric !== "0" && !candidates.includes(numeric)) candidates.push(numeric);
+      }
+
+      const upper = exact.toUpperCase();
+      if (upper !== exact && !candidates.includes(upper)) candidates.push(upper);
+
+      return candidates;
     }
 
     function parseRefs(raw) {
       return Array.from(new Set(
         String(raw || "")
-          .split(",")
+          .split(/[;,\n]+/)
           .map((s) => normalizeOneRef(s))
           .filter(Boolean)
       ));
