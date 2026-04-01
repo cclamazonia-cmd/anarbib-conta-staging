@@ -542,6 +542,18 @@
       .return-editor-backdrop{padding:14px}
     }
 
+    .external-governance-card{border-color:rgba(225,29,47,.28);box-shadow:0 18px 42px rgba(0,0,0,.46)}
+    .external-support-card{border-color:rgba(255,255,255,.08)}
+    .subsection-title{margin:16px 0 8px;font-size:.92rem;font-weight:900;letter-spacing:.02em;color:#fff}
+    .subsection-note{margin-top:8px}
+    .governance-source-box{border-color:rgba(225,29,47,.22);background:rgba(122,11,20,.12)}
+    .governance-summary-box{margin-top:12px}
+    .scope-field.is-disabled{opacity:.58}
+    .scope-field.is-hidden{display:none}
+    .partner-actions-primary,.partner-actions-secondary{display:flex;gap:10px;flex-wrap:wrap}
+    .partner-actions-secondary{margin-top:10px}
+
+
   </style>
 </head>
 <body>
@@ -930,31 +942,36 @@
                     <div class="section-head">
                       <div>
                         <h2>Relações externas</h2>
-                        <div class="mini">Camada de gestão e probe para governança documental, solicitações entre bibliotecas e leitura técnica de parceiras externas.</div>
+                        <div class="mini">Aqui ficam, em ordem, a fonte de verdade dos acordos, as solicitações entre bibliotecas e a leitura técnica de catálogos externos.</div>
                       </div>
                     </div>
                     <div class="muted-box" style="margin-top:12px">
-                      <div class="mini">Aqui tu registras regras, pedidos e testes. Nada nesta área importa catálogo automaticamente, não muda sozinha o estatuto político de uma parceira e não substitui a decisão local da biblioteca.</div>
+                      <div class="mini">Primeiro definem-se acordos e limites políticos. Depois registram-se pedidos entre bibliotecas. Só então faz sentido testar tecnicamente uma parceira externa. Nada nesta área importa catálogo automaticamente nem substitui a decisão humana da biblioteca.</div>
                     </div>
                   </div>
-                  <div class="card">
+                  <div class="card external-governance-card">
                     <div class="section-head">
                       <div>
                         <h2>Governança documental</h2>
-                        <div class="mini">Define o que esta biblioteca pode editar diretamente, o que deve virar proposta de correção, o que pode ser retomado localmente e como a mutualização começa por padrão.</div>
+                        <div class="mini">Fonte de verdade dos acordos entre bibliotecas: é aqui que esta biblioteca define o que pode ser corrigido, retomado localmente, partilhado ou mantido apenas no seu espaço.</div>
                       </div>
                     </div>
+                    <div class="muted-box governance-source-box" style="margin-top:12px">
+                      <div class="mini">Este bloco deve pilotar as permissões usadas depois em catalogação. Teste técnico, preset ou URL de parceira nunca substituem um acordo explícito salvo aqui.</div>
+                    </div>
+
+                    <div class="subsection-title">1. Edição e correção de fichas externas</div>
                     <div class="row" style="margin-top:12px">
                       <div>
-                        <label for="docGovDirectEditMode">Edição direta de notices de outras bibliotecas</label>
+                        <label for="docGovDirectEditMode">Edição direta de fichas de outras bibliotecas</label>
                         <select class="select" id="docGovDirectEditMode">
                           <option value="nao_permitir">Não permitir</option>
                           <option value="permitir_com_parceiros">Permitir só com parceiras autorizadas</option>
-                          <option value="permitir_todas">Permitir para qualquer notice compartilhada</option>
+                          <option value="permitir_todas">Permitir para qualquer ficha partilhada</option>
                         </select>
                       </div>
                       <div>
-                        <label for="docGovCorrectionMode">Correções em notices externas</label>
+                        <label for="docGovCorrectionMode">Correções em fichas externas</label>
                         <select class="select" id="docGovCorrectionMode">
                           <option value="propor_correcao">Só propor correção</option>
                           <option value="propor_ou_editar">Propor ou editar segundo a regra acima</option>
@@ -962,9 +979,11 @@
                         </select>
                       </div>
                     </div>
+
+                    <div class="subsection-title">2. Retomada local, recursos digitais e partilha</div>
                     <div class="row" style="margin-top:12px">
                       <div>
-                        <label for="docGovLocalRepriseMode">Retomada local de notice parceira</label>
+                        <label for="docGovLocalRepriseMode">Retomada local de ficha parceira</label>
                         <select class="select" id="docGovLocalRepriseMode">
                           <option value="nao_permitir">Não permitir</option>
                           <option value="rascunho_local">Criar rascunho local sem mexer na original</option>
@@ -972,7 +991,7 @@
                         </select>
                       </div>
                       <div>
-                        <label for="docGovDigitalLinkMode">Ligar recursos digitais a notices externas</label>
+                        <label for="docGovDigitalLinkMode">Ligar recursos digitais a fichas externas</label>
                         <select class="select" id="docGovDigitalLinkMode">
                           <option value="nao_permitir">Não permitir</option>
                           <option value="somente_locais">Permitir só para recursos locais desta biblioteca</option>
@@ -982,10 +1001,10 @@
                     </div>
                     <div class="row" style="margin-top:12px">
                       <div>
-                        <label for="docGovDefaultMutualization">Mutualização padrão para novas notices locais</label>
+                        <label for="docGovDefaultMutualization">Partilha padrão para novas fichas locais</label>
                         <select class="select" id="docGovDefaultMutualization">
                           <option value="local">Somente local</option>
-                          <option value="mutualizavel">Mutualizável</option>
+                          <option value="mutualizavel">Partilhável / mutualizável</option>
                           <option value="consulta_local">Consulta local</option>
                           <option value="emprestimo_interbib">Empréstimo inter-bibs possível</option>
                         </select>
@@ -998,6 +1017,8 @@
                         </label>
                       </div>
                     </div>
+
+                    <div class="subsection-title">3. Quem entra nos acordos</div>
                     <div style="margin-top:12px">
                       <label for="docGovAuthorizedPartners">Parceiras autorizadas</label>
                       <textarea class="textarea" id="docGovAuthorizedPartners" placeholder="Ex.: btl, cira, csl-milano"></textarea>
@@ -1005,7 +1026,7 @@
                     </div>
                     <div class="row3" style="margin-top:12px">
                       <div>
-                        <label for="docGovPermissionScopeMode">Escopo das permissões entre bibliotecas</label>
+                        <label for="docGovPermissionScopeMode">Como este acordo se aplica</label>
                         <select class="select" id="docGovPermissionScopeMode">
                           <option value="parceiras_selecionadas">Só parceiras selecionadas</option>
                           <option value="todas_ativas">Todas as bibliotecas ativas</option>
@@ -1013,12 +1034,13 @@
                           <option value="por_rede_ou_grupo">Por rede / grupo</option>
                           <option value="misto">Combinação mista</option>
                         </select>
+                        <div class="hint subsection-note" id="docGovScopeModeHint">Escolhe o alcance do acordo. Os campos abaixo abrem-se só quando fizerem sentido.</div>
                       </div>
-                      <div>
+                      <div class="scope-field" id="docGovAuthorizedCountriesWrap">
                         <label for="docGovAuthorizedCountries">Países autorizados</label>
                         <input class="input" id="docGovAuthorizedCountries" type="text" placeholder="Ex.: BR, AR, UY">
                       </div>
-                      <div>
+                      <div class="scope-field" id="docGovAuthorizedNetworksWrap">
                         <label for="docGovAuthorizedNetworks">Redes / grupos autorizados</label>
                         <input class="input" id="docGovAuthorizedNetworks" type="text" placeholder="Ex.: FICEDL, rede-anarquista">
                       </div>
@@ -1026,29 +1048,32 @@
                     <div style="margin-top:12px">
                       <label for="docGovScopeNote">Nota de escopo (preparatória)</label>
                       <textarea class="textarea" id="docGovScopeNote" placeholder="Ex.: correções abertas às bibliotecas BR escolhidas; edição direta reservada às bibliotecas da FICEDL; mutualização mais ampla do que a correção."></textarea>
-                      <div class="hint">Nesta etapa, o painel já grava este escopo na governança documental da biblioteca. A aplicação automática fina por país, rede ou comunidade ainda precisa ser ligada depois em catalogação e nas outras superfícies.</div>
+                      <div class="hint">O painel já grava este escopo na governança documental da biblioteca. A aplicação automática fina por país, rede ou comunidade ainda será ligada depois em catalogação e nas outras superfícies.</div>
                     </div>
+
+                    <div class="subsection-title">4. Memória interna e resumo atual</div>
                     <div style="margin-top:12px">
                       <label for="docGovInternalNote">Nota interna de governança</label>
-                      <textarea class="textarea" id="docGovInternalNote" placeholder="Ex.: notices BTL só podem receber proposta de correção; PDFs locais podem ser ligados a notices mutualizadas."></textarea>
+                      <textarea class="textarea" id="docGovInternalNote" placeholder="Ex.: fichas BTL só podem receber proposta de correção; PDFs locais podem ser ligados a fichas mutualizadas."></textarea>
                     </div>
-                    <div style="margin-top:12px">
+                    <div class="muted-box governance-summary-box">
                       <label for="docGovStateNote">Resumo atual</label>
                       <input class="input" id="docGovStateNote" type="text" value="" placeholder="Sem regra documental específica salva." readonly>
                     </div>
                     <div class="actions">
-                      <button class="btn" id="btnSaveDocGovernance" type="button">Salvar governança documental</button>
+                      <button class="btn primary" id="btnSaveDocGovernance" type="button">Salvar acordos e governança</button>
                     </div>
                     <div class="status" id="docGovernanceMsg"></div>
                   </div>
 
-                  <div class="card">
+                  <div class="card external-support-card">
                     <div class="section-head">
                       <div>
                         <h2>Solicitações interbibliotecas</h2>
                         <div class="mini">Registra pedidos formais entre bibliotecas parceiras, mantendo visíveis os canais diretos de contato para que as pessoas responsáveis também possam se falar fora do sistema.</div>
                       </div>
                     </div>
+                    <div class="subsection-title">1. Enviar solicitação</div>
                     <div class="row3" style="margin-top:12px">
                       <div>
                         <label for="interlibPartnerLibrary">Biblioteca parceira</label>
@@ -1101,6 +1126,7 @@
                       <label for="interlibRecentRequests">Solicitações recentes</label>
                       <textarea class="textarea" id="interlibRecentRequests" placeholder="As solicitações recentes desta biblioteca aparecerão aqui." readonly></textarea>
                     </div>
+                    <div class="subsection-title">2. Responder solicitação recebida</div>
                     <div class="row" style="margin-top:12px">
                       <div>
                         <label for="interlibPendingIncomingSelect">Solicitações recebidas pendentes</label>
@@ -1130,14 +1156,18 @@
                     <div class="status" id="interlibRequestsMsg"></div>
                   </div>
 
-                  <div class="card" id="partnerProbeCard" style="margin-bottom:16px;">
+                  <div class="card external-support-card" id="partnerProbeCard" style="margin-bottom:16px;">
                     <h4>Catálogos de parceiras externas</h4>
                     <p class="hint" style="margin:0 0 12px;">
-                      Registra a parceria, qualifica o estado relacional e testa o acesso técnico, sem importar catálogo nenhum automaticamente.
+                      Este bloco serve para identificar uma parceira, registrar o estado relacional e ler a situação técnica atual. Não substitui os acordos salvos acima.
                     </p>
+                    <div class="muted-box" style="margin:0 0 12px;">
+                      <div class="mini">Use este espaço depois de definir a linha política da biblioteca. Teste técnico bem-sucedido não equivale a acordo político, autorização de importação ou direito de correção.</div>
+                    </div>
 
                     <div id="partnerProbeMessage" class="hint" style="margin:0 0 12px;"></div>
 
+                    <div class="subsection-title">1. Identificar a parceira</div>
                     <div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:12px;">
                       <div class="field">
                         <label for="partnerPresetSelect">Parceira conhecida</label>
@@ -1162,6 +1192,7 @@
                       </div>
                     </div>
 
+                    <div class="subsection-title">2. Qualificar a situação atual</div>
                     <div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:12px;">
                       <div class="field">
                         <label for="partnerFamilySelect">Família</label>
@@ -1193,6 +1224,7 @@
                       </div>
                     </div>
 
+                    <div class="subsection-title">3. Ler situação e decidir o próximo passo</div>
                     <div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:12px;">
                       <div class="field">
                         <label for="partnerRelationshipStatusSelect">Situação relacional</label>
@@ -1228,12 +1260,15 @@
                       <textarea id="partnerRelationshipNotesInput" class="textarea" rows="4" placeholder="Ex.: primeiro contato feito por e-mail; aguarda retorno; interesse mútuo em comparação local; parceria ainda sem acordo técnico."></textarea>
                     </div>
 
-                    <div class="actions">
+                    <div class="subsection-title">4. Ações técnicas e de registro</div>
+                    <div class="partner-actions-primary">
                       <button id="partnerSaveBtn" class="btn primary" type="button">Salvar parceira na base</button>
-                      <button id="partnerOpenBaseBtn" class="btn" type="button">Abrir base URL</button>
-                      <button id="partnerGenerateBtn" class="btn" type="button">Gerar endpoints e seed</button>
                       <button id="partnerTestBtn" class="btn" type="button">Testar endpoints</button>
-                      <button id="partnerCopyReportBtn" class="btn" type="button">Copiar relatório</button>
+                      <button id="partnerOpenBaseBtn" class="btn" type="button">Abrir base URL</button>
+                    </div>
+                    <div class="partner-actions-secondary">
+                      <button id="partnerGenerateBtn" class="btn" type="button">Gerar endpoints e SQL</button>
+                      <button id="partnerCopyReportBtn" class="btn" type="button">Copiar leitura técnica</button>
                       <button id="partnerCopySeedBtn" class="btn" type="button">Copiar SQL</button>
                     </div>
 
@@ -1244,12 +1279,12 @@
                     <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px;">
                       <div class="field">
                         <label for="partnerProbeOutput">Leitura técnica atual</label>
-                        <textarea id="partnerProbeOutput" class="textarea mono" rows="14" readonly placeholder="Os endpoints prováveis e, depois do teste, o retorno técnico mais recente aparecerão aqui."></textarea>
+                        <textarea id="partnerProbeOutput" class="textarea mono" rows="14" readonly placeholder="Os endpoints prováveis e, depois do teste, o retorno técnico mais recente aparecerão aqui para leitura rápida."></textarea>
                       </div>
 
                       <div class="field">
                         <label for="partnerSeedOutput">SQL de seed</label>
-                        <textarea id="partnerSeedOutput" class="textarea mono" rows="14" readonly placeholder="O insert em public.catalog_partners aparecerá aqui."></textarea>
+                        <textarea id="partnerSeedOutput" class="textarea mono" rows="14" readonly placeholder="O SQL preparatório para registrar a parceira aparecerá aqui."></textarea>
                       </div>
                     </div>
                   </div>
@@ -4177,30 +4212,56 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
 
     function buildDocGovernanceSummary(governance){
       const direct = ({
-        nao_permitir: 'sem edição direta de notices externas',
+        nao_permitir: 'sem edição direta de fichas externas',
         permitir_com_parceiros: 'edição direta só com parceiras autorizadas',
-        permitir_todas: 'edição direta liberada para notices compartilhadas'
+        permitir_todas: 'edição direta liberada para fichas partilhadas'
       })[governance.direct_edit_mode] || 'sem regra definida';
       const localCopy = ({
-        nao_permitir: 'sem criação de cópia local',
-        rascunho_local: 'criação de cópia local via rascunho',
-        copia_local: 'criação de cópia local imediata'
+        nao_permitir: 'sem retomada local',
+        rascunho_local: 'retomada local via rascunho',
+        copia_local: 'cópia local permitida'
       })[governance.local_reprise_mode] || 'sem regra de cópia local';
       const mutual = ({
-        local: 'novas notices locais por padrão',
-        mutualizavel: 'novas notices mutualizáveis por padrão',
-        consulta_local: 'novas notices em consulta local por padrão',
-        emprestimo_interbib: 'novas notices com empréstimo inter-bibs por padrão'
-      })[governance.default_mutualization] || 'mutualização sem regra';
+        local: 'novas fichas ficam locais por padrão',
+        mutualizavel: 'novas fichas ficam partilháveis por padrão',
+        consulta_local: 'novas fichas ficam em consulta local por padrão',
+        emprestimo_interbib: 'novas fichas admitem empréstimo inter-bibs por padrão'
+      })[governance.default_mutualization] || 'partilha sem regra';
       const partners = governance.authorized_partners.length ? `parceiras: ${governance.authorized_partners.join(', ')}` : 'sem parceiras autorizadas';
       const scope = ({
         parceiras_selecionadas: 'escopo por parceiras selecionadas',
         todas_ativas: 'escopo aberto a todas as bibliotecas ativas',
         por_pais: governance.authorized_countries.length ? `escopo por país: ${governance.authorized_countries.join(', ')}` : 'escopo por país ainda sem países definidos',
         por_rede_ou_grupo: governance.authorized_networks.length ? `escopo por rede / grupo: ${governance.authorized_networks.join(', ')}` : 'escopo por rede / grupo ainda sem grupos definidos',
-        misto: 'escopo misto entre parceiras, países ou redes'
+        misto: 'escopo misto entre parceiras, países e redes'
       })[governance.permission_scope_mode] || 'escopo sem regra';
       return [direct, localCopy, mutual, partners, scope].join(' · ');
+    }
+
+    function updateDocGovScopeUi(){
+      const mode = String($('docGovPermissionScopeMode')?.value || '').trim();
+      const countriesWrap = $('docGovAuthorizedCountriesWrap');
+      const networksWrap = $('docGovAuthorizedNetworksWrap');
+      const countriesInput = $('docGovAuthorizedCountries');
+      const networksInput = $('docGovAuthorizedNetworks');
+      const hint = $('docGovScopeModeHint');
+      const showCountries = mode === 'por_pais' || mode === 'misto';
+      const showNetworks = mode === 'por_rede_ou_grupo' || mode === 'misto';
+      if (countriesWrap) countriesWrap.classList.toggle('is-hidden', !showCountries);
+      if (networksWrap) networksWrap.classList.toggle('is-hidden', !showNetworks);
+      if (countriesWrap) countriesWrap.classList.toggle('is-disabled', !showCountries);
+      if (networksWrap) networksWrap.classList.toggle('is-disabled', !showNetworks);
+      if (countriesInput) countriesInput.disabled = !showCountries;
+      if (networksInput) networksInput.disabled = !showNetworks;
+      if (hint) {
+        hint.textContent = ({
+          parceiras_selecionadas: 'O acordo vale apenas para a lista de parceiras autorizadas.',
+          todas_ativas: 'O acordo vale para todas as bibliotecas ativas do sistema.',
+          por_pais: 'O acordo vale para bibliotecas dos países indicados abaixo.',
+          por_rede_ou_grupo: 'O acordo vale para bibliotecas das redes ou grupos indicados abaixo.',
+          misto: 'O acordo combina parceiras específicas, países e redes quando isso for necessário.'
+        })[mode] || 'Escolhe o alcance do acordo. Os campos abaixo abrem-se só quando fizerem sentido.';
+      }
     }
 
     function renderDocGovernance(governance){
@@ -4219,6 +4280,7 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
       $('docGovInternalNote').value = normalized.internal_note;
       $('docGovStateNote').value = buildDocGovernanceSummary(normalized);
       currentDocGovernanceState = normalized;
+      updateDocGovScopeUi();
     }
 
     function collectDocGovernanceFromForm(){
@@ -4331,6 +4393,7 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
 
     function setupDocGovernanceActions(){
       $('btnSaveDocGovernance')?.addEventListener('click', saveDocGovernance);
+      $('docGovPermissionScopeMode')?.addEventListener('change', updateDocGovScopeUi);
     }
     const LIBRARY_REGIMENTO_DRAFT_BUCKET = 'library-regimentos-private';
     const LIBRARY_REGIMENTO_PUBLIC_BUCKET = 'library-regimentos-public';
