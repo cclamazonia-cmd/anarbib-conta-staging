@@ -513,6 +513,28 @@ button[type="submit"] *,
 }
 
 
+    .book-title-link,
+    .book-title-link:link,
+    .book-title-link:visited,
+    .book-title-link:hover,
+    .book-title-link:focus,
+    .book-title-link:active{
+      color:#ffffff !important;
+      font-style:italic;
+      font-weight:700;
+      text-decoration:none;
+    }
+    .book-title-link:hover,
+    .book-title-link:focus{
+      text-decoration:underline;
+    }
+    .book-availability-inline{
+      color:#f0f0f0;
+      font-size:.92rem;
+      font-style:italic;
+      white-space:nowrap;
+    }
+
     :root{
       --panel:var(--brand-panel-bg, rgba(10,10,10,.90));
       --text:var(--brand-text, #f4f4f4);
@@ -1563,16 +1585,21 @@ button[type="submit"] *,
       const url = new URL(ROUTES.LIVRO, location.href);
       if (numericBookId > 0) {
         url.searchParams.set("id", String(numericBookId));
-      } else {
+      }
+      if (cleanBibRef) {
         url.searchParams.set("ref", cleanBibRef);
       }
       return url.toString();
     }
 
-    function renderBookTitleLink(title, { bookId = null, bibRef = "" } = {}) {
+    function renderBookTitleLink(title, { bookId = null, bibRef = "", availabilityHint = "" } = {}) {
       const label = escapeHtml(title || (bibRef ? `Referência ${bibRef}` : "Livro"));
       const url = buildBookDetailUrl({ bookId, bibRef });
-      return url ? `<a href="${escapeHtml(url)}">${label}</a>` : label;
+      const linkHtml = url
+        ? `<a class="book-title-link" href="${escapeHtml(url)}">${label}</a>`
+        : `<span class="book-title-link">${label}</span>`;
+      const cleanHint = String(availabilityHint || "").trim();
+      return cleanHint ? `${linkHtml} <span class="book-availability-inline">(${escapeHtml(cleanHint)})</span>` : linkHtml;
     }
 
     function isMissingHoldingReservaFunctionError(error) {
@@ -1707,6 +1734,24 @@ button[type="submit"] *,
       if (!v) return "—";
       const d = new Date(v);
       return Number.isNaN(d.getTime()) ? String(v) : d.toISOString().slice(0, 10);
+    }
+
+    function fmtDateOnlyPtBr(v) {
+      if (!v) return "—";
+      const d = new Date(v);
+      return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleDateString("pt-BR", {
+        timeZone: "America/Belem",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      });
+    }
+
+    function buildBookAvailabilityHint({ dueAt = null, pickupScheduledFor = null, returnedAt = null } = {}) {
+      if (returnedAt) return "disponível agora";
+      if (pickupScheduledFor) return `dia ${fmtDateOnlyPtBr(pickupScheduledFor)}`;
+      if (dueAt) return `dia ${fmtDateOnlyPtBr(dueAt)}`;
+      return "";
     }
 
     function fmtDateTime(v) {
@@ -2328,6 +2373,59 @@ button[type="submit"] *,
         .select("bib_ref, titulo, autor, editora, ano")
         .in("bib_ref", clean);
       return new Map((data || []).map((row) => [String(row.bib_ref), row]));
+    }
+
+    async function fetchReservationHistoryRows() {
+      const primary = await supabase
+        .schema("api")
+        .from("my_reservations_history")
+        .select("id, library_name, bib_ref, titulo, autor, status, reserved_at, created_at, updated_at, cancelled_at, fulfilled_at, expired_at, closed_at")
+        .order("closed_at", { ascending: false })
+        .limit(200);
+
+      if (!primary.error) {
+        return {
+          source: "my_reservations_history",
+          mode: "aggregated",
+          data: Array.isArray(primary.data) ? primary.data : [],
+          error: null
+        };
+      }
+
+      if (!isMissingRelationError(primary.error)) {
+        return {
+          source: "my_reservations_history",
+          mode: "aggregated",
+          data: [],
+          error: primary.error
+        };
+      }
+
+      const fallback = await supabase
+        .schema("api")
+        .from("reserva_itens_followup_ui")
+        .select("reserva_id, line_no, sub_id, titulo, autor, bib_ref, item_status, reserva_created_at, workflow_stage_effective, workflow_note, pickup_scheduled_for, workflow_stage_updated_at_effective")
+        .eq("user_id", session.user.id)
+        .neq("item_status", "ativa")
+        .order("reserva_id", { ascending: false })
+        .order("line_no", { ascending: true })
+        .limit(200);
+
+      if (!fallback.error) {
+        return {
+          source: "reserva_itens_followup_ui",
+          mode: "itemized",
+          data: Array.isArray(fallback.data) ? fallback.data : [],
+          error: null
+        };
+      }
+
+      return {
+        source: "reserva_itens_followup_ui",
+        mode: "itemized",
+        data: [],
+        error: fallback.error
+      };
     }
 
     async function fetchRotulosMapByBibRefs(refs) {
@@ -3566,12 +3664,7 @@ function reservationPickupReplyActions(row) {
       historyEl.textContent = "Carregando...";
       if (historyMsg) historyMsg.textContent = "";
 
-      const currentHistory = await supabase
-        .schema("api")
-        .from("my_reservations_history")
-        .select("id, library_name, bib_ref, titulo, autor, status, reserved_at, created_at, updated_at, cancelled_at, fulfilled_at, expired_at, closed_at")
-        .order("closed_at", { ascending: false })
-        .limit(200);
+      const reservationHistory = await fetchReservationHistoryRows();
 
       const consultationHistory = await supabase
         .schema("api")
@@ -3580,25 +3673,39 @@ function reservationPickupReplyActions(row) {
         .order("closed_at", { ascending: false })
         .limit(200);
 
+      const v2Loans = await supabase
+        .schema("api")
+        .from("emprestimo_itens_ui")
+        .select("emprestimo_id, line_no, sub_id, titulo, autor, bib_ref, rotulo, emprestimo_created_at, due_at, item_status, returned_at")
+        .eq("user_id", session.user.id)
+        .order("emprestimo_created_at", { ascending:false })
+        .limit(200);
+
       const reservationHistoryItems = [];
-      if (!currentHistory.error) {
-        for (const r of (currentHistory.data || [])) {
+      if (reservationHistory.mode === "aggregated") {
+        for (const r of (reservationHistory.data || [])) {
           const when = r.closed_at || r.cancelled_at || r.fulfilled_at || r.expired_at || r.updated_at || r.created_at;
           reservationHistoryItems.push({
             when,
             html: `<li><b>Reserva #${escapeHtml(r.id)}</b> — ${renderBookTitleLink(r.titulo || ('Referência ' + (r.bib_ref || '—')), { bibRef: r.bib_ref })}${r.autor ? ` — ${escapeHtml(r.autor)}` : ""} — ${escapeHtml(reservationStatusLabel(r.status, r))}${r.library_name ? ` — ${escapeHtml(r.library_name)}` : ""}</li>`
           });
         }
+      } else {
+        for (const r of (reservationHistory.data || [])) {
+          const when = r.workflow_stage_updated_at_effective || r.pickup_scheduled_for || r.reserva_created_at;
+          const workflowLabel = reservationWorkflowLabel(r);
+          const workflowDetails = reservationWorkflowDetailLines(r);
+          const suffix = workflowDetails.length ? ` — ${escapeHtml(workflowDetails.join(" · "))}` : "";
+          const availabilityHint = buildBookAvailabilityHint({
+            pickupScheduledFor: r.pickup_scheduled_for
+          });
+          reservationHistoryItems.push({
+            when,
+            html: `<li><b>Reserva #${escapeHtml(r.reserva_id)}</b> — <span class="mono">${escapeHtml(r.sub_id || `${r.reserva_id}.${r.line_no}`)}</span> — ${renderBookTitleLink(r.titulo || ('Referência ' + (r.bib_ref || '—')), { bibRef: r.bib_ref, availabilityHint })}${r.autor ? ` — ${escapeHtml(r.autor)}` : ""} — ${escapeHtml(workflowLabel)}${suffix}</li>`
+          });
+        }
       }
 
-      const reservationFallbackPromise = currentHistory.error
-        ? supabase.schema("api").from("reserva_itens_ui").select("reserva_id, sub_id, titulo, autor, bib_ref, rotulo, reserva_created_at, expires_at, item_status, converted_at, cancelled_at").eq("user_id", session.user.id).neq("item_status", "ativa").order("reserva_created_at", { ascending:false }).limit(200)
-        : Promise.resolve({ data: [], error: null });
-
-      const [v2Loans, v2Reservas] = await Promise.all([
-        supabase.schema("api").from("emprestimo_itens_ui").select("emprestimo_id, line_no, sub_id, titulo, autor, bib_ref, rotulo, emprestimo_created_at, due_at, item_status, returned_at").eq("user_id", session.user.id).order("emprestimo_created_at", { ascending:false }).limit(200),
-        reservationFallbackPromise
-      ]);
       const consultationHistoryItems = [];
       if (!consultationHistory.error) {
         for (const r of (consultationHistory.data || [])) {
@@ -3606,30 +3713,30 @@ function reservationPickupReplyActions(row) {
           const workflowLabel = consultationWorkflowLabel(r);
           const workflowDetails = consultationWorkflowDetailLines(r);
           const suffix = workflowDetails.length ? ` — ${escapeHtml(workflowDetails.join(" · "))}` : "";
+          const availabilityHint = buildBookAvailabilityHint({
+            pickupScheduledFor: r.consultation_scheduled_for
+          });
           consultationHistoryItems.push({
             when,
-            html: `<li><b>Consulta local #${escapeHtml(r.id)}</b> — ${renderBookTitleLink(r.titulo || ('Referência ' + (r.bib_ref || '—')), { bookId: r.book_id, bibRef: r.bib_ref })}${r.autor ? ` — ${escapeHtml(r.autor)}` : ""} — ${escapeHtml(workflowLabel)}${r.library_name ? ` — ${escapeHtml(r.library_name)}` : ""}${suffix}</li>`
+            html: `<li><b>Consulta local #${escapeHtml(r.id)}</b> — ${renderBookTitleLink(r.titulo || ('Referência ' + (r.bib_ref || '—')), { bookId: r.book_id, bibRef: r.bib_ref, availabilityHint })}${r.autor ? ` — ${escapeHtml(r.autor)}` : ""} — ${escapeHtml(workflowLabel)}${r.library_name ? ` — ${escapeHtml(r.library_name)}` : ""}${suffix}</li>`
           });
         }
       }
+
       const items = [...reservationHistoryItems, ...consultationHistoryItems];
-      if (consultationHistory.error || v2Loans.error || v2Reservas.error) {
-        console.error("renderHistory errors", { currentHistory: currentHistory.error, consultationHistory: consultationHistory.error, v2Loans: v2Loans.error, v2Reservas: v2Reservas.error });
+      if (reservationHistory.error || consultationHistory.error || v2Loans.error) {
+        console.error("renderHistory errors", {
+          reservationHistory: reservationHistory.error,
+          consultationHistory: consultationHistory.error,
+          v2Loans: v2Loans.error
+        });
         const msgs = [];
-        if (currentHistory.error) msgs.push("reservas atuais: " + (currentHistory.error.message || JSON.stringify(currentHistory.error)));
+        if (reservationHistory.error) msgs.push("reservas: " + (reservationHistory.error.message || JSON.stringify(reservationHistory.error)));
         if (consultationHistory.error) msgs.push("consultas locais: " + (consultationHistory.error.message || JSON.stringify(consultationHistory.error)));
-        if (v2Loans.error) msgs.push("v2 empréstimos: " + (v2Loans.error.message || JSON.stringify(v2Loans.error)));
-        if (v2Reservas.error) msgs.push("v2 reservas: " + (v2Reservas.error.message || JSON.stringify(v2Reservas.error)));
-        if (historyMsg) historyMsg.textContent = "Diagnóstico histórico — " + msgs.join(" | ");
+        if (v2Loans.error) msgs.push("empréstimos: " + (v2Loans.error.message || JSON.stringify(v2Loans.error)));
+        if (historyMsg) historyMsg.textContent = msgs.length ? ("Diagnóstico histórico — " + msgs.join(" | ")) : "";
       }
-      if (currentHistory.error && !v2Reservas.error) {
-        for (const r of (v2Reservas.data || [])) {
-          items.push({
-            when: r.cancelled_at || r.converted_at || r.reserva_created_at,
-            html: `<li><b>Reserva #${escapeHtml(r.reserva_id)}</b> — <span class="mono">${escapeHtml(r.sub_id)}</span> — ${renderBookTitleLink(r.titulo || 'Livro', { bibRef: r.bib_ref })} — ${escapeHtml(reservationStatusLabel(r.item_status, r))}</li>`
-          });
-        }
-      }
+
       if (!v2Loans.error) {
         const loanGroups = new Map();
         for (const l of (v2Loans.data || [])) {
@@ -3666,7 +3773,11 @@ function reservationPickupReplyActions(row) {
             const itemStatus = l.returned_at ? `retornado em ${fmtDateTime(l.returned_at)}` : `devolução ${fmtDateOnly(l.due_at)}`;
             const ref = l.bib_ref ? `<span class="history-ref mono">${escapeHtml(l.bib_ref)}</span>` : `<span class="history-ref mono">${escapeHtml(l.sub_id || '—')}</span>`;
             const rotulo = l.rotulo ? ` — rótulo ${escapeHtml(l.rotulo)}` : "";
-            return `<li>${ref} — ${renderBookTitleLink(l.titulo || 'Livro', { bibRef: l.bib_ref })} — ${escapeHtml(itemStatus)}${rotulo}</li>`;
+            const availabilityHint = buildBookAvailabilityHint({
+              dueAt: l.due_at,
+              returnedAt: l.returned_at
+            });
+            return `<li>${ref} — ${renderBookTitleLink(l.titulo || 'Livro', { bibRef: l.bib_ref, availabilityHint })} — ${escapeHtml(itemStatus)}${rotulo}</li>`;
           }).join("");
           items.push({
             when: group.when,
