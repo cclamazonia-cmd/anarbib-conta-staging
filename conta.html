@@ -164,12 +164,12 @@
       grid-template-columns:repeat(3, minmax(120px, 1fr));
     }
     .reservation-actions.single-action{
-      grid-template-columns:minmax(168px, max-content);
+      grid-template-columns:minmax(196px, max-content);
       justify-content:start;
     }
     .reservation-actions.single-action .mini-btn{
       width:auto;
-      min-width:168px;
+      min-width:196px;
       white-space:nowrap;
     }
     .loan-actions{ margin-left:0; }
@@ -2976,10 +2976,10 @@ async function resolveReservationLineNoForCurrentView(reservaId, rowHint = {}) {
 function reservationPickupReplyActions(row) {
       const cancelBtn = `<button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-v2="${row.reserva_id}|${row.line_no}">Cancelar reserva</button>`;
       if (!reservationNeedsPickupReply(row?.workflow_stage_effective)) {
-        return buildActionGrid([actionSlotEmpty(), actionSlotEmpty(), cancelBtn], "reservation-actions");
+        return reservationCancelOnlyAction(row);
       }
       if (String(row?.pickup_reply_status || "").trim()) {
-        return buildActionGrid([actionSlotEmpty(), actionSlotEmpty(), cancelBtn], "reservation-actions");
+        return reservationCancelOnlyAction(row);
       }
       return buildActionGrid([
         `<button type="button" class="secondary mini-btn" data-pickup-reply="${row.reserva_id}|${row.line_no}|confirmado_leitor">Confirmar horário</button>`,
