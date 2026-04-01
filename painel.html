@@ -6648,7 +6648,15 @@ function belemNowParts(){
     }
 
     function consultationLooksActiveForWorkflow(row){
-      return String(firstFilledValue(row?.item_status, row?.status, '')).trim().toLowerCase() === 'ativa';
+      const itemStatus = String(firstFilledValue(row?.item_status, row?.status, '')).trim().toLowerCase();
+      const workflowStage = String(firstFilledValue(row?.workflow_stage_effective, row?.workflow_stage, row?.stage, itemStatus, 'solicitada')).trim().toLowerCase();
+      const globalStatus = String(firstFilledValue(row?.consulta_status, row?.status_global, row?.consultation_status, '')).trim().toLowerCase();
+      if (globalStatus && !['ativa', 'ativo', 'active', 'pending', 'solicitada', 'em_preparacao', 'consulta_agendada', 'pronta_para_consulta', 'na_fila', 'parcialmente_encerrada'].includes(globalStatus)) {
+        return false;
+      }
+      if (['consultada', 'cancelada_leitor', 'cancelada_biblioteca', 'expirada'].includes(itemStatus)) return false;
+      if (['consulta_realizada', 'cancelada_leitor', 'cancelada_biblioteca', 'expirada'].includes(workflowStage)) return false;
+      return true;
     }
 
     const buildConsultationSyntheticId = (consultaId, lineNo) => Number(`${consultaId}${String(lineNo).padStart(3, '0')}`);
@@ -6764,6 +6772,12 @@ function belemNowParts(){
         processed += Number(rpc.data || 0) || lineNos.length;
       }
 
+      if (processed < 1) {
+        setStatus(targetStatusId, 'Nenhuma linha de consulta foi atualizada. Verifica se a seleção ainda está ativa e se a etapa escolhida corresponde ao estado atual.', 'warn');
+        await refreshConsultationsOnly({silent:true});
+        return;
+      }
+
       const stageLabel = translateConsultationWorkflowStage(stage);
       setStatus(targetStatusId, `${stageLabel} aplicado para ${processed} item(ns).`, 'ok');
       await refreshConsultationsOnly({silent:true});
@@ -6820,7 +6834,6 @@ function belemNowParts(){
       const attempt = await apiFrom('api', 'consulta_itens_followup_ui')
         .select('*')
         .eq('library_id', libraryId)
-        .eq('item_status', 'ativa')
         .limit(800);
       if (attempt.error) {
         console.warn('Painel: leitura api.consulta_itens_followup_ui falhou; tentando fallback local.', attempt.error);
@@ -7413,6 +7426,12 @@ async function fetchActiveLoans(){
         });
         if (rpc.error) throw rpc.error;
         processed += Array.isArray(rpc.data) ? (rpc.data.length || lineNos.length) : (Number(rpc.data || 0) || lineNos.length);
+      }
+
+      if (processed < 1) {
+        setStatus(targetStatusId, 'Nenhuma linha de reserva foi atualizada. Verifica se a seleção ainda está ativa e se a etapa escolhida corresponde ao estado atual.', 'warn');
+        await refreshReservationsOnly({silent:true});
+        return;
       }
 
       const stageLabel = translateReservationWorkflowStage(stage);
@@ -9972,7 +9991,6 @@ function initPartnerProbeUi() {
         .from('api.consulta_itens_followup_ui')
         .select('*')
         .eq('library_id', libraryId)
-        .eq('item_status', 'ativa')
         .limit(800);
       if (!error) rows = data || [];
     } catch (_e) {}
