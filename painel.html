@@ -2557,14 +2557,36 @@
 
   <script type="module">
     import { supabase } from "./js/blmf-supabase.js";
-    import {
-      PARTNER_PRESETS,
-      buildCapabilityProbe,
-      buildPartnerSeedSql,
-      formatProbeReport,
-      normalizePartnerBaseUrl,
-      normalizePartnerSlug
-    } from "./js/partners.js";
+
+    let PARTNER_PRESETS = {};
+    let buildCapabilityProbe = async () => ({
+      family: 'unknown',
+      confidence: 'unknown',
+      endpoints: [],
+      tests: [],
+      ok: false,
+      note: 'Módulo de parceiras indisponível nesta página.'
+    });
+    let buildPartnerSeedSql = () => '';
+    let formatProbeReport = () => 'Módulo de parceiras indisponível nesta página.';
+    let normalizePartnerBaseUrl = (value) => String(value || '').trim();
+    let normalizePartnerSlug = (value) => String(value || '').trim().toLowerCase();
+    let partnersModuleReady = false;
+
+    try {
+      const partnersMod = await import("./js/partners.js");
+      if (partnersMod && typeof partnersMod === 'object') {
+        PARTNER_PRESETS = partnersMod.PARTNER_PRESETS || {};
+        if (typeof partnersMod.buildCapabilityProbe === 'function') buildCapabilityProbe = partnersMod.buildCapabilityProbe;
+        if (typeof partnersMod.buildPartnerSeedSql === 'function') buildPartnerSeedSql = partnersMod.buildPartnerSeedSql;
+        if (typeof partnersMod.formatProbeReport === 'function') formatProbeReport = partnersMod.formatProbeReport;
+        if (typeof partnersMod.normalizePartnerBaseUrl === 'function') normalizePartnerBaseUrl = partnersMod.normalizePartnerBaseUrl;
+        if (typeof partnersMod.normalizePartnerSlug === 'function') normalizePartnerSlug = partnersMod.normalizePartnerSlug;
+        partnersModuleReady = true;
+      }
+    } catch (error) {
+      console.warn('partners.js ausente ou com falha; o painel segue sem bloquear abas nem dados.', error);
+    }
 
     const FALLBACK_CONFIG = {
       SUPABASE_URL: "https://uflwmikiyjfnikiphtcp.supabase.co",
@@ -9590,7 +9612,11 @@ function initPartnerProbeUi() {
     // Revalidação automática de auth por foco, retorno de página, storage e tentativa tardia desativada aqui.
     // A sincronização auth do painel fica restrita ao fluxo normal do Supabase, como na catalogação.
 
-    initPartnerProbeUi();
+    try {
+      initPartnerProbeUi();
+    } catch (error) {
+      console.warn('Falha ao inicializar o bloco de parceiras; o restante do painel segue ativo.', error);
+    }
   </script>
 </body>
 
