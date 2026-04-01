@@ -748,8 +748,8 @@ button[type="submit"] *,
           <span class="hint">Editar cadastro e endereço</span>
         </button>
         <button class="tab-btn" type="button" data-tab="reservar" role="tab" aria-selected="false" aria-controls="tab-reservar">
-          Reservar livros
-          <span class="hint">Cole uma ou várias referências do(s) livro(s)</span>
+          Reservas e consultas
+          <span class="hint">Peça empréstimo ou consulta local com a referência do material</span>
         </button>
         <button class="tab-btn" type="button" data-tab="curso" role="tab" aria-selected="false" aria-controls="tab-curso">
           Empréstimos em curso
@@ -1107,20 +1107,21 @@ button[type="submit"] *,
         <!-- RESERVAR -->
         <section id="tab-reservar" class="tab-panel" data-tab="reservar" role="tabpanel">
           <div class="panel-head">
-            <h2>Reservar livro(s)</h2>
+            <h2>Reservar empréstimo ou pedir consulta local</h2>
             <p class="small">
-              No catálogo, clique em <b>copiar referência</b> e cole aqui uma ou várias referências do(s) livro(s), separadas por vírgula.
-              Você pode usar a referência no formato exibido pela sua biblioteca (por exemplo: <b>2453</b>, <b>0000123</b> ou <b>0002453</b>).
-              A reserva será criada em lotes e você poderá cancelá-la livro por livro.
+              No catálogo, clique em <b>copiar referência</b> e cole aqui uma ou várias referências, separadas por vírgula.
+              Use <b>Reservar empréstimo</b> para materiais emprestáveis. Use <b>Pedir consulta no local</b> para periódicos e outros materiais apenas consultáveis na biblioteca.
             </p>
           </div>
 
           <div id="reserveServiceNotice" class="notice" style="display:none"></div>
 
-          <form id="reserveForm" class="row" style="justify-content:flex-start;">
+          <form id="reserveForm" class="row" style="justify-content:flex-start; align-items:flex-start;">
             <input type="text" id="bibRef" placeholder="Ex.: 2453, 0000123, 0002453" style="max-width:380px;" required />
-            <button id="reserveSubmitBtn" type="submit">Reservar</button>
+            <button id="reserveSubmitBtn" type="button">Reservar empréstimo</button>
+            <button id="consultSubmitBtn" type="button" class="secondary">Pedir consulta no local</button>
           </form>
+          <p class="small" style="margin-top:8px;">O pedido de consulta local usa a mesma referência, mas cria um pedido separado do fluxo de empréstimo.</p>
           <p id="reserveMsg" class="msg" aria-live="polite"></p>
 
           <div class="panel-head" style="margin-top:18px;">
@@ -1216,6 +1217,7 @@ button[type="submit"] *,
     const ROUTES = {
       CADASTRO: CONFIG.ROUTES.cadastro,
       CATALOGO: CONFIG.ROUTES.catalogo,
+      LIVRO: new URL("livro.html", CONFIG.ROUTES.catalogo).toString(),
       PAINEL: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html",
     };
 
@@ -1290,6 +1292,7 @@ button[type="submit"] *,
     const reserveServiceNotice = $("reserveServiceNotice");
     const reserveFormEl = $("reserveForm");
     const reserveSubmitBtn = $("reserveSubmitBtn");
+    const consultSubmitBtn = $("consultSubmitBtn");
     const bibRefInput = $("bibRef");
     const chipContaEspaco = $("chipContaEspaco");
     const chipContaBiblioteca = $("chipContaBiblioteca");
@@ -1512,6 +1515,25 @@ button[type="submit"] *,
       return normalizeLibraryId(currentContaIdentity?.library_id || currentContaIdentity?.default_library_id);
     }
 
+    function buildBookDetailUrl({ bookId = null, bibRef = "" } = {}) {
+      const numericBookId = Number(bookId || 0);
+      const cleanBibRef = normalizeBibRefValue(bibRef);
+      if (!(numericBookId > 0) && !cleanBibRef) return "";
+      const url = new URL(ROUTES.LIVRO, location.href);
+      if (numericBookId > 0) {
+        url.searchParams.set("id", String(numericBookId));
+      } else {
+        url.searchParams.set("ref", cleanBibRef);
+      }
+      return url.toString();
+    }
+
+    function renderBookTitleLink(title, { bookId = null, bibRef = "" } = {}) {
+      const label = escapeHtml(title || (bibRef ? `Referência ${bibRef}` : "Livro"));
+      const url = buildBookDetailUrl({ bookId, bibRef });
+      return url ? `<a href="${escapeHtml(url)}">${label}</a>` : label;
+    }
+
     function isMissingHoldingReservaFunctionError(error) {
       const msg = String(error?.message || error || "");
       return /function|does not exist|not exist|schema cache|fn_v2_create_reserva_by_holdings/i.test(msg);
@@ -1520,6 +1542,23 @@ button[type="submit"] *,
     function canFallbackContaHoldingResolutionError(error) {
       const msg = String(error?.message || error || "");
       return /permission|policy|not exist|does not exist|relation|schema cache|column|book_holdings/i.test(msg);
+    }
+
+
+    function explainContaHoldingResolutionFailure(result, actionLabel) {
+      const mode = String(actionLabel || "operação").trim() || "operação";
+      const refLabel = result?.ref ? ` (${result.ref})` : "";
+      if (!result || typeof result !== "object") return `Não foi possível preparar ${mode} agora.`;
+      if (result.reason === "empty-refs") return `Informe ao menos uma referência para ${mode}.`;
+      if (result.reason === "no-library-id") return `Sua biblioteca de vínculo não pôde ser identificada para ${mode}.`;
+      if (result.reason === "holding-not-found" || result.reason === "missing-holding") return `Não encontrei a referência${refLabel} na sua biblioteca de vínculo para ${mode}.`;
+      if (result.reason === "ambiguous-holding") return `A referência${refLabel} aparece de forma ambígua na sua biblioteca. Peça ajuda à biblioteca antes de ${mode}.`;
+      if (result.reason === "holding-resolution-unavailable") return `Não consegui resolver a referência na base holdings-first para ${mode}.`;
+      return `Não foi possível preparar ${mode} agora.`;
+    }
+
+    function getHoldingRowsByLoanableState(rows, desiredLoanable) {
+      return (Array.isArray(rows) ? rows : []).filter((row) => row?.loanable === desiredLoanable);
     }
 
     async function tryResolveContaReservationHoldingIds(refs) {
@@ -1531,7 +1570,7 @@ button[type="submit"] *,
 
       const lookup = await supabase
         .from("book_holdings")
-        .select("id,library_id,local_bib_ref")
+        .select("id,library_id,local_bib_ref,loanable,book_id")
         .eq("library_id", libraryId)
         .in("local_bib_ref", cleanRefs)
         .limit(Math.max(cleanRefs.length + 2, 10));
@@ -1552,23 +1591,33 @@ button[type="submit"] *,
         const holdingId = Number(row?.id || 0);
         if (!refKey || !Number.isFinite(holdingId) || holdingId <= 0) continue;
         if (!exactMap.has(refKey)) exactMap.set(refKey, []);
-        exactMap.get(refKey).push(holdingId);
+        exactMap.get(refKey).push({
+          holding_id: holdingId,
+          local_bib_ref: refKey,
+          loanable: row?.loanable === true,
+          raw_loanable: row?.loanable,
+          book_id: Number(row?.book_id || 0) || null,
+          library_id: normalizeLibraryId(row?.library_id)
+        });
       }
 
       const holdingIds = [];
+      const holdingRows = [];
       for (const ref of cleanRefs) {
         const matches = exactMap.get(ref) || [];
         if (matches.length !== 1) {
           return { resolved: false, reason: matches.length > 1 ? "ambiguous-holding" : "missing-holding", libraryId, ref };
         }
-        holdingIds.push(matches[0]);
+        holdingIds.push(matches[0].holding_id);
+        holdingRows.push(matches[0]);
       }
 
       return {
         resolved: true,
         source: "book_holdings",
         libraryId,
-        holdingIds
+        holdingIds,
+        rows: holdingRows
       };
     }
 
@@ -1709,17 +1758,20 @@ button[type="submit"] *,
       if (reserveServiceNotice) {
         if (reservationsClosed) {
           reserveServiceNotice.style.display = "block";
-          reserveServiceNotice.innerHTML = `<b>Reservas temporariamente fechadas</b><div class="small">As novas reservas públicas estão fechadas no momento. Consulte os canais do CCLA para atualizações e orientações.</div>`;
+          reserveServiceNotice.innerHTML = `<b>Reservas de empréstimo temporariamente fechadas</b><div class="small">As novas reservas públicas de empréstimo estão fechadas no momento. Você ainda pode pedir consulta no local para materiais apenas consultáveis.</div>`;
         } else {
           reserveServiceNotice.style.display = "none";
           reserveServiceNotice.innerHTML = "";
         }
       }
 
-      if (bibRefInput) bibRefInput.disabled = reservationsClosed;
+      if (bibRefInput) bibRefInput.disabled = false;
       if (reserveSubmitBtn) {
         reserveSubmitBtn.disabled = reservationsClosed;
-        reserveSubmitBtn.textContent = reservationsClosed ? "Reservas temporariamente fechadas" : "Reservar";
+        reserveSubmitBtn.textContent = reservationsClosed ? "Reservas de empréstimo fechadas" : "Reservar empréstimo";
+      }
+      if (consultSubmitBtn) {
+        consultSubmitBtn.disabled = false;
       }
     }
 
@@ -2017,11 +2069,15 @@ button[type="submit"] *,
         await Promise.allSettled([renderActiveReservations(), renderHistory()]);
         return;
       }
+      if (scope === 'consultations') {
+        await Promise.allSettled([renderActiveConsultations(), renderHistory()]);
+        return;
+      }
       if (scope === 'loans') {
         await Promise.allSettled([renderLoans(), renderHistory()]);
         return;
       }
-      await Promise.allSettled([renderActiveReservations(), renderLoans(), renderHistory()]);
+      await Promise.allSettled([renderActiveReservations(), renderActiveConsultations(), renderLoans(), renderHistory()]);
     }
 
     function setupContaStateSyncHooks() {
@@ -2060,7 +2116,7 @@ button[type="submit"] *,
         return;
       }
       if (activeTab === 'reservar') {
-        await renderActiveReservations();
+        await Promise.allSettled([renderActiveReservations(), renderActiveConsultations()]);
         return;
       }
       if (activeTab === 'curso') {
@@ -2327,33 +2383,78 @@ button[type="submit"] *,
         return { data: null, error: { message: "Nenhuma referência informada." } };
       }
 
+      let holdingAttempt = null;
       try {
-        const holdingAttempt = await tryResolveContaReservationHoldingIds(cleanRefs);
-        if (holdingAttempt?.resolved && Array.isArray(holdingAttempt.holdingIds) && holdingAttempt.holdingIds.length === cleanRefs.length) {
-          const holdingRpc = await supabase.rpc("fn_v2_create_reserva_by_holdings", {
-            p_user_id: session.user.id,
-            p_holding_ids: holdingAttempt.holdingIds,
-            p_expires_at: null,
-            p_notes: "Reserva criada pela conta do(a/e) leitor(a/e)."
-          });
-          if (!holdingRpc.error) return holdingRpc;
-          if (!isMissingHoldingReservaFunctionError(holdingRpc.error) && !canFallbackContaHoldingResolutionError(holdingRpc.error)) {
-            return holdingRpc;
-          }
+        holdingAttempt = await tryResolveContaReservationHoldingIds(cleanRefs);
+        if (!holdingAttempt?.resolved || !Array.isArray(holdingAttempt.holdingIds) || holdingAttempt.holdingIds.length !== cleanRefs.length) {
+          return { data: null, error: { message: explainContaHoldingResolutionFailure(holdingAttempt, "a reserva de empréstimo") } };
         }
       } catch (error) {
         if (!canFallbackContaHoldingResolutionError(error)) {
           return { data: null, error };
         }
+        return { data: null, error: { message: "Não consegui resolver essa referência na sua biblioteca para a reserva de empréstimo." } };
       }
 
-      const rpc = await supabase.rpc("fn_v2_create_reserva_by_bib_refs", {
+      const nonLoanableRefs = getHoldingRowsByLoanableState(holdingAttempt.rows, false).map((row) => row.local_bib_ref);
+      if (nonLoanableRefs.length) {
+        return {
+          data: null,
+          error: {
+            message: nonLoanableRefs.length === 1
+              ? `A referência ${nonLoanableRefs[0]} é apenas para consulta no local. Usa o botão “Pedir consulta no local”.`
+              : `Estas referências são apenas para consulta no local: ${nonLoanableRefs.join(", ")}. Usa o botão “Pedir consulta no local”.`
+          }
+        };
+      }
+
+      const holdingRpc = await supabase.rpc("fn_v2_create_reserva_by_holdings", {
         p_user_id: session.user.id,
-        p_bib_refs: cleanRefs,
+        p_holding_ids: holdingAttempt.holdingIds,
         p_expires_at: null,
         p_notes: "Reserva criada pela conta do(a/e) leitor(a/e)."
       });
-      return rpc;
+      return holdingRpc;
+    }
+
+    async function createConsultaLocalV2(bibRefs) {
+      const cleanRefs = Array.from(new Set((bibRefs || []).map((ref) => normalizeBibRefValue(ref)).filter(Boolean)));
+      if (!cleanRefs.length) {
+        return { data: null, error: { message: "Nenhuma referência informada." } };
+      }
+
+      let holdingAttempt = null;
+      try {
+        holdingAttempt = await tryResolveContaReservationHoldingIds(cleanRefs);
+        if (!holdingAttempt?.resolved || !Array.isArray(holdingAttempt.holdingIds) || holdingAttempt.holdingIds.length !== cleanRefs.length) {
+          return { data: null, error: { message: explainContaHoldingResolutionFailure(holdingAttempt, "o pedido de consulta local") } };
+        }
+      } catch (error) {
+        if (!canFallbackContaHoldingResolutionError(error)) {
+          return { data: null, error };
+        }
+        return { data: null, error: { message: "Não consegui resolver essa referência na sua biblioteca para o pedido de consulta local." } };
+      }
+
+      const loanableRefs = getHoldingRowsByLoanableState(holdingAttempt.rows, true).map((row) => row.local_bib_ref);
+      if (loanableRefs.length) {
+        return {
+          data: null,
+          error: {
+            message: loanableRefs.length === 1
+              ? `A referência ${loanableRefs[0]} é emprestável. Usa o botão “Reservar empréstimo”.`
+              : `Estas referências são emprestáveis: ${loanableRefs.join(", ")}. Usa o botão “Reservar empréstimo”.`
+          }
+        };
+      }
+
+      const consultaRpc = await supabase.rpc("fn_v2_create_consulta_local_by_holdings", {
+        p_user_id: session.user.id,
+        p_holding_ids: holdingAttempt.holdingIds,
+        p_expires_at: null,
+        p_notes: "Pedido de consulta local criado pela conta do(a/e) leitor(a/e)."
+      });
+      return consultaRpc;
     }
 
     async function cancelReservaV2(reservaId, lineNo) {
@@ -3375,7 +3476,7 @@ function reservationPickupReplyActions(row) {
       const consultationHistory = await supabase
         .schema("api")
         .from("my_consultas_history_v2")
-        .select("id, library_name, bib_ref, titulo, autor, status, requested_at, created_at, updated_at, cancelled_at, consulted_at, expired_at, closed_at, workflow_stage_effective, workflow_note, consultation_scheduled_for")
+        .select("id, book_id, library_name, bib_ref, titulo, autor, status, requested_at, created_at, updated_at, cancelled_at, consulted_at, expired_at, closed_at, workflow_stage_effective, workflow_note, consultation_scheduled_for")
         .order("closed_at", { ascending: false })
         .limit(200);
 
@@ -3385,7 +3486,7 @@ function reservationPickupReplyActions(row) {
           const when = r.closed_at || r.cancelled_at || r.fulfilled_at || r.expired_at || r.updated_at || r.created_at;
           reservationHistoryItems.push({
             when,
-            html: `<li><b>Reserva #${escapeHtml(r.id)}</b> — ${escapeHtml(r.titulo || ('Referência ' + (r.bib_ref || '—')))}${r.autor ? ` — ${escapeHtml(r.autor)}` : ""} — ${escapeHtml(reservationStatusLabel(r.status, r))}${r.library_name ? ` — ${escapeHtml(r.library_name)}` : ""}</li>`
+            html: `<li><b>Reserva #${escapeHtml(r.id)}</b> — ${renderBookTitleLink(r.titulo || ('Referência ' + (r.bib_ref || '—')), { bibRef: r.bib_ref })}${r.autor ? ` — ${escapeHtml(r.autor)}` : ""} — ${escapeHtml(reservationStatusLabel(r.status, r))}${r.library_name ? ` — ${escapeHtml(r.library_name)}` : ""}</li>`
           });
         }
       }
@@ -3407,7 +3508,7 @@ function reservationPickupReplyActions(row) {
           const suffix = workflowDetails.length ? ` — ${escapeHtml(workflowDetails.join(" · "))}` : "";
           consultationHistoryItems.push({
             when,
-            html: `<li><b>Consulta local #${escapeHtml(r.id)}</b> — ${escapeHtml(r.titulo || ('Referência ' + (r.bib_ref || '—')))}${r.autor ? ` — ${escapeHtml(r.autor)}` : ""} — ${escapeHtml(workflowLabel)}${r.library_name ? ` — ${escapeHtml(r.library_name)}` : ""}${suffix}</li>`
+            html: `<li><b>Consulta local #${escapeHtml(r.id)}</b> — ${renderBookTitleLink(r.titulo || ('Referência ' + (r.bib_ref || '—')), { bookId: r.book_id, bibRef: r.bib_ref })}${r.autor ? ` — ${escapeHtml(r.autor)}` : ""} — ${escapeHtml(workflowLabel)}${r.library_name ? ` — ${escapeHtml(r.library_name)}` : ""}${suffix}</li>`
           });
         }
       }
@@ -3425,7 +3526,7 @@ function reservationPickupReplyActions(row) {
         for (const r of (v2Reservas.data || [])) {
           items.push({
             when: r.cancelled_at || r.converted_at || r.reserva_created_at,
-            html: `<li><b>Reserva #${escapeHtml(r.reserva_id)}</b> — <span class="mono">${escapeHtml(r.sub_id)}</span> — ${escapeHtml(r.titulo || 'Livro')} — ${escapeHtml(reservationStatusLabel(r.item_status, r))}</li>`
+            html: `<li><b>Reserva #${escapeHtml(r.reserva_id)}</b> — <span class="mono">${escapeHtml(r.sub_id)}</span> — ${renderBookTitleLink(r.titulo || 'Livro', { bibRef: r.bib_ref })} — ${escapeHtml(reservationStatusLabel(r.item_status, r))}</li>`
           });
         }
       }
@@ -3465,7 +3566,7 @@ function reservationPickupReplyActions(row) {
             const itemStatus = l.returned_at ? `retornado em ${fmtDateTime(l.returned_at)}` : `devolução ${fmtDateOnly(l.due_at)}`;
             const ref = l.bib_ref ? `<span class="history-ref mono">${escapeHtml(l.bib_ref)}</span>` : `<span class="history-ref mono">${escapeHtml(l.sub_id || '—')}</span>`;
             const rotulo = l.rotulo ? ` — rótulo ${escapeHtml(l.rotulo)}` : "";
-            return `<li>${ref} — ${escapeHtml(l.titulo || 'Livro')} — ${escapeHtml(itemStatus)}${rotulo}</li>`;
+            return `<li>${ref} — ${renderBookTitleLink(l.titulo || 'Livro', { bibRef: l.bib_ref })} — ${escapeHtml(itemStatus)}${rotulo}</li>`;
           }).join("");
           items.push({
             when: group.when,
@@ -3532,11 +3633,13 @@ function reservationPickupReplyActions(row) {
       enforcePasswordChangeUI(false);
       pwInput.value = ""; pwInput2.value = ""; pwInput.type = "password"; pwInput2.type = "password"; if (togglePwBtn) togglePwBtn.textContent = "Mostrar senha";
     });
-    $("reserveForm")?.addEventListener("submit", async (e) => {
-      e.preventDefault();
+    async function submitReserveOrConsult(mode) {
       reserveMsg.textContent = "";
-      if (publicServiceState && publicServiceState.allow_reservations === false) {
-        reserveMsg.textContent = "As reservas públicas estão temporariamente fechadas. Consulte os canais do CCLA para atualizações e orientações.";
+      const actionMode = String(mode || "reserve").trim() === "consult" ? "consult" : "reserve";
+      const isConsultation = actionMode === "consult";
+
+      if (!isConsultation && publicServiceState && publicServiceState.allow_reservations === false) {
+        reserveMsg.textContent = "As reservas públicas de empréstimo estão temporariamente fechadas. Você ainda pode pedir consulta no local para materiais apenas consultáveis.";
         return;
       }
       if (userIsRestricted) {
@@ -3545,32 +3648,67 @@ function reservationPickupReplyActions(row) {
       }
       const refs = parseRefs($("bibRef").value);
       if (!refs.length) {
-        reserveMsg.textContent = "Cole uma ou várias referências do(s) livro(s), separadas por vírgula.";
+        reserveMsg.textContent = isConsultation
+          ? "Cole uma ou várias referências para pedir consulta no local."
+          : "Cole uma ou várias referências do(s) livro(s), separadas por vírgula.";
         return;
       }
       if (refs.length > 5) {
-        reserveMsg.textContent = "Você pode reservar no máximo 5 livros por vez.";
+        reserveMsg.textContent = isConsultation
+          ? "Você pode pedir no máximo 5 consultas locais por vez."
+          : "Você pode reservar no máximo 5 livros por vez.";
         return;
       }
-      const alreadyReservedRefs = findAlreadyReservedRefs(refs);
-      if (alreadyReservedRefs.length) {
-        reserveMsg.textContent = alreadyReservedRefs.length === 1
-          ? `Este livro já está reservado na sua conta: ${alreadyReservedRefs[0]}.`
-          : `Estes livros já estão reservados na sua conta: ${alreadyReservedRefs.join(", ")}.`;
-        return;
+      if (!isConsultation) {
+        const alreadyReservedRefs = findAlreadyReservedRefs(refs);
+        if (alreadyReservedRefs.length) {
+          reserveMsg.textContent = alreadyReservedRefs.length === 1
+            ? `Este livro já está reservado na sua conta: ${alreadyReservedRefs[0]}.`
+            : `Estes livros já estão reservados na sua conta: ${alreadyReservedRefs.join(", ")}.`;
+          return;
+        }
       }
-      const resV2 = await createReservaV2(refs);
-      if (!resV2.error) {
-        refs.forEach((ref) => activeReservationBibRefs.add(normalizeBibRefValue(ref)));
-        reserveMsg.textContent = `Reserva registrada com sucesso para ${refs.length} livro(s).`;
+
+      if (reserveSubmitBtn) reserveSubmitBtn.disabled = true;
+      if (consultSubmitBtn) consultSubmitBtn.disabled = true;
+      reserveMsg.textContent = isConsultation ? "Enviando pedido de consulta local..." : "Criando reserva de empréstimo...";
+
+      const response = isConsultation ? await createConsultaLocalV2(refs) : await createReservaV2(refs);
+
+      if (reserveSubmitBtn) reserveSubmitBtn.disabled = publicServiceState && publicServiceState.allow_reservations === false;
+      if (consultSubmitBtn) consultSubmitBtn.disabled = false;
+
+      if (!response.error) {
+        if (!isConsultation) {
+          refs.forEach((ref) => activeReservationBibRefs.add(normalizeBibRefValue(ref)));
+        }
+        reserveMsg.textContent = isConsultation
+          ? `Pedido de consulta local registrado com sucesso para ${refs.length} material(is).`
+          : `Reserva registrada com sucesso para ${refs.length} livro(s).`;
         $("bibRef").value = "";
         await renderActiveReservations();
+        await renderActiveConsultations();
         await renderHistory();
-        writeContaStateSync('reservations');
+        writeContaStateSync(isConsultation ? 'consultations' : 'reservations');
         return;
       }
-      reserveMsg.textContent = "Erro ao reservar: " + resV2.error.message;
-      return;
+
+      reserveMsg.textContent = isConsultation
+        ? "Erro ao pedir consulta local: " + response.error.message
+        : "Erro ao reservar: " + response.error.message;
+    }
+
+    $("reserveForm")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await submitReserveOrConsult("reserve");
+    });
+
+    $("reserveSubmitBtn")?.addEventListener("click", async () => {
+      await submitReserveOrConsult("reserve");
+    });
+
+    $("consultSubmitBtn")?.addEventListener("click", async () => {
+      await submitReserveOrConsult("consult");
     });
     await loadProfile();
     await loadPublicServiceState();
