@@ -530,6 +530,7 @@
         <span class="chip" id="chipFuncao">Função: —</span>
         <span class="chip" id="chipEmail">E-mail: —</span>
         <span class="chip" id="chipResCount">Reservas ativas: —</span>
+        <span class="chip" id="chipConsultCount">Consultas locais: —</span>
         <span class="chip" id="chipLoanCount">Empréstimos ativos: —</span>
         <span class="chip" id="chipBatchCount">Empréstimos agrupados: —</span>
         <span class="chip" id="chipServiceMode">Modo: —</span>
@@ -560,6 +561,10 @@
         <button class="tab-btn" type="button" data-tab="reservas" role="tab" aria-selected="false" aria-controls="tab-reservas">
           Reservas ativas
           <span class="hint">Confirmar retirada ou cancelar</span>
+        </button>
+        <button class="tab-btn" type="button" data-tab="consultas-locais" role="tab" aria-selected="false" aria-controls="tab-consultas-locais">
+          Consultas locais
+          <span class="hint">Pedidos de consulta no local</span>
         </button>
         <button class="tab-btn" type="button" data-tab="emprestimos-livro" role="tab" aria-selected="false" aria-controls="tab-emprestimos-livro">
           Empréstimos por livro
@@ -1408,6 +1413,40 @@
           </div>
         </section>
 
+
+        <section id="tab-consultas-locais" class="tab-panel" data-tab="consultas-locais" role="tabpanel">
+          <div class="card">
+            <div class="section-head">
+              <div>
+                <h2>Consultas locais ativas</h2>
+                <div class="mini">Pedidos ativos de consulta no local, separados do fluxo de empréstimo.</div>
+              </div>
+              <div class="actions" style="margin-top:0">
+                <button class="btn" id="btnRecarregarConsultas" type="button">Recarregar</button>
+              </div>
+            </div>
+            <div class="sep"></div>
+            <div class="tableWrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Consulta</th>
+                    <th>Sub-ID</th>
+                    <th>Leitor(a/e)</th>
+                    <th>Livro</th>
+                    <th>Referência</th>
+                    <th>Solicitada em</th>
+                    <th>Situação</th>
+                    <th>Validade</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyConsultas"><tr><td colspan="8">Carregando…</td></tr></tbody>
+              </table>
+            </div>
+            <div class="status" id="statusConsultas"></div>
+          </div>
+        </section>
+
         <section id="tab-emprestimos-livro" class="tab-panel" data-tab="emprestimos-livro" role="tabpanel">
           <div class="card">
             <div class="section-head">
@@ -1997,6 +2036,7 @@
     let session = null;
     let isLibrarian = false;
     let activeReservations = [];
+    let activeConsultations = [];
     let activeLoans = [];
     let activeBatches = [];
     let selectedReservaIds = new Set();
@@ -5250,12 +5290,16 @@ function belemNowParts(){
           await refreshReservationsOnly({silent:true});
           return;
         }
+        if (nextTab === 'consultas-locais') {
+          await refreshConsultationsOnly({silent:true});
+          return;
+        }
         if (nextTab === 'emprestimos-livro' || nextTab === 'emprestimos-lote') {
           await refreshLoansOnly({silent:true});
           return;
         }
         if (nextTab === 'leitor' && editingProfileId) {
-          await Promise.allSettled([refreshReservationsOnly({silent:true}), refreshLoansOnly({silent:true})]);
+          await Promise.allSettled([refreshReservationsOnly({silent:true}), refreshConsultationsOnly({silent:true}), refreshLoansOnly({silent:true})]);
         }
       }));
       window.addEventListener('hashchange', () => {
@@ -5666,6 +5710,100 @@ function belemNowParts(){
       );
     }
 
+    function consultationLooksActiveForWorkflow(row){
+      return String(firstFilledValue(row?.item_status, row?.status, '')).trim().toLowerCase() === 'ativa';
+    }
+
+    const buildConsultationSyntheticId = (consultaId, lineNo) => Number(`${consultaId}${String(lineNo).padStart(3, '0')}`);
+
+    function translateConsultationWorkflowStage(stage){
+      return ({
+        solicitada: 'Solicitada',
+        em_preparacao: 'Em preparação',
+        consulta_agendada: 'Consulta agendada',
+        pronta_para_consulta: 'Pronta para consulta',
+        consulta_realizada: 'Consulta realizada',
+        cancelada_leitor: 'Cancelada pelo leitor',
+        cancelada_biblioteca: 'Cancelada pela biblioteca',
+        expirada: 'Expirada'
+      })[String(stage || '')] || 'Solicitada';
+    }
+
+    function consultationWorkflowStageClass(stage){
+      return ({
+        solicitada: 'warn',
+        em_preparacao: 'warn',
+        consulta_agendada: 'ok',
+        pronta_para_consulta: 'ok',
+        consulta_realizada: 'ok',
+        cancelada_leitor: 'bad',
+        cancelada_biblioteca: 'bad',
+        expirada: 'bad'
+      })[String(stage || '')] || 'warn';
+    }
+
+    function consultationWorkflowDetail(c){
+      const parts = [];
+      if (c.consultation_scheduled_for) parts.push(`Consulta: ${fmtDateTimeBelem(c.consultation_scheduled_for)} (Belém)`);
+      if (c.workflow_note) parts.push(c.workflow_note);
+      return parts.join(' · ');
+    }
+
+    async function fetchActiveConsultations(){
+      const mapConsultaRows = async (rows, sourceName) => {
+        const filteredRows = (rows || []).filter((row) => {
+          if (!consultationLooksActiveForWorkflow(row)) return false;
+          const consultaId = Number(firstFilledValue(row?.consulta_id, row?.id, 0));
+          const lineNo = Number(firstFilledValue(row?.line_no, row?.consultation_line_no, row?.item_no, 1)) || 1;
+          return Number.isFinite(consultaId) && consultaId > 0 && Number.isFinite(lineNo) && lineNo > 0;
+        });
+        const profileIds = filteredRows.map((row) => firstFilledValue(row?.user_id, row?.reader_id, row?.profile_id, row?.user_uuid, row?.reader_uuid, null)).filter(Boolean);
+        const profilesMap = await loadProfilesByIds(profileIds);
+        return filteredRows.map((row) => {
+          const consultaId = Number(firstFilledValue(row?.consulta_id, row?.id, 0));
+          const lineNo = Number(firstFilledValue(row?.line_no, row?.consultation_line_no, row?.item_no, 1)) || 1;
+          const userId = firstFilledValue(row?.user_id, row?.reader_id, row?.profile_id, row?.user_uuid, row?.reader_uuid, null);
+          const user = profilesMap.get(String(userId)) || {};
+          const createdAt = firstFilledValue(row?.consulta_created_at, row?.requested_at, row?.created_at, null) || null;
+          const workflowStage = String(firstFilledValue(row?.workflow_stage_effective, row?.workflow_stage, row?.item_status, 'solicitada') || 'solicitada');
+          const workflowUpdatedAt = firstFilledValue(row?.workflow_stage_updated_at_effective, row?.workflow_stage_updated_at, row?.updated_at, createdAt, null) || createdAt;
+          return {
+            id: buildConsultationSyntheticId(consultaId, lineNo),
+            consulta_id: consultaId,
+            consulta_item_id: Number(firstFilledValue(row?.consulta_item_id, row?.item_id, 0)) || null,
+            sub_id: String(firstFilledValue(row?.sub_id, `${consultaId}.${lineNo}`)),
+            line_no: lineNo,
+            source: 'v2',
+            consultation_source_name: sourceName,
+            user_id: userId,
+            user_name: firstFilledValue(row?.user_name, row?.reader_name, row?.profile_name, profileNameWithPublicId(user)),
+            user_email: firstFilledValue(row?.user_email, row?.reader_email, row?.email, user?.email, '—') || '—',
+            bib_ref: firstFilledValue(row?.bib_ref, ''),
+            titulo: firstFilledValue(row?.titulo, row?.title, row?.bib_ref ? `Referência ${row.bib_ref}` : 'Referência sem título'),
+            autor: firstFilledValue(row?.autor, row?.author, ''),
+            rotulo: firstFilledValue(row?.rotulo, row?.label, '—') || '—',
+            consulta_em: createdAt,
+            validade: firstFilledValue(row?.expires_at, null),
+            workflow_stage: workflowStage,
+            workflow_stage_updated_at: workflowUpdatedAt,
+            workflow_note: String(firstFilledValue(row?.workflow_note, row?.note, row?.notes, '') || '').trim(),
+            consultation_scheduled_for: firstFilledValue(row?.consultation_scheduled_for, row?.scheduled_for, null) || null,
+            item_status: firstFilledValue(row?.item_status, row?.status, 'ativa'),
+            raw: row,
+          };
+        }).sort((a, b) => String(b.consulta_em || '').localeCompare(String(a.consulta_em || '')));
+      };
+
+      const sourceName = 'api.consulta_itens_followup_ui';
+      const attempt = await apiFrom('api', 'consulta_itens_followup_ui')
+        .select('*')
+        .eq('item_status', 'ativa')
+        .limit(800);
+      if (attempt.error) throw attempt.error;
+      activeConsultations = await mapConsultaRows(attempt.data || [], sourceName);
+      clearStatus('statusConsultas');
+    }
+
 
 async function fetchActiveLoans(){
       const qPainelItems = await supabase
@@ -5801,6 +5939,7 @@ async function fetchActiveLoans(){
 
     function renderCounts(){
       setChip('chipResCount', `Reservas ativas: ${activeReservations.length}`);
+      setChip('chipConsultCount', `Consultas locais: ${activeConsultations.length}`);
       setChip('chipLoanCount', `Empréstimos ativos: ${activeLoans.length}`);
       setChip('chipBatchCount', `Empréstimos agrupados: ${activeBatches.length}`);
     }
@@ -6237,6 +6376,31 @@ async function fetchActiveLoans(){
       }).join('');
     }
 
+    function renderConsultationTable(){
+      const tbody = $('tbodyConsultas');
+      if (!tbody) return;
+      if (!activeConsultations.length){
+        tbody.innerHTML = '<tr><td colspan="8">Sem consultas locais ativas.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = activeConsultations.map((c) => {
+        const workflowLabel = translateConsultationWorkflowStage(c.workflow_stage);
+        const workflowDetail = consultationWorkflowDetail(c);
+        const validity = c.validade ? `${esc(fmtDateTimeBelem(c.validade))} (Belém)` : '—';
+        return `
+          <tr>
+            <td>#${esc(c.consulta_id)}</td>
+            <td class="mono">${esc(c.sub_id)}</td>
+            <td>${esc(c.user_name)}${c.user_email && c.user_email !== '—' ? `<br><span class="mini subtle">${esc(c.user_email)}</span>` : ''}</td>
+            <td>${esc(c.titulo)}${c.autor ? `<br><span class="mini subtle">${esc(c.autor)}</span>` : ''}</td>
+            <td class="mono">${esc(c.bib_ref)}</td>
+            <td>${esc(fmtDateTimeBelem(c.consulta_em))} (Belém)</td>
+            <td><span class="pill ${esc(consultationWorkflowStageClass(c.workflow_stage))}">${esc(workflowLabel)}</span>${c.workflow_stage_updated_at ? `<br><span class="mini subtle">Atualizado: ${esc(fmtDateTimeBelem(c.workflow_stage_updated_at))} (Belém)</span>` : ''}${workflowDetail ? `<br><span class="mini subtle">${esc(workflowDetail)}</span>` : ''}</td>
+            <td>${validity}</td>
+          </tr>`;
+      }).join('');
+    }
+
     function renderLoansTable(){
       const tbody = $('tbodyLoans');
       const rows = dedupeBy(activeLoans, (l) => `${l.source || 'x'}|${l.emprestimo_id || l.loan_id}|${l.line_no || 0}|${l.sub_id || ''}`);
@@ -6327,6 +6491,20 @@ async function fetchActiveLoans(){
       renderTrabalhoDoDia();
     }
 
+    async function refreshConsultationsOnly({silent=false}={}){
+      if (!silent && $('tbodyConsultas')) $('tbodyConsultas').innerHTML = '<tr><td colspan="8">Carregando…</td></tr>';
+      try {
+        await fetchActiveConsultations();
+        renderConsultationTable();
+        clearStatus('statusConsultas');
+      } catch (error) {
+        if ($('tbodyConsultas')) $('tbodyConsultas').innerHTML = '<tr><td colspan="8">Erro ao carregar consultas locais.</td></tr>';
+        setStatus('statusConsultas', error?.message || String(error || 'Erro ao carregar consultas locais.'), 'bad', false);
+      }
+      renderCounts();
+      renderTrabalhoDoDia();
+    }
+
     async function refreshLoansOnly({silent=false}={}){
       if (!silent) {
         $('tbodyLoans').innerHTML = '<tr><td colspan="9">Carregando…</td></tr>';
@@ -6354,10 +6532,11 @@ async function fetchActiveLoans(){
       const runId = ++refreshSerial;
       if (!silent) {
         $('tbodyRes').innerHTML = '<tr><td colspan="8">Carregando…</td></tr>';
+        if ($('tbodyConsultas')) $('tbodyConsultas').innerHTML = '<tr><td colspan="8">Carregando…</td></tr>';
         $('tbodyLoans').innerHTML = '<tr><td colspan="9">Carregando…</td></tr>';
         $('tbodyBatches').innerHTML = '<tr><td colspan="9">Carregando…</td></tr>';
       }
-      const res = await Promise.allSettled([fetchActiveReservations(), fetchActiveLoans()]);
+      const res = await Promise.allSettled([fetchActiveReservations(), fetchActiveConsultations(), fetchActiveLoans()]);
       if (runId !== refreshSerial) return;
       if (res[0].status === 'fulfilled') {
         renderReservationTable();
@@ -6367,6 +6546,13 @@ async function fetchActiveLoans(){
         setStatus('statusRes', res[0].reason?.message || String(res[0].reason || 'Erro ao carregar reservas.'), 'bad', false);
       }
       if (res[1].status === 'fulfilled') {
+        renderConsultationTable();
+        clearStatus('statusConsultas');
+      } else {
+        if ($('tbodyConsultas')) $('tbodyConsultas').innerHTML = '<tr><td colspan="8">Erro ao carregar consultas locais.</td></tr>';
+        setStatus('statusConsultas', res[1].reason?.message || String(res[1].reason || 'Erro ao carregar consultas locais.'), 'bad', false);
+      }
+      if (res[2].status === 'fulfilled') {
         renderLoansTable();
         renderBatchTable();
         clearStatus('statusLoans');
@@ -6374,7 +6560,7 @@ async function fetchActiveLoans(){
       } else {
         $('tbodyLoans').innerHTML = '<tr><td colspan="9">Erro ao carregar empréstimos.</td></tr>';
         $('tbodyBatches').innerHTML = '<tr><td colspan="9">Erro ao carregar empréstimos agrupados.</td></tr>';
-        const msg = res[1].reason?.message || String(res[1].reason || 'Erro ao carregar empréstimos.');
+        const msg = res[2].reason?.message || String(res[2].reason || 'Erro ao carregar empréstimos.');
         setStatus('statusLoans', msg, 'bad', false);
         setStatus('statusBatches', msg, 'bad', false);
       }
@@ -6415,14 +6601,14 @@ async function fetchActiveLoans(){
       if (!(session && isLibrarian)) return;
 
       if (scope === 'reservations') {
-        await refreshReservationsOnly({silent:true});
+        await Promise.allSettled([refreshReservationsOnly({silent:true}), refreshConsultationsOnly({silent:true})]);
         return;
       }
       if (scope === 'loans') {
         await refreshLoansOnly({silent:true});
         return;
       }
-      await Promise.allSettled([refreshReservationsOnly({silent:true}), refreshLoansOnly({silent:true})]);
+      await Promise.allSettled([refreshReservationsOnly({silent:true}), refreshConsultationsOnly({silent:true}), refreshLoansOnly({silent:true})]);
     }
 
     function setupPainelStateSyncHooks(){
@@ -7451,6 +7637,7 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
       }
     });
     $('btnRecarregarRes').addEventListener('click', () => refreshReservationsOnly());
+    $('btnRecarregarConsultas')?.addEventListener('click', () => refreshConsultationsOnly());
     $('btnRecarregarTrabalhoDia')?.addEventListener('click', () => { renderTrabalhoDoDia(); setStatus('statusTrabalhoDia', 'Prioridades recalculadas.', 'ok'); });
     $('btnAddInternalTask')?.addEventListener('click', async () => {
       const btn = $('btnAddInternalTask');
