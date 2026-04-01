@@ -2809,11 +2809,17 @@
       return String(ROUTES?.CADASTRO || CONFIG?.ROUTES?.cadastro || FALLBACK_CONFIG?.ROUTES?.cadastro || 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html').trim() || 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html';
     }
 
+    function buildPainelCadastroHref(nextUrl = location.href){
+      const url = new URL(resolveCadastroHref());
+      url.searchParams.set('next', nextUrl);
+      return url.toString();
+    }
+
     function updateTopbarAuthButton(isLoggedIn){
       const btn = $('btnSair');
       if (!btn) return;
       const hasSession = !!isLoggedIn;
-      const cadastroHref = resolveCadastroHref();
+      const cadastroHref = hasSession ? resolveCadastroHref() : buildPainelCadastroHref(location.href);
       btn.dataset.authMode = hasSession ? 'logout' : 'login';
       btn.dataset.authHref = cadastroHref;
       btn.disabled = false;
@@ -5737,53 +5743,24 @@ function belemNowParts(){
       safePainelUiInit('sincronização de estado', () => setupPainelStateSyncHooks());
     }
 
-    async function requireSession({ attempts = 40, delayMs = 150 } = {}){
-      for (let i = 0; i < attempts; i += 1) {
-        try {
-          const { data: { session: sess } } = await supabase.auth.getSession();
-          if (sess?.user?.id) return sess;
-        } catch (error) {
-          console.warn('getSession falhou durante o bootstrap do painel.', error);
-        }
-
-        try {
-          const { data } = await supabase.auth.getUser();
-          if (data?.user?.id) {
-            const { data: { session: recoveredSession } } = await supabase.auth.getSession();
-            if (recoveredSession?.user?.id) return recoveredSession;
-          }
-        } catch (error) {
-          console.warn('getUser falhou durante o bootstrap do painel.', error);
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
+    async function getPainelCurrentSession(){
+      try {
+        const { data: { session: sess } } = await supabase.auth.getSession();
+        if (sess?.user?.id) return sess;
+      } catch (error) {
+        console.warn('getSession falhou ao ler a sessão do painel.', error);
       }
-      return null;
-    }
 
-    async function getConfirmedCurrentSession({ attempts = 6, delayMs = 180 } = {}){
-      for (let i = 0; i < attempts; i += 1) {
-        try {
-          const { data: { session: sess } } = await supabase.auth.getSession();
-          if (sess?.user?.id) return sess;
-        } catch (error) {
-          console.warn('getSession falhou ao confirmar a sessão do painel.', error);
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (data?.user?.id) {
+          const { data: { session: recoveredSession } } = await supabase.auth.getSession();
+          if (recoveredSession?.user?.id) return recoveredSession;
         }
-
-        try {
-          const { data } = await supabase.auth.getUser();
-          if (data?.user?.id) {
-            const { data: { session: recoveredSession } } = await supabase.auth.getSession();
-            if (recoveredSession?.user?.id) return recoveredSession;
-          }
-        } catch (error) {
-          console.warn('getUser falhou ao confirmar a sessão do painel.', error);
-        }
-
-        if (i < attempts - 1) {
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
-        }
+      } catch (error) {
+        console.warn('getUser falhou ao ler a sessão do painel.', error);
       }
+
       return null;
     }
     let currentAccessRow = null;
@@ -8870,40 +8847,73 @@ function initPartnerProbeUi() {
       refreshTimer = null;
     }
 
-    let authSyncSerial = 0;
-    let painelAuthBootstrapping = true;
     let painelAuthSyncInFlight = false;
 
-    async function syncPainelAuthState(nextSession, { reloadData=false, allowAnonymousReset=false } = {}){
-      const syncId = ++authSyncSerial;
-      const previousSession = session;
+    async function getPainelUserAndRole(){
+      const nextSession = await getPainelCurrentSession();
+      if (!nextSession?.user?.id) {
+        return {
+          session: null,
+          isLibrarian: false,
+          identityRow: null,
+          accessRow: null,
+        };
+      }
+
+      const accessRead = await fetchMyAccessRows(nextSession.user.id);
+      const accessRows = Array.isArray(accessRead?.data) ? accessRead.data : [];
+      const identityRow = accessRows.find((row) => String(row?.id || row?.user_id || '') === String(nextSession.user.id)) || accessRows[0] || null;
+      let accessRow = pickCurrentLibrarianAccess(accessRows);
+      if (!accessRow && identityRow?.is_librarian === true && identityRow?.is_restricted !== true) {
+        accessRow = {
+          ...identityRow,
+          role: 'librarian',
+          status: 'active',
+          can_access_painel: true
+        };
+      }
+
+      return {
+        session: nextSession,
+        isLibrarian: !!accessRow,
+        identityRow,
+        accessRow,
+        accessError: accessRead?.error || null,
+      };
+    }
+
+    async function bootstrapPainelAuth({ reloadData=true } = {}){
       painelAuthSyncInFlight = true;
-      updateTopbarAuthButton(!!previousSession?.user?.id);
+      updateTopbarAuthButton(!!session?.user?.id);
 
       try {
-        session = nextSession || null;
-        if (!session?.user?.id) {
-          session = await getConfirmedCurrentSession({ attempts: allowAnonymousReset ? 4 : 8, delayMs: 180 });
-        }
-        if (!session?.user?.id && previousSession?.user?.id && !allowAnonymousReset) {
-          session = previousSession;
-        }
-        if (syncId !== authSyncSerial) return !!session?.user?.id;
-
-        updateTopbarAuthButton(!!session?.user?.id);
+        const state = await getPainelUserAndRole();
+        session = state.session || null;
+        currentIdentityRow = state.identityRow || null;
+        currentAccessRow = state.accessRow || null;
+        isLibrarian = !!state.isLibrarian;
 
         if (!session?.user?.id) {
-          if (allowAnonymousReset) resetPainelAuthChrome();
+          resetPainelAuthChrome();
           return false;
         }
 
-        isLibrarian = await requireBibliotecaOrRedirect({ attempts: 8, delayMs: 220 });
+        updateTopbarAuthButton(true);
+
         if (!isLibrarian) {
           hideActiveLibraryLogo();
           $('btnModoLeitor')?.classList.add('hidden');
+          setChip('chipEmail', 'E-mail: ' + (String(session?.user?.email || '').trim() || '—'));
+          setChip('chipFuncao', 'Função: —');
+          if ($('helloLine')) {
+            $('helloLine').dataset.baseText = '';
+            $('helloLine').textContent = '';
+          }
+          setStatus('statusLoans', 'Sua sessão está ativa, mas este acesso não tem permissão de bibliotecári@ para abrir o painel.', 'bad', false);
           return false;
         }
 
+        clearStatus('statusLoans');
         await fillHeader();
         if (!reloadData) return true;
 
@@ -8918,38 +8928,21 @@ function initPartnerProbeUi() {
         await loadInternalTaskLibrarians();
         await loadInternalTasks({ silent:true });
         await refreshCollections();
-        if (syncId === authSyncSerial) setupRefreshHooks();
+        setupRefreshHooks();
         return true;
       } catch (error) {
-        if (syncId === authSyncSerial && allowAnonymousReset) {
-          resetPainelAuthChrome();
-        }
-        console.warn('Não consegui sincronizar a sessão do painel.', error);
+        console.warn('Não consegui iniciar a sessão do painel.', error);
+        resetPainelAuthChrome();
+        setStatus('statusLoans', 'Não consegui abrir o painel: ' + (error?.message || String(error)), 'bad', false);
         return false;
       } finally {
-        if (syncId === authSyncSerial) {
-          painelAuthSyncInFlight = false;
-          updateTopbarAuthButton(!!session?.user?.id);
-        }
+        painelAuthSyncInFlight = false;
+        updateTopbarAuthButton(!!session?.user?.id);
       }
     }
 
-    session = await requireSession({ attempts: 40, delayMs: 150 });
-    painelAuthBootstrapping = false;
-    await syncPainelAuthState(session, { reloadData: !!session?.user?.id, allowAnonymousReset: false });
     initializePainelUiOnce();
-
-    supabase.auth.onAuthStateChange(async (event, nextSession) => {
-      const eventName = String(event || '').trim().toUpperCase();
-      if (painelAuthBootstrapping && eventName === 'INITIAL_SESSION' && !nextSession?.user?.id) return;
-      const allowAnonymousReset = eventName === 'SIGNED_OUT';
-      await syncPainelAuthState(nextSession, { reloadData: false, allowAnonymousReset });
-      initializePainelUiOnce();
-    });
-
-    // Revalidação automática de auth por foco, retorno de página e storage desativada aqui.
-    // A sincronização leve restante deste painel fica restrita ao fluxo normal do Supabase auth.
-
+    await bootstrapPainelAuth({ reloadData: true });
     initPartnerProbeUi();
   </script>
 </body>
