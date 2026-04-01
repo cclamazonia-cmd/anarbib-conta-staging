@@ -1549,6 +1549,7 @@
                 <div class="mini">Pedidos ativos de consulta no local, separados do fluxo de empréstimo.</div>
               </div>
               <div class="actions" style="margin-top:0">
+                <button class="btn" id="btnCancelarConsultasSelecionadas" type="button">Cancelar pedido</button>
                 <button class="btn" id="btnRecarregarConsultas" type="button">Recarregar</button>
               </div>
             </div>
@@ -8386,6 +8387,48 @@ async function fetchActiveLoans(){
       }
     }
 
+    async function cancelConsultations(consultationIds){
+      const ids = Array.from(new Set((consultationIds || []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0)));
+      if (!ids.length) return setStatus('statusConsultas', 'Selecione pelo menos 1 consulta local ativa.', 'warn');
+      const cancelBtn = $('btnCancelarConsultasSelecionadas');
+      if (cancelBtn) cancelBtn.disabled = true;
+      try {
+        const rows = activeConsultations.filter((c) => ids.includes(c.id));
+        if (!rows.length) return setStatus('statusConsultas', 'As consultas selecionadas já não estão ativas.', 'warn');
+
+        const v2Rows = rows.filter((c) => c.source === 'v2');
+        if (!v2Rows.length) {
+          throw new Error('As consultas selecionadas não estão disponíveis no fluxo v2 ativo do painel.');
+        }
+
+        const grouped = groupBy(v2Rows, (c) => c.consulta_id);
+        let total = 0;
+        for (const [consultaId, items] of grouped.entries()) {
+          const lineNos = items.map((i) => Number(i.line_no)).filter((n) => Number.isFinite(n) && n > 0);
+          if (!lineNos.length) continue;
+          const rpc = await supabase.rpc('fn_v2_set_consulta_linhas_workflow', {
+            p_consulta_id: Number(consultaId),
+            p_line_nos: lineNos,
+            p_workflow_stage: 'cancelada_biblioteca',
+            p_workflow_note: 'Cancelamento registrado pela biblioteca no painel.',
+            p_consultation_scheduled_for: null,
+          });
+          if (rpc.error) throw rpc.error;
+          total += Number(rpc.data || 0) || lineNos.length;
+        }
+
+        selectedConsultaIds = new Set([...selectedConsultaIds].filter((id) => !ids.includes(id)));
+        await refreshConsultationsOnly({silent:true});
+        writePainelStateSync('consultations');
+        setStatus('statusConsultas', `Pedido(s) cancelado(s): ${total}.`, 'ok');
+      } catch (e) {
+        setStatus('statusConsultas', e.message || String(e), 'bad', false);
+      } finally {
+        if (cancelBtn) cancelBtn.disabled = false;
+        updateBulkSelectionButtons();
+      }
+    }
+
     function updateBulkSelectionButtons(){
       const reservationCount = selectedReservaIds.size;
       const consultationCount = selectedConsultaIds.size;
@@ -8798,7 +8841,15 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
       }
     });
     $('btnRecarregarRes').addEventListener('click', () => refreshReservationsOnly());
+    $('btnRecarregarRes').dataset.mainReloadBound = 'true';
     $('btnRecarregarConsultas')?.addEventListener('click', () => refreshConsultationsOnly());
+    if ($('btnRecarregarConsultas')) $('btnRecarregarConsultas').dataset.mainReloadBound = 'true';
+    $('btnCancelarConsultasSelecionadas')?.addEventListener('click', async () => {
+      const ids = Array.from(selectedConsultaIds);
+      const proceed = window.confirm('Deseja cancelar os pedidos de consulta local selecionados?');
+      if (!proceed) return;
+      await cancelConsultations(ids);
+    });
     $('btnRecarregarTrabalhoDia')?.addEventListener('click', () => { renderTrabalhoDoDia(); setStatus('statusTrabalhoDia', 'Prioridades recalculadas.', 'ok'); });
     $('btnAddInternalTask')?.addEventListener('click', async () => {
       const btn = $('btnAddInternalTask');
@@ -10100,6 +10151,21 @@ function initPartnerProbeUi() {
 
   async function reloadPainelRescueData() {
     try {
+      if (typeof fetchActiveReservations === 'function' && typeof fetchActiveConsultations === 'function' && typeof fetchActiveLoans === 'function') {
+        await Promise.all([
+          fetchActiveReservations(),
+          fetchActiveConsultations(),
+          fetchActiveLoans()
+        ]);
+        if (typeof renderReservationTable === 'function') renderReservationTable();
+        if (typeof renderConsultationTable === 'function') renderConsultationTable();
+        if (typeof renderLoansTable === 'function') renderLoansTable();
+        if (typeof renderBatchTable === 'function') renderBatchTable();
+        if (typeof renderCounts === 'function') renderCounts();
+        if (typeof renderProfileLists === 'function') renderProfileLists();
+        return;
+      }
+
       const [reservations, consultations, loans] = await Promise.all([
         fetchReservationsR(),
         fetchConsultationsR(),
@@ -10131,7 +10197,7 @@ function initPartnerProbeUi() {
     ];
     map.forEach(([id, fn]) => {
       const el = $r(id);
-      if (!el || el.dataset.rescueReloadBound === 'true') return;
+      if (!el || el.dataset.mainReloadBound === 'true' || el.dataset.rescueReloadBound === 'true') return;
       el.dataset.rescueReloadBound = 'true';
       el.addEventListener('click', () => fn());
     });
