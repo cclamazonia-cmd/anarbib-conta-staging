@@ -568,7 +568,7 @@
         <a class="btn" id="btnCatalogacao" href="https://cclamazonia-cmd.github.io/anarbib-staging/catalogacao.html">Catalogação</a>
         <a class="btn" id="btnManual" href="https://cclamazonia-cmd.github.io/anarbib-staging/Manual_do_AnarBib.pdf" target="_blank" rel="noopener noreferrer">Manual do AnarBib</a>
         <a class="btn" id="btnModoLeitor" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html">Ir para modo leitor</a>
-        <button class="btn primary" id="btnSair" type="button" data-auth-mode="login" data-auth-href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html">Login</button>
+        <button class="btn primary" id="btnSair" type="button" data-auth-mode="login" data-auth-href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html" onclick="if ((this.dataset.authMode || 'login') === 'login') { window.location.href = (this.dataset.authHref || 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html'); return false; }">Login</button>
       </div>
     </div>
 
@@ -2809,41 +2809,16 @@
       return String(ROUTES?.CADASTRO || CONFIG?.ROUTES?.cadastro || FALLBACK_CONFIG?.ROUTES?.cadastro || 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html').trim() || 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html';
     }
 
-    function buildPainelCadastroHref(nextUrl = location.href){
-      const url = new URL(resolveCadastroHref());
-      url.searchParams.set('next', nextUrl);
-      return url.toString();
-    }
-
     function updateTopbarAuthButton(isLoggedIn){
       const btn = $('btnSair');
       if (!btn) return;
-      const hasSession = !!isLoggedIn;
-      const cadastroHref = hasSession ? resolveCadastroHref() : buildPainelCadastroHref(location.href);
-      btn.dataset.authMode = hasSession ? 'logout' : 'login';
+      const authMode = isLoggedIn ? 'logout' : 'login';
+      const cadastroHref = resolveCadastroHref();
+      btn.dataset.authMode = authMode;
       btn.dataset.authHref = cadastroHref;
-      btn.disabled = false;
-      btn.removeAttribute('aria-busy');
-
-      if (painelAuthSyncInFlight) {
-        btn.setAttribute('aria-busy', 'true');
-        if (hasSession) {
-          btn.textContent = 'Logout';
-          btn.setAttribute('aria-label', 'Logout');
-          btn.title = 'Sessão ativa. Você já pode sair sem esperar a sincronização terminar.';
-        } else {
-          btn.disabled = true;
-          btn.textContent = 'Login';
-          btn.setAttribute('aria-label', 'Login');
-          btn.title = 'Sessão ainda não confirmada.';
-        }
-        return;
-      }
-
-      btn.textContent = hasSession ? 'Logout' : 'Login';
-      btn.setAttribute('aria-label', hasSession ? 'Logout' : 'Login');
-      btn.title = hasSession ? 'Encerrar sessão e voltar ao cadastro' : 'Ir para o cadastro / login';
-      btn.setAttribute('aria-busy', 'false');
+      btn.textContent = isLoggedIn ? 'Logout' : 'Login';
+      btn.setAttribute('aria-label', isLoggedIn ? 'Logout' : 'Login');
+      btn.title = isLoggedIn ? 'Encerrar sessão e voltar ao cadastro' : 'Ir para o cadastro / login';
     }
 
     function resetPainelAuthChrome(){
@@ -2855,10 +2830,7 @@
       updateTopbarAuthButton(false);
       hideActiveLibraryLogo();
       $('btnModoLeitor')?.classList.add('hidden');
-      if ($('helloLine')) {
-        $('helloLine').dataset.baseText = '';
-        $('helloLine').textContent = '';
-      }
+      $('helloLine').textContent = '';
       setChip('chipFuncao', 'Função: —');
       setChip('chipEmail', 'E-mail: —');
     }
@@ -5743,24 +5715,53 @@ function belemNowParts(){
       safePainelUiInit('sincronização de estado', () => setupPainelStateSyncHooks());
     }
 
-    async function getPainelCurrentSession(){
-      try {
-        const { data: { session: sess } } = await supabase.auth.getSession();
-        if (sess?.user?.id) return sess;
-      } catch (error) {
-        console.warn('getSession falhou ao ler a sessão do painel.', error);
-      }
-
-      try {
-        const { data } = await supabase.auth.getUser();
-        if (data?.user?.id) {
-          const { data: { session: recoveredSession } } = await supabase.auth.getSession();
-          if (recoveredSession?.user?.id) return recoveredSession;
+    async function requireSession({ attempts = 40, delayMs = 150 } = {}){
+      for (let i = 0; i < attempts; i += 1) {
+        try {
+          const { data: { session: sess } } = await supabase.auth.getSession();
+          if (sess?.user?.id) return sess;
+        } catch (error) {
+          console.warn('getSession falhou durante o bootstrap do painel.', error);
         }
-      } catch (error) {
-        console.warn('getUser falhou ao ler a sessão do painel.', error);
-      }
 
+        try {
+          const { data } = await supabase.auth.getUser();
+          if (data?.user?.id) {
+            const { data: { session: recoveredSession } } = await supabase.auth.getSession();
+            if (recoveredSession?.user?.id) return recoveredSession;
+          }
+        } catch (error) {
+          console.warn('getUser falhou durante o bootstrap do painel.', error);
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+      return null;
+    }
+
+    async function getConfirmedCurrentSession({ attempts = 6, delayMs = 180 } = {}){
+      for (let i = 0; i < attempts; i += 1) {
+        try {
+          const { data: { session: sess } } = await supabase.auth.getSession();
+          if (sess?.user?.id) return sess;
+        } catch (error) {
+          console.warn('getSession falhou ao confirmar a sessão do painel.', error);
+        }
+
+        try {
+          const { data } = await supabase.auth.getUser();
+          if (data?.user?.id) {
+            const { data: { session: recoveredSession } } = await supabase.auth.getSession();
+            if (recoveredSession?.user?.id) return recoveredSession;
+          }
+        } catch (error) {
+          console.warn('getUser falhou ao confirmar a sessão do painel.', error);
+        }
+
+        if (i < attempts - 1) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      }
       return null;
     }
     let currentAccessRow = null;
@@ -5918,11 +5919,7 @@ function belemNowParts(){
       if (accessPublicId) helloParts.push('ID ' + accessPublicId);
       if (libraryLabel) helloParts.push(libraryLabel);
       if (!helloParts.length && accessEmail) helloParts.push(accessEmail);
-      const helloText = helloParts.length ? ('Conectad@: ' + helloParts.join(' · ')) : '';
-      if ($('helloLine')) {
-        $('helloLine').dataset.baseText = helloText;
-        $('helloLine').textContent = helloText;
-      }
+      $('helloLine').textContent = helloParts.length ? ('Conectad@: ' + helloParts.join(' · ')) : '';
       $('btnModoLeitor').classList.toggle('hidden', !isLibrarian);
       updateTopbarAuthButton(!!session?.user?.id);
       renderActiveLibraryLogo(currentLibraryRow || identity || {});
@@ -8847,76 +8844,37 @@ function initPartnerProbeUi() {
       refreshTimer = null;
     }
 
-    let painelAuthSyncInFlight = false;
+    let authSyncSerial = 0;
+    let painelAuthBootstrapping = true;
 
-    async function getPainelUserAndRole(){
-      const nextSession = await getPainelCurrentSession();
-      if (!nextSession?.user?.id) {
-        return {
-          session: null,
-          isLibrarian: false,
-          identityRow: null,
-          accessRow: null,
-        };
+    async function syncPainelAuthState(nextSession, { reloadData=false, allowAnonymousReset=false } = {}){
+      const syncId = ++authSyncSerial;
+      const previousSession = session;
+      session = nextSession || null;
+
+      if (!session?.user?.id) {
+        session = await getConfirmedCurrentSession({ attempts: allowAnonymousReset ? 4 : 8, delayMs: 180 });
+      }
+      if (!session?.user?.id && previousSession?.user?.id && !allowAnonymousReset) {
+        session = previousSession;
       }
 
-      const accessRead = await fetchMyAccessRows(nextSession.user.id);
-      const accessRows = Array.isArray(accessRead?.data) ? accessRead.data : [];
-      const identityRow = accessRows.find((row) => String(row?.id || row?.user_id || '') === String(nextSession.user.id)) || accessRows[0] || null;
-      let accessRow = pickCurrentLibrarianAccess(accessRows);
-      if (!accessRow && identityRow?.is_librarian === true && identityRow?.is_restricted !== true) {
-        accessRow = {
-          ...identityRow,
-          role: 'librarian',
-          status: 'active',
-          can_access_painel: true
-        };
-      }
-
-      return {
-        session: nextSession,
-        isLibrarian: !!accessRow,
-        identityRow,
-        accessRow,
-        accessError: accessRead?.error || null,
-      };
-    }
-
-    async function bootstrapPainelAuth({ reloadData=true } = {}){
-      painelAuthSyncInFlight = true;
       updateTopbarAuthButton(!!session?.user?.id);
 
+      if (!session?.user?.id) {
+        if (allowAnonymousReset) resetPainelAuthChrome();
+        return false;
+      }
+
       try {
-        const state = await getPainelUserAndRole();
-        session = state.session || null;
-        currentIdentityRow = state.identityRow || null;
-        currentAccessRow = state.accessRow || null;
-        isLibrarian = !!state.isLibrarian;
-
-        if (!session?.user?.id) {
-          resetPainelAuthChrome();
-          return false;
-        }
-
-        updateTopbarAuthButton(true);
-
+        isLibrarian = await requireBibliotecaOrRedirect({ attempts: 8, delayMs: 220 });
         if (!isLibrarian) {
           hideActiveLibraryLogo();
           $('btnModoLeitor')?.classList.add('hidden');
-          setChip('chipEmail', 'E-mail: ' + (String(session?.user?.email || '').trim() || '—'));
-          setChip('chipFuncao', 'Função: —');
-          if ($('helloLine')) {
-            $('helloLine').dataset.baseText = '';
-            $('helloLine').textContent = '';
-          }
-          setStatus('statusLoans', 'Sua sessão está ativa, mas este acesso não tem permissão de bibliotecári@ para abrir o painel.', 'bad', false);
           return false;
         }
-
-        clearStatus('statusLoans');
         await fillHeader();
         if (!reloadData) return true;
-
         await loadLibraryServiceState();
         await loadLibraryIdentity();
         await loadLibraryTheme();
@@ -8928,21 +8886,38 @@ function initPartnerProbeUi() {
         await loadInternalTaskLibrarians();
         await loadInternalTasks({ silent:true });
         await refreshCollections();
-        setupRefreshHooks();
+        if (syncId === authSyncSerial) setupRefreshHooks();
         return true;
       } catch (error) {
-        console.warn('Não consegui iniciar a sessão do painel.', error);
-        resetPainelAuthChrome();
-        setStatus('statusLoans', 'Não consegui abrir o painel: ' + (error?.message || String(error)), 'bad', false);
+        console.warn('Não consegui sincronizar a sessão do painel.', error);
         return false;
-      } finally {
-        painelAuthSyncInFlight = false;
-        updateTopbarAuthButton(!!session?.user?.id);
       }
     }
 
+    session = await requireSession({ attempts: 40, delayMs: 150 });
+    painelAuthBootstrapping = false;
+    await syncPainelAuthState(session, { reloadData: !!session?.user?.id, allowAnonymousReset: false });
     initializePainelUiOnce();
-    await bootstrapPainelAuth({ reloadData: true });
+
+    supabase.auth.onAuthStateChange(async (event, nextSession) => {
+      const eventName = String(event || '').trim().toUpperCase();
+      if (painelAuthBootstrapping && eventName === 'INITIAL_SESSION' && !nextSession?.user?.id) return;
+      const shouldReload = eventName === 'SIGNED_IN' || eventName === 'USER_UPDATED' || eventName === 'INITIAL_SESSION';
+      const allowAnonymousReset = eventName === 'SIGNED_OUT';
+      await syncPainelAuthState(nextSession, { reloadData: shouldReload, allowAnonymousReset });
+      initializePainelUiOnce();
+    });
+
+    if (!session?.user?.id) {
+      setTimeout(async () => {
+        const lateSession = await getConfirmedCurrentSession({ attempts: 10, delayMs: 200 });
+        if (lateSession?.user?.id) {
+          await syncPainelAuthState(lateSession, { reloadData: true, allowAnonymousReset: false });
+        }
+        initializePainelUiOnce();
+      }, 700);
+    }
+
     initPartnerProbeUi();
   </script>
 </body>
