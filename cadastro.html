@@ -595,10 +595,31 @@
       }
     }
 
+    function sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    async function settleSessionBeforeRedirect(signInData) {
+      let lastSession = signInData?.session || null;
+      for (let i = 0; i < 8; i += 1) {
+        try {
+          const { data } = await supabase.auth.getSession();
+          if (data?.session?.user?.id) {
+            lastSession = data.session;
+          }
+        } catch (e) {
+          console.warn("settleSessionBeforeRedirect retry failed:", e);
+        }
+        await sleep(120);
+      }
+      return lastSession;
+    }
+
     async function afterLoginRedirect(signInData) {
       await waitForSharedSession(signInData);
+      const settledSession = await settleSessionBeforeRedirect(signInData);
 
-      const userId = await getStableSessionUserId(signInData);
+      const userId = settledSession?.user?.id || await getStableSessionUserId(signInData);
       const next = getNextParam();
 
       if (!userId) {
@@ -606,18 +627,14 @@
         return;
       }
 
-      const isLib = await fetchIsLibrarian(userId, signInData);
+      const isLib = await fetchIsLibrarian(userId, { ...(signInData || {}), session: settledSession || signInData?.session || null });
 
       try { window.sessionStorage.setItem("anarbib_last_login_target", isLib ? ROUTES.PAINEL : ROUTES.CONTA); } catch {}
       try { window.localStorage.removeItem("anarbib_last_login_target"); } catch {}
 
-      if (next) {
-        window.location.replace(next);
-        return;
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 150));
-      window.location.replace(isLib ? ROUTES.PAINEL : ROUTES.CONTA);
+      const destination = next || (isLib ? ROUTES.PAINEL : ROUTES.CONTA);
+      await sleep(180);
+      window.location.replace(destination);
     }
 
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
