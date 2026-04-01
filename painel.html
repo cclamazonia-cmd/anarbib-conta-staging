@@ -7442,7 +7442,7 @@ async function fetchActiveLoans(){
         const workflowDetail = reservationWorkflowDetail(r);
         return `
           <tr data-reserva-row="${esc(r.id)}" class="${checked ? 'is-selected clickable-row' : 'clickable-row'}">
-            <td><input type="checkbox" ${checked} data-reserva-check="${esc(r.id)}" aria-label="Selecionar ${esc(r.sub_id)}" onclick="event.stopPropagation()"></td>
+            <td><input type="checkbox" ${checked} data-reserva-check="${esc(r.id)}" aria-label="Selecionar ${esc(r.sub_id)}" onclick="event.stopPropagation()" onchange="window.__anarbibToggleReservaSelection && window.__anarbibToggleReservaSelection(${esc(r.id)}, this.checked)"></td>
             <td class="mono">${esc(r.sub_id)}</td>
             <td>${esc(r.user_name)}${r.user_email && r.user_email !== '—' ? `<br><span class="mini subtle">${esc(r.user_email)}</span>` : ''}</td>
             <td>${esc(r.titulo)}${r.autor ? `<br><span class="mini subtle">${esc(r.autor)}</span>` : ''}</td>
@@ -7471,7 +7471,7 @@ async function fetchActiveLoans(){
         const validity = c.validade ? `${esc(fmtDateTimeBelem(c.validade))} (Belém)` : '—';
         return `
           <tr data-consulta-row="${esc(c.id)}" class="${checked ? 'is-selected clickable-row' : 'clickable-row'}">
-            <td><input type="checkbox" ${checked} data-consulta-check="${esc(c.id)}" aria-label="Selecionar ${esc(c.sub_id)}" onclick="event.stopPropagation()"></td>
+            <td><input type="checkbox" ${checked} data-consulta-check="${esc(c.id)}" aria-label="Selecionar ${esc(c.sub_id)}" onclick="event.stopPropagation()" onchange="window.__anarbibToggleConsultaSelection && window.__anarbibToggleConsultaSelection(${esc(c.id)}, this.checked)"></td>
             <td>#${esc(c.consulta_id)}</td>
             <td class="mono">${esc(c.sub_id)}</td>
             <td>${esc(c.user_name)}${c.user_email && c.user_email !== '—' ? `<br><span class="mini subtle">${esc(c.user_email)}</span>` : ''}</td>
@@ -8420,6 +8420,22 @@ async function fetchActiveLoans(){
       if ($('btnApplyResWorkflowStage')) $('btnApplyResWorkflowStage').disabled = reservationCount < 1;
       if ($('btnApplyConsultWorkflowStage')) $('btnApplyConsultWorkflowStage').disabled = consultationCount < 1;
     }
+
+    window.__anarbibToggleReservaSelection = (id, checked) => {
+      const numericId = Number(id);
+      if (!Number.isFinite(numericId)) return;
+      if (checked) selectedReservaIds.add(numericId); else selectedReservaIds.delete(numericId);
+      renderReservationTable();
+      updateBulkSelectionButtons();
+    };
+
+    window.__anarbibToggleConsultaSelection = (id, checked) => {
+      const numericId = Number(id);
+      if (!Number.isFinite(numericId)) return;
+      if (checked) selectedConsultaIds.add(numericId); else selectedConsultaIds.delete(numericId);
+      renderConsultationTable();
+      updateBulkSelectionButtons();
+    };
 
     function bindReservationSelection(){
       const tbody = $('tbodyRes');
