@@ -167,6 +167,7 @@
     @media (max-width:980px){
       .tableWrap{overflow-x:auto;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y}
       #tab-reservas table{min-width:760px;table-layout:fixed}
+      #tab-consultas-locais table{min-width:860px;table-layout:fixed}
       #tab-emprestimos-livro table{min-width:900px;table-layout:fixed}
       #tab-emprestimos-lote table{min-width:880px;table-layout:fixed}
       #profilePaneReservas table{min-width:720px;table-layout:fixed}
@@ -178,6 +179,14 @@
       #tab-reservas th:nth-child(6), #tab-reservas td:nth-child(6){width:110px}
       #tab-reservas th:nth-child(7), #tab-reservas td:nth-child(7){width:118px}
       #tab-reservas th:nth-child(8), #tab-reservas td:nth-child(8){width:118px}
+
+      #tab-consultas-locais th:nth-child(1), #tab-consultas-locais td:nth-child(1){width:56px}
+      #tab-consultas-locais th:nth-child(2), #tab-consultas-locais td:nth-child(2){width:72px}
+      #tab-consultas-locais th:nth-child(3), #tab-consultas-locais td:nth-child(3){width:88px}
+      #tab-consultas-locais th:nth-child(6), #tab-consultas-locais td:nth-child(6){width:110px}
+      #tab-consultas-locais th:nth-child(7), #tab-consultas-locais td:nth-child(7){width:126px}
+      #tab-consultas-locais th:nth-child(8), #tab-consultas-locais td:nth-child(8){width:138px}
+      #tab-consultas-locais th:nth-child(9), #tab-consultas-locais td:nth-child(9){width:126px}
 
       #tab-emprestimos-livro th:nth-child(1), #tab-emprestimos-livro td:nth-child(1){width:86px}
       #tab-emprestimos-livro th:nth-child(2), #tab-emprestimos-livro td:nth-child(2){width:74px}
@@ -212,30 +221,35 @@
       #profilePaneEmprestimos th:nth-child(8), #profilePaneEmprestimos td:nth-child(8){width:126px}
 
       #tab-reservas td,
+      #tab-consultas-locais td,
       #tab-emprestimos-livro td,
       #tab-emprestimos-lote td,
       #profilePaneReservas td,
       #profilePaneEmprestimos td{white-space:normal;overflow-wrap:anywhere;word-break:break-word;vertical-align:top}
 
       #tab-reservas td .mini,
+      #tab-consultas-locais td .mini,
       #tab-emprestimos-livro td .mini,
       #tab-emprestimos-lote td .mini,
       #profilePaneReservas td .mini,
       #profilePaneEmprestimos td .mini{display:block;white-space:normal;line-height:1.25}
 
       #tab-reservas td .mono, #tab-reservas td.mono,
+      #tab-consultas-locais td .mono, #tab-consultas-locais td.mono,
       #tab-emprestimos-livro td .mono, #tab-emprestimos-livro td.mono,
       #tab-emprestimos-lote td .mono, #tab-emprestimos-lote td.mono,
       #profilePaneReservas td .mono, #profilePaneReservas td.mono,
       #profilePaneEmprestimos td .mono, #profilePaneEmprestimos td.mono{white-space:normal;overflow-wrap:anywhere;word-break:break-word}
 
       #tab-reservas td .actions,
+      #tab-consultas-locais td .actions,
       #tab-emprestimos-livro td .actions,
       #tab-emprestimos-lote td .actions,
       #profilePaneReservas td .actions,
       #profilePaneEmprestimos td .actions{flex-direction:column;align-items:stretch;gap:8px;min-width:0}
 
       #tab-reservas td .btn.mini,
+      #tab-consultas-locais td .btn.mini,
       #tab-emprestimos-livro td .btn.mini,
       #tab-emprestimos-lote td .btn.mini,
       #profilePaneReservas td .btn.mini,
@@ -279,17 +293,20 @@
 
     @media (max-width:820px){
       #tab-reservas .section-head > .actions,
+      #tab-consultas-locais .section-head > .actions,
       #tab-emprestimos-livro .section-head > .actions,
       #tab-emprestimos-lote .section-head > .actions{
         width:100%;
       }
       #tab-reservas .section-head > .actions .btn,
+      #tab-consultas-locais .section-head > .actions .btn,
       #tab-emprestimos-livro .section-head > .actions .btn,
       #tab-emprestimos-lote .section-head > .actions .btn{
         flex:1 1 100%;
       }
 
       #tab-reservas .tableWrap,
+      #tab-consultas-locais .tableWrap,
       #tab-emprestimos-livro .tableWrap,
       #tab-emprestimos-lote .tableWrap,
       #profilePaneReservas .tableWrap,
@@ -301,6 +318,7 @@
       }
 
       #tab-reservas table,
+      #tab-consultas-locais table,
       #tab-emprestimos-livro table,
       #tab-emprestimos-lote table,
       #profilePaneReservas table,
@@ -312,6 +330,7 @@
       }
 
       #tab-reservas thead,
+      #tab-consultas-locais thead,
       #tab-emprestimos-livro thead,
       #tab-emprestimos-lote thead,
       #profilePaneReservas thead,
@@ -320,6 +339,7 @@
       }
 
       #tab-reservas tbody,
+      #tab-consultas-locais tbody,
       #tab-emprestimos-livro tbody,
       #tab-emprestimos-lote tbody,
       #profilePaneReservas tbody,
@@ -328,6 +348,7 @@
       }
 
       #tab-reservas tbody tr,
+      #tab-consultas-locais tbody tr,
       #tab-emprestimos-livro tbody tr,
       #tab-emprestimos-lote tbody tr,
       #profilePaneReservas tbody tr,
@@ -341,6 +362,7 @@
       }
 
       #tab-reservas tbody td,
+      #tab-consultas-locais tbody td,
       #tab-emprestimos-livro tbody td,
       #tab-emprestimos-lote tbody td,
       #profilePaneReservas tbody td,
@@ -355,6 +377,7 @@
       }
 
       #tab-reservas tbody td:last-child,
+      #tab-consultas-locais tbody td:last-child,
       #tab-emprestimos-livro tbody td:last-child,
       #tab-emprestimos-lote tbody td:last-child,
       #profilePaneReservas tbody td:last-child,
@@ -363,6 +386,7 @@
       }
 
       #tab-reservas tbody td::before,
+      #tab-consultas-locais tbody td::before,
       #tab-emprestimos-livro tbody td::before,
       #tab-emprestimos-lote tbody td::before,
       #profilePaneReservas tbody td::before,
@@ -377,6 +401,7 @@
       }
 
       #tab-reservas tbody td[colspan],
+      #tab-consultas-locais tbody td[colspan],
       #tab-emprestimos-livro tbody td[colspan],
       #tab-emprestimos-lote tbody td[colspan],
       #profilePaneReservas tbody td[colspan],
@@ -387,6 +412,7 @@
       }
 
       #tab-reservas tbody td[colspan]::before,
+      #tab-consultas-locais tbody td[colspan]::before,
       #tab-emprestimos-livro tbody td[colspan]::before,
       #tab-emprestimos-lote tbody td[colspan]::before,
       #profilePaneReservas tbody td[colspan]::before,
@@ -395,6 +421,7 @@
       }
 
       #tab-reservas td .actions,
+      #tab-consultas-locais td .actions,
       #tab-emprestimos-livro td .actions,
       #tab-emprestimos-lote td .actions,
       #profilePaneReservas td .actions,
@@ -405,6 +432,7 @@
       }
 
       #tab-reservas td .btn.mini,
+      #tab-consultas-locais td .btn.mini,
       #tab-emprestimos-livro td .btn.mini,
       #tab-emprestimos-lote td .btn.mini,
       #profilePaneReservas td .btn.mini,
@@ -420,6 +448,16 @@
       #tab-reservas td:nth-child(6)::before{content:"Rótulo"}
       #tab-reservas td:nth-child(7)::before{content:"Reserva"}
       #tab-reservas td:nth-child(8)::before{content:"Validade"}
+
+      #tab-consultas-locais td:nth-child(1)::before{content:"Selecionar"}
+      #tab-consultas-locais td:nth-child(2)::before{content:"Consulta"}
+      #tab-consultas-locais td:nth-child(3)::before{content:"Sub-ID"}
+      #tab-consultas-locais td:nth-child(4)::before{content:"Leitor(a/e)"}
+      #tab-consultas-locais td:nth-child(5)::before{content:"Livro"}
+      #tab-consultas-locais td:nth-child(6)::before{content:"Referência"}
+      #tab-consultas-locais td:nth-child(7)::before{content:"Solicitada em"}
+      #tab-consultas-locais td:nth-child(8)::before{content:"Situação"}
+      #tab-consultas-locais td:nth-child(9)::before{content:"Validade"}
 
       #tab-emprestimos-livro td:nth-child(1)::before{content:"ID do item"}
       #tab-emprestimos-livro td:nth-child(2)::before{content:"ID do empréstimo"}
@@ -1425,11 +1463,40 @@
                 <button class="btn" id="btnRecarregarConsultas" type="button">Recarregar</button>
               </div>
             </div>
+            <div class="muted-box" style="margin-top:12px">
+              <div class="mini" style="margin-bottom:8px">Gestão das etapas do fluxo de consulta local para as linhas selecionadas.</div>
+              <div class="row" style="align-items:end">
+                <div>
+                  <label for="consultWorkflowNote">Nota interna da etapa (opcional)</label>
+                  <input class="input" id="consultWorkflowNote" type="text" placeholder="Ex.: material separado, consulta combinada, leitor não compareceu no horário...">
+                </div>
+                <div>
+                  <label for="consultScheduleAt">Data e hora da consulta (para “Consulta agendada”)</label>
+                  <input class="input" id="consultScheduleAt" type="datetime-local" step="60">
+                </div>
+                <div>
+                  <label for="consultWorkflowStage">Próxima etapa</label>
+                  <select class="input" id="consultWorkflowStage">
+                    <option value="">Selecione uma etapa…</option>
+                    <option value="em_preparacao">1. Em preparação</option>
+                    <option value="consulta_agendada">2. Consulta agendada</option>
+                    <option value="consulta_realizada">3. Consulta realizada</option>
+                    <option value="nao_compareceu">4. Não compareceu</option>
+                    <option value="cancelada_biblioteca">5. Cancelada pela biblioteca</option>
+                    <option value="expirada">6. Expirada</option>
+                  </select>
+                </div>
+              </div>
+              <div class="actions">
+                <button class="btn" id="btnApplyConsultWorkflowStage" type="button">Aplicar etapa</button>
+              </div>
+            </div>
             <div class="sep"></div>
             <div class="tableWrap">
               <table>
                 <thead>
                   <tr>
+                    <th>Selecionar</th>
                     <th>Consulta</th>
                     <th>Sub-ID</th>
                     <th>Leitor(a/e)</th>
@@ -1440,7 +1507,7 @@
                     <th>Validade</th>
                   </tr>
                 </thead>
-                <tbody id="tbodyConsultas"><tr><td colspan="8">Carregando…</td></tr></tbody>
+                <tbody id="tbodyConsultas"><tr><td colspan="9">Carregando…</td></tr></tbody>
               </table>
             </div>
             <div class="status" id="statusConsultas"></div>
@@ -2040,6 +2107,7 @@
     let activeLoans = [];
     let activeBatches = [];
     let selectedReservaIds = new Set();
+    let selectedConsultaIds = new Set();
     let editingProfileId = null;
     let editingProfileRow = null;
     let editingKnownColumns = {};
@@ -5370,6 +5438,7 @@ function belemNowParts(){
       safePainelUiInit('editor de devolução', () => setupReturnScheduleEditor());
       safePainelUiInit('tarefas internas', () => renderInternalTasks());
       safePainelUiInit('seleção de reservas', () => bindReservationSelection());
+      safePainelUiInit('seleção de consultas', () => bindConsultationSelection());
       safePainelUiInit('ações dinâmicas', () => bindDynamicActions());
       safePainelUiInit('sugestões de responsáveis', () => bindInternalTaskOwnerSuggestions());
       safePainelUiInit('horários da biblioteca', () => setupLibraryScheduleActions());
@@ -5723,6 +5792,7 @@ function belemNowParts(){
         consulta_agendada: 'Consulta agendada',
         pronta_para_consulta: 'Pronta para consulta',
         consulta_realizada: 'Consulta realizada',
+        nao_compareceu: 'Não compareceu',
         cancelada_leitor: 'Cancelada pelo leitor',
         cancelada_biblioteca: 'Cancelada pela biblioteca',
         expirada: 'Expirada'
@@ -5736,6 +5806,7 @@ function belemNowParts(){
         consulta_agendada: 'ok',
         pronta_para_consulta: 'ok',
         consulta_realizada: 'ok',
+        nao_compareceu: 'bad',
         cancelada_leitor: 'bad',
         cancelada_biblioteca: 'bad',
         expirada: 'bad'
@@ -5747,6 +5818,87 @@ function belemNowParts(){
       if (c.consultation_scheduled_for) parts.push(`Consulta: ${fmtDateTimeBelem(c.consultation_scheduled_for)} (Belém)`);
       if (c.workflow_note) parts.push(c.workflow_note);
       return parts.join(' · ');
+    }
+
+    function selectedConsultationRows(){
+      return activeConsultations.filter((c) => selectedConsultaIds.has(c.id));
+    }
+
+    function getConsultationCurrentStage(row){
+      return String(row?.workflow_stage || 'solicitada').trim() || 'solicitada';
+    }
+
+    function getConsultationAllowedNextStages(stage){
+      const current = String(stage || 'solicitada').trim() || 'solicitada';
+      const matrix = {
+        solicitada: ['em_preparacao', 'consulta_agendada', 'cancelada_biblioteca', 'expirada'],
+        em_preparacao: ['consulta_agendada', 'cancelada_biblioteca', 'expirada'],
+        consulta_agendada: ['consulta_agendada', 'consulta_realizada', 'nao_compareceu', 'cancelada_biblioteca', 'expirada'],
+        nao_compareceu: ['consulta_agendada', 'cancelada_biblioteca', 'expirada'],
+        pronta_para_consulta: ['consulta_agendada', 'consulta_realizada', 'nao_compareceu', 'cancelada_biblioteca', 'expirada'],
+        consulta_realizada: [],
+        cancelada_biblioteca: [],
+        expirada: []
+      };
+      return matrix[current] || [];
+    }
+
+    function consultationCanMoveToStage(rows, targetStage){
+      const activeRows = (rows || []).filter(Boolean);
+      if (!activeRows.length) return true;
+      const target = String(targetStage || '').trim();
+      if (!target) return true;
+      return activeRows.every((row) => getConsultationAllowedNextStages(getConsultationCurrentStage(row)).includes(target));
+    }
+
+    function updateConsultationWorkflowStageOptions(){
+      const select = $('consultWorkflowStage');
+      if (!select) return;
+      const rows = selectedConsultationRows();
+      Array.from(select.options || []).forEach((option) => {
+        const value = String(option?.value || '').trim();
+        if (!value) return;
+        option.disabled = !consultationCanMoveToStage(rows, value);
+      });
+      const currentValue = String(select.value || '').trim();
+      if (currentValue && !consultationCanMoveToStage(rows, currentValue)) select.value = '';
+    }
+
+    async function setConsultationWorkflowStage(stage, rows, { note='', consultationScheduledFor=null, targetStatusId='statusConsultas' } = {}){
+      const cleanRows = (rows || []).filter((r) => r && r.source === 'v2');
+      if (!cleanRows.length) {
+        setStatus(targetStatusId, 'Selecione pelo menos 1 consulta local ativa.', 'warn');
+        return;
+      }
+      if (!consultationCanMoveToStage(cleanRows, stage)) {
+        setStatus(targetStatusId, 'A etapa selecionada não é válida para o estado atual das consultas selecionadas.', 'warn');
+        return;
+      }
+      if (stage === 'consulta_agendada' && !consultationScheduledFor) {
+        setStatus(targetStatusId, 'Informe data e hora para agendar a consulta.', 'warn');
+        return;
+      }
+
+      const groups = groupBy(cleanRows, (c) => c.consulta_id);
+      let processed = 0;
+
+      for (const [consultaId, items] of groups.entries()) {
+        const lineNos = items.map((i) => Number(i.line_no)).filter((n) => Number.isFinite(n) && n > 0);
+        if (!lineNos.length) continue;
+        const rpc = await supabase.rpc('fn_v2_set_consulta_linhas_workflow', {
+          p_consulta_id: Number(consultaId),
+          p_line_nos: lineNos,
+          p_workflow_stage: stage,
+          p_workflow_note: note || null,
+          p_consultation_scheduled_for: consultationScheduledFor || null,
+        });
+        if (rpc.error) throw rpc.error;
+        processed += Number(rpc.data || 0) || lineNos.length;
+      }
+
+      const stageLabel = translateConsultationWorkflowStage(stage);
+      setStatus(targetStatusId, `${stageLabel} aplicado para ${processed} item(ns).`, 'ok');
+      await refreshConsultationsOnly({silent:true});
     }
 
     async function fetchActiveConsultations(){
@@ -5801,6 +5953,9 @@ function belemNowParts(){
         .limit(800);
       if (attempt.error) throw attempt.error;
       activeConsultations = await mapConsultaRows(attempt.data || [], sourceName);
+      selectedConsultaIds = new Set(
+        [...selectedConsultaIds].filter((id) => activeConsultations.some((c) => c.id === id))
+      );
       clearStatus('statusConsultas');
     }
 
@@ -6379,16 +6534,19 @@ async function fetchActiveLoans(){
     function renderConsultationTable(){
       const tbody = $('tbodyConsultas');
       if (!tbody) return;
+      updateConsultationWorkflowStageOptions();
       if (!activeConsultations.length){
-        tbody.innerHTML = '<tr><td colspan="8">Sem consultas locais ativas.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9">Sem consultas locais ativas.</td></tr>';
         return;
       }
       tbody.innerHTML = activeConsultations.map((c) => {
+        const checked = selectedConsultaIds.has(c.id) ? 'checked' : '';
         const workflowLabel = translateConsultationWorkflowStage(c.workflow_stage);
         const workflowDetail = consultationWorkflowDetail(c);
         const validity = c.validade ? `${esc(fmtDateTimeBelem(c.validade))} (Belém)` : '—';
         return `
-          <tr>
+          <tr data-consulta-row="${esc(c.id)}" class="${checked ? 'is-selected clickable-row' : 'clickable-row'}">
+            <td><input type="checkbox" ${checked} data-consulta-check="${esc(c.id)}" aria-label="Selecionar ${esc(c.sub_id)}"></td>
             <td>#${esc(c.consulta_id)}</td>
             <td class="mono">${esc(c.sub_id)}</td>
             <td>${esc(c.user_name)}${c.user_email && c.user_email !== '—' ? `<br><span class="mini subtle">${esc(c.user_email)}</span>` : ''}</td>
@@ -6492,13 +6650,13 @@ async function fetchActiveLoans(){
     }
 
     async function refreshConsultationsOnly({silent=false}={}){
-      if (!silent && $('tbodyConsultas')) $('tbodyConsultas').innerHTML = '<tr><td colspan="8">Carregando…</td></tr>';
+      if (!silent && $('tbodyConsultas')) $('tbodyConsultas').innerHTML = '<tr><td colspan="9">Carregando…</td></tr>';
       try {
         await fetchActiveConsultations();
         renderConsultationTable();
         clearStatus('statusConsultas');
       } catch (error) {
-        if ($('tbodyConsultas')) $('tbodyConsultas').innerHTML = '<tr><td colspan="8">Erro ao carregar consultas locais.</td></tr>';
+        if ($('tbodyConsultas')) $('tbodyConsultas').innerHTML = '<tr><td colspan="9">Erro ao carregar consultas locais.</td></tr>';
         setStatus('statusConsultas', error?.message || String(error || 'Erro ao carregar consultas locais.'), 'bad', false);
       }
       renderCounts();
@@ -6532,7 +6690,7 @@ async function fetchActiveLoans(){
       const runId = ++refreshSerial;
       if (!silent) {
         $('tbodyRes').innerHTML = '<tr><td colspan="8">Carregando…</td></tr>';
-        if ($('tbodyConsultas')) $('tbodyConsultas').innerHTML = '<tr><td colspan="8">Carregando…</td></tr>';
+        if ($('tbodyConsultas')) $('tbodyConsultas').innerHTML = '<tr><td colspan="9">Carregando…</td></tr>';
         $('tbodyLoans').innerHTML = '<tr><td colspan="9">Carregando…</td></tr>';
         $('tbodyBatches').innerHTML = '<tr><td colspan="9">Carregando…</td></tr>';
       }
@@ -6549,7 +6707,7 @@ async function fetchActiveLoans(){
         renderConsultationTable();
         clearStatus('statusConsultas');
       } else {
-        if ($('tbodyConsultas')) $('tbodyConsultas').innerHTML = '<tr><td colspan="8">Erro ao carregar consultas locais.</td></tr>';
+        if ($('tbodyConsultas')) $('tbodyConsultas').innerHTML = '<tr><td colspan="9">Erro ao carregar consultas locais.</td></tr>';
         setStatus('statusConsultas', res[1].reason?.message || String(res[1].reason || 'Erro ao carregar consultas locais.'), 'bad', false);
       }
       if (res[2].status === 'fulfilled') {
@@ -6602,6 +6760,10 @@ async function fetchActiveLoans(){
 
       if (scope === 'reservations') {
         await Promise.allSettled([refreshReservationsOnly({silent:true}), refreshConsultationsOnly({silent:true})]);
+        return;
+      }
+      if (scope === 'consultations') {
+        await refreshConsultationsOnly({silent:true});
         return;
       }
       if (scope === 'loans') {
@@ -7315,6 +7477,24 @@ async function fetchActiveLoans(){
       });
     }
 
+    function bindConsultationSelection(){
+      $('tbodyConsultas')?.addEventListener('click', (ev) => {
+        const check = ev.target.closest('[data-consulta-check]');
+        if (check) {
+          const id = Number(check.getAttribute('data-consulta-check'));
+          if (check.checked) selectedConsultaIds.add(id); else selectedConsultaIds.delete(id);
+          renderConsultationTable();
+          return;
+        }
+        const row = ev.target.closest('[data-consulta-row]');
+        if (!row) return;
+        const id = Number(row.getAttribute('data-consulta-row'));
+        if (!Number.isFinite(id)) return;
+        if (selectedConsultaIds.has(id)) selectedConsultaIds.delete(id); else selectedConsultaIds.add(id);
+        renderConsultationTable();
+      });
+    }
+
     function bindDynamicActions(){
       document.body.addEventListener('click', async (ev) => {
         const openReservaTaskBtn = ev.target.closest('[data-task-open-reserva]');
@@ -7634,6 +7814,28 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
         writePainelStateSync('reservations');
       } catch (error) {
         setStatus('statusRes', error?.message || 'Erro ao aplicar etapa.', 'bad');
+      }
+    });
+    $('btnApplyConsultWorkflowStage')?.addEventListener('click', async () => {
+      const stage = $('consultWorkflowStage')?.value || '';
+      const consultationScheduledFor = toIsoFromLocalInput($('consultScheduleAt')?.value);
+      if (!stage) {
+        setStatus('statusConsultas', 'Escolhe uma etapa do fluxo para aplicar.', 'warn');
+        return;
+      }
+      if (stage === 'consulta_agendada' && !consultationScheduledFor) {
+        setStatus('statusConsultas', 'Informe data e hora para agendar a consulta.', 'warn');
+        return;
+      }
+      try {
+        await setConsultationWorkflowStage(stage, selectedConsultationRows(), {
+          note: $('consultWorkflowNote')?.value.trim() || '',
+          consultationScheduledFor: stage === 'consulta_agendada' ? consultationScheduledFor : null,
+          targetStatusId: 'statusConsultas'
+        });
+        writePainelStateSync('consultations');
+      } catch (error) {
+        setStatus('statusConsultas', error?.message || 'Erro ao aplicar etapa.', 'bad');
       }
     });
     $('btnRecarregarRes').addEventListener('click', () => refreshReservationsOnly());
