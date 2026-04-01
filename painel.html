@@ -2105,6 +2105,144 @@
   </div>
 
   <script type="module">
+    (() => {
+      const btn = document.getElementById('btnSair');
+      if (!btn) return;
+
+      const boot = window.__ANARBIB_PAINEL_TOPBAR_AUTH__ = window.__ANARBIB_PAINEL_TOPBAR_AUTH__ || { installed: true };
+      const fallbackHref = String(
+        btn.getAttribute('data-auth-href') ||
+        'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html'
+      ).trim() || 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html';
+
+      let authClientPromise = null;
+      let refreshPromise = null;
+
+      const resolveHref = () => String(btn.dataset.authHref || btn.getAttribute('data-auth-href') || fallbackHref).trim() || fallbackHref;
+
+      function applyState({ mode = 'login', label = 'Login', disabled = false, busy = false, title = '' } = {}) {
+        btn.dataset.authMode = mode;
+        btn.dataset.authHref = resolveHref();
+        btn.textContent = label;
+        btn.disabled = !!disabled;
+        btn.setAttribute('aria-busy', busy ? 'true' : 'false');
+        btn.setAttribute('aria-label', label);
+        btn.title = title || (mode === 'logout' ? 'Encerrar sessão e voltar ao cadastro' : 'Ir para o cadastro / login');
+      }
+
+      async function loadSupabaseClient() {
+        if (!authClientPromise) {
+          authClientPromise = import('./js/blmf-supabase.js')
+            .then((mod) => mod?.supabase || null)
+            .catch((error) => {
+              console.warn('Não consegui carregar o cliente de auth do painel.', error);
+              return null;
+            });
+        }
+        return authClientPromise;
+      }
+
+      async function resolveSession() {
+        const client = await loadSupabaseClient();
+        if (!client?.auth) return null;
+
+        try {
+          const { data: { session } = {} } = await client.auth.getSession();
+          if (session?.user?.id) return session;
+        } catch (error) {
+          console.warn('getSession falhou no bootstrap leve do auth do painel.', error);
+        }
+
+        try {
+          const { data } = await client.auth.getUser();
+          if (data?.user?.id) {
+            const { data: { session } = {} } = await client.auth.getSession();
+            if (session?.user?.id) return session;
+          }
+        } catch (error) {
+          console.warn('getUser falhou no bootstrap leve do auth do painel.', error);
+        }
+
+        return null;
+      }
+
+      async function refreshFromClient() {
+        if (refreshPromise) return refreshPromise;
+
+        refreshPromise = (async () => {
+          const currentMode = String(btn.dataset.authMode || 'login').trim().toLowerCase();
+          if (currentMode !== 'logout') {
+            applyState({ mode: 'boot', label: 'Conectando...', disabled: false, busy: true, title: 'Verificando a sessão atual.' });
+          }
+
+          const session = await resolveSession();
+          if (session?.user?.id) {
+            applyState({ mode: 'logout', label: 'Logout', disabled: false, busy: false });
+          } else {
+            applyState({ mode: 'login', label: 'Login', disabled: false, busy: false });
+          }
+          return session;
+        })().finally(() => {
+          refreshPromise = null;
+        });
+
+        return refreshPromise;
+      }
+
+      btn.addEventListener('click', async (event) => {
+        event.preventDefault();
+        const targetHref = resolveHref();
+        const authMode = String(btn.dataset.authMode || 'login').trim().toLowerCase();
+
+        if (authMode !== 'logout') {
+          window.location.href = targetHref;
+          return;
+        }
+
+        applyState({ mode: 'logout', label: 'Saindo...', disabled: true, busy: true, title: 'Encerrando a sessão.' });
+        try {
+          const client = await loadSupabaseClient();
+          if (client?.auth?.signOut) {
+            await Promise.race([
+              client.auth.signOut(),
+              new Promise((resolve) => setTimeout(resolve, 2500))
+            ]);
+          }
+        } catch (error) {
+          console.warn('Não consegui encerrar a sessão no bootstrap leve do painel.', error);
+        } finally {
+          applyState({ mode: 'login', label: 'Login', disabled: false, busy: false });
+          window.location.href = targetHref;
+        }
+      });
+
+      window.addEventListener('pageshow', () => { void refreshFromClient(); });
+      window.addEventListener('focus', () => { void refreshFromClient(); });
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') void refreshFromClient();
+      });
+      window.addEventListener('storage', (event) => {
+        const key = String(event?.key || '');
+        if (!key || /auth|supabase|sb-.*-auth-token/i.test(key)) {
+          void refreshFromClient();
+        }
+      });
+
+      boot.refresh = refreshFromClient;
+      boot.applyState = applyState;
+      boot.resolveHref = resolveHref;
+
+      applyState({
+        mode: String(btn.dataset.authMode || 'login').trim().toLowerCase() || 'login',
+        label: String(btn.textContent || 'Login').trim() || 'Login',
+        disabled: false,
+        busy: false
+      });
+      void refreshFromClient();
+    })();
+  </script>
+
+  <script type="module">
     import { supabase } from "./js/blmf-supabase.js";
     import {
       PARTNER_PRESETS,
@@ -2818,7 +2956,7 @@
       btn.setAttribute('aria-label', label);
       btn.title = 'Aguarda a verificação da sessão.';
       btn.setAttribute('aria-busy', 'true');
-      btn.disabled = true;
+      btn.disabled = false;
     }
 
     function updateTopbarAuthButton(isLoggedIn){
@@ -8181,30 +8319,32 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
         setStatus('statusPerfil', e.message || String(e), 'bad', false);
       }
     });
-    $('btnSair').addEventListener('click', async (event) => {
-      const btn = $('btnSair');
-      const targetHref = String(btn?.dataset?.authHref || resolveCadastroHref()).trim() || resolveCadastroHref();
-      const authMode = String(btn?.dataset?.authMode || 'login').trim().toLowerCase();
-      if (authMode !== 'logout') {
-        event.preventDefault();
-        window.location.href = targetHref;
-        return;
-      }
+    if (!window.__ANARBIB_PAINEL_TOPBAR_AUTH__?.installed) {
+      $('btnSair').addEventListener('click', async (event) => {
+        const btn = $('btnSair');
+        const targetHref = String(btn?.dataset?.authHref || resolveCadastroHref()).trim() || resolveCadastroHref();
+        const authMode = String(btn?.dataset?.authMode || 'login').trim().toLowerCase();
+        if (authMode !== 'logout') {
+          event.preventDefault();
+          window.location.href = targetHref;
+          return;
+        }
 
-      btn.disabled = true;
-      try {
-        await Promise.race([
-          supabase.auth.signOut(),
-          new Promise((resolve) => setTimeout(resolve, 2500))
-        ]);
-      } catch (error) {
-        console.warn('Não consegui encerrar a sessão do painel; seguindo para o cadastro mesmo assim.', error);
-      } finally {
-        resetPainelAuthChrome();
-        btn.disabled = false;
-        window.location.href = targetHref;
-      }
-    });
+        btn.disabled = true;
+        try {
+          await Promise.race([
+            supabase.auth.signOut(),
+            new Promise((resolve) => setTimeout(resolve, 2500))
+          ]);
+        } catch (error) {
+          console.warn('Não consegui encerrar a sessão do painel; seguindo para o cadastro mesmo assim.', error);
+        } finally {
+          resetPainelAuthChrome();
+          btn.disabled = false;
+          window.location.href = targetHref;
+        }
+      });
+    }
 
 
 function setPartnerProbeMessage(msg = '', kind = 'info') {
