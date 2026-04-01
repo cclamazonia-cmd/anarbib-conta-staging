@@ -9337,6 +9337,33 @@ function initPartnerProbeUi() {
       return null;
     }
 
+    async function runPainelDataLoadsSafely({ syncId } = {}){
+      const steps = [
+        ['loadLibraryServiceState', () => loadLibraryServiceState()],
+        ['loadLibraryIdentity', () => loadLibraryIdentity()],
+        ['loadLibraryTheme', () => loadLibraryTheme()],
+        ['loadDocGovernance', () => loadDocGovernance()],
+        ['loadInterlibraryRequests', () => loadInterlibraryRequests({ silent:true })],
+        ['loadLibrarySchedule', () => loadLibrarySchedule()],
+        ['loadLocalRules', () => loadLocalRules()],
+        ['loadLibraryRegimento', () => loadLibraryRegimento()],
+        ['loadInternalTaskLibrarians', () => loadInternalTaskLibrarians()],
+        ['loadInternalTasks', () => loadInternalTasks({ silent:true })],
+      ];
+
+      for (const [stepName, stepRun] of steps) {
+        if (syncId && syncId !== authSyncSerial) return;
+        try {
+          await stepRun();
+        } catch (error) {
+          console.warn(`Painel: etapa não bloqueante falhou (${stepName}).`, error);
+        }
+      }
+
+      if (syncId && syncId !== authSyncSerial) return;
+      await refreshCollections();
+    }
+
     async function syncPainelAuthState(nextSession, { reloadData = false, allowAnonymousReset = false } = {}){
       const syncId = ++authSyncSerial;
       const previousSession = session;
@@ -9377,17 +9404,7 @@ function initPartnerProbeUi() {
         await fillHeader();
         if (!reloadData) return true;
 
-        await loadLibraryServiceState();
-        await loadLibraryIdentity();
-        await loadLibraryTheme();
-        await loadDocGovernance();
-        await loadInterlibraryRequests({ silent:true });
-        await loadLibrarySchedule();
-        await loadLocalRules();
-        await loadLibraryRegimento();
-        await loadInternalTaskLibrarians();
-        await loadInternalTasks({ silent:true });
-        await refreshCollections();
+        await runPainelDataLoadsSafely({ syncId });
         if (syncId !== authSyncSerial) return true;
         return true;
       } catch (error) {
