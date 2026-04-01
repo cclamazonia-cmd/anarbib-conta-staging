@@ -2108,9 +2108,6 @@
   <script type="module">
     import { supabase } from "./js/blmf-supabase.js";
 
-    // Désactivation locale du mini-bootstrap auth historique du haut.
-    // Le pilote auth conservé doit être celui du gros module principal plus bas.
-    const PAINEL_MIN_BOOTSTRAP_DISABLED = true;
     const painelMinBoot = window.__ANARBIB_PAINEL_BOOTSTRAP_STATE__ = window.__ANARBIB_PAINEL_BOOTSTRAP_STATE__ || { hydrated: false, hasAccess: false };
 
     const $boot = (id) => document.getElementById(id);
@@ -2135,7 +2132,6 @@
     }
 
     function bootUpdateTopbarAuthButton(isLoggedIn) {
-      if (PAINEL_MIN_BOOTSTRAP_DISABLED) return;
       const btn = $boot('btnSair');
       if (!btn) return;
       btn.dataset.authMode = isLoggedIn ? 'logout' : 'login';
@@ -2148,7 +2144,6 @@
     }
 
     function bootHideActiveLibraryLogo() {
-      if (PAINEL_MIN_BOOTSTRAP_DISABLED) return;
       const logo = $boot('activeLibraryLogo');
       if (!logo) return;
       logo.classList.add('hidden');
@@ -2184,7 +2179,6 @@
     }
 
     function bootApplyActiveLibraryLogo(row) {
-      if (PAINEL_MIN_BOOTSTRAP_DISABLED) return;
       const logo = $boot('activeLibraryLogo');
       if (!logo) return;
       const candidates = bootLogoCandidates(row || {});
@@ -2221,7 +2215,6 @@
     }
 
     function bootResetPainelChrome() {
-      if (PAINEL_MIN_BOOTSTRAP_DISABLED) return;
       painelMinBoot.session = null;
       painelMinBoot.rows = [];
       painelMinBoot.currentAccessRow = null;
@@ -2393,7 +2386,6 @@
     }
 
     function bootRenderPainelChrome(payload) {
-      if (PAINEL_MIN_BOOTSTRAP_DISABLED) return;
       const identity = { ...(payload?.currentIdentityRow || {}), ...(payload?.currentAccessRow || {}) };
       const accessEmail = String(identity?.email || payload?.session?.user?.email || '').trim();
       const accessPublicId = String(identity?.public_id || '').trim();
@@ -2434,7 +2426,6 @@
     }
 
     async function bootHydratePainelAuthChrome(nextSession = null, { allowAnonymousReset = false } = {}) {
-      if (PAINEL_MIN_BOOTSTRAP_DISABLED) return null;
       const previousSession = painelMinBoot?.session;
       const session = nextSession?.user?.id ? nextSession : await bootResolveSession();
       if (!session?.user?.id) {
@@ -2483,7 +2474,7 @@
     }
 
     const bootAuthButton = $boot('btnSair');
-    if (!PAINEL_MIN_BOOTSTRAP_DISABLED && bootAuthButton && !bootAuthButton.dataset.minAuthBound) {
+    if (bootAuthButton && !bootAuthButton.dataset.minAuthBound) {
       bootAuthButton.dataset.minAuthBound = 'true';
       bootAuthButton.addEventListener('click', async (event) => {
         event.preventDefault();
@@ -2513,43 +2504,41 @@
       });
     }
 
-    if (!PAINEL_MIN_BOOTSTRAP_DISABLED) window.addEventListener('pageshow', () => { void bootHydratePainelAuthChrome(); });
-    if (!PAINEL_MIN_BOOTSTRAP_DISABLED) window.addEventListener('focus', () => { void bootHydratePainelAuthChrome(); });
-    if (!PAINEL_MIN_BOOTSTRAP_DISABLED) document.addEventListener('visibilitychange', () => {
+    window.addEventListener('pageshow', () => { void bootHydratePainelAuthChrome(); });
+    window.addEventListener('focus', () => { void bootHydratePainelAuthChrome(); });
+    document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') void bootHydratePainelAuthChrome();
     });
-    if (!PAINEL_MIN_BOOTSTRAP_DISABLED) window.addEventListener('storage', (event) => {
+    window.addEventListener('storage', (event) => {
       const key = String(event?.key || '');
       if (!key || /auth|supabase|sb-.*-auth-token/i.test(key)) {
         void bootHydratePainelAuthChrome();
       }
     });
 
-    if (!PAINEL_MIN_BOOTSTRAP_DISABLED) {
-      supabase.auth.onAuthStateChange(async (event, nextSession) => {
-        const eventName = String(event || '').trim().toUpperCase();
-        if (nextSession?.user?.id) {
-          await bootHydratePainelAuthChrome(nextSession);
-          return;
-        }
-        if (eventName === 'SIGNED_OUT') {
-          bootUpdateTopbarAuthButton(false);
-          bootResetPainelChrome();
-          return;
-        }
-        const recovered = await bootResolveSession(4, 120);
-        if (recovered?.user?.id) {
-          await bootHydratePainelAuthChrome(recovered);
-          return;
-        }
-        if (!painelMinBoot?.session?.user?.id && !painelMinBoot?.hydrated) {
-          bootUpdateTopbarAuthButton(false);
-          bootResetPainelChrome();
-        }
-      });
+    supabase.auth.onAuthStateChange(async (event, nextSession) => {
+      const eventName = String(event || '').trim().toUpperCase();
+      if (nextSession?.user?.id) {
+        await bootHydratePainelAuthChrome(nextSession);
+        return;
+      }
+      if (eventName === 'SIGNED_OUT') {
+        bootUpdateTopbarAuthButton(false);
+        bootResetPainelChrome();
+        return;
+      }
+      const recovered = await bootResolveSession(4, 120);
+      if (recovered?.user?.id) {
+        await bootHydratePainelAuthChrome(recovered);
+        return;
+      }
+      if (!painelMinBoot?.session?.user?.id && !painelMinBoot?.hydrated) {
+        bootUpdateTopbarAuthButton(false);
+        bootResetPainelChrome();
+      }
+    });
 
-      await bootHydratePainelAuthChrome();
-    }
+    await bootHydratePainelAuthChrome();
   </script>
 
   <script type="module">
@@ -3280,7 +3269,11 @@
       updateTopbarAuthButton(false);
       hideActiveLibraryLogo();
       $('btnModoLeitor')?.classList.add('hidden');
-      $('helloLine').textContent = '';
+      const helloLine = $('helloLine');
+      if (helloLine) {
+        helloLine.dataset.baseText = '';
+        helloLine.textContent = '';
+      }
       setChip('chipFuncao', 'Função: —');
       setChip('chipEmail', 'E-mail: —');
     }
@@ -6386,7 +6379,12 @@ function belemNowParts(){
       if (accessPublicId) helloParts.push('ID ' + accessPublicId);
       if (libraryLabel) helloParts.push(libraryLabel);
       if (!helloParts.length && accessEmail) helloParts.push(accessEmail);
-      $('helloLine').textContent = helloParts.length ? ('Conectad@: ' + helloParts.join(' · ')) : '';
+      const helloText = helloParts.length ? ('Conectad@: ' + helloParts.join(' · ')) : '';
+      const helloLine = $('helloLine');
+      if (helloLine) {
+        helloLine.dataset.baseText = helloText;
+        helloLine.textContent = helloText;
+      }
       $('btnModoLeitor').classList.toggle('hidden', !isLibrarian);
       updateTopbarAuthButton(!!session?.user?.id);
       renderActiveLibraryLogo(currentLibraryRow || identity || {});
@@ -9328,11 +9326,18 @@ function initPartnerProbeUi() {
     async function syncPainelAuthState(nextSession, { reloadData = false, allowAnonymousReset = false } = {}){
       const syncId = ++authSyncSerial;
       const previousSession = session;
+      const adoptedBootstrapBeforeSync = !allowAnonymousReset && adoptPainelBootstrapState();
+      if (!previousSession?.user?.id && session?.user?.id && adoptedBootstrapBeforeSync) {
+        updateTopbarAuthButton(true);
+      }
       painelAuthSyncInFlight = true;
-      updateTopbarAuthButton(!!previousSession?.user?.id);
+      updateTopbarAuthButton(!!session?.user?.id || !!previousSession?.user?.id);
 
       try {
         session = await resolvePainelSession(nextSession, { allowAnonymousReset });
+        if (!session?.user?.id && !allowAnonymousReset && adoptPainelBootstrapState()) {
+          session = window.__ANARBIB_PAINEL_BOOTSTRAP_STATE__?.session || session;
+        }
         if (!session?.user?.id && previousSession?.user?.id && !allowAnonymousReset) {
           session = previousSession;
         }
@@ -9345,7 +9350,10 @@ function initPartnerProbeUi() {
           return false;
         }
 
-        isLibrarian = await requireBibliotecaOrRedirect({ attempts: 8, delayMs: 220 });
+        const adoptedBootstrapAccess = !allowAnonymousReset && adoptPainelBootstrapState();
+        isLibrarian = adoptedBootstrapAccess && !!currentAccessRow
+          ? true
+          : await requireBibliotecaOrRedirect({ attempts: 8, delayMs: 220 });
         if (!isLibrarian) {
           hideActiveLibraryLogo();
           $('btnModoLeitor')?.classList.add('hidden');
