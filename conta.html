@@ -2675,7 +2675,7 @@ button[type="submit"] *,
     }
 
     function consultationCancelOnlyAction(row) {
-      return `<div class="reservation-actions single-action"><button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-consulta-v2="${escapeHtml(Number(row?.consulta_id) || "")}|${escapeHtml(Number(row?.line_no) || "")}">Cancelar reserva</button></div>`;
+      return `<div class="reservation-actions single-action"><button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-consulta-v2="${escapeHtml(Number(row?.consulta_id) || "")}|${escapeHtml(Number(row?.line_no) || "")}">Cancelar consulta</button></div>`;
     }
 
     function parseReservationLineNoFromSubId(subId) {
