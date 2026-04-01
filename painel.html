@@ -568,7 +568,7 @@
         <a class="btn" id="btnCatalogacao" href="https://cclamazonia-cmd.github.io/anarbib-staging/catalogacao.html">Catalogação</a>
         <a class="btn" id="btnManual" href="https://cclamazonia-cmd.github.io/anarbib-staging/Manual_do_AnarBib.pdf" target="_blank" rel="noopener noreferrer">Manual do AnarBib</a>
         <a class="btn" id="btnModoLeitor" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html">Ir para modo leitor</a>
-        <button class="btn primary" id="btnSair" type="button" data-auth-mode="boot" data-auth-href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html" aria-busy="true" disabled>Conectando...</button>
+        <button class="btn primary" id="btnSair" type="button" data-auth-mode="login" data-auth-href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html">Login</button>
       </div>
     </div>
 
@@ -8884,7 +8884,7 @@ function initPartnerProbeUi() {
 
       if (!session?.user?.id) {
         if (allowAnonymousReset) resetPainelAuthChrome();
-        else setTopbarAuthButtonBootState('Aguardando sessão...');
+        else updateTopbarAuthButton(false);
         return false;
       }
 
