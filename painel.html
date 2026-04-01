@@ -568,7 +568,7 @@
         <a class="btn" id="btnCatalogacao" href="https://cclamazonia-cmd.github.io/anarbib-staging/catalogacao.html">Catalogação</a>
         <a class="btn" id="btnManual" href="https://cclamazonia-cmd.github.io/anarbib-staging/Manual_do_AnarBib.pdf" target="_blank" rel="noopener noreferrer">Manual do AnarBib</a>
         <a class="btn" id="btnModoLeitor" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html">Ir para modo leitor</a>
-        <button class="btn primary" id="btnSair" type="button" data-auth-mode="login" data-auth-href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html" onclick="if ((this.dataset.authMode || 'login') === 'login') { window.location.href = (this.dataset.authHref || 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html'); return false; }">Login</button>
+        <button class="btn primary" id="btnSair" type="button" data-auth-mode="boot" data-auth-href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html" aria-busy="true" disabled>Conectando...</button>
       </div>
     </div>
 
@@ -2809,6 +2809,18 @@
       return String(ROUTES?.CADASTRO || CONFIG?.ROUTES?.cadastro || FALLBACK_CONFIG?.ROUTES?.cadastro || 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html').trim() || 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html';
     }
 
+    function setTopbarAuthButtonBootState(label='Conectando...'){
+      const btn = $('btnSair');
+      if (!btn) return;
+      btn.dataset.authMode = 'boot';
+      btn.dataset.authHref = resolveCadastroHref();
+      btn.textContent = label;
+      btn.setAttribute('aria-label', label);
+      btn.title = 'Aguarda a verificação da sessão.';
+      btn.setAttribute('aria-busy', 'true');
+      btn.disabled = true;
+    }
+
     function updateTopbarAuthButton(isLoggedIn){
       const btn = $('btnSair');
       if (!btn) return;
@@ -2819,6 +2831,8 @@
       btn.textContent = isLoggedIn ? 'Logout' : 'Login';
       btn.setAttribute('aria-label', isLoggedIn ? 'Logout' : 'Login');
       btn.title = isLoggedIn ? 'Encerrar sessão e voltar ao cadastro' : 'Ir para o cadastro / login';
+      btn.setAttribute('aria-busy', 'false');
+      btn.disabled = false;
     }
 
     function resetPainelAuthChrome(){
@@ -2833,6 +2847,14 @@
       $('helloLine').textContent = '';
       setChip('chipFuncao', 'Função: —');
       setChip('chipEmail', 'E-mail: —');
+    }
+
+    async function recheckPainelSessionAndSync({ reloadData=true } = {}){
+      const recovered = await getConfirmedCurrentSession({ attempts: 10, delayMs: 200 });
+      if (!recovered?.user?.id) return false;
+      await syncPainelAuthState(recovered, { reloadData, allowAnonymousReset: false });
+      initializePainelUiOnce();
+      return true;
     }
 
     function applyActiveLibraryLogoCandidate(index=0){
@@ -8850,6 +8872,7 @@ function initPartnerProbeUi() {
     async function syncPainelAuthState(nextSession, { reloadData=false, allowAnonymousReset=false } = {}){
       const syncId = ++authSyncSerial;
       const previousSession = session;
+      if (!allowAnonymousReset) setTopbarAuthButtonBootState('Conectando...');
       session = nextSession || null;
 
       if (!session?.user?.id) {
@@ -8859,12 +8882,13 @@ function initPartnerProbeUi() {
         session = previousSession;
       }
 
-      updateTopbarAuthButton(!!session?.user?.id);
-
       if (!session?.user?.id) {
         if (allowAnonymousReset) resetPainelAuthChrome();
+        else setTopbarAuthButtonBootState('Aguardando sessão...');
         return false;
       }
+
+      updateTopbarAuthButton(true);
 
       try {
         isLibrarian = await requireBibliotecaOrRedirect({ attempts: 8, delayMs: 220 });
@@ -8910,13 +8934,21 @@ function initPartnerProbeUi() {
 
     if (!session?.user?.id) {
       setTimeout(async () => {
-        const lateSession = await getConfirmedCurrentSession({ attempts: 10, delayMs: 200 });
-        if (lateSession?.user?.id) {
-          await syncPainelAuthState(lateSession, { reloadData: true, allowAnonymousReset: false });
-        }
-        initializePainelUiOnce();
+        await recheckPainelSessionAndSync({ reloadData: true });
       }, 700);
     }
+
+    window.addEventListener('pageshow', async () => {
+      if (!session?.user?.id) await recheckPainelSessionAndSync({ reloadData: true });
+    });
+    window.addEventListener('focus', async () => {
+      if (!session?.user?.id) await recheckPainelSessionAndSync({ reloadData: true });
+    });
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState === 'visible' && !session?.user?.id) {
+        await recheckPainelSessionAndSync({ reloadData: true });
+      }
+    });
 
     initPartnerProbeUi();
   </script>
