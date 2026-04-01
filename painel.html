@@ -1549,7 +1549,6 @@
                 <div class="mini">Pedidos ativos de consulta no local, separados do fluxo de empréstimo.</div>
               </div>
               <div class="actions" style="margin-top:0">
-                <button class="btn" id="btnCancelarConsultasSelecionadas" type="button">Cancelar pedido</button>
                 <button class="btn" id="btnRecarregarConsultas" type="button">Recarregar</button>
               </div>
             </div>
@@ -6648,13 +6647,7 @@ function belemNowParts(){
     }
 
     function consultationLooksActiveForWorkflow(row){
-      const itemStatus = String(firstFilledValue(row?.item_status, row?.status, '')).trim().toLowerCase();
-      const workflowStage = String(firstFilledValue(row?.workflow_stage_effective, row?.workflow_stage, row?.stage, itemStatus, 'solicitada')).trim().toLowerCase();
-      const globalStatus = String(firstFilledValue(row?.consulta_status, row?.status_global, row?.consultation_status, '')).trim().toLowerCase();
-      if (['consultada', 'cancelada_leitor', 'cancelada_biblioteca', 'expirada'].includes(itemStatus)) return false;
-      if (['consulta_realizada', 'cancelada_leitor', 'cancelada_biblioteca', 'expirada'].includes(workflowStage)) return false;
-      if (!itemStatus && !workflowStage && ['encerrada', 'cancelada', 'closed'].includes(globalStatus)) return false;
-      return true;
+      return String(firstFilledValue(row?.item_status, row?.status, '')).trim().toLowerCase() === 'ativa';
     }
 
     const buildConsultationSyntheticId = (consultaId, lineNo) => Number(`${consultaId}${String(lineNo).padStart(3, '0')}`);
@@ -6823,10 +6816,10 @@ function belemNowParts(){
       const libraryId = await resolvePainelLibraryIdForData();
       let rows = [];
       let sourceName = 'api.consulta_itens_followup_ui';
-      let usedRawFallback = false;
       const attempt = await apiFrom('api', 'consulta_itens_followup_ui')
         .select('*')
         .eq('library_id', libraryId)
+        .eq('item_status', 'ativa')
         .limit(800);
       if (attempt.error) {
         console.warn('Painel: leitura api.consulta_itens_followup_ui falhou; tentando fallback local.', attempt.error);
@@ -6834,7 +6827,7 @@ function belemNowParts(){
         rows = attempt.data || [];
       }
 
-      const loadRawConsultationRows = async () => {
+      if (!rows.length) {
         sourceName = 'public.consultas_locais_v2+consulta_linhas_v2';
         const consultasRes = await supabase
           .from('consultas_locais_v2')
@@ -6893,19 +6886,9 @@ function belemNowParts(){
             };
           });
         }
-        return rows;
-      };
-
-      if (!rows.length) {
-        usedRawFallback = true;
-        rows = await loadRawConsultationRows();
       }
 
       activeConsultations = await mapConsultaRows(rows || [], sourceName);
-      if (!activeConsultations.length && !usedRawFallback) {
-        rows = await loadRawConsultationRows();
-        activeConsultations = await mapConsultaRows(rows || [], sourceName);
-      }
       selectedConsultaIds = new Set([...selectedConsultaIds].filter((id) => activeConsultations.some((c) => c.id === id)));
       clearStatus('statusConsultas');
     }
@@ -7423,8 +7406,8 @@ async function fetchActiveLoans(){
         const rpc = await supabase.rpc('fn_v2_set_reserva_linhas_workflow', {
           p_reserva_id: Number(reservaId),
           p_line_nos: lineNos,
-          p_workflow_stage: stage,
-          p_workflow_note: note || null,
+          p_stage: stage,
+          p_note: note || null,
           p_pickup_scheduled_for: pickupScheduledFor || null,
         });
         if (rpc.error) throw rpc.error;
@@ -7442,13 +7425,11 @@ async function fetchActiveLoans(){
       updateReservationWorkflowStageOptions();
       if (!activeReservations.length){
         tbody.innerHTML = '<tr><td colspan="8">Sem reservas ativas.</td></tr>';
-        updateBulkSelectionButtons();
         return;
       }
       const rows = activeReservations.filter(reservationMatchesFilter);
       if (!rows.length){
         tbody.innerHTML = '<tr><td colspan="8">Nenhuma reserva neste recorte.</td></tr>';
-        updateBulkSelectionButtons();
         return;
       }
       tbody.innerHTML = rows.map((r) => {
@@ -7458,7 +7439,7 @@ async function fetchActiveLoans(){
         const workflowDetail = reservationWorkflowDetail(r);
         return `
           <tr data-reserva-row="${esc(r.id)}" class="${checked ? 'is-selected clickable-row' : 'clickable-row'}">
-            <td><input type="checkbox" ${checked} data-reserva-check="${esc(r.id)}" aria-label="Selecionar ${esc(r.sub_id)}" onclick="event.stopPropagation()" onchange="window.__anarbibToggleReservaSelection && window.__anarbibToggleReservaSelection(${esc(r.id)}, this.checked)"></td>
+            <td><input type="checkbox" ${checked} data-reserva-check="${esc(r.id)}" aria-label="Selecionar ${esc(r.sub_id)}"></td>
             <td class="mono">${esc(r.sub_id)}</td>
             <td>${esc(r.user_name)}${r.user_email && r.user_email !== '—' ? `<br><span class="mini subtle">${esc(r.user_email)}</span>` : ''}</td>
             <td>${esc(r.titulo)}${r.autor ? `<br><span class="mini subtle">${esc(r.autor)}</span>` : ''}</td>
@@ -7468,7 +7449,6 @@ async function fetchActiveLoans(){
             <td>${esc(fmtDateTimeBelem(r.validade))} (Belém)<br><span class="pill ${esc(followUp.className)}">${esc(followUp.label)}</span><br><span class="mini subtle">${esc(followUp.detail)}</span></td>
           </tr>`;
       }).join('');
-      updateBulkSelectionButtons();
     }
 
     function renderConsultationTable(){
@@ -7477,7 +7457,6 @@ async function fetchActiveLoans(){
       updateConsultationWorkflowStageOptions();
       if (!activeConsultations.length){
         tbody.innerHTML = '<tr><td colspan="9">Sem consultas locais ativas.</td></tr>';
-        updateBulkSelectionButtons();
         return;
       }
       tbody.innerHTML = activeConsultations.map((c) => {
@@ -7487,7 +7466,7 @@ async function fetchActiveLoans(){
         const validity = c.validade ? `${esc(fmtDateTimeBelem(c.validade))} (Belém)` : '—';
         return `
           <tr data-consulta-row="${esc(c.id)}" class="${checked ? 'is-selected clickable-row' : 'clickable-row'}">
-            <td><input type="checkbox" ${checked} data-consulta-check="${esc(c.id)}" aria-label="Selecionar ${esc(c.sub_id)}" onclick="event.stopPropagation()" onchange="window.__anarbibToggleConsultaSelection && window.__anarbibToggleConsultaSelection(${esc(c.id)}, this.checked)"></td>
+            <td><input type="checkbox" ${checked} data-consulta-check="${esc(c.id)}" aria-label="Selecionar ${esc(c.sub_id)}"></td>
             <td>#${esc(c.consulta_id)}</td>
             <td class="mono">${esc(c.sub_id)}</td>
             <td>${esc(c.user_name)}${c.user_email && c.user_email !== '—' ? `<br><span class="mini subtle">${esc(c.user_email)}</span>` : ''}</td>
@@ -7498,7 +7477,6 @@ async function fetchActiveLoans(){
             <td>${validity}</td>
           </tr>`;
       }).join('');
-      updateBulkSelectionButtons();
     }
 
     function renderLoansTable(){
@@ -7581,7 +7559,7 @@ async function fetchActiveLoans(){
       try {
         await fetchActiveReservations();
         renderReservationTable();
-        if (!silent) clearStatus('statusRes');
+        clearStatus('statusRes');
       } catch (error) {
         $('tbodyRes').innerHTML = '<tr><td colspan="8">Erro ao carregar reservas.</td></tr>';
         setStatus('statusRes', error?.message || String(error || 'Erro ao carregar reservas.'), 'bad', false);
@@ -7596,7 +7574,7 @@ async function fetchActiveLoans(){
       try {
         await fetchActiveConsultations();
         renderConsultationTable();
-        if (!silent) clearStatus('statusConsultas');
+        clearStatus('statusConsultas');
       } catch (error) {
         if ($('tbodyConsultas')) $('tbodyConsultas').innerHTML = '<tr><td colspan="9">Erro ao carregar consultas locais.</td></tr>';
         setStatus('statusConsultas', error?.message || String(error || 'Erro ao carregar consultas locais.'), 'bad', false);
@@ -8398,45 +8376,22 @@ async function fetchActiveLoans(){
         setStatus('statusRes', e.message || String(e), 'bad', false);
       } finally {
         $('btnCancelarSelecionados').disabled = false;
-        updateBulkSelectionButtons();
       }
     }
 
-    async function cancelConsultations(consultationIds){
-      const ids = Array.from(new Set((consultationIds || []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0)));
-      if (!ids.length) return setStatus('statusConsultas', 'Selecione pelo menos 1 pedido de consulta.', 'warn');
-      $('btnCancelarConsultasSelecionadas').disabled = true;
-      try {
-        const rows = activeConsultations.filter((c) => ids.includes(c.id));
-        if (!rows.length) return setStatus('statusConsultas', 'Os pedidos selecionados já não estão ativos.', 'warn');
-
-        await setConsultationWorkflowStage('cancelada_biblioteca', rows, {
-          note: 'Cancelamento registrado pela biblioteca no painel.',
-          consultationScheduledFor: null,
-          targetStatusId: 'statusConsultas'
-        });
-
-        selectedConsultaIds = new Set([...selectedConsultaIds].filter((id) => !ids.includes(id)));
-        await refreshConsultationsOnly({silent:true});
-        writePainelStateSync('consultations');
-      } catch (e) {
-        setStatus('statusConsultas', e.message || String(e), 'bad', false);
-      } finally {
-        $('btnCancelarConsultasSelecionadas').disabled = false;
-        updateBulkSelectionButtons();
-      }
-    }
-
-    function updateBulkSelectionButtons(){
-      const reservationCount = selectedReservaIds.size;
-      const consultationCount = selectedConsultaIds.size;
-      if ($('btnConfirmarSelecionados')) $('btnConfirmarSelecionados').disabled = reservationCount < 1;
-      if ($('btnCancelarSelecionados')) $('btnCancelarSelecionados').disabled = reservationCount < 1;
-      if ($('btnCancelarConsultasSelecionadas')) $('btnCancelarConsultasSelecionadas').disabled = consultationCount < 1;
-      if ($('btnApplyResWorkflowStage')) $('btnApplyResWorkflowStage').disabled = reservationCount < 1;
-      if ($('btnApplyConsultWorkflowStage')) $('btnApplyConsultWorkflowStage').disabled = consultationCount < 1;
-    }
-
+    window.__anarbibPainelUpdateBulkSelectionButtons = updateBulkSelectionButtons;
+    window.__anarbibPainelMainHooks = {
+      fetchActiveReservations,
+      fetchActiveConsultations,
+      fetchActiveLoans,
+      renderReservationTable,
+      renderConsultationTable,
+      renderLoansTable,
+      renderBatchTable,
+      renderCounts,
+      renderProfileLists,
+      updateBulkSelectionButtons,
+    };
     window.__anarbibToggleReservaSelection = (id, checked) => {
       const numericId = Number(id);
       if (!Number.isFinite(numericId)) return;
@@ -8444,7 +8399,6 @@ async function fetchActiveLoans(){
       renderReservationTable();
       updateBulkSelectionButtons();
     };
-
     window.__anarbibToggleConsultaSelection = (id, checked) => {
       const numericId = Number(id);
       if (!Number.isFinite(numericId)) return;
@@ -8454,56 +8408,38 @@ async function fetchActiveLoans(){
     };
 
     function bindReservationSelection(){
-      const tbody = $('tbodyRes');
-      if (!tbody || tbody.dataset.selectionBound === 'true') return;
-      tbody.dataset.selectionBound = 'true';
-
-      tbody.addEventListener('change', (ev) => {
+      $('tbodyRes').addEventListener('click', (ev) => {
         const check = ev.target.closest('[data-reserva-check]');
-        if (!check) return;
-        const id = Number(check.getAttribute('data-reserva-check'));
-        if (!Number.isFinite(id)) return;
-        if (check.checked) selectedReservaIds.add(id); else selectedReservaIds.delete(id);
-        renderReservationTable();
-        updateBulkSelectionButtons();
-      });
-
-      tbody.addEventListener('click', (ev) => {
-        if (ev.target.closest('input, button, a, label, select, textarea')) return;
+        if (check) {
+          const id = Number(check.getAttribute('data-reserva-check'));
+          if (check.checked) selectedReservaIds.add(id); else selectedReservaIds.delete(id);
+          renderReservationTable();
+          return;
+        }
         const row = ev.target.closest('[data-reserva-row]');
         if (!row) return;
         const id = Number(row.getAttribute('data-reserva-row'));
         if (!Number.isFinite(id)) return;
         if (selectedReservaIds.has(id)) selectedReservaIds.delete(id); else selectedReservaIds.add(id);
         renderReservationTable();
-        updateBulkSelectionButtons();
       });
     }
 
     function bindConsultationSelection(){
-      const tbody = $('tbodyConsultas');
-      if (!tbody || tbody.dataset.selectionBound === 'true') return;
-      tbody.dataset.selectionBound = 'true';
-
-      tbody.addEventListener('change', (ev) => {
+      $('tbodyConsultas')?.addEventListener('click', (ev) => {
         const check = ev.target.closest('[data-consulta-check]');
-        if (!check) return;
-        const id = Number(check.getAttribute('data-consulta-check'));
-        if (!Number.isFinite(id)) return;
-        if (check.checked) selectedConsultaIds.add(id); else selectedConsultaIds.delete(id);
-        renderConsultationTable();
-        updateBulkSelectionButtons();
-      });
-
-      tbody.addEventListener('click', (ev) => {
-        if (ev.target.closest('input, button, a, label, select, textarea')) return;
+        if (check) {
+          const id = Number(check.getAttribute('data-consulta-check'));
+          if (check.checked) selectedConsultaIds.add(id); else selectedConsultaIds.delete(id);
+          renderConsultationTable();
+          return;
+        }
         const row = ev.target.closest('[data-consulta-row]');
         if (!row) return;
         const id = Number(row.getAttribute('data-consulta-row'));
         if (!Number.isFinite(id)) return;
         if (selectedConsultaIds.has(id)) selectedConsultaIds.delete(id); else selectedConsultaIds.add(id);
         renderConsultationTable();
-        updateBulkSelectionButtons();
       });
     }
 
@@ -8803,8 +8739,6 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
     $('btnDevolverSubIds').addEventListener('click', returnPartialBySubIds);
     $('btnConfirmarSelecionados').addEventListener('click', () => confirmReservations([...selectedReservaIds]));
     $('btnCancelarSelecionados').addEventListener('click', () => cancelReservations([...selectedReservaIds]));
-    $('btnCancelarConsultasSelecionadas')?.addEventListener('click', () => cancelConsultations([...selectedConsultaIds]));
-    updateBulkSelectionButtons();
     const reservationStageNeedsSchedule = (stage) => isReservationPickupScheduledStage(stage);
     $('btnApplyResWorkflowStage')?.addEventListener('click', async () => {
       const stage = $('resWorkflowStage')?.value || '';
@@ -8820,7 +8754,6 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
         return;
       }
       try {
-        setStatus('statusRes', 'Aplicando etapa selecionada…', 'warn');
         await setReservationWorkflowStage(stage, selectedReservationRows(), {
           note: $('resWorkflowNote')?.value.trim() || '',
           pickupScheduledFor: reservationStageNeedsSchedule(stage) ? pickupScheduledFor : null,
@@ -8843,7 +8776,6 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
         return;
       }
       try {
-        setStatus('statusConsultas', 'Aplicando etapa selecionada…', 'warn');
         await setConsultationWorkflowStage(stage, selectedConsultationRows(), {
           note: $('consultWorkflowNote')?.value.trim() || '',
           consultationScheduledFor: stage === 'consulta_agendada' ? consultationScheduledFor : null,
@@ -10154,11 +10086,12 @@ function initPartnerProbeUi() {
     if (!tbody) return;
     if (!rows.length) {
       tbody.innerHTML = '<tr><td colspan="8">Sem reservas ativas.</td></tr>';
+      window.__anarbibPainelUpdateBulkSelectionButtons && window.__anarbibPainelUpdateBulkSelectionButtons();
       return;
     }
     tbody.innerHTML = rows.map((r) => `
-      <tr>
-        <td><input type="checkbox" disabled aria-label="Selecionar ${escR(r.sub_id)}"></td>
+      <tr data-reserva-row="${escR(r.id)}" class="clickable-row">
+        <td><input type="checkbox" data-reserva-check="${escR(r.id)}" aria-label="Selecionar ${escR(r.sub_id)}" onclick="event.stopPropagation()" onchange="window.__anarbibToggleReservaSelection && window.__anarbibToggleReservaSelection(${escR(r.id)}, this.checked)"></td>
         <td class="mono">${escR(r.sub_id)}</td>
         <td>${escR(r.user_name)}${r.user_email && r.user_email !== '—' ? `<br><span class="mini subtle">${escR(r.user_email)}</span>` : ''}</td>
         <td>${escR(r.titulo)}${r.autor ? `<br><span class="mini subtle">${escR(r.autor)}</span>` : ''}</td>
@@ -10168,6 +10101,7 @@ function initPartnerProbeUi() {
         <td>${escR(fmtDateTimeR(r.validade))}</td>
       </tr>
     `).join('');
+    window.__anarbibPainelUpdateBulkSelectionButtons && window.__anarbibPainelUpdateBulkSelectionButtons();
   }
 
   function renderConsultationsR(rows) {
@@ -10175,11 +10109,12 @@ function initPartnerProbeUi() {
     if (!tbody) return;
     if (!rows.length) {
       tbody.innerHTML = '<tr><td colspan="9">Sem consultas locais ativas.</td></tr>';
+      window.__anarbibPainelUpdateBulkSelectionButtons && window.__anarbibPainelUpdateBulkSelectionButtons();
       return;
     }
     tbody.innerHTML = rows.map((c) => `
-      <tr>
-        <td><input type="checkbox" disabled aria-label="Selecionar ${escR(c.sub_id)}"></td>
+      <tr data-consulta-row="${escR(c.id)}" class="clickable-row">
+        <td><input type="checkbox" data-consulta-check="${escR(c.id)}" aria-label="Selecionar ${escR(c.sub_id)}" onclick="event.stopPropagation()" onchange="window.__anarbibToggleConsultaSelection && window.__anarbibToggleConsultaSelection(${escR(c.id)}, this.checked)"></td>
         <td>#${escR(c.consulta_id)}</td>
         <td class="mono">${escR(c.sub_id)}</td>
         <td>${escR(c.user_name)}${c.user_email && c.user_email !== '—' ? `<br><span class="mini subtle">${escR(c.user_email)}</span>` : ''}</td>
@@ -10190,6 +10125,7 @@ function initPartnerProbeUi() {
         <td>${escR(fmtDateTimeR(c.validade))}</td>
       </tr>
     `).join('');
+    window.__anarbibPainelUpdateBulkSelectionButtons && window.__anarbibPainelUpdateBulkSelectionButtons();
   }
 
   function renderLoansR(items, batches) {
@@ -10229,6 +10165,28 @@ function initPartnerProbeUi() {
 
   async function reloadPainelRescueData() {
     try {
+      const hooks = window.__anarbibPainelMainHooks;
+      if (hooks
+          && typeof hooks.fetchActiveReservations === 'function'
+          && typeof hooks.fetchActiveConsultations === 'function'
+          && typeof hooks.fetchActiveLoans === 'function'
+          && typeof hooks.renderReservationTable === 'function'
+          && typeof hooks.renderConsultationTable === 'function') {
+        await Promise.all([
+          hooks.fetchActiveReservations(),
+          hooks.fetchActiveConsultations(),
+          hooks.fetchActiveLoans()
+        ]);
+        hooks.renderReservationTable();
+        hooks.renderConsultationTable();
+        if (typeof hooks.renderLoansTable === 'function') hooks.renderLoansTable();
+        if (typeof hooks.renderBatchTable === 'function') hooks.renderBatchTable();
+        if (typeof hooks.renderCounts === 'function') hooks.renderCounts();
+        if (typeof hooks.renderProfileLists === 'function') hooks.renderProfileLists();
+        if (typeof hooks.updateBulkSelectionButtons === 'function') hooks.updateBulkSelectionButtons();
+        return;
+      }
+
       const [reservations, consultations, loans] = await Promise.all([
         fetchReservationsR(),
         fetchConsultationsR(),
