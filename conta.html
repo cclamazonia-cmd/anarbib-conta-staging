@@ -645,6 +645,23 @@ button[type="submit"] *,
       border:none;
       background:linear-gradient(135deg,var(--red2),var(--red));
     }
+    .reserve-mode-btn{
+      border:1px solid var(--line) !important;
+      background:rgba(12,12,12,.84) !important;
+      color:#ffffff !important;
+      -webkit-text-fill-color:#ffffff !important;
+      transition:background .12s ease, border-color .12s ease, transform .06s ease, filter .12s ease;
+    }
+    .reserve-mode-btn:hover,
+    .reserve-mode-btn:focus{
+      filter:brightness(1.05);
+    }
+    .reserve-mode-btn.is-active{
+      border:none !important;
+      background:linear-gradient(135deg,var(--red2),var(--red)) !important;
+      color:#ffffff !important;
+      -webkit-text-fill-color:#ffffff !important;
+    }
     .table-scroll{
       overflow:auto;
       max-height:58vh;
@@ -1118,8 +1135,8 @@ button[type="submit"] *,
 
           <form id="reserveForm" class="row" style="justify-content:flex-start; align-items:flex-start;">
             <input type="text" id="bibRef" placeholder="Ex.: 2453, 0000123, 0002453" style="max-width:380px;" required />
-            <button id="reserveSubmitBtn" type="button">Reservar empréstimo</button>
-            <button id="consultSubmitBtn" type="button" class="secondary">Pedir consulta no local</button>
+            <button id="reserveSubmitBtn" type="button" class="secondary reserve-mode-btn is-active" aria-pressed="true">Reservar empréstimo</button>
+            <button id="consultSubmitBtn" type="button" class="secondary reserve-mode-btn" aria-pressed="false">Pedir consulta no local</button>
           </form>
           <p class="small" style="margin-top:8px;">O pedido de consulta local usa a mesma referência, mas cria um pedido separado do fluxo de empréstimo.</p>
           <p id="reserveMsg" class="msg" aria-live="polite"></p>
@@ -1294,6 +1311,19 @@ button[type="submit"] *,
     const reserveSubmitBtn = $("reserveSubmitBtn");
     const consultSubmitBtn = $("consultSubmitBtn");
     const bibRefInput = $("bibRef");
+
+    function setReserveActionMode(mode) {
+      const activeMode = String(mode || "reserve").trim() === "consult" ? "consult" : "reserve";
+      const reserveActive = activeMode === "reserve";
+      if (reserveSubmitBtn) {
+        reserveSubmitBtn.classList.toggle("is-active", reserveActive);
+        reserveSubmitBtn.setAttribute("aria-pressed", reserveActive ? "true" : "false");
+      }
+      if (consultSubmitBtn) {
+        consultSubmitBtn.classList.toggle("is-active", !reserveActive);
+        consultSubmitBtn.setAttribute("aria-pressed", reserveActive ? "false" : "true");
+      }
+    }
     const chipContaEspaco = $("chipContaEspaco");
     const chipContaBiblioteca = $("chipContaBiblioteca");
     const chipContaPublicId = $("chipContaPublicId");
@@ -3636,6 +3666,7 @@ function reservationPickupReplyActions(row) {
     async function submitReserveOrConsult(mode) {
       reserveMsg.textContent = "";
       const actionMode = String(mode || "reserve").trim() === "consult" ? "consult" : "reserve";
+      setReserveActionMode(actionMode);
       const isConsultation = actionMode === "consult";
 
       if (!isConsultation && publicServiceState && publicServiceState.allow_reservations === false) {
@@ -3704,12 +3735,15 @@ function reservationPickupReplyActions(row) {
     });
 
     $("reserveSubmitBtn")?.addEventListener("click", async () => {
+      setReserveActionMode("reserve");
       await submitReserveOrConsult("reserve");
     });
 
     $("consultSubmitBtn")?.addEventListener("click", async () => {
+      setReserveActionMode("consult");
       await submitReserveOrConsult("consult");
     });
+    setReserveActionMode("reserve");
     await loadProfile();
     await loadPublicServiceState();
     await renderActiveReservations();
