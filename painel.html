@@ -2473,12 +2473,16 @@
       return payload;
     }
 
-    const PAINEL_BOOTSTRAP_AUTH_ACTIVE = false;
+    const PAINEL_BOOTSTRAP_AUTH_ACTIVE = true;
+    const PAINEL_BOOTSTRAP_AUTH_WATCHER_ACTIVE = false;
     /*
-      Bootstrap auth local explicitement neutralisé ici.
-      Raison : ce fichier contenait encore deux pilotes auth concurrents
-      pour btnSair + session + header.
-      Le module principal du bas reste désormais la seule autorité.
+      Sur ce fichier précis, on réactive le bootstrap initial du haut
+      parce que c’est lui qui savait encore amorcer l’état connecté
+      et faire fonctionner le bouton Login/Logout.
+
+      En revanche, on coupe ici sa surveillance auth continue,
+      pour éviter qu’un second watcher du haut redémonte ensuite
+      l’état déjà repris par le module principal du bas.
     */
     if (PAINEL_BOOTSTRAP_AUTH_ACTIVE) {
       const bootAuthButton = $boot('btnSair');
@@ -2522,28 +2526,30 @@
       /* removed auth bootstrap passive recheck */
       /* end removed passive auth hooks */
 
-      supabase.auth.onAuthStateChange(async (event, nextSession) => {
-        const eventName = String(event || '').trim().toUpperCase();
-        if (nextSession?.user?.id) {
-          await bootHydratePainelAuthChrome(nextSession);
-          return;
-        }
-        if (eventName === 'SIGNED_OUT') {
-          if (painelMinBoot?.session?.user?.id || painelMinBoot?.hydrated) { bootUpdateTopbarAuthButton(true); return; }
-          bootUpdateTopbarAuthButton(false);
-          bootResetPainelChrome();
-          return;
-        }
-        const recovered = await bootResolveSession(4, 120);
-        if (recovered?.user?.id) {
-          await bootHydratePainelAuthChrome(recovered);
-          return;
-        }
-        if (!painelMinBoot?.session?.user?.id && !painelMinBoot?.hydrated) {
-          bootUpdateTopbarAuthButton(false);
-          bootResetPainelChrome();
-        }
-      });
+      if (PAINEL_BOOTSTRAP_AUTH_WATCHER_ACTIVE) {
+        supabase.auth.onAuthStateChange(async (event, nextSession) => {
+          const eventName = String(event || '').trim().toUpperCase();
+          if (nextSession?.user?.id) {
+            await bootHydratePainelAuthChrome(nextSession);
+            return;
+          }
+          if (eventName === 'SIGNED_OUT') {
+            if (painelMinBoot?.session?.user?.id || painelMinBoot?.hydrated) { bootUpdateTopbarAuthButton(true); return; }
+            bootUpdateTopbarAuthButton(false);
+            bootResetPainelChrome();
+            return;
+          }
+          const recovered = await bootResolveSession(4, 120);
+          if (recovered?.user?.id) {
+            await bootHydratePainelAuthChrome(recovered);
+            return;
+          }
+          if (!painelMinBoot?.session?.user?.id && !painelMinBoot?.hydrated) {
+            bootUpdateTopbarAuthButton(false);
+            bootResetPainelChrome();
+          }
+        });
+      }
 
       await bootHydratePainelAuthChrome();
     }
