@@ -2525,6 +2525,14 @@ button[type="submit"] *,
       });
     }
 
+    async function cancelConsultaLocalV2(consultaId, lineNo) {
+      return await supabase.rpc("fn_v2_cancel_consulta_linhas_as_leitor", {
+        p_consulta_id: consultaId,
+        p_line_nos: [lineNo],
+        p_notes: "Cancelamento solicitado pela conta do(a/e) leitor(a/e)."
+      });
+    }
+
     function reservationStatusLabel(status, row) {
       const s = String(status || "").trim().toLowerCase();
       if (s === "ativa" || s === "active") return "Ativa";
@@ -2657,7 +2665,15 @@ button[type="submit"] *,
       return buildActionGrid([
         actionSlotEmpty(),
         actionSlotEmpty(),
-        `<button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-current="${escapeHtml(reservaId || "")}" data-cancel-current-line-no="${escapeHtml(Number(row?.line_no) || "")}" data-cancel-current-bib-ref="${escapeHtml(bibRef)}" data-cancel-current-sub-id="${escapeHtml(subId)}" data-cancel-current-title="${escapeHtml(title)}">Cancelar</button>`
+        `<button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-current="${escapeHtml(reservaId || "")}" data-cancel-current-line-no="${escapeHtml(Number(row?.line_no) || "")}" data-cancel-current-bib-ref="${escapeHtml(bibRef)}" data-cancel-current-sub-id="${escapeHtml(subId)}" data-cancel-current-title="${escapeHtml(title)}">Cancelar reserva</button>`
+      ], "reservation-actions");
+    }
+
+    function consultationCancelOnlyAction(row) {
+      return buildActionGrid([
+        actionSlotEmpty(),
+        actionSlotEmpty(),
+        `<button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-consulta-v2="${escapeHtml(Number(row?.consulta_id) || "")}|${escapeHtml(Number(row?.line_no) || "")}">Cancelar reserva</button>`
       ], "reservation-actions");
     }
 
@@ -2957,7 +2973,7 @@ async function resolveReservationLineNoForCurrentView(reservaId, rowHint = {}) {
 
 
 function reservationPickupReplyActions(row) {
-      const cancelBtn = `<button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-v2="${row.reserva_id}|${row.line_no}">Cancelar</button>`;
+      const cancelBtn = `<button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-v2="${row.reserva_id}|${row.line_no}">Cancelar reserva</button>`;
       if (!reservationNeedsPickupReply(row?.workflow_stage_effective)) {
         return buildActionGrid([actionSlotEmpty(), actionSlotEmpty(), cancelBtn], "reservation-actions");
       }
@@ -3138,6 +3154,7 @@ function reservationPickupReplyActions(row) {
             <td>${escapeHtml(r.library_name || "—")}</td>
             <td>${escapeHtml(fmtDateTimeBelem(r.requested_at))} (Belém)</td>
             <td><b>${escapeHtml(workflowLabel)}</b>${workflowDetails.length ? `<br><small>${workflowDetails.map((line) => escapeHtml(line)).join("<br>")}</small>` : ""}</td>
+            <td>${consultationCancelOnlyAction(r)}</td>
           </tr>`;
       }).join("");
 
@@ -3156,6 +3173,9 @@ function reservationPickupReplyActions(row) {
               <div class="k">Pedido em</div><div class="v">${escapeHtml(fmtDateTimeBelem(r.requested_at))} (Belém)</div>
               <div class="k">Situação</div><div class="v"><b>${escapeHtml(workflowLabel)}</b>${workflowDetails.length ? `<br><small>${workflowDetails.map((line) => escapeHtml(line)).join("<br>")}</small>` : ""}</div>
             </div>
+            <div class="mobile-actions">
+              ${consultationCancelOnlyAction(r)}
+            </div>
           </article>`;
       }).join("");
 
@@ -3164,13 +3184,32 @@ function reservationPickupReplyActions(row) {
           <div class="table-scroll">
             <table class="list-table">
               <thead>
-                <tr><th>Lote</th><th>Livro</th><th>Título</th><th>Referência</th><th>Biblioteca</th><th>Pedido em</th><th>Situação</th></tr>
+                <tr><th>Lote</th><th>Livro</th><th>Título</th><th>Referência</th><th>Biblioteca</th><th>Pedido em</th><th>Situação</th><th>Ação</th></tr>
               </thead>
               <tbody>${rows}</tbody>
             </table>
           </div>
         </div>
         <div class="mobile-only mobile-cards">${mobileCards}</div>`;
+
+      activeConsultationsEl.querySelectorAll("[data-cancel-consulta-v2]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const [cid, lineNo] = String(btn.getAttribute("data-cancel-consulta-v2") || "").split("|").map(Number);
+          if (!cid || !lineNo) return;
+          btn.disabled = true;
+          if (activeConsultMsg) activeConsultMsg.textContent = "Cancelando reserva...";
+          const res = await cancelConsultaLocalV2(cid, lineNo);
+          if (res.error) {
+            activeConsultMsg.textContent = "Erro ao cancelar: " + res.error.message;
+            btn.disabled = false;
+            return;
+          }
+          activeConsultMsg.textContent = "Pedido cancelado.";
+          await renderActiveConsultations();
+          await renderHistory();
+          writeContaStateSync('consultations');
+        });
+      });
     }
 
     async function tryRenewV2(loanId) {
