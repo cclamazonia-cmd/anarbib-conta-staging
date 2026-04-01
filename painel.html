@@ -6127,6 +6127,43 @@ function belemNowParts(){
       setStatus('statusLoans', 'Não consegui verificar o acesso da biblioteca' + (lastErrorMessage ? ': ' + lastErrorMessage : '.'), 'bad', false);
       return false;
     }
+    function isPainelHeaderHydrated(){
+      const hello = String($('helloLine')?.textContent || '').trim();
+      const chipEmail = String($('chipEmail')?.textContent || '').trim();
+      const chipFuncao = String($('chipFuncao')?.textContent || '').trim();
+      return !!hello && chipEmail !== 'E-mail: —' && chipFuncao !== 'Função: —';
+    }
+
+    async function hydratePainelAccessAndHeader({ attempts = 4, delayMs = 180 } = {}){
+      if (!session?.user?.id) return false;
+      for (let i = 0; i < attempts; i += 1) {
+        const accessRead = await fetchMyAccessRows(session.user.id);
+        const accessRows = accessRead?.data || [];
+        currentIdentityRow = accessRows.find((row) => String(row?.id || row?.user_id || '') === String(session?.user?.id || '')) || accessRows[0] || currentIdentityRow || null;
+        currentAccessRow = pickCurrentLibrarianAccess(accessRows) || currentAccessRow || null;
+
+        if (!currentAccessRow && currentIdentityRow?.is_librarian === true && currentIdentityRow?.is_restricted !== true) {
+          currentAccessRow = {
+            ...currentIdentityRow,
+            role: 'librarian',
+            status: 'active',
+            can_access_painel: true
+          };
+        }
+
+        if (currentAccessRow) {
+          isLibrarian = true;
+          await fillHeader();
+          if (isPainelHeaderHydrated()) return true;
+        }
+
+        if (i < attempts - 1) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      }
+      return isPainelHeaderHydrated();
+    }
+
     async function fillHeader(){
       const identity = { ...(currentIdentityRow || {}), ...(currentAccessRow || {}) };
       const accessEmail = String(identity?.email || session?.user?.email || '').trim();
@@ -9137,6 +9174,10 @@ function initPartnerProbeUi() {
       try {
         isLibrarian = await requireBibliotecaOrRedirect({ attempts: 8, delayMs: 220 });
         if (!isLibrarian) {
+          const recoveredAccess = await hydratePainelAccessAndHeader({ attempts: 4, delayMs: 180 });
+          isLibrarian = recoveredAccess === true;
+        }
+        if (!isLibrarian) {
           if (session?.user?.id) {
             setTimeout(() => { void recheckPainelSessionAndSync({ reloadData: true }); }, 900);
           }
@@ -9145,6 +9186,9 @@ function initPartnerProbeUi() {
           return false;
         }
         await fillHeader();
+        if (!isPainelHeaderHydrated()) {
+          await hydratePainelAccessAndHeader({ attempts: 3, delayMs: 160 });
+        }
         if (!reloadData) {
           setPainelSessionOpenNotice('');
           return true;
