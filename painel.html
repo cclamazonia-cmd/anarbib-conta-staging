@@ -1019,8 +1019,26 @@
                     </div>
 
                     <div class="subsection-title">3. Quem entra nos acordos</div>
+                    <div class="row" style="margin-top:12px">
+                      <div>
+                        <label for="docGovRequireExplicitAgreement">Regra de ativação em catalogação</label>
+                        <label class="checkline" for="docGovRequireExplicitAgreement">
+                          <input id="docGovRequireExplicitAgreement" type="checkbox">
+                          <span>Exigir acordo explícito salvo aqui antes de liberar o uso de parceiras externas em catalogação</span>
+                        </label>
+                      </div>
+                      <div>
+                        <label for="docGovNoAgreementMessage">Mensagem padrão sem acordo explícito</label>
+                        <textarea class="textarea" id="docGovNoAgreementMessage" placeholder="Ex.: É preciso definir acordos de parceria com esta biblioteca no Painel antes de usar este módulo em catalogação."></textarea>
+                      </div>
+                    </div>
                     <div style="margin-top:12px">
-                      <label for="docGovAuthorizedPartners">Parceiras autorizadas</label>
+                      <label for="docGovExplicitAgreementPartners">Parceiras com acordo explícito ativo</label>
+                      <textarea class="textarea" id="docGovExplicitAgreementPartners" placeholder="Ex.: btl, cira, csl-milano"></textarea>
+                      <div class="hint">Sem acordo explícito ativo, catalogação deve manter o módulo bloqueado para esta parceira, mesmo que haja URL, preset ou teste técnico.</div>
+                    </div>
+                    <div style="margin-top:12px">
+                      <label for="docGovAuthorizedPartners">Parceiras autorizadas dentro destes acordos</label>
                       <textarea class="textarea" id="docGovAuthorizedPartners" placeholder="Ex.: btl, cira, csl-milano"></textarea>
                       <div class="hint">Usa slugs, siglas ou identificadores curtos separados por vírgula, um por linha ou por ponto e vírgula.</div>
                     </div>
@@ -1258,6 +1276,17 @@
                     <div class="field" style="margin-bottom:12px;">
                       <label for="partnerRelationshipNotesInput">Notas relacionais / histórico de contato</label>
                       <textarea id="partnerRelationshipNotesInput" class="textarea" rows="4" placeholder="Ex.: primeiro contato feito por e-mail; aguarda retorno; interesse mútuo em comparação local; parceria ainda sem acordo técnico."></textarea>
+                    </div>
+
+                    <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:12px;">
+                      <div class="field">
+                        <label for="partnerAgreementStatusInput">Acordo explícito neste painel</label>
+                        <input id="partnerAgreementStatusInput" class="input" type="text" readonly placeholder="Sem leitura ainda">
+                      </div>
+                      <div class="field">
+                        <label for="partnerCatalogacaoGateInput">Regra de uso em catalogação</label>
+                        <input id="partnerCatalogacaoGateInput" class="input" type="text" readonly placeholder="Sem leitura ainda">
+                      </div>
                     </div>
 
                     <div class="subsection-title">4. Ações técnicas e de registro</div>
@@ -3143,20 +3172,27 @@
       const select = $('interlibPartnerLibrary');
       if (!select) return;
       const currentValue = String(select.value || '').trim();
+      const explicitPartners = Array.isArray(currentDocGovernanceState?.explicit_agreement_partners)
+        ? currentDocGovernanceState.explicit_agreement_partners.map((v) => String(v || '').trim().toLowerCase()).filter(Boolean)
+        : [];
       const authPartners = Array.isArray(currentDocGovernanceState?.authorized_partners)
         ? currentDocGovernanceState.authorized_partners.map((v) => String(v || '').trim().toLowerCase()).filter(Boolean)
         : [];
       const sorted = [...(options || [])].sort((a, b) => {
-        const aScore = authPartners.includes(String(a?.slug || '').trim().toLowerCase()) ? 0 : 1;
-        const bScore = authPartners.includes(String(b?.slug || '').trim().toLowerCase()) ? 0 : 1;
+        const aSlug = String(a?.slug || '').trim().toLowerCase();
+        const bSlug = String(b?.slug || '').trim().toLowerCase();
+        const aScore = explicitPartners.includes(aSlug) ? 0 : (authPartners.includes(aSlug) ? 1 : 2);
+        const bScore = explicitPartners.includes(bSlug) ? 0 : (authPartners.includes(bSlug) ? 1 : 2);
         if (aScore !== bScore) return aScore - bScore;
         return shortLibraryLabel(a).localeCompare(shortLibraryLabel(b), 'pt-BR');
       });
       const validIds = new Set(sorted.map((row) => normalizeLibraryId(row?.id)).filter(Boolean));
       const fallback = sorted[0] ? normalizeLibraryId(sorted[0].id) : '';
-      const preferred = authPartners.length
-        ? normalizeLibraryId((sorted.find((row) => authPartners.includes(String(row?.slug || '').trim().toLowerCase())) || {}).id || '')
-        : '';
+      const preferred = explicitPartners.length
+        ? normalizeLibraryId((sorted.find((row) => explicitPartners.includes(String(row?.slug || '').trim().toLowerCase())) || {}).id || '')
+        : (authPartners.length
+            ? normalizeLibraryId((sorted.find((row) => authPartners.includes(String(row?.slug || '').trim().toLowerCase())) || {}).id || '')
+            : '');
       const nextValue = validIds.has(currentValue) ? currentValue : (preferred && validIds.has(preferred) ? preferred : fallback);
       select.innerHTML = '<option value="">Selecione uma biblioteca parceira</option>' + sorted.map((row) => {
         const id = normalizeLibraryId(row?.id);
@@ -4011,6 +4047,7 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
 
     let currentDocGovernanceBinding = null;
     let currentDocGovernanceState = null;
+    let refreshPartnerProbeGovernanceReadout = null;
 
     function getEmptyDocGovernance(){
       return {
@@ -4020,6 +4057,9 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         digital_link_mode: 'somente_locais',
         default_mutualization: 'local',
         local_items_only: true,
+        require_explicit_agreement: true,
+        explicit_agreement_partners: [],
+        no_agreement_message: 'É preciso definir acordos de parceria com esta biblioteca no Painel antes de usar este módulo em catalogação.',
         authorized_partners: [],
         permission_scope_mode: 'parceiras_selecionadas',
         authorized_countries: [],
@@ -4058,6 +4098,24 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
       return Array.from(new Set(raw
         .map((item) => String(item || '').trim())
         .filter(Boolean)));
+    }
+
+    function getDefaultNoAgreementMessage(){
+      return 'É preciso definir acordos de parceria com esta biblioteca no Painel antes de usar este módulo em catalogação.';
+    }
+
+    function getDocGovExplicitAgreementPartners(governance=currentDocGovernanceState){
+      return parseDocGovPartners(governance?.explicit_agreement_partners || []);
+    }
+
+    function isDocGovExplicitAgreementRequired(governance=currentDocGovernanceState){
+      if (!governance || governance.require_explicit_agreement == null) return true;
+      return regimentoToBool(governance.require_explicit_agreement);
+    }
+
+    function getDocGovNoAgreementMessage(governance=currentDocGovernanceState){
+      const raw = String(governance?.no_agreement_message || '').trim();
+      return raw || getDefaultNoAgreementMessage();
     }
 
     function normalizeDocGovernance(value){
@@ -4100,6 +4158,26 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
           obj.local_exemplars_only,
           base.local_items_only
         )),
+        require_explicit_agreement: regimentoToBool(firstFilledValue(
+          obj.require_explicit_agreement,
+          obj.catalogacao_requires_explicit_agreement,
+          obj.explicit_agreement_required,
+          obj.block_without_explicit_agreement,
+          base.require_explicit_agreement
+        )),
+        explicit_agreement_partners: parseDocGovPartners(firstFilledValue(
+          obj.explicit_agreement_partners,
+          obj.partners_with_explicit_agreement,
+          obj.catalogacao_enabled_partners,
+          obj.active_partner_agreements,
+          ''
+        )),
+        no_agreement_message: String(firstFilledValue(
+          obj.no_agreement_message,
+          obj.catalogacao_no_agreement_message,
+          obj.no_explicit_agreement_message,
+          base.no_agreement_message
+        ) || '').trim() || base.no_agreement_message,
         authorized_partners: parseDocGovPartners(firstFilledValue(
           obj.authorized_partners,
           obj.allowed_partners,
@@ -4183,6 +4261,9 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         digital_link_mode: governance.digital_link_mode,
         default_mutualization: governance.default_mutualization,
         local_items_only: !!governance.local_items_only,
+        require_explicit_agreement: !!governance.require_explicit_agreement,
+        explicit_agreement_partners: parseDocGovPartners(governance.explicit_agreement_partners),
+        no_agreement_message: String(governance.no_agreement_message || '').trim() || getDefaultNoAgreementMessage(),
         authorized_partners: parseDocGovPartners(governance.authorized_partners),
         permission_scope_mode: governance.permission_scope_mode,
         authorized_countries: parseDocGovCountryCodes(governance.authorized_countries),
@@ -4227,7 +4308,12 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         consulta_local: 'novas fichas ficam em consulta local por padrão',
         emprestimo_interbib: 'novas fichas admitem empréstimo inter-bibs por padrão'
       })[governance.default_mutualization] || 'partilha sem regra';
-      const partners = governance.authorized_partners.length ? `parceiras: ${governance.authorized_partners.join(', ')}` : 'sem parceiras autorizadas';
+      const explicitRule = governance.require_explicit_agreement
+        ? (governance.explicit_agreement_partners.length
+            ? `catalogação exige acordo explícito com: ${governance.explicit_agreement_partners.join(', ')}`
+            : 'catalogação exige acordo explícito, mas ainda sem parceiras listadas')
+        : 'catalogação sem exigência geral de acordo explícito';
+      const partners = governance.authorized_partners.length ? `parceiras autorizadas: ${governance.authorized_partners.join(', ')}` : 'sem parceiras autorizadas';
       const scope = ({
         parceiras_selecionadas: 'escopo por parceiras selecionadas',
         todas_ativas: 'escopo aberto a todas as bibliotecas ativas',
@@ -4235,9 +4321,10 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         por_rede_ou_grupo: governance.authorized_networks.length ? `escopo por rede / grupo: ${governance.authorized_networks.join(', ')}` : 'escopo por rede / grupo ainda sem grupos definidos',
         misto: 'escopo misto entre parceiras, países e redes'
       })[governance.permission_scope_mode] || 'escopo sem regra';
-      return [direct, localCopy, mutual, partners, scope].join(' · ');
+      return [direct, localCopy, mutual, explicitRule, partners, scope].join(' · ');
     }
 
+    function updateDocGovScopeUi(){
     function updateDocGovScopeUi(){
       const mode = String($('docGovPermissionScopeMode')?.value || '').trim();
       const countriesWrap = $('docGovAuthorizedCountriesWrap');
@@ -4272,6 +4359,9 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
       $('docGovDigitalLinkMode').value = normalized.digital_link_mode;
       $('docGovDefaultMutualization').value = normalized.default_mutualization;
       $('docGovLocalItemsOnly').checked = !!normalized.local_items_only;
+      $('docGovRequireExplicitAgreement').checked = !!normalized.require_explicit_agreement;
+      $('docGovExplicitAgreementPartners').value = normalized.explicit_agreement_partners.join(', ');
+      $('docGovNoAgreementMessage').value = normalized.no_agreement_message;
       $('docGovAuthorizedPartners').value = normalized.authorized_partners.join(', ');
       $('docGovPermissionScopeMode').value = normalized.permission_scope_mode;
       $('docGovAuthorizedCountries').value = normalized.authorized_countries.join(', ');
@@ -4281,6 +4371,7 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
       $('docGovStateNote').value = buildDocGovernanceSummary(normalized);
       currentDocGovernanceState = normalized;
       updateDocGovScopeUi();
+      if (typeof refreshPartnerProbeGovernanceReadout === 'function') refreshPartnerProbeGovernanceReadout();
     }
 
     function collectDocGovernanceFromForm(){
@@ -4291,6 +4382,9 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         digital_link_mode: $('docGovDigitalLinkMode')?.value,
         default_mutualization: $('docGovDefaultMutualization')?.value,
         local_items_only: !!$('docGovLocalItemsOnly')?.checked,
+        require_explicit_agreement: !!$('docGovRequireExplicitAgreement')?.checked,
+        explicit_agreement_partners: $('docGovExplicitAgreementPartners')?.value,
+        no_agreement_message: $('docGovNoAgreementMessage')?.value,
         authorized_partners: $('docGovAuthorizedPartners')?.value,
         permission_scope_mode: $('docGovPermissionScopeMode')?.value,
         authorized_countries: $('docGovAuthorizedCountries')?.value,
@@ -4393,7 +4487,30 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
 
     function setupDocGovernanceActions(){
       $('btnSaveDocGovernance')?.addEventListener('click', saveDocGovernance);
-      $('docGovPermissionScopeMode')?.addEventListener('change', updateDocGovScopeUi);
+      [
+        'docGovDirectEditMode',
+        'docGovCorrectionMode',
+        'docGovLocalRepriseMode',
+        'docGovDigitalLinkMode',
+        'docGovDefaultMutualization',
+        'docGovLocalItemsOnly',
+        'docGovRequireExplicitAgreement',
+        'docGovExplicitAgreementPartners',
+        'docGovNoAgreementMessage',
+        'docGovAuthorizedPartners',
+        'docGovPermissionScopeMode',
+        'docGovAuthorizedCountries',
+        'docGovAuthorizedNetworks',
+        'docGovScopeNote',
+        'docGovInternalNote'
+      ].forEach((id) => {
+        document.getElementById(id)?.addEventListener('change', () => {
+          if (id === 'docGovPermissionScopeMode') updateDocGovScopeUi();
+          const governance = collectDocGovernanceFromForm();
+          $('docGovStateNote').value = buildDocGovernanceSummary(governance);
+          if (typeof refreshPartnerProbeGovernanceReadout === 'function') refreshPartnerProbeGovernanceReadout();
+        });
+      });
     }
     const LIBRARY_REGIMENTO_DRAFT_BUCKET = 'library-regimentos-private';
     const LIBRARY_REGIMENTO_PUBLIC_BUCKET = 'library-regimentos-public';
@@ -8247,6 +8364,51 @@ async function copyPartnerTextFrom(id, successMessage) {
   }
 }
 
+function partnerHasExplicitAgreementForState(state, governance=currentDocGovernanceState) {
+  const slug = normalizePartnerSlug(state?.slug || '');
+  if (!slug) return false;
+  const explicitPartners = getDocGovExplicitAgreementPartners(governance).map((item) => String(item || '').trim().toLowerCase());
+  return explicitPartners.includes(slug.toLowerCase());
+}
+
+function buildPartnerExplicitAgreementStatus(state, governance=currentDocGovernanceState) {
+  if (!state?.slug) return 'Informe uma parceira para consultar os acordos.';
+  if (!governance) return 'Governança documental ainda não carregada.';
+  return partnerHasExplicitAgreementForState(state, governance)
+    ? 'Acordo explícito ativo para esta parceira.'
+    : 'Sem acordo explícito ativo para esta parceira.';
+}
+
+function buildPartnerCatalogacaoGateStatus(state, governance=currentDocGovernanceState) {
+  if (!state?.slug) return 'Informe uma parceira para consultar a regra.';
+  if (!governance) return 'Governança documental ainda não carregada.';
+  if (!isDocGovExplicitAgreementRequired(governance)) {
+    return 'Uso em catalogação não exige acordo explícito por padrão.';
+  }
+  return partnerHasExplicitAgreementForState(state, governance)
+    ? 'Catalogação pode ler e aplicar os acordos desta parceira.'
+    : 'Catalogação deve manter o módulo bloqueado até haver acordo explícito ativo.';
+}
+
+function buildPartnerDecisionSummaryWithAgreement(state, status, rows = [], governance=currentDocGovernanceState) {
+  if (state?.slug && governance && isDocGovExplicitAgreementRequired(governance) && !partnerHasExplicitAgreementForState(state, governance)) {
+    return 'Antes de qualquer uso em catalogação, salvar acordo explícito com esta parceira no Painel';
+  }
+  return buildPartnerDecisionSummary(status, rows);
+}
+
+function buildPartnerPoliticalNoticeWithAgreement(state, status, rows = [], governance=currentDocGovernanceState) {
+  const baseNotice = buildPartnerPoliticalNotice(status, rows);
+  if (!state?.slug || !governance) return baseNotice;
+  if (!isDocGovExplicitAgreementRequired(governance)) {
+    return `${baseNotice} O uso em catalogação não exige acordo explícito geral nesta biblioteca.`;
+  }
+  if (partnerHasExplicitAgreementForState(state, governance)) {
+    return `${baseNotice} Há acordo explícito ativo com esta parceira, então catalogação deve aplicar apenas os limites salvos neste painel.`;
+  }
+  return `${baseNotice} ${getDocGovNoAgreementMessage(governance)}`;
+}
+
 function initPartnerProbeUi() {
   const presetEl = document.getElementById('partnerPresetSelect');
   const displayEl = document.getElementById('partnerDisplayNameInput');
@@ -8261,6 +8423,8 @@ function initPartnerProbeUi() {
   const lastProbeAtEl = document.getElementById('partnerLastProbeAtInput');
   const knownStateEl = document.getElementById('partnerKnownStateInput');
   const decisionEl = document.getElementById('partnerProbeDecisionInput');
+  const agreementStatusEl = document.getElementById('partnerAgreementStatusInput');
+  const catalogacaoGateEl = document.getElementById('partnerCatalogacaoGateInput');
   const politicalNoticeEl = document.getElementById('partnerPoliticalNotice');
   const reportEl = document.getElementById('partnerProbeOutput');
   const seedEl = document.getElementById('partnerSeedOutput');
@@ -8275,7 +8439,7 @@ function initPartnerProbeUi() {
     !presetEl || !displayEl || !slugEl || !baseUrlEl || !familyEl ||
     !confidenceEl || !countryEl || !notesEl || !relationshipStatusEl ||
     !relationshipNotesEl || !lastProbeAtEl || !knownStateEl || !decisionEl ||
-    !politicalNoticeEl || !reportEl || !seedEl
+    !agreementStatusEl || !catalogacaoGateEl || !politicalNoticeEl || !reportEl || !seedEl
   ) {
     return;
   }
@@ -8356,10 +8520,13 @@ function initPartnerProbeUi() {
     const state = collectPartnerFormState();
     knownStateEl.value = formatPartnerTechnicalState(currentPartnerCapabilityRows);
     lastProbeAtEl.value = formatPartnerDateTime(getPartnerLastCheckedAt(currentPartnerCapabilityRows)) || 'Ainda não testado';
-    decisionEl.value = buildPartnerDecisionSummary(state.relationshipStatus, currentPartnerCapabilityRows);
-    politicalNoticeEl.textContent = buildPartnerPoliticalNotice(state.relationshipStatus, currentPartnerCapabilityRows);
+    agreementStatusEl.value = buildPartnerExplicitAgreementStatus(state);
+    catalogacaoGateEl.value = buildPartnerCatalogacaoGateStatus(state);
+    decisionEl.value = buildPartnerDecisionSummaryWithAgreement(state, state.relationshipStatus, currentPartnerCapabilityRows);
+    politicalNoticeEl.textContent = buildPartnerPoliticalNoticeWithAgreement(state, state.relationshipStatus, currentPartnerCapabilityRows);
     updatePartnerActionAvailability();
   }
+  refreshPartnerProbeGovernanceReadout = updatePartnerGovernanceReadout;
 
   function renderPartnerArtifacts({ keepLiveResults = true } = {}) {
     const state = collectPartnerFormState();
