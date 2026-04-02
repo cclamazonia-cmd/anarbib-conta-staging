@@ -554,6 +554,19 @@
     .partner-actions-secondary{margin-top:10px}
 
 
+    .consult-structured-grid{display:grid;grid-template-columns:1fr;gap:10px}
+    .consult-structured-day{border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:12px;background:rgba(255,255,255,.03)}
+    .consult-structured-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+    .consult-structured-head strong{font-size:.95rem}
+    .consult-structured-times{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .consult-slot-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+    .consult-slot-hint{margin-top:6px}
+    .consult-slot-select-empty{color:rgba(255,255,255,.72)}
+    @media (max-width:980px){
+      .consult-structured-times,.consult-slot-grid{grid-template-columns:1fr}
+    }
+
+
   </style>
 </head>
 <body>
@@ -745,6 +758,25 @@
                       <label for="libraryExceptionalClosures">Fechamentos ou suspensões temporárias</label>
                       <textarea class="textarea" id="libraryExceptionalClosures" placeholder="Ex.: fechado no feriado, mutirão interno, reforma do espaço, pausa temporária etc."></textarea>
                     </div>
+                    <div class="sep"></div>
+                    <div class="section-head">
+                      <div>
+                        <h3>Consulta local — parâmetros estruturados</h3>
+                        <div class="mini">Esses campos servem para validar agendamentos reais de consulta: fuso da biblioteca, capacidade simultânea e janelas semanais legíveis pela base.</div>
+                      </div>
+                    </div>
+                    <div class="row" style="margin-top:12px">
+                      <div>
+                        <label for="libraryConsultationTimezone">Fuso horário da biblioteca</label>
+                        <input class="input mono" id="libraryConsultationTimezone" type="text" placeholder="Ex.: America/Belem">
+                      </div>
+                      <div>
+                        <label for="libraryConsultationCapacity">Pessoas em consulta ao mesmo tempo</label>
+                        <input class="input" id="libraryConsultationCapacity" type="number" min="1" max="50" step="1" placeholder="1">
+                      </div>
+                    </div>
+                    <div class="hint">Os horários abaixo são usados para validar o início e o fim dos agendamentos. As descrições textuais acima continuam visíveis para leitura humana.</div>
+                    <div id="consultStructuredScheduleGrid" class="consult-structured-grid" style="margin-top:12px"></div>
                     <div class="actions">
                       <button class="btn" id="btnSaveLibrarySchedule" type="button">Salvar horários</button>
                     </div>
@@ -1560,8 +1592,19 @@
                   <input class="input" id="consultWorkflowNote" type="text" placeholder="Ex.: material separado, consulta combinada, leitor não compareceu no horário...">
                 </div>
                 <div>
-                  <label for="consultScheduleAt">Data e hora da consulta (para “Consulta agendada”)</label>
-                  <input class="input" id="consultScheduleAt" type="datetime-local" step="60">
+                  <label for="consultScheduleDate">Data da consulta</label>
+                  <input class="input" id="consultScheduleDate" type="text" placeholder="DD/MM/YYYY">
+                </div>
+                <div>
+                  <label for="consultScheduleStart">Hora de início</label>
+                  <input class="input mono" id="consultScheduleStart" type="text" placeholder="Ex.: 15:00 ou 15:30">
+                  <div class="hint consult-slot-hint" id="consultScheduleTimezoneHint">Horário local da biblioteca.</div>
+                </div>
+                <div>
+                  <label for="consultScheduleEnd">Hora de fim</label>
+                  <select class="input" id="consultScheduleEnd">
+                    <option value="">Escolhe primeiro a hora de início…</option>
+                  </select>
                 </div>
                 <div>
                   <label for="consultWorkflowStage">Próxima etapa</label>
@@ -2749,6 +2792,36 @@
         hour12: false
       });
     };
+    const fmtDateTimeInZone = (v, timeZone='America/Belem') => {
+      if (!v) return '—';
+      const d = new Date(v);
+      return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString('pt-BR', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+    };
+    const fmtTimeInZone = (v, timeZone='America/Belem') => {
+      if (!v) return '—';
+      const d = new Date(v);
+      return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleTimeString('pt-BR', {
+        timeZone,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+    };
+    function getCurrentConsultationTimeZone(){
+      return getCurrentConsultationSettings().consultation_timezone || 'America/Belem';
+    }
+    function consultationTimeZoneLabel(){
+      return getCurrentConsultationTimeZone();
+    }
     const todayISO = () => belemNowParts().ymd;
     const nowISO = () => new Date().toISOString();
     function addDays(dateLike, days){
@@ -2918,6 +2991,9 @@
         allows_new_reservations: getAllowsNewReservations(row),
         allows_new_loans: getAllowsNewLoans(row),
         public_message: String(row.public_message || '').trim(),
+        consultation_timezone: String(row.consultation_timezone || 'America/Belem').trim() || 'America/Belem',
+        max_simultaneous_consultations: Math.max(1, Number(row.max_simultaneous_consultations || 1) || 1),
+        consultation_schedule_struct: safeJsonObject(row.consultation_schedule_struct)
       };
     }
 
@@ -2990,7 +3066,7 @@
 
         const { data, error } = await supabase
           .from('library_service_state')
-          .select('library_id,service_mode,public_message,allows_new_reservations,allows_new_loans,updated_at')
+          .select('library_id,service_mode,public_message,allows_new_reservations,allows_new_loans,consultation_timezone,max_simultaneous_consultations,consultation_schedule_struct,updated_at')
           .eq('library_id', libraryId)
           .maybeSingle();
         if (error) throw error;
@@ -3033,7 +3109,7 @@
         const { data, error } = await supabase
           .from('library_service_state')
           .upsert(payload, { onConflict: 'library_id' })
-          .select('library_id,service_mode,public_message,allows_new_reservations,allows_new_loans,updated_at')
+          .select('library_id,service_mode,public_message,allows_new_reservations,allows_new_loans,consultation_timezone,max_simultaneous_consultations,consultation_schedule_struct,updated_at')
           .maybeSingle();
         if (error) throw error;
 
@@ -4078,6 +4154,119 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
       };
     }
 
+
+    const CONSULTATION_WEEKDAY_META = [
+      ['monday', 'Segunda-feira'],
+      ['tuesday', 'Terça-feira'],
+      ['wednesday', 'Quarta-feira'],
+      ['thursday', 'Quinta-feira'],
+      ['friday', 'Sexta-feira'],
+      ['saturday', 'Sábado'],
+      ['sunday', 'Domingo']
+    ];
+
+    function getEmptyConsultationDay(){
+      return { enabled: false, open: '', close: '', pause_start: '', pause_end: '' };
+    }
+
+    function getEmptyConsultationScheduleStruct(){
+      return Object.fromEntries(CONSULTATION_WEEKDAY_META.map(([key]) => [key, getEmptyConsultationDay()]));
+    }
+
+    function normalizeConsultationDayConfig(value){
+      const base = getEmptyConsultationDay();
+      const source = value && typeof value === 'object' ? value : {};
+      const normalizeTime = (raw) => {
+        const m = String(raw || '').trim().match(/^(\d{2}):(\d{2})$/);
+        if (!m) return '';
+        return (m[2] === '00' || m[2] === '30') ? `${m[1]}:${m[2]}` : '';
+      };
+      return {
+        enabled: source.enabled === true || String(source.enabled || '').trim().toLowerCase() === 'true',
+        open: normalizeTime(source.open),
+        close: normalizeTime(source.close),
+        pause_start: normalizeTime(source.pause_start),
+        pause_end: normalizeTime(source.pause_end)
+      };
+    }
+
+    function normalizeConsultationSettings(source){
+      const row = source && typeof source === 'object' ? source : {};
+      const scheduleSource = safeJsonObject(row.consultation_schedule_struct);
+      const scheduleStruct = getEmptyConsultationScheduleStruct();
+      for (const [key] of CONSULTATION_WEEKDAY_META) {
+        scheduleStruct[key] = normalizeConsultationDayConfig(scheduleSource[key]);
+      }
+      return {
+        consultation_timezone: String(row.consultation_timezone || 'America/Belem').trim() || 'America/Belem',
+        max_simultaneous_consultations: Math.max(1, Number(row.max_simultaneous_consultations || 1) || 1),
+        consultation_schedule_struct: scheduleStruct
+      };
+    }
+
+    function renderConsultationSettings(source){
+      const normalized = normalizeConsultationSettings(source);
+      if ($('libraryConsultationTimezone')) $('libraryConsultationTimezone').value = normalized.consultation_timezone;
+      if ($('libraryConsultationCapacity')) $('libraryConsultationCapacity').value = String(normalized.max_simultaneous_consultations);
+      const container = $('consultStructuredScheduleGrid');
+      if (container) {
+        container.innerHTML = CONSULTATION_WEEKDAY_META.map(([key, label]) => {
+          const day = normalized.consultation_schedule_struct[key] || getEmptyConsultationDay();
+          return `
+            <div class="consult-structured-day" data-consult-day="${esc(key)}">
+              <div class="consult-structured-head">
+                <strong>${esc(label)}</strong>
+                <label class="checkline" for="consultDayEnabled_${esc(key)}">
+                  <input id="consultDayEnabled_${esc(key)}" type="checkbox" ${day.enabled ? 'checked' : ''}>
+                  <span>Atendimento estruturado ativo</span>
+                </label>
+              </div>
+              <div class="consult-structured-times">
+                <div>
+                  <label for="consultDayOpen_${esc(key)}">Abertura</label>
+                  <input class="input mono" id="consultDayOpen_${esc(key)}" type="time" step="1800" value="${esc(day.open)}">
+                </div>
+                <div>
+                  <label for="consultDayClose_${esc(key)}">Fechamento</label>
+                  <input class="input mono" id="consultDayClose_${esc(key)}" type="time" step="1800" value="${esc(day.close)}">
+                </div>
+                <div>
+                  <label for="consultDayPauseStart_${esc(key)}">Pausa — início</label>
+                  <input class="input mono" id="consultDayPauseStart_${esc(key)}" type="time" step="1800" value="${esc(day.pause_start)}">
+                </div>
+                <div>
+                  <label for="consultDayPauseEnd_${esc(key)}">Pausa — fim</label>
+                  <input class="input mono" id="consultDayPauseEnd_${esc(key)}" type="time" step="1800" value="${esc(day.pause_end)}">
+                </div>
+              </div>
+            </div>`;
+        }).join('');
+      }
+      syncConsultationScheduleBuilder({ silent: true });
+    }
+
+    function collectConsultationSettingsFromForm(){
+      const scheduleStruct = getEmptyConsultationScheduleStruct();
+      for (const [key] of CONSULTATION_WEEKDAY_META) {
+        scheduleStruct[key] = normalizeConsultationDayConfig({
+          enabled: $('consultDayEnabled_' + key)?.checked === true,
+          open: $('consultDayOpen_' + key)?.value,
+          close: $('consultDayClose_' + key)?.value,
+          pause_start: $('consultDayPauseStart_' + key)?.value,
+          pause_end: $('consultDayPauseEnd_' + key)?.value,
+        });
+      }
+      return {
+        consultation_timezone: String($('libraryConsultationTimezone')?.value || 'America/Belem').trim() || 'America/Belem',
+        max_simultaneous_consultations: Math.max(1, Number($('libraryConsultationCapacity')?.value || 1) || 1),
+        consultation_schedule_struct: scheduleStruct
+      };
+    }
+
+    function getCurrentConsultationSettings(){
+      return normalizeConsultationSettings(currentLibraryScheduleStateRow || libraryServiceState || {});
+    }
+
     const LIBRARY_SCHEDULE_TEXT_FIELDS = {
       monday: ['open_monday', 'library_open_monday', 'monday_hours', 'hours_monday', 'schedule_monday'],
       tuesday: ['open_tuesday', 'library_open_tuesday', 'tuesday_hours', 'hours_tuesday', 'schedule_tuesday'],
@@ -4213,10 +4402,12 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
           || detectFallbackLibraryScheduleBinding();
         currentLibraryScheduleBinding = binding || null;
         renderLibrarySchedule(binding?.schedule || getEmptyLibrarySchedule());
+        renderConsultationSettings(serviceRow || {});
         clearStatus('libraryScheduleMsg');
       } catch (e) {
         currentLibraryScheduleBinding = null;
         renderLibrarySchedule(getEmptyLibrarySchedule());
+        renderConsultationSettings({});
         setStatus('libraryScheduleMsg', 'Não consegui carregar os horários da biblioteca: ' + (e.message || String(e)), 'bad', false);
       }
     }
@@ -6195,6 +6386,7 @@ function belemNowParts(){
       safePainelUiInit('abas principais', () => setupMainTabs());
       safePainelUiInit('subabas de biblioteca', () => setupBibliotecaSubtabs());
       safePainelUiInit('ações de funcionamento', () => setupServiceStateActions());
+      safePainelUiInit('construtor de consulta local', () => setupConsultationScheduleBuilder());
       safePainelUiInit('identidade da biblioteca', () => setupLibraryIdentityActions());
       safePainelUiInit('tema da biblioteca', () => setupLibraryThemeActions());
       safePainelUiInit('governança documental', () => setupDocGovernanceActions());
@@ -6712,7 +6904,9 @@ function belemNowParts(){
 
     function consultationWorkflowDetail(c){
       const parts = [];
-      if (c.consultation_scheduled_for) parts.push(`Consulta: ${fmtDateTimeBelem(c.consultation_scheduled_for)} (Belém)`);
+      const tz = c.consultation_timezone || getCurrentConsultationTimeZone();
+      if (c.consultation_starts_at && c.consultation_ends_at) parts.push(`Consulta: ${fmtDateTimeInZone(c.consultation_starts_at, tz)} → ${fmtTimeInZone(c.consultation_ends_at, tz)} (${tz})`);
+      else if (c.consultation_scheduled_for) parts.push(`Consulta: ${fmtDateTimeInZone(c.consultation_scheduled_for, tz)} (${tz})`);
       const scheduleReplyLabel = translateConsultationScheduleReplyStatus(c.schedule_reply_status);
       if (scheduleReplyLabel) parts.push(scheduleReplyLabel);
       if (c.schedule_reply_note) parts.push(c.schedule_reply_note);
@@ -6775,7 +6969,7 @@ function belemNowParts(){
       updateConsultationWorkflowStageOptions();
     }
 
-    async function setConsultationWorkflowStage(stage, rows, { note='', consultationScheduledFor=null, targetStatusId='statusConsultas' } = {}){
+    async function setConsultationWorkflowStage(stage, rows, { note='', consultationDateLocal='', consultationStartLocal='', consultationEndLocal='', consultationTimezone='America/Belem', targetStatusId='statusConsultas' } = {}){
       const cleanRows = (rows || []).filter((r) => r && r.source === 'v2');
       if (!cleanRows.length) {
         setStatus(targetStatusId, 'Selecione pelo menos 1 consulta local ativa.', 'warn');
@@ -6785,9 +6979,11 @@ function belemNowParts(){
         setStatus(targetStatusId, 'A etapa selecionada não é válida para o estado atual das consultas selecionadas.', 'warn');
         return;
       }
-      if (stage === 'consulta_agendada' && !consultationScheduledFor) {
-        setStatus(targetStatusId, 'Informe data e hora para agendar a consulta.', 'warn');
-        return;
+      if (stage === 'consulta_agendada') {
+        if (!consultationDateLocal || !consultationStartLocal || !consultationEndLocal) {
+          setStatus(targetStatusId, 'Informe data, hora de início e hora de fim para agendar a consulta.', 'warn');
+          return;
+        }
       }
 
       const groups = groupBy(cleanRows, (c) => c.consulta_id);
@@ -6796,12 +6992,15 @@ function belemNowParts(){
       for (const [consultaId, items] of groups.entries()) {
         const lineNos = items.map((i) => Number(i.line_no)).filter((n) => Number.isFinite(n) && n > 0);
         if (!lineNos.length) continue;
-        const rpc = await supabase.rpc('fn_v2_set_consulta_linhas_workflow', {
+        const rpc = await supabase.rpc('fn_v2_set_consulta_linhas_workflow_slot', {
           p_consulta_id: Number(consultaId),
           p_line_nos: lineNos,
           p_workflow_stage: stage,
           p_workflow_note: note || null,
-          p_consultation_scheduled_for: consultationScheduledFor || null,
+          p_consultation_date_local: stage === 'consulta_agendada' ? consultationDateLocal : null,
+          p_consultation_start_local: stage === 'consulta_agendada' ? consultationStartLocal : null,
+          p_consultation_end_local: stage === 'consulta_agendada' ? consultationEndLocal : null,
+          p_consultation_timezone: stage === 'consulta_agendada' ? (consultationTimezone || 'America/Belem') : null,
         });
         if (rpc.error) throw rpc.error;
         processed += Number(rpc.data || 0) || 0;
@@ -6857,6 +7056,9 @@ function belemNowParts(){
             workflow_stage_updated_at: workflowUpdatedAt,
             workflow_note: String(firstFilledValue(row?.workflow_note, row?.note, row?.notes, '') || '').trim(),
             consultation_scheduled_for: firstFilledValue(row?.consultation_scheduled_for, row?.scheduled_for, null) || null,
+            consultation_starts_at: firstFilledValue(row?.consultation_starts_at, row?.consultation_scheduled_for, row?.scheduled_for, null) || null,
+            consultation_ends_at: firstFilledValue(row?.consultation_ends_at, null) || null,
+            consultation_timezone: firstFilledValue(row?.consultation_timezone, currentLibraryScheduleStateRow?.consultation_timezone, libraryServiceState?.consultation_timezone, 'America/Belem') || 'America/Belem',
             schedule_reply_status: firstFilledValue(row?.schedule_reply_status, row?.reader_schedule_reply_status, null) || null,
             schedule_reply_note: String(firstFilledValue(row?.schedule_reply_note, row?.reader_schedule_reply_note, '') || '').trim(),
             schedule_reply_at: firstFilledValue(row?.schedule_reply_at, row?.reader_schedule_reply_at, null) || null,
@@ -6899,7 +7101,7 @@ function belemNowParts(){
           if (linhasRes.error) throw linhasRes.error;
           const workflowsRes = await supabase
             .from('consulta_item_workflow_v2')
-            .select('consulta_id,line_no,workflow_stage,workflow_note,consultation_scheduled_for,schedule_reply_status,schedule_reply_note,schedule_reply_at,updated_at')
+.select('consulta_id,line_no,workflow_stage,workflow_note,consultation_scheduled_for,consultation_starts_at,consultation_ends_at,schedule_reply_status,schedule_reply_note,schedule_reply_at,updated_at')
             .in('consulta_id', consultaIds)
             .order('updated_at', { ascending:false });
           if (workflowsRes.error) throw workflowsRes.error;
@@ -6935,6 +7137,9 @@ function belemNowParts(){
               workflow_stage_effective: workflow?.workflow_stage || null,
               workflow_note: workflow?.workflow_note || null,
               consultation_scheduled_for: workflow?.consultation_scheduled_for || null,
+              consultation_starts_at: workflow?.consultation_starts_at || workflow?.consultation_scheduled_for || null,
+              consultation_ends_at: workflow?.consultation_ends_at || null,
+              consultation_timezone: currentLibraryScheduleStateRow?.consultation_timezone || libraryServiceState?.consultation_timezone || 'America/Belem',
               schedule_reply_status: workflow?.schedule_reply_status || null,
               schedule_reply_note: workflow?.schedule_reply_note || null,
               schedule_reply_at: workflow?.schedule_reply_at || null,
@@ -7293,6 +7498,108 @@ async function fetchActiveLoans(){
       return { date: m?.[1] || '', time: m?.[2] || '' };
     }
 
+
+    function normalizeBrDateToIso(value){
+      const raw = String(value || '').trim();
+      const m = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!m) return '';
+      return `${m[3]}-${m[2]}-${m[1]}`;
+    }
+
+    function normalizeHalfHourTime(value){
+      const raw = String(value || '').trim();
+      const m = raw.match(/^(\d{2}):(\d{2})$/);
+      if (!m) return '';
+      const hh = Number(m[1]);
+      const mm = Number(m[2]);
+      if (hh < 0 || hh > 23) return '';
+      if (![0, 30].includes(mm)) return '';
+      return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+    }
+
+    function hhmmToMinutes(value){
+      const normalized = normalizeHalfHourTime(value);
+      if (!normalized) return null;
+      const [hh, mm] = normalized.split(':').map(Number);
+      return hh * 60 + mm;
+    }
+
+    function minutesToHhmm(value){
+      const total = Number(value);
+      if (!Number.isFinite(total) || total < 0 || total > 24 * 60) return '';
+      const hh = Math.floor(total / 60);
+      const mm = total % 60;
+      return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+    }
+
+    function isoDateToConsultationDayKey(isoDate){
+      const raw = String(isoDate || '').trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return '';
+      const date = new Date(`${raw}T12:00:00Z`);
+      const day = date.getUTCDay();
+      return ({ 1: 'monday', 2: 'tuesday', 3: 'wednesday', 4: 'thursday', 5: 'friday', 6: 'saturday', 0: 'sunday' })[day] || '';
+    }
+
+    function syncConsultationScheduleBuilder({ silent=false } = {}){
+      const endSelect = $('consultScheduleEnd');
+      const startInput = $('consultScheduleStart');
+      const dateInput = $('consultScheduleDate');
+      const hint = $('consultScheduleTimezoneHint');
+      if (hint) hint.textContent = `Horário local da biblioteca (${consultationTimeZoneLabel()}). Só são aceitos minutos 00 ou 30.`;
+      if (!endSelect) return;
+      const isoDate = normalizeBrDateToIso(dateInput?.value || '');
+      const start = normalizeHalfHourTime(startInput?.value || '');
+      const settings = getCurrentConsultationSettings();
+      const dayKey = isoDateToConsultationDayKey(isoDate);
+      const dayCfg = settings.consultation_schedule_struct?.[dayKey] || getEmptyConsultationDay();
+      const options = [];
+      if (!isoDate || !start) {
+        endSelect.innerHTML = '<option value="">Escolhe primeiro a data e a hora de início…</option>';
+        return;
+      }
+      const startMinutes = hhmmToMinutes(start);
+      const openMinutes = hhmmToMinutes(dayCfg.open);
+      const closeMinutes = hhmmToMinutes(dayCfg.close);
+      const pauseStart = hhmmToMinutes(dayCfg.pause_start);
+      const pauseEnd = hhmmToMinutes(dayCfg.pause_end);
+      if (!dayKey || dayCfg.enabled !== true || openMinutes === null || closeMinutes === null) {
+        endSelect.innerHTML = '<option value="">Configura primeiro o horário estruturado deste dia.</option>';
+        return;
+      }
+      for (let duration = 60; duration <= 240; duration += 60) {
+        const endMinutes = startMinutes + duration;
+        const overlapsPause = pauseStart !== null && pauseEnd !== null && startMinutes < pauseEnd && endMinutes > pauseStart;
+        if (startMinutes < openMinutes) continue;
+        if (endMinutes > closeMinutes) continue;
+        if (overlapsPause) continue;
+        options.push({ value: minutesToHhmm(endMinutes), label: `${minutesToHhmm(endMinutes)} · sessão de ${duration / 60}h` });
+      }
+      if (!options.length) {
+        endSelect.innerHTML = '<option value="">Nenhum fim possível dentro do horário estruturado.</option>';
+        if (!silent) setStatus('statusConsultas', 'O início escolhido não cabe nas janelas estruturadas desta biblioteca.', 'warn');
+        return;
+      }
+      const previous = String(endSelect.value || '').trim();
+      endSelect.innerHTML = '<option value="">Escolhe a hora de fim…</option>' + options.map((option) => `<option value="${esc(option.value)}">${esc(option.label)}</option>`).join('');
+      if (options.some((option) => option.value === previous)) endSelect.value = previous;
+    }
+
+    function setupConsultationScheduleBuilder(){
+      $('consultScheduleDate')?.addEventListener('input', () => syncConsultationScheduleBuilder({ silent: true }));
+      $('consultScheduleDate')?.addEventListener('change', () => syncConsultationScheduleBuilder({ silent: true }));
+      $('consultScheduleStart')?.addEventListener('input', () => syncConsultationScheduleBuilder({ silent: true }));
+      $('consultScheduleStart')?.addEventListener('change', () => syncConsultationScheduleBuilder({ silent: true }));
+      $('consultScheduleStart')?.addEventListener('blur', () => {
+        const normalized = normalizeHalfHourTime($('consultScheduleStart')?.value || '');
+        if ($('consultScheduleStart')) $('consultScheduleStart').value = normalized;
+        if (!normalized && String($('consultScheduleStart')?.value || '').trim()) {
+          setStatus('statusConsultas', 'A hora de início deve usar apenas minutos 00 ou 30.', 'warn');
+        }
+        syncConsultationScheduleBuilder({ silent: true });
+      });
+      syncConsultationScheduleBuilder({ silent: true });
+    }
+
     function closeReturnScheduleEditor(){
       const backdrop = $('returnScheduleEditor');
       if (!backdrop) return;
@@ -7531,7 +7838,8 @@ async function fetchActiveLoans(){
         const checked = selectedConsultaIds.has(c.id) ? 'checked' : '';
         const workflowLabel = translateConsultationWorkflowStage(c.workflow_stage);
         const workflowDetail = consultationWorkflowDetail(c);
-        const validity = c.validade ? `${esc(fmtDateTimeBelem(c.validade))} (Belém)` : '—';
+        const tz = c.consultation_timezone || getCurrentConsultationTimeZone();
+        const validity = c.validade ? `${esc(fmtDateTimeInZone(c.validade, tz))} (${esc(tz)})` : '—';
         return `
           <tr data-consulta-row="${esc(c.id)}" class="${checked ? 'is-selected clickable-row' : 'clickable-row'}">
             <td><input type="checkbox" ${checked} data-consulta-check="${esc(c.id)}" aria-label="Selecionar ${esc(c.sub_id)}"></td>
@@ -7540,8 +7848,8 @@ async function fetchActiveLoans(){
             <td>${esc(c.user_name)}${c.user_email && c.user_email !== '—' ? `<br><span class="mini subtle">${esc(c.user_email)}</span>` : ''}</td>
             <td>${esc(c.titulo)}${c.autor ? `<br><span class="mini subtle">${esc(c.autor)}</span>` : ''}</td>
             <td class="mono">${esc(c.bib_ref)}</td>
-            <td>${esc(fmtDateTimeBelem(c.consulta_em))} (Belém)</td>
-            <td><span class="pill ${esc(consultationWorkflowStageClass(c.workflow_stage))}">${esc(workflowLabel)}</span>${c.workflow_stage_updated_at ? `<br><span class="mini subtle">Atualizado: ${esc(fmtDateTimeBelem(c.workflow_stage_updated_at))} (Belém)</span>` : ''}${workflowDetail ? `<br><span class="mini subtle">${esc(workflowDetail)}</span>` : ''}</td>
+            <td>${esc(fmtDateTimeInZone(c.consulta_em, tz))} (${esc(tz)})</td>
+            <td><span class="pill ${esc(consultationWorkflowStageClass(c.workflow_stage))}">${esc(workflowLabel)}</span>${c.workflow_stage_updated_at ? `<br><span class="mini subtle">Atualizado: ${esc(fmtDateTimeInZone(c.workflow_stage_updated_at, tz))} (${esc(tz)})</span>` : ''}${workflowDetail ? `<br><span class="mini subtle">${esc(workflowDetail)}</span>` : ''}</td>
             <td>${validity}</td>
           </tr>`;
       }).join('');
@@ -8991,20 +9299,26 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
     });
     $('btnApplyConsultWorkflowStage')?.addEventListener('click', async () => {
       const stage = $('consultWorkflowStage')?.value || '';
-      const consultationScheduledFor = toIsoFromLocalInput($('consultScheduleAt')?.value);
+      const consultationDateLocal = normalizeBrDateToIso($('consultScheduleDate')?.value);
+      const consultationStartLocal = normalizeHalfHourTime($('consultScheduleStart')?.value);
+      const consultationEndLocal = String($('consultScheduleEnd')?.value || '').trim();
+      const consultationTimezone = getCurrentConsultationTimeZone();
       if (!stage) {
         setStatus('statusConsultas', 'Escolhe uma etapa do fluxo para aplicar.', 'warn');
         return;
       }
-      if (stage === 'consulta_agendada' && !consultationScheduledFor) {
-        setStatus('statusConsultas', 'Informe data e hora para agendar a consulta.', 'warn');
+      if (stage === 'consulta_agendada' && (!consultationDateLocal || !consultationStartLocal || !consultationEndLocal)) {
+        setStatus('statusConsultas', 'Informe data, hora de início e hora de fim para agendar a consulta.', 'warn');
         return;
       }
       setStatus('statusConsultas', 'Aplicando etapa...', 'warn');
       try {
         await setConsultationWorkflowStage(stage, selectedConsultationRows(), {
           note: $('consultWorkflowNote')?.value.trim() || '',
-          consultationScheduledFor: stage === 'consulta_agendada' ? consultationScheduledFor : null,
+          consultationDateLocal,
+          consultationStartLocal,
+          consultationEndLocal,
+          consultationTimezone,
           targetStatusId: 'statusConsultas'
         });
         writePainelStateSync('consultations');
@@ -10044,19 +10358,24 @@ function initPartnerProbeUi() {
 
             case 'btnApplyConsultWorkflowStage': {
               const stage = $('consultWorkflowStage')?.value || '';
-              const consultationScheduledFor = toIsoFromLocalInput($('consultScheduleAt')?.value);
+              const consultationDateLocal = normalizeBrDateToIso($('consultScheduleDate')?.value);
+              const consultationStartLocal = normalizeHalfHourTime($('consultScheduleStart')?.value);
+              const consultationEndLocal = String($('consultScheduleEnd')?.value || '').trim();
               if (!stage) {
                 setStatus('statusConsultas', 'Escolhe uma etapa do fluxo para aplicar.', 'warn');
                 return;
               }
-              if (stage === 'consulta_agendada' && !consultationScheduledFor) {
-                setStatus('statusConsultas', 'Informe data e hora para agendar a consulta.', 'warn');
+              if (stage === 'consulta_agendada' && (!consultationDateLocal || !consultationStartLocal || !consultationEndLocal)) {
+                setStatus('statusConsultas', 'Informe data, hora de início e hora de fim para agendar a consulta.', 'warn');
                 return;
               }
               setStatus('statusConsultas', 'Aplicando etapa...', 'warn');
               await setConsultationWorkflowStage(stage, selectedConsultationRows(), {
                 note: $('consultWorkflowNote')?.value.trim() || '',
-                consultationScheduledFor: stage === 'consulta_agendada' ? consultationScheduledFor : null,
+                consultationDateLocal,
+                consultationStartLocal,
+                consultationEndLocal,
+                consultationTimezone: getCurrentConsultationTimeZone(),
                 targetStatusId: 'statusConsultas'
               });
               writePainelStateSync('consultations');
@@ -10487,7 +10806,7 @@ function initPartnerProbeUi() {
           if (e2) throw e2;
           const { data: workflows, error: e3 } = await supabase
             .from('consulta_item_workflow_v2')
-            .select('consulta_id,line_no,workflow_stage,workflow_note,consultation_scheduled_for,updated_at')
+.select('consulta_id,line_no,workflow_stage,workflow_note,consultation_scheduled_for,consultation_starts_at,consultation_ends_at,updated_at')
             .in('consulta_id', consultaIds)
             .order('updated_at', { ascending: false });
           if (e3) throw e3;
@@ -10523,6 +10842,9 @@ function initPartnerProbeUi() {
               workflow_stage_effective: workflow?.workflow_stage || null,
               workflow_note: workflow?.workflow_note || null,
               consultation_scheduled_for: workflow?.consultation_scheduled_for || null,
+              consultation_starts_at: workflow?.consultation_starts_at || workflow?.consultation_scheduled_for || null,
+              consultation_ends_at: workflow?.consultation_ends_at || null,
+              consultation_timezone: currentLibraryScheduleStateRow?.consultation_timezone || libraryServiceState?.consultation_timezone || 'America/Belem',
               workflow_stage_updated_at_effective: workflow?.updated_at || linha?.updated_at || consulta?.updated_at || consulta?.created_at || null,
             };
           });
