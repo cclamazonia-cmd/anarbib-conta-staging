@@ -303,6 +303,17 @@
       display:inline-block;
       min-width:78px;
     }
+    .consultation-muted-row td{
+      opacity:.58;
+      background:rgba(255,255,255,.04);
+    }
+    .consultation-muted-row:hover td{
+      background:rgba(255,255,255,.06) !important;
+    }
+    .mobile-card.consultation-muted-card{
+      opacity:.62;
+      border-color:rgba(255,255,255,.18);
+    }
     @media (max-width: 760px){
       .desktop-only{ display:none !important; }
       .mobile-only{ display:block !important; }
@@ -512,28 +523,6 @@ button[type="submit"] *,
   -webkit-text-fill-color:#ffffff !important;
 }
 
-
-    .book-title-link,
-    .book-title-link:link,
-    .book-title-link:visited,
-    .book-title-link:hover,
-    .book-title-link:focus,
-    .book-title-link:active{
-      color:#ffffff !important;
-      font-style:italic;
-      font-weight:700;
-      text-decoration:none;
-    }
-    .book-title-link:hover,
-    .book-title-link:focus{
-      text-decoration:underline;
-    }
-    .book-availability-inline{
-      color:#f0f0f0;
-      font-size:.92rem;
-      font-style:italic;
-      white-space:nowrap;
-    }
 
     :root{
       --panel:var(--brand-panel-bg, rgba(10,10,10,.90));
@@ -784,7 +773,6 @@ button[type="submit"] *,
           <span class="chip" id="chipContaPublicId" style="display:none">ID público: —</span>
           <span class="chip" id="chipContaCadastro">Cadastro: —</span>
           <span class="chip" id="chipContaReservas">Reservas ativas: —</span>
-          <span class="chip" id="chipContaConsultas">Consultas ativas: —</span>
           <span class="chip" id="chipContaEmprestimos">Empréstimos em curso: —</span>
         </div>
         <div id="serviceStateNotice" class="notice service-inline" style="display:none;"></div>
@@ -1363,7 +1351,6 @@ button[type="submit"] *,
     const chipContaPublicId = $("chipContaPublicId");
     const chipContaCadastro = $("chipContaCadastro");
     const chipContaReservas = $("chipContaReservas");
-    const chipContaConsultas = $("chipContaConsultas");
     const chipContaEmprestimos = $("chipContaEmprestimos");
 
     function setChipText(el, label, value) {
@@ -1587,21 +1574,16 @@ button[type="submit"] *,
       const url = new URL(ROUTES.LIVRO, location.href);
       if (numericBookId > 0) {
         url.searchParams.set("id", String(numericBookId));
-      }
-      if (cleanBibRef) {
+      } else {
         url.searchParams.set("ref", cleanBibRef);
       }
       return url.toString();
     }
 
-    function renderBookTitleLink(title, { bookId = null, bibRef = "", availabilityHint = "" } = {}) {
+    function renderBookTitleLink(title, { bookId = null, bibRef = "" } = {}) {
       const label = escapeHtml(title || (bibRef ? `Referência ${bibRef}` : "Livro"));
       const url = buildBookDetailUrl({ bookId, bibRef });
-      const linkHtml = url
-        ? `<a class="book-title-link" href="${escapeHtml(url)}">${label}</a>`
-        : `<span class="book-title-link">${label}</span>`;
-      const cleanHint = String(availabilityHint || "").trim();
-      return cleanHint ? `${linkHtml} <span class="book-availability-inline">(${escapeHtml(cleanHint)})</span>` : linkHtml;
+      return url ? `<a href="${escapeHtml(url)}">${label}</a>` : label;
     }
 
     function isMissingHoldingReservaFunctionError(error) {
@@ -1738,24 +1720,6 @@ button[type="submit"] *,
       return Number.isNaN(d.getTime()) ? String(v) : d.toISOString().slice(0, 10);
     }
 
-    function fmtDateOnlyPtBr(v) {
-      if (!v) return "—";
-      const d = new Date(v);
-      return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleDateString("pt-BR", {
-        timeZone: "America/Belem",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit"
-      });
-    }
-
-    function buildBookAvailabilityHint({ dueAt = null, pickupScheduledFor = null, returnedAt = null } = {}) {
-      if (returnedAt) return "disponível agora";
-      if (pickupScheduledFor) return `dia ${fmtDateOnlyPtBr(pickupScheduledFor)}`;
-      if (dueAt) return `dia ${fmtDateOnlyPtBr(dueAt)}`;
-      return "";
-    }
-
     function fmtDateTime(v) {
       if (!v) return "—";
       const d = new Date(v);
@@ -1846,32 +1810,42 @@ button[type="submit"] *,
       const mode = publicServiceState?.service_mode || null;
       const modeLabel = SERVICE_MODE_LABELS[mode] || "Funcionamento não informado";
       const message = getServiceModeMessage(publicServiceState);
-      const reservationsClosed = publicServiceState ? publicServiceState.allow_reservations === false : false;
-      const reservationsLabel = reservationsClosed ? "Reservas temporariamente interrompidas" : "Reservas possíveis no momento";
-      const reservationsMessage = reservationsClosed
-        ? "As novas reservas públicas estão fechadas no momento. Consulte os canais do CCLA para atualizações e orientações."
-        : "As novas reservas públicas estão abertas no momento para a sua biblioteca de vínculo.";
+      const publicRequestsClosed = publicServiceState ? publicServiceState.allow_reservations === false : false;
+      const consultationsClosed = publicRequestsClosed || mode === "pausada";
+      const reservationsClosed = consultationsClosed || mode === "somente_consulta";
+      const requestsLabel = consultationsClosed
+        ? "Novas reservas e consultas públicas temporariamente interrompidas"
+        : (reservationsClosed ? "Novas reservas públicas interrompidas; consultas locais possíveis" : "Novas reservas e consultas públicas possíveis");
+      const requestsMessage = consultationsClosed
+        ? "A biblioteca não está recebendo novos pedidos públicos de reserva nem de consulta local no momento."
+        : (reservationsClosed
+            ? "No momento, a biblioteca aceita novos pedidos públicos de consulta local, mas não está abrindo novas reservas de empréstimo."
+            : "No momento, a biblioteca aceita novos pedidos públicos de reserva e de consulta local.");
       if (serviceStateNotice) {
         serviceStateNotice.style.display = "block";
-        serviceStateNotice.innerHTML = `<b>Funcionamento: ${escapeHtml(modeLabel)}</b><div class="small">${escapeHtml(message)}</div><div class="small"><b>${escapeHtml(reservationsLabel)}</b> — ${escapeHtml(reservationsMessage)}</div>`;
+        serviceStateNotice.innerHTML = `<b>Funcionamento: ${escapeHtml(modeLabel)}</b><div class="small">${escapeHtml(message)}</div><div class="small"><b>${escapeHtml(requestsLabel)}</b> — ${escapeHtml(requestsMessage)}</div>`;
       }
       if (reserveServiceNotice) {
-        if (reservationsClosed) {
+        if (consultationsClosed) {
           reserveServiceNotice.style.display = "block";
-          reserveServiceNotice.innerHTML = `<b>Reservas de empréstimo temporariamente fechadas</b><div class="small">As novas reservas públicas de empréstimo estão fechadas no momento. Você ainda pode pedir consulta no local para materiais apenas consultáveis.</div>`;
+          reserveServiceNotice.innerHTML = `<b>Reservas e consultas públicas temporariamente fechadas</b><div class="small">A biblioteca não está recebendo novos pedidos públicos de reserva nem de consulta local no momento.</div>`;
+        } else if (reservationsClosed) {
+          reserveServiceNotice.style.display = "block";
+          reserveServiceNotice.innerHTML = `<b>Reservas de empréstimo temporariamente fechadas</b><div class="small">As novas reservas públicas de empréstimo estão fechadas no momento. Os pedidos públicos de consulta local continuam disponíveis para materiais apenas consultáveis.</div>`;
         } else {
           reserveServiceNotice.style.display = "none";
           reserveServiceNotice.innerHTML = "";
         }
       }
 
-      if (bibRefInput) bibRefInput.disabled = false;
+      if (bibRefInput) bibRefInput.disabled = consultationsClosed;
       if (reserveSubmitBtn) {
         reserveSubmitBtn.disabled = reservationsClosed;
         reserveSubmitBtn.textContent = reservationsClosed ? "Reservas de empréstimo fechadas" : "Reservar empréstimo";
       }
       if (consultSubmitBtn) {
-        consultSubmitBtn.disabled = false;
+        consultSubmitBtn.disabled = consultationsClosed;
+        consultSubmitBtn.textContent = consultationsClosed ? "Consultas locais fechadas" : "Pedir consulta no local";
       }
     }
 
@@ -2377,59 +2351,6 @@ button[type="submit"] *,
       return new Map((data || []).map((row) => [String(row.bib_ref), row]));
     }
 
-    async function fetchReservationHistoryRows() {
-      const primary = await supabase
-        .schema("api")
-        .from("my_reservations_history")
-        .select("id, library_name, bib_ref, titulo, autor, status, reserved_at, created_at, updated_at, cancelled_at, fulfilled_at, expired_at, closed_at")
-        .order("closed_at", { ascending: false })
-        .limit(200);
-
-      if (!primary.error) {
-        return {
-          source: "my_reservations_history",
-          mode: "aggregated",
-          data: Array.isArray(primary.data) ? primary.data : [],
-          error: null
-        };
-      }
-
-      if (!isMissingRelationError(primary.error)) {
-        return {
-          source: "my_reservations_history",
-          mode: "aggregated",
-          data: [],
-          error: primary.error
-        };
-      }
-
-      const fallback = await supabase
-        .schema("api")
-        .from("reserva_itens_followup_ui")
-        .select("reserva_id, line_no, sub_id, titulo, autor, bib_ref, item_status, reserva_created_at, workflow_stage_effective, workflow_note, pickup_scheduled_for, workflow_stage_updated_at_effective")
-        .eq("user_id", session.user.id)
-        .neq("item_status", "ativa")
-        .order("reserva_id", { ascending: false })
-        .order("line_no", { ascending: true })
-        .limit(200);
-
-      if (!fallback.error) {
-        return {
-          source: "reserva_itens_followup_ui",
-          mode: "itemized",
-          data: Array.isArray(fallback.data) ? fallback.data : [],
-          error: null
-        };
-      }
-
-      return {
-        source: "reserva_itens_followup_ui",
-        mode: "itemized",
-        data: [],
-        error: fallback.error
-      };
-    }
-
     async function fetchRotulosMapByBibRefs(refs) {
       const clean = Array.from(new Set((refs || []).map((r) => String(r || "").trim()).filter(Boolean)));
       if (!clean.length) return new Map();
@@ -2730,9 +2651,31 @@ button[type="submit"] *,
       return stage ? translateConsultationWorkflowStage(stage) : consultationStatusLabel(row?.status || row?.item_status);
     }
 
+    function translateConsultationScheduleReplyStatus(status) {
+      return ({
+        confirmado_leitor: "Você aceitou esse horário",
+        recusado_leitor: "Você recusou esse horário"
+      })[String(status || "")] || "";
+    }
+
+    function consultationNeedsScheduleReply(row) {
+      return String(row?.workflow_stage_effective || "").trim() === "consulta_agendada"
+        && String(row?.status || row?.item_status || "").trim() === "ativa"
+        && !String(row?.schedule_reply_status || "").trim();
+    }
+
+    function consultationDismissPending(row) {
+      return String(row?.status || row?.item_status || "").trim() === "cancelada_biblioteca"
+        && !row?.dismissed_by_reader_at;
+    }
+
     function consultationWorkflowDetailLines(row) {
       const lines = [];
       if (row?.consultation_scheduled_for) lines.push(`Consulta prevista: ${fmtDateTimeBelem(row.consultation_scheduled_for)} (Belém)`);
+      const scheduleReplyLabel = translateConsultationScheduleReplyStatus(row?.schedule_reply_status);
+      if (scheduleReplyLabel) lines.push(scheduleReplyLabel);
+      if (row?.schedule_reply_note) lines.push(String(row.schedule_reply_note));
+      if (consultationDismissPending(row)) lines.push('A biblioteca cancelou este pedido. Você ainda pode descartá-lo da sua lista.');
       if (row?.workflow_note) lines.push(String(row.workflow_note));
       return lines;
     }
@@ -2742,6 +2685,23 @@ button[type="submit"] *,
         p_reserva_id: rid,
         p_line_nos: [lineNo],
         p_reply_status: replyStatus,
+        p_note: note
+      });
+    }
+
+    async function setConsultaScheduleReply(cid, lineNo, replyStatus, note = null) {
+      return await supabase.rpc("fn_v2_set_consulta_linhas_schedule_reply", {
+        p_consulta_id: cid,
+        p_line_nos: [lineNo],
+        p_reply_status: replyStatus,
+        p_note: note
+      });
+    }
+
+    async function dismissCancelledConsultaV2(cid, lineNo, note = null) {
+      return await supabase.rpc("fn_v2_dismiss_consulta_cancelled_as_leitor", {
+        p_consulta_id: cid,
+        p_line_nos: [lineNo],
         p_note: note
       });
     }
@@ -2776,6 +2736,20 @@ button[type="submit"] *,
 
     function consultationCancelOnlyAction(row) {
       return `<div class="reservation-actions single-action"><button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-consulta-v2="${escapeHtml(Number(row?.consulta_id) || "")}|${escapeHtml(Number(row?.line_no) || "")}">Cancelar consulta</button></div>`;
+    }
+
+    function consultationDismissOnlyAction(row) {
+      return `<div class="reservation-actions single-action"><button type="button" class="secondary mini-btn" data-dismiss-consulta-v2="${escapeHtml(Number(row?.consulta_id) || "")}|${escapeHtml(Number(row?.line_no) || "")}">Descartar consulta</button></div>`;
+    }
+
+    function consultationScheduleReplyActions(row) {
+      if (consultationDismissPending(row)) return consultationDismissOnlyAction(row);
+      if (!consultationNeedsScheduleReply(row)) return consultationCancelOnlyAction(row);
+      return buildActionGrid([
+        `<button type="button" class="secondary mini-btn" data-consult-reply="${row.consulta_id}|${row.line_no}|confirmado_leitor">Aceitar agendamento</button>`,
+        `<button type="button" class="secondary mini-btn" data-consult-reply="${row.consulta_id}|${row.line_no}|recusado_leitor">Recusar agendamento</button>`,
+        `<button type="button" class="secondary mini-btn danger-mini-btn" data-cancel-consulta-v2="${row.consulta_id}|${row.line_no}">Cancelar consulta</button>`
+      ], "reservation-actions");
     }
 
     function parseReservationLineNoFromSubId(subId) {
@@ -3229,18 +3203,16 @@ function reservationPickupReplyActions(row) {
       const activeConsultas = await supabase
         .schema("api")
         .from("my_consultas_active_v2")
-        .select("consulta_id, sub_id, line_no, titulo, autor, bib_ref, rotulo, requested_at, status, consultation_scheduled_for, workflow_stage_effective, workflow_note, library_name")
+        .select("consulta_id, sub_id, line_no, titulo, autor, bib_ref, rotulo, requested_at, status, consultation_scheduled_for, workflow_stage_effective, workflow_note, library_name, schedule_reply_status, schedule_reply_note, schedule_reply_at, dismissed_by_reader_at")
         .order("consulta_id", { ascending: false })
         .order("line_no", { ascending: true });
 
       if (activeConsultas.error) {
         console.error("renderActiveConsultations error:", activeConsultas.error);
-        setChipText(chipContaConsultas, "Consultas ativas", "—");
         return showEmpty(activeConsultationsEl, "Não foi possível carregar seus pedidos de consulta local.");
       }
 
       const rowsData = Array.isArray(activeConsultas.data) ? activeConsultas.data : [];
-      setChipText(chipContaConsultas, "Consultas ativas", String(rowsData.length));
       if (!rowsData.length) {
         return showEmpty(activeConsultationsEl, "Você não tem pedidos de consulta local ativos no momento.");
       }
@@ -3248,8 +3220,9 @@ function reservationPickupReplyActions(row) {
       const rows = rowsData.map((r) => {
         const workflowLabel = consultationWorkflowLabel(r);
         const workflowDetails = consultationWorkflowDetailLines(r);
+        const mutedClass = consultationDismissPending(r) ? ' class="consultation-muted-row"' : '';
         return `
-          <tr>
+          <tr${mutedClass}>
             <td>#${r.consulta_id}</td>
             <td class="mono">${escapeHtml(r.sub_id || `${r.consulta_id}.${r.line_no}`)}</td>
             <td>${escapeHtml(r.titulo || "Livro")} ${r.autor ? `<br><small>${escapeHtml(r.autor)}</small>` : ""}</td>
@@ -3257,15 +3230,16 @@ function reservationPickupReplyActions(row) {
             <td>${escapeHtml(r.library_name || "—")}</td>
             <td>${escapeHtml(fmtDateTimeBelem(r.requested_at))} (Belém)</td>
             <td><b>${escapeHtml(workflowLabel)}</b>${workflowDetails.length ? `<br><small>${workflowDetails.map((line) => escapeHtml(line)).join("<br>")}</small>` : ""}</td>
-            <td>${consultationCancelOnlyAction(r)}</td>
+            <td>${consultationScheduleReplyActions(r)}</td>
           </tr>`;
       }).join("");
 
       const mobileCards = rowsData.map((r) => {
         const workflowLabel = consultationWorkflowLabel(r);
         const workflowDetails = consultationWorkflowDetailLines(r);
+        const mutedCardClass = consultationDismissPending(r) ? ' consultation-muted-card' : '';
         return `
-          <article class="mobile-card">
+          <article class="mobile-card${mutedCardClass}">
             <h4>${escapeHtml(r.titulo || "Livro")}</h4>
             ${r.autor ? `<p class="author">${escapeHtml(r.autor)}</p>` : ""}
             <div class="mobile-kv">
@@ -3277,7 +3251,7 @@ function reservationPickupReplyActions(row) {
               <div class="k">Situação</div><div class="v"><b>${escapeHtml(workflowLabel)}</b>${workflowDetails.length ? `<br><small>${workflowDetails.map((line) => escapeHtml(line)).join("<br>")}</small>` : ""}</div>
             </div>
             <div class="mobile-actions">
-              ${consultationCancelOnlyAction(r)}
+              ${consultationScheduleReplyActions(r)}
             </div>
           </article>`;
       }).join("");
@@ -3300,7 +3274,7 @@ function reservationPickupReplyActions(row) {
           const [cid, lineNo] = String(btn.getAttribute("data-cancel-consulta-v2") || "").split("|").map(Number);
           if (!cid || !lineNo) return;
           btn.disabled = true;
-          if (activeConsultMsg) activeConsultMsg.textContent = "Cancelando reserva...";
+          if (activeConsultMsg) activeConsultMsg.textContent = "Cancelando consulta...";
           const res = await cancelConsultaLocalV2(cid, lineNo);
           if (res.error) {
             activeConsultMsg.textContent = "Erro ao cancelar: " + res.error.message;
@@ -3308,6 +3282,52 @@ function reservationPickupReplyActions(row) {
             return;
           }
           activeConsultMsg.textContent = "Pedido cancelado.";
+          await renderActiveConsultations();
+          await renderHistory();
+          writeContaStateSync('consultations');
+        });
+      });
+      activeConsultationsEl.querySelectorAll("[data-consult-reply]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const [cid, lineNo, replyStatus] = String(btn.getAttribute("data-consult-reply") || "").split("|");
+          const consultaId = Number(cid);
+          const consultaLineNo = Number(lineNo);
+          if (!consultaId || !consultaLineNo || !replyStatus) return;
+          const proceed = window.confirm(replyStatus === "confirmado_leitor"
+            ? "Confirma que aceita esse horário de consulta?"
+            : "Confirma que não pode comparecer nesse horário de consulta?");
+          if (!proceed) return;
+          btn.disabled = true;
+          if (activeConsultMsg) activeConsultMsg.textContent = replyStatus === "confirmado_leitor"
+            ? "Registrando sua confirmação..."
+            : "Registrando sua resposta...";
+          const res = await setConsultaScheduleReply(consultaId, consultaLineNo, replyStatus, null);
+          if (res.error) {
+            activeConsultMsg.textContent = "Erro ao registrar sua resposta: " + res.error.message;
+            btn.disabled = false;
+            return;
+          }
+          activeConsultMsg.textContent = replyStatus === "confirmado_leitor"
+            ? "Agendamento aceito. A biblioteca foi avisada."
+            : "Agendamento recusado. A biblioteca foi avisada para propor outro horário.";
+          await renderActiveConsultations();
+          await renderHistory();
+          writeContaStateSync('consultations');
+        });
+      });
+      activeConsultationsEl.querySelectorAll("[data-dismiss-consulta-v2]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const [cid, lineNo] = String(btn.getAttribute("data-dismiss-consulta-v2") || "").split("|").map(Number);
+          if (!cid || !lineNo) return;
+          btn.disabled = true;
+          if (activeConsultMsg) activeConsultMsg.textContent = "Descartando consulta cancelada...";
+          const res = await dismissCancelledConsultaV2(cid, lineNo, null);
+          if (res.error) {
+            activeConsultMsg.textContent = "Erro ao descartar: " + res.error.message;
+            btn.disabled = false;
+            return;
+          }
+          activeConsultMsg.textContent = "Consulta descartada da sua lista ativa.";
           await renderActiveConsultations();
           await renderHistory();
           writeContaStateSync('consultations');
@@ -3668,48 +3688,39 @@ function reservationPickupReplyActions(row) {
       historyEl.textContent = "Carregando...";
       if (historyMsg) historyMsg.textContent = "";
 
-      const reservationHistory = await fetchReservationHistoryRows();
+      const currentHistory = await supabase
+        .schema("api")
+        .from("my_reservations_history")
+        .select("id, library_name, bib_ref, titulo, autor, status, reserved_at, created_at, updated_at, cancelled_at, fulfilled_at, expired_at, closed_at")
+        .order("closed_at", { ascending: false })
+        .limit(200);
 
       const consultationHistory = await supabase
         .schema("api")
         .from("my_consultas_history_v2")
-        .select("id, book_id, library_name, bib_ref, titulo, autor, status, requested_at, created_at, updated_at, cancelled_at, consulted_at, expired_at, closed_at, workflow_stage_effective, workflow_note, consultation_scheduled_for")
+        .select("id, book_id, library_name, bib_ref, titulo, autor, status, requested_at, created_at, updated_at, cancelled_at, consulted_at, expired_at, closed_at, workflow_stage_effective, workflow_note, consultation_scheduled_for, schedule_reply_status, schedule_reply_note, schedule_reply_at, dismissed_by_reader_at")
         .order("closed_at", { ascending: false })
         .limit(200);
 
-      const v2Loans = await supabase
-        .schema("api")
-        .from("emprestimo_itens_ui")
-        .select("emprestimo_id, line_no, sub_id, titulo, autor, bib_ref, rotulo, emprestimo_created_at, due_at, item_status, returned_at")
-        .eq("user_id", session.user.id)
-        .order("emprestimo_created_at", { ascending:false })
-        .limit(200);
-
       const reservationHistoryItems = [];
-      if (reservationHistory.mode === "aggregated") {
-        for (const r of (reservationHistory.data || [])) {
+      if (!currentHistory.error) {
+        for (const r of (currentHistory.data || [])) {
           const when = r.closed_at || r.cancelled_at || r.fulfilled_at || r.expired_at || r.updated_at || r.created_at;
           reservationHistoryItems.push({
             when,
             html: `<li><b>Reserva #${escapeHtml(r.id)}</b> — ${renderBookTitleLink(r.titulo || ('Referência ' + (r.bib_ref || '—')), { bibRef: r.bib_ref })}${r.autor ? ` — ${escapeHtml(r.autor)}` : ""} — ${escapeHtml(reservationStatusLabel(r.status, r))}${r.library_name ? ` — ${escapeHtml(r.library_name)}` : ""}</li>`
           });
         }
-      } else {
-        for (const r of (reservationHistory.data || [])) {
-          const when = r.workflow_stage_updated_at_effective || r.pickup_scheduled_for || r.reserva_created_at;
-          const workflowLabel = reservationWorkflowLabel(r);
-          const workflowDetails = reservationWorkflowDetailLines(r);
-          const suffix = workflowDetails.length ? ` — ${escapeHtml(workflowDetails.join(" · "))}` : "";
-          const availabilityHint = buildBookAvailabilityHint({
-            pickupScheduledFor: r.pickup_scheduled_for
-          });
-          reservationHistoryItems.push({
-            when,
-            html: `<li><b>Reserva #${escapeHtml(r.reserva_id)}</b> — <span class="mono">${escapeHtml(r.sub_id || `${r.reserva_id}.${r.line_no}`)}</span> — ${renderBookTitleLink(r.titulo || ('Referência ' + (r.bib_ref || '—')), { bibRef: r.bib_ref, availabilityHint })}${r.autor ? ` — ${escapeHtml(r.autor)}` : ""} — ${escapeHtml(workflowLabel)}${suffix}</li>`
-          });
-        }
       }
 
+      const reservationFallbackPromise = currentHistory.error
+        ? supabase.schema("api").from("reserva_itens_ui").select("reserva_id, sub_id, titulo, autor, bib_ref, rotulo, reserva_created_at, expires_at, item_status, converted_at, cancelled_at").eq("user_id", session.user.id).neq("item_status", "ativa").order("reserva_created_at", { ascending:false }).limit(200)
+        : Promise.resolve({ data: [], error: null });
+
+      const [v2Loans, v2Reservas] = await Promise.all([
+        supabase.schema("api").from("emprestimo_itens_ui").select("emprestimo_id, line_no, sub_id, titulo, autor, bib_ref, rotulo, emprestimo_created_at, due_at, item_status, returned_at").eq("user_id", session.user.id).order("emprestimo_created_at", { ascending:false }).limit(200),
+        reservationFallbackPromise
+      ]);
       const consultationHistoryItems = [];
       if (!consultationHistory.error) {
         for (const r of (consultationHistory.data || [])) {
@@ -3717,30 +3728,30 @@ function reservationPickupReplyActions(row) {
           const workflowLabel = consultationWorkflowLabel(r);
           const workflowDetails = consultationWorkflowDetailLines(r);
           const suffix = workflowDetails.length ? ` — ${escapeHtml(workflowDetails.join(" · "))}` : "";
-          const availabilityHint = buildBookAvailabilityHint({
-            pickupScheduledFor: r.consultation_scheduled_for
-          });
           consultationHistoryItems.push({
             when,
-            html: `<li><b>Consulta local #${escapeHtml(r.id)}</b> — ${renderBookTitleLink(r.titulo || ('Referência ' + (r.bib_ref || '—')), { bookId: r.book_id, bibRef: r.bib_ref, availabilityHint })}${r.autor ? ` — ${escapeHtml(r.autor)}` : ""} — ${escapeHtml(workflowLabel)}${r.library_name ? ` — ${escapeHtml(r.library_name)}` : ""}${suffix}</li>`
+            html: `<li><b>Consulta local #${escapeHtml(r.id)}</b> — ${renderBookTitleLink(r.titulo || ('Referência ' + (r.bib_ref || '—')), { bookId: r.book_id, bibRef: r.bib_ref })}${r.autor ? ` — ${escapeHtml(r.autor)}` : ""} — ${escapeHtml(workflowLabel)}${r.library_name ? ` — ${escapeHtml(r.library_name)}` : ""}${suffix}</li>`
           });
         }
       }
-
       const items = [...reservationHistoryItems, ...consultationHistoryItems];
-      if (reservationHistory.error || consultationHistory.error || v2Loans.error) {
-        console.error("renderHistory errors", {
-          reservationHistory: reservationHistory.error,
-          consultationHistory: consultationHistory.error,
-          v2Loans: v2Loans.error
-        });
+      if (consultationHistory.error || v2Loans.error || v2Reservas.error) {
+        console.error("renderHistory errors", { currentHistory: currentHistory.error, consultationHistory: consultationHistory.error, v2Loans: v2Loans.error, v2Reservas: v2Reservas.error });
         const msgs = [];
-        if (reservationHistory.error) msgs.push("reservas: " + (reservationHistory.error.message || JSON.stringify(reservationHistory.error)));
+        if (currentHistory.error) msgs.push("reservas atuais: " + (currentHistory.error.message || JSON.stringify(currentHistory.error)));
         if (consultationHistory.error) msgs.push("consultas locais: " + (consultationHistory.error.message || JSON.stringify(consultationHistory.error)));
-        if (v2Loans.error) msgs.push("empréstimos: " + (v2Loans.error.message || JSON.stringify(v2Loans.error)));
-        if (historyMsg) historyMsg.textContent = msgs.length ? ("Diagnóstico histórico — " + msgs.join(" | ")) : "";
+        if (v2Loans.error) msgs.push("v2 empréstimos: " + (v2Loans.error.message || JSON.stringify(v2Loans.error)));
+        if (v2Reservas.error) msgs.push("v2 reservas: " + (v2Reservas.error.message || JSON.stringify(v2Reservas.error)));
+        if (historyMsg) historyMsg.textContent = "Diagnóstico histórico — " + msgs.join(" | ");
       }
-
+      if (currentHistory.error && !v2Reservas.error) {
+        for (const r of (v2Reservas.data || [])) {
+          items.push({
+            when: r.cancelled_at || r.converted_at || r.reserva_created_at,
+            html: `<li><b>Reserva #${escapeHtml(r.reserva_id)}</b> — <span class="mono">${escapeHtml(r.sub_id)}</span> — ${renderBookTitleLink(r.titulo || 'Livro', { bibRef: r.bib_ref })} — ${escapeHtml(reservationStatusLabel(r.item_status, r))}</li>`
+          });
+        }
+      }
       if (!v2Loans.error) {
         const loanGroups = new Map();
         for (const l of (v2Loans.data || [])) {
@@ -3777,11 +3788,7 @@ function reservationPickupReplyActions(row) {
             const itemStatus = l.returned_at ? `retornado em ${fmtDateTime(l.returned_at)}` : `devolução ${fmtDateOnly(l.due_at)}`;
             const ref = l.bib_ref ? `<span class="history-ref mono">${escapeHtml(l.bib_ref)}</span>` : `<span class="history-ref mono">${escapeHtml(l.sub_id || '—')}</span>`;
             const rotulo = l.rotulo ? ` — rótulo ${escapeHtml(l.rotulo)}` : "";
-            const availabilityHint = buildBookAvailabilityHint({
-              dueAt: l.due_at,
-              returnedAt: l.returned_at
-            });
-            return `<li>${ref} — ${renderBookTitleLink(l.titulo || 'Livro', { bibRef: l.bib_ref, availabilityHint })} — ${escapeHtml(itemStatus)}${rotulo}</li>`;
+            return `<li>${ref} — ${renderBookTitleLink(l.titulo || 'Livro', { bibRef: l.bib_ref })} — ${escapeHtml(itemStatus)}${rotulo}</li>`;
           }).join("");
           items.push({
             when: group.when,
@@ -3854,8 +3861,18 @@ function reservationPickupReplyActions(row) {
       setReserveActionMode(actionMode);
       const isConsultation = actionMode === "consult";
 
-      if (!isConsultation && publicServiceState && publicServiceState.allow_reservations === false) {
-        reserveMsg.textContent = "As reservas públicas de empréstimo estão temporariamente fechadas. Você ainda pode pedir consulta no local para materiais apenas consultáveis.";
+      const serviceMode = String(publicServiceState?.service_mode || "").trim();
+      const publicRequestsClosed = publicServiceState ? publicServiceState.allow_reservations === false : false;
+      const consultationsClosed = publicRequestsClosed || serviceMode === "pausada";
+      const reservationsClosed = consultationsClosed || serviceMode === "somente_consulta";
+      if (isConsultation && consultationsClosed) {
+        reserveMsg.textContent = "Os pedidos públicos de consulta local estão temporariamente fechados para a sua biblioteca de vínculo.";
+        return;
+      }
+      if (!isConsultation && reservationsClosed) {
+        reserveMsg.textContent = consultationsClosed
+          ? "As reservas públicas de empréstimo estão temporariamente fechadas para a sua biblioteca de vínculo."
+          : "As reservas públicas de empréstimo estão temporariamente fechadas. Você ainda pode pedir consulta no local para materiais apenas consultáveis.";
         return;
       }
       if (userIsRestricted) {
@@ -3891,8 +3908,12 @@ function reservationPickupReplyActions(row) {
 
       const response = isConsultation ? await createConsultaLocalV2(refs) : await createReservaV2(refs);
 
-      if (reserveSubmitBtn) reserveSubmitBtn.disabled = publicServiceState && publicServiceState.allow_reservations === false;
-      if (consultSubmitBtn) consultSubmitBtn.disabled = false;
+      const serviceModeAfter = String(publicServiceState?.service_mode || "").trim();
+      const publicRequestsClosedAfter = publicServiceState ? publicServiceState.allow_reservations === false : false;
+      const consultationsClosedAfter = publicRequestsClosedAfter || serviceModeAfter === "pausada";
+      const reservationsClosedAfter = consultationsClosedAfter || serviceModeAfter === "somente_consulta";
+      if (reserveSubmitBtn) reserveSubmitBtn.disabled = reservationsClosedAfter;
+      if (consultSubmitBtn) consultSubmitBtn.disabled = consultationsClosedAfter;
 
       if (!response.error) {
         if (!isConsultation) {
