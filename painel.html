@@ -8056,6 +8056,25 @@ async function fetchActiveLoans(){
       return /permission|policy|not exist|does not exist|relation|schema cache|column|book_holdings/i.test(msg);
     }
 
+    function buildBibRefMatchVariants(ref){
+      const raw = String(ref || '').trim();
+      if (!raw) return [];
+      const variants = new Set([raw]);
+      if (/^\d+$/.test(raw)) {
+        const stripped = raw.replace(/^0+/, '') || '0';
+        variants.add(stripped);
+        variants.add(stripped.padStart(Math.max(raw.length, 7), '0'));
+      }
+      return Array.from(variants).filter(Boolean);
+    }
+
+    function normalizeBibRefForMatch(ref){
+      const raw = String(ref || '').trim();
+      if (!raw) return '';
+      if (!/^\d+$/.test(raw)) return raw;
+      return raw.replace(/^0+/, '') || '0';
+    }
+
     async function tryResolveLocalLoanHoldings(refs){
       const cleanRefs = Array.from(new Set((refs || []).map((r) => String(r || '').trim()).filter(Boolean)));
       if (!cleanRefs.length) return { resolved: false, reason: 'empty', rows: [] };
@@ -8068,11 +8087,12 @@ async function fetchActiveLoans(){
       );
       if (!libraryId) return { resolved: false, reason: 'no-library', rows: [] };
 
+      const queryRefs = Array.from(new Set(cleanRefs.flatMap(buildBibRefMatchVariants)));
       const holdingsRes = await supabase
         .from('book_holdings')
         .select('id,book_id,library_id,local_bib_ref,available_count')
         .eq('library_id', libraryId)
-        .in('local_bib_ref', cleanRefs);
+        .in('local_bib_ref', queryRefs);
 
       if (holdingsRes.error) {
         if (canFallbackHoldingResolutionError(holdingsRes.error)) {
@@ -8085,16 +8105,17 @@ async function fetchActiveLoans(){
       const byLocalRef = new Map();
       for (const row of holdingRows) {
         const ref = String(row?.local_bib_ref || '').trim();
-        if (!ref || byLocalRef.has(ref)) continue;
-        byLocalRef.set(ref, row);
+        const matchKey = normalizeBibRefForMatch(ref);
+        if (!matchKey || byLocalRef.has(matchKey)) continue;
+        byLocalRef.set(matchKey, row);
       }
 
-      const missingLocalRefs = cleanRefs.filter((ref) => !byLocalRef.has(ref));
+      const missingLocalRefs = cleanRefs.filter((ref) => !byLocalRef.has(normalizeBibRefForMatch(ref)));
       if (missingLocalRefs.length) {
         return { resolved: false, reason: 'local-ref-not-found', rows: [], missing: missingLocalRefs };
       }
 
-      const holdings = cleanRefs.map((ref) => byLocalRef.get(ref)).filter(Boolean);
+      const holdings = cleanRefs.map((ref) => byLocalRef.get(normalizeBibRefForMatch(ref))).filter(Boolean);
       const bookIds = Array.from(new Set(holdings.map((row) => Number(row?.book_id)).filter((v) => Number.isFinite(v) && v > 0)));
 
       let booksById = new Map();
