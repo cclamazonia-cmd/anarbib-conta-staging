@@ -7409,6 +7409,7 @@ async function fetchActiveLoans(){
 
       for (const [reservaId, items] of groups.entries()) {
         const lineNos = items.map((i) => Number(i.line_no)).filter((n) => Number.isFinite(n) && n > 0);
+        if (!lineNos.length) continue;
         const rpc = await supabase.rpc('fn_v2_set_reserva_linhas_workflow', {
           p_reserva_id: Number(reservaId),
           p_line_nos: lineNos,
@@ -7417,12 +7418,18 @@ async function fetchActiveLoans(){
           p_pickup_scheduled_for: pickupScheduledFor || null,
         });
         if (rpc.error) throw rpc.error;
-        processed += Array.isArray(rpc.data) ? (rpc.data.length || lineNos.length) : (Number(rpc.data || 0) || lineNos.length);
+        processed += Number(rpc.data || 0) || 0;
+      }
+
+      if (!processed) {
+        await refreshReservationsOnly({silent:true});
+        setStatus(targetStatusId, 'Nenhuma reserva foi atualizada. Verifica se as linhas continuam ativas e selecionadas.', 'warn');
+        return;
       }
 
       const stageLabel = translateReservationWorkflowStage(stage);
-      setStatus(targetStatusId, `${stageLabel} aplicado para ${processed} item(ns).`, 'ok');
       await refreshReservationsOnly({silent:true});
+      setStatus(targetStatusId, `${stageLabel} aplicado para ${processed} item(ns).`, 'ok');
     }
 
     function renderReservationTable(){
