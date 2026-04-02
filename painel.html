@@ -6567,6 +6567,37 @@ function belemNowParts(){
         console.warn('Painel: leitura api.reserva_itens_followup_ui falhou; tentando fallback local.', attempt.error);
       } else {
         rows = attempt.data || [];
+        const reservaIdsFromApi = Array.from(new Set((rows || []).map((row) => Number(firstFilledValue(row?.reserva_id, row?.reservation_id, row?.id, 0))).filter((id) => Number.isFinite(id) && id > 0)));
+        if (reservaIdsFromApi.length) {
+          const workflowsRes = await supabase
+            .from('reserva_item_workflow_v2')
+            .select('reserva_id,line_no,workflow_stage,workflow_note,pickup_scheduled_for,updated_at,pickup_reply_status,pickup_reply_note,pickup_reply_at')
+            .in('reserva_id', reservaIdsFromApi)
+            .order('updated_at', { ascending:false });
+          if (!workflowsRes.error) {
+            const latestWorkflow = new Map();
+            for (const workflowRow of (workflowsRes.data || [])) {
+              const key = `${workflowRow?.reserva_id}|${workflowRow?.line_no}`;
+              if (!latestWorkflow.has(key)) latestWorkflow.set(key, workflowRow);
+            }
+            rows = (rows || []).map((row) => {
+              const reservaId = Number(firstFilledValue(row?.reserva_id, row?.reservation_id, row?.id, 0));
+              const lineNo = Number(firstFilledValue(row?.line_no, row?.reservation_line_no, row?.item_no, 1)) || 1;
+              const workflow = latestWorkflow.get(`${reservaId}|${lineNo}`) || {};
+              if (!workflow || !Object.keys(workflow).length) return row;
+              return {
+                ...row,
+                workflow_stage_effective: workflow?.workflow_stage || row?.workflow_stage_effective || row?.workflow_stage || row?.stage || null,
+                workflow_stage_updated_at_effective: workflow?.updated_at || row?.workflow_stage_updated_at_effective || row?.workflow_stage_updated_at || row?.updated_at || null,
+                workflow_note: workflow?.workflow_note ?? row?.workflow_note ?? row?.note ?? row?.notes ?? null,
+                pickup_scheduled_for: workflow?.pickup_scheduled_for ?? row?.pickup_scheduled_for ?? row?.scheduled_pickup_for ?? row?.retirada_agendada_para ?? null,
+                pickup_reply_status: workflow?.pickup_reply_status ?? row?.pickup_reply_status ?? null,
+                pickup_reply_note: workflow?.pickup_reply_note ?? row?.pickup_reply_note ?? null,
+                pickup_reply_at: workflow?.pickup_reply_at ?? row?.pickup_reply_at ?? null,
+              };
+            });
+          }
+        }
       }
 
       if (!rows.length) {
@@ -6647,7 +6678,11 @@ function belemNowParts(){
     }
 
     function consultationLooksActiveForWorkflow(row){
-      return String(firstFilledValue(row?.item_status, row?.status, '')).trim().toLowerCase() === 'ativa';
+      const itemStatus = String(firstFilledValue(row?.item_status, row?.status, '')).trim().toLowerCase();
+      const stage = String(firstFilledValue(row?.workflow_stage_effective, row?.workflow_stage, '')).trim().toLowerCase();
+      if (['cancelada_leitor', 'cancelada_biblioteca', 'expirada', 'consulta_realizada', 'consultada'].includes(itemStatus)) return false;
+      if (['cancelada_leitor', 'cancelada_biblioteca', 'expirada', 'consulta_realizada'].includes(stage)) return false;
+      return itemStatus === 'ativa' || !itemStatus;
     }
 
     const buildConsultationSyntheticId = (consultaId, lineNo) => Number(`${consultaId}${String(lineNo).padStart(3, '0')}`);
@@ -6825,12 +6860,39 @@ function belemNowParts(){
       const attempt = await apiFrom('api', 'consulta_itens_followup_ui')
         .select('*')
         .eq('library_id', libraryId)
-        .eq('item_status', 'ativa')
         .limit(800);
       if (attempt.error) {
         console.warn('Painel: leitura api.consulta_itens_followup_ui falhou; tentando fallback local.', attempt.error);
       } else {
         rows = attempt.data || [];
+        const consultaIdsFromApi = Array.from(new Set((rows || []).map((row) => Number(firstFilledValue(row?.consulta_id, row?.id, 0))).filter((id) => Number.isFinite(id) && id > 0)));
+        if (consultaIdsFromApi.length) {
+          const workflowsRes = await supabase
+            .from('consulta_item_workflow_v2')
+            .select('consulta_id,line_no,workflow_stage,workflow_note,consultation_scheduled_for,updated_at')
+            .in('consulta_id', consultaIdsFromApi)
+            .order('updated_at', { ascending:false });
+          if (!workflowsRes.error) {
+            const latestWorkflow = new Map();
+            for (const workflowRow of (workflowsRes.data || [])) {
+              const key = `${workflowRow?.consulta_id}|${workflowRow?.line_no}`;
+              if (!latestWorkflow.has(key)) latestWorkflow.set(key, workflowRow);
+            }
+            rows = (rows || []).map((row) => {
+              const consultaId = Number(firstFilledValue(row?.consulta_id, row?.id, 0));
+              const lineNo = Number(firstFilledValue(row?.line_no, row?.consultation_line_no, row?.item_no, 1)) || 1;
+              const workflow = latestWorkflow.get(`${consultaId}|${lineNo}`) || {};
+              if (!workflow || !Object.keys(workflow).length) return row;
+              return {
+                ...row,
+                workflow_stage_effective: workflow?.workflow_stage || row?.workflow_stage_effective || row?.workflow_stage || null,
+                workflow_stage_updated_at_effective: workflow?.updated_at || row?.workflow_stage_updated_at_effective || row?.workflow_stage_updated_at || row?.updated_at || null,
+                workflow_note: workflow?.workflow_note ?? row?.workflow_note ?? row?.note ?? row?.notes ?? null,
+                consultation_scheduled_for: workflow?.consultation_scheduled_for ?? row?.consultation_scheduled_for ?? row?.scheduled_for ?? null,
+              };
+            });
+          }
+        }
       }
 
       if (!rows.length) {
