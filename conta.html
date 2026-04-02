@@ -528,28 +528,6 @@ button[type="submit"] *,
     .book-title-link:focus{
       text-decoration:underline;
     }
-    .card a.book-title-link:not(.secondary),
-    .card a.book-title-link:not(.secondary):visited,
-    .card a.book-title-link:not(.secondary):hover,
-    .card a.book-title-link:not(.secondary):focus,
-    .card a.book-title-link:not(.secondary):active,
-    .tab-panel a.book-title-link:not(.secondary),
-    .tab-panel a.book-title-link:not(.secondary):visited,
-    .tab-panel a.book-title-link:not(.secondary):hover,
-    .tab-panel a.book-title-link:not(.secondary):focus,
-    .tab-panel a.book-title-link:not(.secondary):active{
-      color:#ffffff !important;
-      -webkit-text-fill-color:#ffffff !important;
-      font-style:italic;
-      font-weight:700;
-      text-decoration:none;
-    }
-    .card a.book-title-link:not(.secondary):hover,
-    .card a.book-title-link:not(.secondary):focus,
-    .tab-panel a.book-title-link:not(.secondary):hover,
-    .tab-panel a.book-title-link:not(.secondary):focus{
-      text-decoration:underline;
-    }
     .book-availability-inline{
       color:#f0f0f0;
       font-size:.92rem;
@@ -764,64 +742,6 @@ button[type="submit"] *,
       .tabs-nav{grid-template-columns:1fr}
     }
 
-    /* loan actions cosmetic alignment */
-    .loan-actions{
-      display:flex;
-      flex-wrap:nowrap;
-      justify-content:flex-start;
-      gap:8px;
-      align-items:stretch;
-      margin-left:0;
-    }
-    .loan-actions > *{
-      flex:0 0 auto;
-      min-width:0;
-    }
-    .loan-actions .action-slot-empty{
-      display:none;
-    }
-    .loan-actions .mini-btn,
-    .loan-actions .mini-btn:hover,
-    .loan-actions .mini-btn:focus,
-    .loan-actions .mini-btn:active{
-      width:auto !important;
-      min-width:168px !important;
-      white-space:nowrap !important;
-      overflow-wrap:normal !important;
-      word-break:normal !important;
-      padding-left:14px !important;
-      padding-right:14px !important;
-      background:linear-gradient(180deg, #d41414 0%, #9f0000 100%) !important;
-      border-color:rgba(255,255,255,0.24) !important;
-      color:#ffffff !important;
-      -webkit-text-fill-color:#ffffff !important;
-      justify-content:center;
-      text-align:center;
-    }
-    @media (max-width: 760px){
-      .loan-actions{
-        display:grid;
-        grid-template-columns:1fr;
-      }
-      .loan-actions > *{
-        flex:initial;
-      }
-      .loan-actions .mini-btn,
-      .loan-actions .mini-btn:hover,
-      .loan-actions .mini-btn:focus,
-      .loan-actions .mini-btn:active{
-        width:100% !important;
-        min-width:0 !important;
-        white-space:normal !important;
-        overflow-wrap:anywhere !important;
-        word-break:break-word !important;
-      }
-      .loan-actions .action-slot-empty{
-        display:none;
-      }
-    }
-
-
 </style>
 </head>
 
@@ -864,6 +784,7 @@ button[type="submit"] *,
           <span class="chip" id="chipContaPublicId" style="display:none">ID público: —</span>
           <span class="chip" id="chipContaCadastro">Cadastro: —</span>
           <span class="chip" id="chipContaReservas">Reservas ativas: —</span>
+          <span class="chip" id="chipContaConsultas">Consultas ativas: —</span>
           <span class="chip" id="chipContaEmprestimos">Empréstimos em curso: —</span>
         </div>
         <div id="serviceStateNotice" class="notice service-inline" style="display:none;"></div>
@@ -1442,6 +1363,7 @@ button[type="submit"] *,
     const chipContaPublicId = $("chipContaPublicId");
     const chipContaCadastro = $("chipContaCadastro");
     const chipContaReservas = $("chipContaReservas");
+    const chipContaConsultas = $("chipContaConsultas");
     const chipContaEmprestimos = $("chipContaEmprestimos");
 
     function setChipText(el, label, value) {
@@ -3313,10 +3235,12 @@ function reservationPickupReplyActions(row) {
 
       if (activeConsultas.error) {
         console.error("renderActiveConsultations error:", activeConsultas.error);
+        setChipText(chipContaConsultas, "Consultas ativas", "—");
         return showEmpty(activeConsultationsEl, "Não foi possível carregar seus pedidos de consulta local.");
       }
 
       const rowsData = Array.isArray(activeConsultas.data) ? activeConsultas.data : [];
+      setChipText(chipContaConsultas, "Consultas ativas", String(rowsData.length));
       if (!rowsData.length) {
         return showEmpty(activeConsultationsEl, "Você não tem pedidos de consulta local ativos no momento.");
       }
