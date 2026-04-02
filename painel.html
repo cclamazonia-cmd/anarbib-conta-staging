@@ -8087,6 +8087,61 @@ async function fetchActiveLoans(){
       );
       if (!libraryId) return { resolved: false, reason: 'no-library', rows: [] };
 
+      try {
+        const resolverRes = await supabase.rpc('fn_v2_resolve_catalog_refs_for_current_user', {
+          p_refs: cleanRefs
+        });
+        if (!resolverRes.error) {
+          const resolvedRows = Array.isArray(resolverRes.data) ? resolverRes.data : [];
+          const usableRows = resolvedRows.filter((row) => {
+            return row?.matched === true && Number(row?.session_holding_id) > 0;
+          });
+          if (usableRows.length === cleanRefs.length) {
+            const matchedBookIds = Array.from(new Set(usableRows
+              .map((row) => Number(row?.book_id))
+              .filter((v) => Number.isFinite(v) && v > 0)));
+            let booksById = new Map();
+            if (matchedBookIds.length) {
+              const booksRes = await supabase
+                .from('books')
+                .select('id,bib_ref,titulo')
+                .in('id', matchedBookIds);
+              if (booksRes.error) throw booksRes.error;
+              booksById = new Map((booksRes.data || []).map((row) => [Number(row.id), row]));
+            }
+            return {
+              resolved: true,
+              libraryId,
+              rows: cleanRefs.map((inputRef) => {
+                const inputKey = normalizeBibRefForMatch(inputRef);
+                const row = usableRows.find((candidate) => {
+                  const localKey = normalizeBibRefForMatch(candidate?.session_local_bib_ref);
+                  const bibKey = normalizeBibRefForMatch(candidate?.bib_ref);
+                  return inputKey && (localKey === inputKey || bibKey === inputKey);
+                }) || usableRows.find((candidate) => String(candidate?.input_ref || '').trim() === String(inputRef || '').trim()) || null;
+                const book = booksById.get(Number(row?.book_id)) || {};
+                return {
+                  holding_id: Number(row?.session_holding_id),
+                  book_id: Number(row?.book_id),
+                  library_id: String(libraryId),
+                  local_bib_ref: String(row?.session_local_bib_ref || inputRef || '').trim(),
+                  available_count: Number(row?.session_available_count || 0),
+                  titulo: String(book?.titulo || '').trim(),
+                  loanable: row?.session_loanable === true,
+                  bib_ref: String(row?.bib_ref || book?.bib_ref || '').trim(),
+                };
+              }).filter((row) => Number.isFinite(row?.holding_id) && row.holding_id > 0)
+            };
+          }
+        } else if (!isMissingFunctionError(resolverRes.error)) {
+          throw resolverRes.error;
+        }
+      } catch (resolverError) {
+        if (!canFallbackHoldingResolutionError(resolverError) && !isMissingFunctionError(resolverError)) {
+          throw resolverError;
+        }
+      }
+
       const queryRefs = Array.from(new Set(cleanRefs.flatMap(buildBibRefMatchVariants)));
       const holdingsRes = await supabase
         .from('book_holdings')
