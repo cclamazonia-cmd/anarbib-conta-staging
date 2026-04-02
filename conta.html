@@ -793,6 +793,7 @@ button[type="submit"] *,
           <span class="chip" id="chipContaPublicId" style="display:none">ID público: —</span>
           <span class="chip" id="chipContaCadastro">Cadastro: —</span>
           <span class="chip" id="chipContaReservas">Reservas ativas: —</span>
+          <span class="chip" id="chipContaConsultas">Consultas ativas: —</span>
           <span class="chip" id="chipContaEmprestimos">Empréstimos em curso: —</span>
         </div>
         <div id="serviceStateNotice" class="notice service-inline" style="display:none;"></div>
@@ -1371,6 +1372,7 @@ button[type="submit"] *,
     const chipContaPublicId = $("chipContaPublicId");
     const chipContaCadastro = $("chipContaCadastro");
     const chipContaReservas = $("chipContaReservas");
+    const chipContaConsultas = $("chipContaConsultas");
     const chipContaEmprestimos = $("chipContaEmprestimos");
 
     function setChipText(el, label, value) {
@@ -3215,27 +3217,75 @@ function reservationPickupReplyActions(row) {
       return showEmpty(activeReservationsEl, "Você não tem reservas ativas no momento.");
     }
 
+    async function fetchActiveConsultationRows() {
+      const attempts = [
+        () => supabase
+          .schema("api")
+          .from("my_consultas_active_v2")
+          .select("consulta_id, sub_id, line_no, titulo, autor, bib_ref, rotulo, requested_at, status, consultation_scheduled_for, workflow_stage_effective, workflow_note, library_name")
+          .order("consulta_id", { ascending: false })
+          .order("line_no", { ascending: true }),
+        () => supabase
+          .schema("api")
+          .from("consulta_itens_followup_ui")
+          .select("consulta_id, sub_id, line_no, titulo, autor, bib_ref, rotulo, consulta_created_at, item_status, consultation_scheduled_for, workflow_stage_effective, workflow_note, library_name")
+          .eq("user_id", session.user.id)
+          .eq("item_status", "ativa")
+          .order("consulta_id", { ascending: false })
+          .order("line_no", { ascending: true }),
+        () => supabase
+          .schema("api")
+          .from("consulta_itens_ui")
+          .select("consulta_id, sub_id, line_no, titulo, autor, bib_ref, rotulo, consulta_created_at, item_status, consultation_scheduled_for, workflow_stage_effective, workflow_note, library_name")
+          .eq("user_id", session.user.id)
+          .eq("item_status", "ativa")
+          .order("consulta_id", { ascending: false })
+          .order("line_no", { ascending: true })
+      ];
+
+      let lastError = null;
+      for (const run of attempts) {
+        try {
+          const res = await run();
+          if (!res?.error) {
+            return { data: Array.isArray(res.data) ? res.data : [], error: null };
+          }
+          lastError = res.error;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      return { data: [], error: lastError };
+    }
+
     async function renderActiveConsultations() {
       if (!activeConsultationsEl) return;
       if (activeConsultMsg) activeConsultMsg.textContent = "";
       activeConsultationsEl.textContent = "Carregando...";
 
-      const activeConsultas = await supabase
-        .schema("api")
-        .from("my_consultas_active_v2")
-        .select("consulta_id, sub_id, line_no, titulo, autor, bib_ref, rotulo, requested_at, status, consultation_scheduled_for, workflow_stage_effective, workflow_note, library_name, schedule_reply_status, schedule_reply_note, schedule_reply_at, dismissed_by_reader_at")
-        .order("consulta_id", { ascending: false })
-        .order("line_no", { ascending: true });
+      const activeConsultas = await fetchActiveConsultationRows();
 
       if (activeConsultas.error) {
         console.error("renderActiveConsultations error:", activeConsultas.error);
+        setChipText(chipContaConsultas, "Consultas ativas", "—");
         return showEmpty(activeConsultationsEl, "Não foi possível carregar seus pedidos de consulta local.");
       }
 
-      const rowsData = Array.isArray(activeConsultas.data) ? activeConsultas.data : [];
+      const rowsData = (Array.isArray(activeConsultas.data) ? activeConsultas.data : []).map((row) => ({
+        ...row,
+        requested_at: row?.requested_at || row?.consulta_created_at || row?.created_at || null,
+        status: row?.status || row?.item_status || null,
+        schedule_reply_status: row?.schedule_reply_status || null,
+        schedule_reply_note: row?.schedule_reply_note || null,
+        schedule_reply_at: row?.schedule_reply_at || null,
+        dismissed_by_reader_at: row?.dismissed_by_reader_at || null
+      }));
       if (!rowsData.length) {
+        setChipText(chipContaConsultas, "Consultas ativas", "0");
         return showEmpty(activeConsultationsEl, "Você não tem pedidos de consulta local ativos no momento.");
       }
+
+      setChipText(chipContaConsultas, "Consultas ativas", String(rowsData.length));
 
       const rows = rowsData.map((r) => {
         const workflowLabel = consultationWorkflowLabel(r);
