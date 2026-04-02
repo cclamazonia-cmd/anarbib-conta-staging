@@ -4806,7 +4806,7 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
     }
 
     function updateDocGovScopeUi(){
-    function updateDocGovScopeUi(){
+    // duplicate declaration removed: keep single function opening to avoid breaking the main module
       const mode = String($('docGovPermissionScopeMode')?.value || '').trim();
       const countriesWrap = $('docGovAuthorizedCountriesWrap');
       const networksWrap = $('docGovAuthorizedNetworksWrap');
