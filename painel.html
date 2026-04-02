@@ -4806,7 +4806,7 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
     }
 
     function updateDocGovScopeUi(){
-    function updateDocGovScopeUi(){
+    // duplicate declaration removed: keep single function opening to avoid breaking the main module
       const mode = String($('docGovPermissionScopeMode')?.value || '').trim();
       const countriesWrap = $('docGovAuthorizedCountriesWrap');
       const networksWrap = $('docGovAuthorizedNetworksWrap');
@@ -10491,17 +10491,11 @@ function initPartnerProbeUi() {
     `).join('');
   }
 
-  function getReturnScheduleActionLabelR(entry = {}) {
-    return entry?.return_scheduled_for ? 'Alterar devolução' : 'Agendar devolução';
-  }
-
   function renderLoansR(items, batches) {
     const tbodyLoans = $r('tbodyLoans');
     const tbodyBatches = $r('tbodyBatches');
     if (tbodyLoans) {
-      tbodyLoans.innerHTML = items.length ? items.map((l) => {
-        const scheduleLabel = getReturnScheduleActionLabelR(l);
-        return `
+      tbodyLoans.innerHTML = items.length ? items.map((l) => `
         <tr>
           <td class="mono">${escR(l.sub_id)}</td>
           <td class="mono">#${escR(l.batch_label)}</td>
@@ -10511,22 +10505,12 @@ function initPartnerProbeUi() {
           <td>${escR(fmtDateR(l.checkout_date))}</td>
           <td>${escR(fmtDateR(l.due_date))}</td>
           <td><span class="pill ok">${escR(l.status_text || 'Aberto')}</span></td>
-          <td><div class="actions" style="margin-top:0">
-            <button class="btn mini" type="button" data-renew-emp-v2="${escR(l.emprestimo_id)}">Renovar</button>
-            <button class="btn mini" type="button" data-return-emp-v2="${escR(l.emprestimo_id)}" data-return-line-v2="${escR(l.line_no)}">Devolver</button>
-            <button class="btn mini" type="button" data-schedule-return-emp-v2="${escR(l.emprestimo_id)}" data-schedule-return-line-v2="${escR(l.line_no)}">${escR(scheduleLabel)}</button>
-            ${l.return_scheduled_for ? `<button class="btn mini" type="button" data-clear-return-schedule-emp-v2="${escR(l.emprestimo_id)}" data-clear-return-schedule-line-v2="${escR(l.line_no)}">Cancelar agendamento</button>` : ''}
-            <button class="btn mini" type="button" data-missed-return-emp-v2="${escR(l.emprestimo_id)}" data-missed-return-line-v2="${escR(l.line_no)}">Não realizado</button>
-          </div></td>
-        </tr>`;
-      }).join('') : '<tr><td colspan="9">Sem empréstimos ativos.</td></tr>';
+          <td><span class="mini subtle">Ações indisponíveis neste modo de recuperação.</span></td>
+        </tr>
+      `).join('') : '<tr><td colspan="9">Sem empréstimos ativos.</td></tr>';
     }
     if (tbodyBatches) {
-      tbodyBatches.innerHTML = batches.length ? batches.map((b) => {
-        const scheduleLabel = getReturnScheduleActionLabelR(b);
-        const lineNos = escR((b.line_nos || []).join(','));
-        const canRenew = b.can_renew ? '' : 'disabled';
-        return `
+      tbodyBatches.innerHTML = batches.length ? batches.map((b) => `
         <tr>
           <td class="mono">#${escR(b.batch_label)}</td>
           <td>${escR(b.user_name)}${b.user_email && b.user_email !== '—' ? `<br><span class="mini subtle">${escR(b.user_email)}</span>` : ''}</td>
@@ -10536,15 +10520,9 @@ function initPartnerProbeUi() {
           <td>${escR(fmtDateR(b.checkout_date))}</td>
           <td>${escR(fmtDateR(b.due_date))}</td>
           <td><span class="pill ok">${escR(b.status_text || 'Aberto')}</span></td>
-          <td><div class="actions" style="margin-top:0">
-            <button class="btn mini" type="button" data-renew-batch-v2="${escR(b.emprestimo_id)}" ${canRenew}>Renovar empréstimo</button>
-            <button class="btn mini" type="button" data-return-batch-v2="${escR(b.emprestimo_id)}">Devolver empréstimo</button>
-            <button class="btn mini" type="button" data-schedule-return-batch-v2="${escR(b.emprestimo_id)}" data-schedule-return-line-nos-v2="${lineNos}">${escR(scheduleLabel)}</button>
-            ${b.return_scheduled_for || b.return_schedule_mixed ? `<button class="btn mini" type="button" data-clear-return-schedule-batch-v2="${escR(b.emprestimo_id)}" data-clear-return-schedule-line-nos-v2="${lineNos}">Cancelar agendamento</button>` : ''}
-            <button class="btn mini" type="button" data-missed-return-batch-v2="${escR(b.emprestimo_id)}" data-missed-return-line-nos-v2="${lineNos}">Não realizado</button>
-          </div></td>
-        </tr>`;
-      }).join('') : '<tr><td colspan="9">Sem empréstimos agrupados ativos.</td></tr>';
+          <td><span class="mini subtle">Ações indisponíveis neste modo de recuperação.</span></td>
+        </tr>
+      `).join('') : '<tr><td colspan="9">Sem empréstimos agrupados ativos.</td></tr>';
     }
   }
 
@@ -10609,32 +10587,10 @@ function initPartnerProbeUi() {
     });
   }
 
-  let rescuePassiveReloadHooksBound = false;
-  function setupRescuePassiveReloadHooks() {
-    if (rescuePassiveReloadHooksBound) return;
-    rescuePassiveReloadHooksBound = true;
-    const safeReload = () => {
-      reloadPainelRescueData().catch((error) => {
-        console.warn('Rescue do painel: falha ao sincronizar retorno passivo.', error);
-      });
-    };
-    window.addEventListener('focus', safeReload);
-    window.addEventListener('pageshow', safeReload);
-    window.addEventListener('storage', (event) => {
-      if (event && event.key && event.key !== 'anarbib_state_sync_v1') return;
-      safeReload();
-    });
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState !== 'visible') return;
-      safeReload();
-    });
-  }
-
   setupMainTabsRescue();
   setupBibliotecaSubtabsRescue();
   setupProfileTabsRescue();
   bindReloadButtonsRescue();
-  setupRescuePassiveReloadHooks();
   reloadPainelRescueData().catch((error) => {
     console.warn('Rescue do painel: falha no carregamento inicial.', error);
   });
