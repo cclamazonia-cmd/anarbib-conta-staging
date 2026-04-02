@@ -680,10 +680,10 @@
                         </select>
                       </div>
                       <div>
-                        <label for="allowReservationsToggle">Novas reservas públicas</label>
+                        <label for="allowReservationsToggle">Novas reservas e consultas públicas</label>
                         <label class="checkline" for="allowReservationsToggle">
                           <input id="allowReservationsToggle" type="checkbox">
-                          <span>Permitir novas reservas para leitoras/es não bibliotecárias/os</span>
+                          <span>Permitir reservas e consultas para leitoras/es não bibliotecárias/os</span>
                         </label>
                       </div>
                     </div>
@@ -2921,15 +2921,28 @@
       };
     }
 
+    function syncAllowReservationsToggleWithServiceMode(){
+      const serviceModeSelect = $('serviceModeSelect');
+      const allowReservationsToggle = $('allowReservationsToggle');
+      if (!serviceModeSelect || !allowReservationsToggle) return;
+      const normalizedMode = normalizeServiceMode(serviceModeSelect.value);
+      const paused = normalizedMode === 'pausada';
+      if (paused) allowReservationsToggle.checked = false;
+      allowReservationsToggle.disabled = paused;
+      allowReservationsToggle.closest('.checkline')?.classList.toggle('is-disabled', paused);
+      allowReservationsToggle.closest('.checkline')?.setAttribute('aria-disabled', paused ? 'true' : 'false');
+    }
+
     function renderLibraryServiceState(state){
       const normalizedState = normalizeLibraryServiceState(state);
       const modeText = translateServiceMode(normalizedState?.service_mode);
-      const reservationsText = normalizedState?.allows_new_reservations ? 'Reservas públicas: abertas' : 'Reservas públicas: fechadas';
+      const reservationsText = normalizedState?.allows_new_reservations ? 'Reservas e consultas públicas: abertas' : 'Reservas e consultas públicas: fechadas';
       setChip('chipServiceMode', `Modo: ${modeText}`);
       setChip('chipReservationsState', reservationsText);
 
       if ($('serviceModeSelect')) $('serviceModeSelect').value = normalizeServiceMode(normalizedState?.service_mode);
       if ($('allowReservationsToggle')) $('allowReservationsToggle').checked = !!normalizedState?.allows_new_reservations;
+      syncAllowReservationsToggleWithServiceMode();
       if ($('publicServiceMessage')) $('publicServiceMessage').value = getEditablePublicServiceMessage(normalizedState);
       if ($('internalServiceMessage')) {
         $('internalServiceMessage').value = '';
@@ -2994,7 +3007,7 @@
           public_message: ''
         });
         setChip('chipServiceMode', 'Modo: erro');
-        setChip('chipReservationsState', 'Reservas públicas: erro');
+        setChip('chipReservationsState', 'Reservas e consultas públicas: erro');
         if (!silent) setStatus('serviceStateMsg', 'Não consegui carregar o modo de funcionamento: ' + (e.message || String(e)), 'bad', false);
       }
     }
@@ -3009,10 +3022,11 @@
         if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar o funcionamento.');
 
         const currentState = normalizeLibraryServiceState(libraryServiceState, libraryId);
+        const serviceMode = normalizeServiceMode($('serviceModeSelect')?.value);
         const payload = {
           library_id: libraryId,
-          service_mode: normalizeServiceMode($('serviceModeSelect')?.value),
-          allows_new_reservations: !!$('allowReservationsToggle')?.checked,
+          service_mode: serviceMode,
+          allows_new_reservations: serviceMode === 'pausada' ? false : !!$('allowReservationsToggle')?.checked,
           allows_new_loans: currentState.allows_new_loans,
           public_message: String($('publicServiceMessage')?.value || '').trim()
         };
@@ -3035,6 +3049,8 @@
 
     function setupServiceStateActions(){
       $('btnSaveServiceState')?.addEventListener('click', saveLibraryServiceState);
+      $('serviceModeSelect')?.addEventListener('change', syncAllowReservationsToggleWithServiceMode);
+      syncAllowReservationsToggleWithServiceMode();
     }
 
     let currentLibraryRow = null;
@@ -6687,9 +6703,19 @@ function belemNowParts(){
       })[String(stage || '')] || 'warn';
     }
 
+    function translateConsultationScheduleReplyStatus(status){
+      return ({
+        confirmado_leitor: 'Leitor aceitou o horário',
+        recusado_leitor: 'Leitor recusou o horário'
+      })[String(status || '')] || '';
+    }
+
     function consultationWorkflowDetail(c){
       const parts = [];
       if (c.consultation_scheduled_for) parts.push(`Consulta: ${fmtDateTimeBelem(c.consultation_scheduled_for)} (Belém)`);
+      const scheduleReplyLabel = translateConsultationScheduleReplyStatus(c.schedule_reply_status);
+      if (scheduleReplyLabel) parts.push(scheduleReplyLabel);
+      if (c.schedule_reply_note) parts.push(c.schedule_reply_note);
       if (c.workflow_note) parts.push(c.workflow_note);
       return parts.join(' · ');
     }
@@ -6831,6 +6857,10 @@ function belemNowParts(){
             workflow_stage_updated_at: workflowUpdatedAt,
             workflow_note: String(firstFilledValue(row?.workflow_note, row?.note, row?.notes, '') || '').trim(),
             consultation_scheduled_for: firstFilledValue(row?.consultation_scheduled_for, row?.scheduled_for, null) || null,
+            schedule_reply_status: firstFilledValue(row?.schedule_reply_status, row?.reader_schedule_reply_status, null) || null,
+            schedule_reply_note: String(firstFilledValue(row?.schedule_reply_note, row?.reader_schedule_reply_note, '') || '').trim(),
+            schedule_reply_at: firstFilledValue(row?.schedule_reply_at, row?.reader_schedule_reply_at, null) || null,
+            dismissed_by_reader_at: firstFilledValue(row?.dismissed_by_reader_at, null) || null,
             item_status: firstFilledValue(row?.item_status, row?.status, 'ativa'),
             raw: row,
           };
@@ -6869,7 +6899,7 @@ function belemNowParts(){
           if (linhasRes.error) throw linhasRes.error;
           const workflowsRes = await supabase
             .from('consulta_item_workflow_v2')
-            .select('consulta_id,line_no,workflow_stage,workflow_note,consultation_scheduled_for,updated_at')
+            .select('consulta_id,line_no,workflow_stage,workflow_note,consultation_scheduled_for,schedule_reply_status,schedule_reply_note,schedule_reply_at,updated_at')
             .in('consulta_id', consultaIds)
             .order('updated_at', { ascending:false });
           if (workflowsRes.error) throw workflowsRes.error;
@@ -6905,6 +6935,10 @@ function belemNowParts(){
               workflow_stage_effective: workflow?.workflow_stage || null,
               workflow_note: workflow?.workflow_note || null,
               consultation_scheduled_for: workflow?.consultation_scheduled_for || null,
+              schedule_reply_status: workflow?.schedule_reply_status || null,
+              schedule_reply_note: workflow?.schedule_reply_note || null,
+              schedule_reply_at: workflow?.schedule_reply_at || null,
+              dismissed_by_reader_at: linha?.dismissed_by_reader_at || null,
               workflow_stage_updated_at_effective: workflow?.updated_at || linha?.updated_at || consulta?.updated_at || consulta?.created_at || null,
             };
           });
