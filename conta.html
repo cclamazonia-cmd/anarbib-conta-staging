@@ -764,6 +764,64 @@ button[type="submit"] *,
       .tabs-nav{grid-template-columns:1fr}
     }
 
+    /* loan actions cosmetic alignment */
+    .loan-actions{
+      display:flex;
+      flex-wrap:nowrap;
+      justify-content:flex-start;
+      gap:8px;
+      align-items:stretch;
+      margin-left:0;
+    }
+    .loan-actions > *{
+      flex:0 0 auto;
+      min-width:0;
+    }
+    .loan-actions .action-slot-empty{
+      display:none;
+    }
+    .loan-actions .mini-btn,
+    .loan-actions .mini-btn:hover,
+    .loan-actions .mini-btn:focus,
+    .loan-actions .mini-btn:active{
+      width:auto !important;
+      min-width:168px !important;
+      white-space:nowrap !important;
+      overflow-wrap:normal !important;
+      word-break:normal !important;
+      padding-left:14px !important;
+      padding-right:14px !important;
+      background:linear-gradient(180deg, #d41414 0%, #9f0000 100%) !important;
+      border-color:rgba(255,255,255,0.24) !important;
+      color:#ffffff !important;
+      -webkit-text-fill-color:#ffffff !important;
+      justify-content:center;
+      text-align:center;
+    }
+    @media (max-width: 760px){
+      .loan-actions{
+        display:grid;
+        grid-template-columns:1fr;
+      }
+      .loan-actions > *{
+        flex:initial;
+      }
+      .loan-actions .mini-btn,
+      .loan-actions .mini-btn:hover,
+      .loan-actions .mini-btn:focus,
+      .loan-actions .mini-btn:active{
+        width:100% !important;
+        min-width:0 !important;
+        white-space:normal !important;
+        overflow-wrap:anywhere !important;
+        word-break:break-word !important;
+      }
+      .loan-actions .action-slot-empty{
+        display:none;
+      }
+    }
+
+
 </style>
 </head>
 
