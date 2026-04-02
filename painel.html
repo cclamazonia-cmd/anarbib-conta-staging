@@ -4801,19 +4801,30 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
       return currentLibraryScheduleStateRow;
     }
 
+    /*
+      Persistência direta dos horários desta biblioteca.
+      Mantém este painel preso a library_service_state.
+      Evita detecção heurística de colunas em libraries.
+      Evita detecção heurística de JSONs aninhados.
+      Evita fallback opaco para campos legados.
+      Mantém o salvamento do bloco humano em service_schedule_text.
+      Mantém o fuso da consulta no mesmo registro.
+      Mantém a capacidade simultânea no mesmo registro.
+      Mantém a grade estruturada no mesmo registro.
+      O objetivo aqui é só estabilizar Salvar horários.
+      Não altera auth.
+      Não altera circulação.
+      Não altera outros formulários.
+    */
     async function loadLibrarySchedule(){
       try {
         const serviceRow = await fetchCurrentLibraryServiceStateRow();
-        const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
-        const binding = extractLibraryScheduleBinding('library_service_state', serviceRow)
-          || extractLibraryScheduleBinding('libraries', libraryRow)
-          || detectFallbackLibraryScheduleBinding();
-        currentLibraryScheduleBinding = binding || null;
-        renderLibrarySchedule(binding?.schedule || getEmptyLibrarySchedule());
+        currentLibraryScheduleBinding = { table: 'library_service_state', source: { type: 'direct-json', field: 'service_schedule_text' } };
+        renderLibrarySchedule(serviceRow?.service_schedule_text || getEmptyLibrarySchedule());
         renderConsultationSettings(serviceRow || {});
         clearStatus('libraryScheduleMsg');
       } catch (e) {
-        currentLibraryScheduleBinding = null;
+        currentLibraryScheduleBinding = { table: 'library_service_state', source: { type: 'direct-json', field: 'service_schedule_text' } };
         renderLibrarySchedule(getEmptyLibrarySchedule());
         renderConsultationSettings({});
         setStatus('libraryScheduleMsg', 'Não consegui carregar os horários da biblioteca: ' + (e.message || String(e)), 'bad', false);
@@ -4846,38 +4857,29 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
       const btn = $('btnSaveLibrarySchedule');
       btn.disabled = true;
       try {
-        const libraryRow = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
         const serviceRow = currentLibraryScheduleStateRow?.library_id ? currentLibraryScheduleStateRow : await fetchCurrentLibraryServiceStateRow();
-        const binding = currentLibraryScheduleBinding || extractLibraryScheduleBinding('library_service_state', serviceRow) || extractLibraryScheduleBinding('libraries', libraryRow) || detectFallbackLibraryScheduleBinding();
-        if (!binding) throw new Error('Não encontrei ainda um campo de persistência para os horários desta biblioteca.');
-
-        const schedule = collectLibraryScheduleFromForm();
-        const libraryId = normalizeLibraryId(libraryRow?.id || serviceRow?.library_id);
+        const libraryId = normalizeLibraryId(serviceRow?.library_id || currentLibraryRow?.id);
         if (!libraryId) throw new Error('Biblioteca ativa não identificada para salvar os horários.');
 
-        if (binding.table === 'library_service_state') {
-          const payload = buildLibrarySchedulePayload(binding, schedule, serviceRow);
-          const { data, error } = await supabase
-            .from('library_service_state')
-            .upsert({ library_id: libraryId, ...payload }, { onConflict: 'library_id' })
-            .select('*')
-            .maybeSingle();
-          if (error) throw error;
-          currentLibraryScheduleStateRow = { ...(data || {}), library_id: libraryId };
-        } else if (binding.table === 'libraries') {
-          const payload = buildLibrarySchedulePayload(binding, schedule, libraryRow);
-          const { data, error } = await supabase
-            .from('libraries')
-            .update(payload)
-            .eq('id', libraryId)
-            .select('*')
-            .maybeSingle();
-          if (error) throw error;
-          currentLibraryRow = { ...(currentLibraryRow || {}), ...(data || {}), id: libraryId };
-        } else {
-          throw new Error('Destino de gravação não reconhecido para os horários.');
-        }
+        const schedule = collectLibraryScheduleFromForm();
+        const consultationSettings = collectConsultationSettingsFromForm();
+        const payload = {
+          library_id: libraryId,
+          service_schedule_text: schedule,
+          consultation_timezone: consultationSettings.consultation_timezone,
+          max_simultaneous_consultations: consultationSettings.max_simultaneous_consultations,
+          consultation_schedule_struct: consultationSettings.consultation_schedule_struct,
+        };
 
+        const { data, error } = await supabase
+          .from('library_service_state')
+          .upsert(payload, { onConflict: 'library_id' })
+          .select('*')
+          .maybeSingle();
+        if (error) throw error;
+
+        currentLibraryScheduleBinding = { table: 'library_service_state', source: { type: 'direct-json', field: 'service_schedule_text' } };
+        currentLibraryScheduleStateRow = { ...(data || {}), library_id: libraryId };
         await loadLibrarySchedule();
         setStatus('libraryScheduleMsg', 'Horários e permanências atualizados.', 'ok');
       } catch (e) {
