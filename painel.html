@@ -8101,33 +8101,99 @@ async function fetchActiveLoans(){
         throw holdingsRes.error;
       }
 
+      const pickPreferredHolding = (currentRow, nextRow) => {
+        if (!currentRow) return nextRow;
+        const currentAvailable = Number(currentRow?.available_count || 0) > 0;
+        const nextAvailable = Number(nextRow?.available_count || 0) > 0;
+        if (!currentAvailable && nextAvailable) return nextRow;
+        const currentHasLocalRef = !!String(currentRow?.local_bib_ref || '').trim();
+        const nextHasLocalRef = !!String(nextRow?.local_bib_ref || '').trim();
+        if (!currentHasLocalRef && nextHasLocalRef) return nextRow;
+        return currentRow;
+      };
+
       const holdingRows = holdingsRes.data || [];
       const byLocalRef = new Map();
+      const initialBookIds = Array.from(new Set(holdingRows.map((row) => Number(row?.book_id)).filter((v) => Number.isFinite(v) && v > 0)));
+      let booksById = new Map();
+      if (initialBookIds.length) {
+        const booksRes = await supabase
+          .from('books')
+          .select('id,bib_ref,titulo,loanable')
+          .in('id', initialBookIds);
+        if (booksRes.error) throw booksRes.error;
+        booksById = new Map((booksRes.data || []).map((row) => [Number(row.id), row]));
+      }
+
+      const byBookBibRef = new Map();
       for (const row of holdingRows) {
         const ref = String(row?.local_bib_ref || '').trim();
         const matchKey = normalizeBibRefForMatch(ref);
-        if (!matchKey || byLocalRef.has(matchKey)) continue;
-        byLocalRef.set(matchKey, row);
+        if (matchKey && !byLocalRef.has(matchKey)) byLocalRef.set(matchKey, row);
+        const book = booksById.get(Number(row?.book_id)) || {};
+        const bookBibRefKey = normalizeBibRefForMatch(book?.bib_ref);
+        if (bookBibRefKey) {
+          byBookBibRef.set(bookBibRefKey, pickPreferredHolding(byBookBibRef.get(bookBibRefKey), row));
+        }
       }
 
-      const missingLocalRefs = cleanRefs.filter((ref) => !byLocalRef.has(normalizeBibRefForMatch(ref)));
+      let missingLocalRefs = cleanRefs.filter((ref) => {
+        const matchKey = normalizeBibRefForMatch(ref);
+        return !byLocalRef.has(matchKey) && !byBookBibRef.has(matchKey);
+      });
+
+      if (missingLocalRefs.length) {
+        const missingQueryRefs = Array.from(new Set(missingLocalRefs.flatMap(buildBibRefMatchVariants)));
+        const booksRes = await supabase
+          .from('books')
+          .select('id,bib_ref,titulo,loanable')
+          .in('bib_ref', missingQueryRefs);
+        if (booksRes.error) throw booksRes.error;
+
+        const fallbackBooks = booksRes.data || [];
+        for (const book of fallbackBooks) {
+          booksById.set(Number(book.id), book);
+        }
+
+        const fallbackBookIds = Array.from(new Set(fallbackBooks.map((row) => Number(row?.id)).filter((v) => Number.isFinite(v) && v > 0)));
+        if (fallbackBookIds.length) {
+          const fallbackHoldingsRes = await supabase
+            .from('book_holdings')
+            .select('id,book_id,library_id,local_bib_ref,available_count')
+            .eq('library_id', libraryId)
+            .in('book_id', fallbackBookIds);
+          if (fallbackHoldingsRes.error) {
+            if (canFallbackHoldingResolutionError(fallbackHoldingsRes.error)) {
+              return { resolved: false, reason: 'holding-resolution-unavailable', rows: [], error: fallbackHoldingsRes.error };
+            }
+            throw fallbackHoldingsRes.error;
+          }
+
+          for (const row of (fallbackHoldingsRes.data || [])) {
+            const localRefKey = normalizeBibRefForMatch(row?.local_bib_ref);
+            if (localRefKey && !byLocalRef.has(localRefKey)) byLocalRef.set(localRefKey, row);
+            const book = booksById.get(Number(row?.book_id)) || {};
+            const bookBibRefKey = normalizeBibRefForMatch(book?.bib_ref);
+            if (bookBibRefKey) {
+              byBookBibRef.set(bookBibRefKey, pickPreferredHolding(byBookBibRef.get(bookBibRefKey), row));
+            }
+          }
+        }
+
+        missingLocalRefs = cleanRefs.filter((ref) => {
+          const matchKey = normalizeBibRefForMatch(ref);
+          return !byLocalRef.has(matchKey) && !byBookBibRef.has(matchKey);
+        });
+      }
+
       if (missingLocalRefs.length) {
         return { resolved: false, reason: 'local-ref-not-found', rows: [], missing: missingLocalRefs };
       }
 
-      const holdings = cleanRefs.map((ref) => byLocalRef.get(normalizeBibRefForMatch(ref))).filter(Boolean);
-      const bookIds = Array.from(new Set(holdings.map((row) => Number(row?.book_id)).filter((v) => Number.isFinite(v) && v > 0)));
-
-      let booksById = new Map();
-      if (bookIds.length) {
-        const booksRes = await supabase
-          .from('books')
-          .select('id,bib_ref,titulo,loanable')
-          .in('id', bookIds);
-
-        if (booksRes.error) throw booksRes.error;
-        booksById = new Map((booksRes.data || []).map((row) => [Number(row.id), row]));
-      }
+      const holdings = cleanRefs.map((ref) => {
+        const matchKey = normalizeBibRefForMatch(ref);
+        return byLocalRef.get(matchKey) || byBookBibRef.get(matchKey);
+      }).filter(Boolean);
 
       return {
         resolved: true,
