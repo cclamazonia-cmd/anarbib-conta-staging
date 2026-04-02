@@ -6736,6 +6736,17 @@ function belemNowParts(){
       if (currentValue && !consultationCanMoveToStage(rows, currentValue)) select.value = '';
     }
 
+    function updateBulkSelectionButtons(){
+      const reservationCount = selectedReservationRows().length;
+      const consultationCount = selectedConsultationRows().length;
+      if ($('btnConfirmarSelecionados')) $('btnConfirmarSelecionados').disabled = reservationCount < 1;
+      if ($('btnCancelarSelecionados')) $('btnCancelarSelecionados').disabled = reservationCount < 1;
+      if ($('btnApplyResWorkflowStage')) $('btnApplyResWorkflowStage').disabled = reservationCount < 1;
+      if ($('btnApplyConsultWorkflowStage')) $('btnApplyConsultWorkflowStage').disabled = consultationCount < 1;
+      updateReservationWorkflowStageOptions();
+      updateConsultationWorkflowStageOptions();
+    }
+
     async function setConsultationWorkflowStage(stage, rows, { note='', consultationScheduledFor=null, targetStatusId='statusConsultas' } = {}){
       const cleanRows = (rows || []).filter((r) => r && r.source === 'v2');
       if (!cleanRows.length) {
@@ -6765,12 +6776,18 @@ function belemNowParts(){
           p_consultation_scheduled_for: consultationScheduledFor || null,
         });
         if (rpc.error) throw rpc.error;
-        processed += Number(rpc.data || 0) || lineNos.length;
+        processed += Number(rpc.data || 0) || 0;
+      }
+
+      if (!processed) {
+        await refreshConsultationsOnly({silent:true});
+        setStatus(targetStatusId, 'Nenhuma consulta foi atualizada. Verifica se as linhas continuam ativas e selecionadas.', 'warn');
+        return;
       }
 
       const stageLabel = translateConsultationWorkflowStage(stage);
-      setStatus(targetStatusId, `${stageLabel} aplicado para ${processed} item(ns).`, 'ok');
       await refreshConsultationsOnly({silent:true});
+      setStatus(targetStatusId, `${stageLabel} aplicado para ${processed} item(ns).`, 'ok');
     }
 
     async function fetchActiveConsultations(){
@@ -7406,21 +7423,28 @@ async function fetchActiveLoans(){
       let processed = 0;
 
       for (const [reservaId, items] of groups.entries()) {
-        const lineNos = items.map((i) => Number(i.line_no));
+        const lineNos = items.map((i) => Number(i.line_no)).filter((n) => Number.isFinite(n) && n > 0);
+        if (!lineNos.length) continue;
         const rpc = await supabase.rpc('fn_v2_set_reserva_linhas_workflow', {
           p_reserva_id: Number(reservaId),
           p_line_nos: lineNos,
-          p_stage: stage,
-          p_note: note || null,
+          p_workflow_stage: stage,
+          p_workflow_note: note || null,
           p_pickup_scheduled_for: pickupScheduledFor || null,
         });
         if (rpc.error) throw rpc.error;
-        processed += Array.isArray(rpc.data) ? (rpc.data.length || lineNos.length) : (Number(rpc.data || 0) || lineNos.length);
+        processed += Number(rpc.data || 0) || 0;
+      }
+
+      if (!processed) {
+        await refreshReservationsOnly({silent:true});
+        setStatus(targetStatusId, 'Nenhuma reserva foi atualizada. Verifica se as linhas continuam ativas e selecionadas.', 'warn');
+        return;
       }
 
       const stageLabel = translateReservationWorkflowStage(stage);
-      setStatus(targetStatusId, `${stageLabel} aplicado para ${processed} item(ns).`, 'ok');
       await refreshReservationsOnly({silent:true});
+      setStatus(targetStatusId, `${stageLabel} aplicado para ${processed} item(ns).`, 'ok');
     }
 
     function renderReservationTable(){
@@ -7429,11 +7453,13 @@ async function fetchActiveLoans(){
       updateReservationWorkflowStageOptions();
       if (!activeReservations.length){
         tbody.innerHTML = '<tr><td colspan="8">Sem reservas ativas.</td></tr>';
+        updateBulkSelectionButtons();
         return;
       }
       const rows = activeReservations.filter(reservationMatchesFilter);
       if (!rows.length){
         tbody.innerHTML = '<tr><td colspan="8">Nenhuma reserva neste recorte.</td></tr>';
+        updateBulkSelectionButtons();
         return;
       }
       tbody.innerHTML = rows.map((r) => {
@@ -7453,6 +7479,7 @@ async function fetchActiveLoans(){
             <td>${esc(fmtDateTimeBelem(r.validade))} (Belém)<br><span class="pill ${esc(followUp.className)}">${esc(followUp.label)}</span><br><span class="mini subtle">${esc(followUp.detail)}</span></td>
           </tr>`;
       }).join('');
+      updateBulkSelectionButtons();
     }
 
     function renderConsultationTable(){
@@ -7461,6 +7488,7 @@ async function fetchActiveLoans(){
       updateConsultationWorkflowStageOptions();
       if (!activeConsultations.length){
         tbody.innerHTML = '<tr><td colspan="9">Sem consultas locais ativas.</td></tr>';
+        updateBulkSelectionButtons();
         return;
       }
       tbody.innerHTML = activeConsultations.map((c) => {
@@ -7481,6 +7509,7 @@ async function fetchActiveLoans(){
             <td>${validity}</td>
           </tr>`;
       }).join('');
+      updateBulkSelectionButtons();
     }
 
     function renderLoansTable(){
@@ -8419,6 +8448,47 @@ async function fetchActiveLoans(){
       });
     }
 
+    window.__anarbibToggleReservaSelection = (id, checked) => {
+      const normalizedId = Number(id);
+      if (!Number.isFinite(normalizedId)) return;
+      if (checked) selectedReservaIds.add(normalizedId); else selectedReservaIds.delete(normalizedId);
+      renderReservationTable();
+    };
+
+    window.__anarbibToggleConsultaSelection = (id, checked) => {
+      const normalizedId = Number(id);
+      if (!Number.isFinite(normalizedId)) return;
+      if (checked) selectedConsultaIds.add(normalizedId); else selectedConsultaIds.delete(normalizedId);
+      renderConsultationTable();
+    };
+
+    window.__anarbibPainelMainHooks = {
+      fetchActiveReservations,
+      fetchActiveConsultations,
+      fetchActiveLoans,
+      renderReservationTable,
+      renderConsultationTable,
+      renderLoansTable,
+      renderBatchTable,
+      renderCounts,
+      renderProfileLists,
+      updateBulkSelectionButtons,
+      applyRescueSnapshot(snapshot = {}){
+        if (Array.isArray(snapshot.reservations)) {
+          activeReservations = snapshot.reservations;
+          selectedReservaIds = new Set([...selectedReservaIds].filter((id) => activeReservations.some((r) => r.id === id)));
+          renderReservationTable();
+        }
+        if (Array.isArray(snapshot.consultations)) {
+          activeConsultations = snapshot.consultations;
+          selectedConsultaIds = new Set([...selectedConsultaIds].filter((id) => activeConsultations.some((c) => c.id === id)));
+          renderConsultationTable();
+        }
+        renderCounts();
+        renderProfileLists();
+      }
+    };
+
     function bindDynamicActions(){
       document.body.addEventListener('click', async (ev) => {
         const openReservaTaskBtn = ev.target.closest('[data-task-open-reserva]');
@@ -8729,6 +8799,7 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
           : 'Informe data e hora para agendar a retirada.', 'warn');
         return;
       }
+      setStatus('statusRes', 'Aplicando etapa...', 'warn');
       try {
         await setReservationWorkflowStage(stage, selectedReservationRows(), {
           note: $('resWorkflowNote')?.value.trim() || '',
@@ -8751,6 +8822,7 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
         setStatus('statusConsultas', 'Informe data e hora para agendar a consulta.', 'warn');
         return;
       }
+      setStatus('statusConsultas', 'Aplicando etapa...', 'warn');
       try {
         await setConsultationWorkflowStage(stage, selectedConsultationRows(), {
           note: $('consultWorkflowNote')?.value.trim() || '',
@@ -10143,6 +10215,28 @@ function initPartnerProbeUi() {
 
   async function reloadPainelRescueData() {
     try {
+      const hooks = window.__anarbibPainelMainHooks;
+      if (hooks
+          && typeof hooks.fetchActiveReservations === 'function'
+          && typeof hooks.fetchActiveConsultations === 'function'
+          && typeof hooks.fetchActiveLoans === 'function'
+          && typeof hooks.renderReservationTable === 'function'
+          && typeof hooks.renderConsultationTable === 'function') {
+        await Promise.all([
+          hooks.fetchActiveReservations(),
+          hooks.fetchActiveConsultations(),
+          hooks.fetchActiveLoans()
+        ]);
+        hooks.renderReservationTable();
+        hooks.renderConsultationTable();
+        if (typeof hooks.renderLoansTable === 'function') hooks.renderLoansTable();
+        if (typeof hooks.renderBatchTable === 'function') hooks.renderBatchTable();
+        if (typeof hooks.renderCounts === 'function') hooks.renderCounts();
+        if (typeof hooks.renderProfileLists === 'function') hooks.renderProfileLists();
+        if (typeof hooks.updateBulkSelectionButtons === 'function') hooks.updateBulkSelectionButtons();
+        return;
+      }
+
       const [reservations, consultations, loans] = await Promise.all([
         fetchReservationsR(),
         fetchConsultationsR(),
