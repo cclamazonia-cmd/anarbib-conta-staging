@@ -7709,9 +7709,14 @@ async function fetchActiveLoans(){
       const payload = readPainelStateSyncRaw();
       const ts = Number(payload?.ts || 0);
       const scope = String(payload?.scope || '').trim() || 'circulation';
-      if (!ts || ts <= painelLastAppliedStateSyncTs) return;
-      painelLastAppliedStateSyncTs = ts;
+      const passiveReloadSources = new Set(['focus', 'pageshow', 'visibilitychange']);
       if (!(session && isLibrarian)) return;
+      if (!ts || ts <= painelLastAppliedStateSyncTs) {
+        if (!passiveReloadSources.has(String(source || '').trim())) return;
+        await Promise.allSettled([refreshReservationsOnly({silent:true}), refreshConsultationsOnly({silent:true}), refreshLoansOnly({silent:true})]);
+        return;
+      }
+      painelLastAppliedStateSyncTs = ts;
 
       if (scope === 'reservations') {
         await Promise.allSettled([refreshReservationsOnly({silent:true}), refreshConsultationsOnly({silent:true})]);
@@ -7732,23 +7737,31 @@ async function fetchActiveLoans(){
       if (painelStateSyncHooksBound) return;
       painelStateSyncHooksBound = true;
 
-      /* storage hook removed on request */
-      /* removed: sync by PAINEL_STATE_SYNC_KEY via storage event */
-      /* focus hook removed on request */
-      /* removed: applyPainelStateSync('focus') */
-      /* pageshow hook removed on request */
-      /* removed: applyPainelStateSync('pageshow') */
-      /* visibilitychange hook removed on request */
-      /* removed visibility guard for visible state */
-      /* removed: applyPainelStateSync('visibilitychange') */
-      /* no passive page/window sync hooks remain here */
-      /* explicit refresh buttons and direct actions remain active */
-      /* end removed passive painel state hooks */
-      /* padding line 01 */
-      /* padding line 02 */
-      /* padding line 03 */
-      /* padding line 04 */
-      /* padding line 05 */
+      window.addEventListener('storage', (event) => {
+        if (event.key !== PAINEL_STATE_SYNC_KEY) return;
+        applyPainelStateSync('storage').catch((error) => {
+          console.warn('Painel: falha ao sincronizar via storage.', error);
+        });
+      });
+
+      window.addEventListener('focus', () => {
+        applyPainelStateSync('focus').catch((error) => {
+          console.warn('Painel: falha ao sincronizar ao focar a janela.', error);
+        });
+      });
+
+      window.addEventListener('pageshow', () => {
+        applyPainelStateSync('pageshow').catch((error) => {
+          console.warn('Painel: falha ao sincronizar no retorno da página.', error);
+        });
+      });
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible') return;
+        applyPainelStateSync('visibilitychange').catch((error) => {
+          console.warn('Painel: falha ao sincronizar quando a aba voltou a ficar visível.', error);
+        });
+      });
     }
 
     function findProfileReservations(userId){
@@ -10022,6 +10035,7 @@ function initPartnerProbeUi() {
     } catch (error) {
       console.warn('Falha ao inicializar o bloco de parceiras; o restante do painel segue ativo.', error);
     }
+  }
   </script>
 
 <script type="module">
