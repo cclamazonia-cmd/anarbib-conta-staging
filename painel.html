@@ -9627,6 +9627,16 @@ function initPartnerProbeUi() {
     // Revalidação automática de auth por foco, retorno de página, storage e tentativa tardia desativada aqui.
     // A sincronização auth do painel fica restrita ao fluxo normal do Supabase, como na catalogação.
 
+    window.__anarbibPainelMainHooks = {
+      applyRescueSnapshot(snapshot = {}) {
+        if (Array.isArray(snapshot.reservations)) activeReservations = snapshot.reservations;
+        if (Array.isArray(snapshot.consultations)) activeConsultations = snapshot.consultations;
+        renderCounts();
+        renderReservationTable();
+        renderConsultationTable();
+      }
+    };
+
     try {
       initPartnerProbeUi();
     } catch (error) {
@@ -10061,6 +10071,56 @@ function initPartnerProbeUi() {
     }
   }
 
+  function normalizeReservationForMainR(row) {
+    const reservaId = Number(firstFilledR(row?.reserva_id, row?.id, 0));
+    const lineNo = Number(firstFilledR(row?.line_no, 1)) || 1;
+    return {
+      id: Number(`${reservaId}${String(lineNo).padStart(3, '0')}`),
+      reserva_id: reservaId,
+      line_no: lineNo,
+      sub_id: String(firstFilledR(row?.sub_id, `${reservaId}.${lineNo}`)),
+      source: 'v2',
+      user_name: firstFilledR(row?.user_name, '—'),
+      user_email: firstFilledR(row?.user_email, '—'),
+      bib_ref: firstFilledR(row?.bib_ref, ''),
+      titulo: firstFilledR(row?.titulo, '—'),
+      autor: firstFilledR(row?.autor, ''),
+      rotulo: firstFilledR(row?.rotulo, '—') || '—',
+      reserva_em: firstFilledR(row?.reserva_em, null),
+      validade: firstFilledR(row?.validade, null),
+      workflow_stage: String(firstFilledR(row?.workflow, 'solicitada') || 'solicitada'),
+      workflow_stage_updated_at: firstFilledR(row?.reserva_em, null),
+      workflow_note: '',
+      pickup_scheduled_for: null,
+      pickup_reply_status: '',
+      pickup_reply_note: '',
+      pickup_reply_at: null,
+    };
+  }
+
+  function normalizeConsultationForMainR(row) {
+    const consultaId = Number(firstFilledR(row?.consulta_id, row?.id, 0));
+    const lineNo = Number(firstFilledR(row?.line_no, 1)) || 1;
+    return {
+      id: Number(`${consultaId}${String(lineNo).padStart(3, '0')}`),
+      consulta_id: consultaId,
+      line_no: lineNo,
+      sub_id: String(firstFilledR(row?.sub_id, `${consultaId}.${lineNo}`)),
+      source: 'v2',
+      user_name: firstFilledR(row?.user_name, '—'),
+      user_email: firstFilledR(row?.user_email, '—'),
+      bib_ref: firstFilledR(row?.bib_ref, ''),
+      titulo: firstFilledR(row?.titulo, '—'),
+      autor: firstFilledR(row?.autor, ''),
+      consulta_em: firstFilledR(row?.consulta_em, null),
+      validade: firstFilledR(row?.validade, null),
+      workflow_stage: String(firstFilledR(row?.workflow, 'solicitada') || 'solicitada'),
+      workflow_stage_updated_at: firstFilledR(row?.consulta_em, null),
+      workflow_note: '',
+      consultation_scheduled_for: null,
+    };
+  }
+
   async function reloadPainelRescueData() {
     try {
       const [reservations, consultations, loans] = await Promise.all([
@@ -10068,8 +10128,16 @@ function initPartnerProbeUi() {
         fetchConsultationsR(),
         fetchLoansR()
       ]);
-      renderReservationsR(reservations);
-      renderConsultationsR(consultations);
+      const hooks = window.__anarbibPainelMainHooks || null;
+      if (hooks && typeof hooks.applyRescueSnapshot === 'function') {
+        hooks.applyRescueSnapshot({
+          reservations: reservations.map(normalizeReservationForMainR),
+          consultations: consultations.map(normalizeConsultationForMainR),
+        });
+      } else {
+        renderReservationsR(reservations);
+        renderConsultationsR(consultations);
+      }
       renderLoansR(loans.items, loans.batches);
       setChipR('chipResCount', `Reservas ativas: ${reservations.length}`);
       setChipR('chipConsultCount', `Consultas locais: ${consultations.length}`);
