@@ -6760,12 +6760,18 @@ function belemNowParts(){
           p_consultation_scheduled_for: consultationScheduledFor || null,
         });
         if (rpc.error) throw rpc.error;
-        processed += Number(rpc.data || 0) || lineNos.length;
+        processed += Number(rpc.data || 0) || 0;
+      }
+
+      if (!processed) {
+        await refreshConsultationsOnly({silent:true});
+        setStatus(targetStatusId, 'Nenhuma consulta foi atualizada. Verifica se as linhas continuam ativas e selecionadas.', 'warn');
+        return;
       }
 
       const stageLabel = translateConsultationWorkflowStage(stage);
-      setStatus(targetStatusId, `${stageLabel} aplicado para ${processed} item(ns).`, 'ok');
       await refreshConsultationsOnly({silent:true});
+      setStatus(targetStatusId, `${stageLabel} aplicado para ${processed} item(ns).`, 'ok');
     }
 
     async function fetchActiveConsultations(){
@@ -8753,6 +8759,7 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
           : 'Informe data e hora para agendar a retirada.', 'warn');
         return;
       }
+      setStatus('statusRes', 'Aplicando etapa...', 'warn');
       try {
         await setReservationWorkflowStage(stage, selectedReservationRows(), {
           note: $('resWorkflowNote')?.value.trim() || '',
@@ -8775,6 +8782,7 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
         setStatus('statusConsultas', 'Informe data e hora para agendar a consulta.', 'warn');
         return;
       }
+      setStatus('statusConsultas', 'Aplicando etapa...', 'warn');
       try {
         await setConsultationWorkflowStage(stage, selectedConsultationRows(), {
           note: $('consultWorkflowNote')?.value.trim() || '',
