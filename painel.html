@@ -8454,6 +8454,21 @@ async function fetchActiveLoans(){
       }
     }
 
+    function updateBulkSelectionButtons(){
+      const reservationSelected = selectedReservationRows();
+      const consultationSelected = selectedConsultationRows();
+      const hasReservationSelection = reservationSelected.length > 0;
+      const hasConsultationSelection = consultationSelected.length > 0;
+
+      if ($('btnConfirmarSelecionados')) $('btnConfirmarSelecionados').disabled = !hasReservationSelection;
+      if ($('btnCancelarSelecionados')) $('btnCancelarSelecionados').disabled = !hasReservationSelection;
+      if ($('btnApplyResWorkflowStage')) $('btnApplyResWorkflowStage').disabled = !hasReservationSelection;
+      if ($('btnApplyConsultWorkflowStage')) $('btnApplyConsultWorkflowStage').disabled = !hasConsultationSelection;
+
+      updateReservationWorkflowStageOptions();
+      updateConsultationWorkflowStageOptions();
+    }
+
     window.__anarbibPainelUpdateBulkSelectionButtons = updateBulkSelectionButtons;
     window.__anarbibPainelMainHooks = {
       fetchActiveReservations,
