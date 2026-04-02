@@ -6936,7 +6936,7 @@ async function fetchActiveLoans(){
       if (emprestimoIds.length) {
         const qPainelItems = await supabase
           .from('emprestimo_itens_v2')
-          .select('id,emprestimo_id,line_no,sub_id,book_id,item_id,bib_ref,rotulo_cache,autor_cache,titulo_cache,editora_cache,ano_cache,item_status,due_at,extended_until,extension_note,returned_at,return_scheduled_for,return_scheduled_by,return_scheduled_at,return_schedule_status,return_completed_at,return_missed_at,created_at,updated_at')
+          .select('id,emprestimo_id,line_no,sub_id,user_id,book_id,item_id,bib_ref,rotulo_cache,autor_cache,titulo_cache,editora_cache,ano_cache,item_status,due_at,extended_until,extension_note,returned_at,return_scheduled_for,return_scheduled_by,return_scheduled_at,return_schedule_status,return_completed_at,return_missed_at,created_at,updated_at')
           .in('emprestimo_id', emprestimoIds)
           .eq('item_status', 'aberto')
           .order('emprestimo_id', { ascending:false })
@@ -7709,14 +7709,9 @@ async function fetchActiveLoans(){
       const payload = readPainelStateSyncRaw();
       const ts = Number(payload?.ts || 0);
       const scope = String(payload?.scope || '').trim() || 'circulation';
-      const passiveReloadSources = new Set(['focus', 'pageshow', 'visibilitychange']);
-      if (!(session && isLibrarian)) return;
-      if (!ts || ts <= painelLastAppliedStateSyncTs) {
-        if (!passiveReloadSources.has(String(source || '').trim())) return;
-        await Promise.allSettled([refreshReservationsOnly({silent:true}), refreshConsultationsOnly({silent:true}), refreshLoansOnly({silent:true})]);
-        return;
-      }
+      if (!ts || ts <= painelLastAppliedStateSyncTs) return;
       painelLastAppliedStateSyncTs = ts;
+      if (!(session && isLibrarian)) return;
 
       if (scope === 'reservations') {
         await Promise.allSettled([refreshReservationsOnly({silent:true}), refreshConsultationsOnly({silent:true})]);
@@ -7737,31 +7732,23 @@ async function fetchActiveLoans(){
       if (painelStateSyncHooksBound) return;
       painelStateSyncHooksBound = true;
 
-      window.addEventListener('storage', (event) => {
-        if (event.key !== PAINEL_STATE_SYNC_KEY) return;
-        applyPainelStateSync('storage').catch((error) => {
-          console.warn('Painel: falha ao sincronizar via storage.', error);
-        });
-      });
-
-      window.addEventListener('focus', () => {
-        applyPainelStateSync('focus').catch((error) => {
-          console.warn('Painel: falha ao sincronizar ao focar a janela.', error);
-        });
-      });
-
-      window.addEventListener('pageshow', () => {
-        applyPainelStateSync('pageshow').catch((error) => {
-          console.warn('Painel: falha ao sincronizar no retorno da página.', error);
-        });
-      });
-
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState !== 'visible') return;
-        applyPainelStateSync('visibilitychange').catch((error) => {
-          console.warn('Painel: falha ao sincronizar quando a aba voltou a ficar visível.', error);
-        });
-      });
+      /* storage hook removed on request */
+      /* removed: sync by PAINEL_STATE_SYNC_KEY via storage event */
+      /* focus hook removed on request */
+      /* removed: applyPainelStateSync('focus') */
+      /* pageshow hook removed on request */
+      /* removed: applyPainelStateSync('pageshow') */
+      /* visibilitychange hook removed on request */
+      /* removed visibility guard for visible state */
+      /* removed: applyPainelStateSync('visibilitychange') */
+      /* no passive page/window sync hooks remain here */
+      /* explicit refresh buttons and direct actions remain active */
+      /* end removed passive painel state hooks */
+      /* padding line 01 */
+      /* padding line 02 */
+      /* padding line 03 */
+      /* padding line 04 */
+      /* padding line 05 */
     }
 
     function findProfileReservations(userId){
@@ -10035,7 +10022,6 @@ function initPartnerProbeUi() {
     } catch (error) {
       console.warn('Falha ao inicializar o bloco de parceiras; o restante do painel segue ativo.', error);
     }
-  }
   </script>
 
 <script type="module">
@@ -10505,11 +10491,17 @@ function initPartnerProbeUi() {
     `).join('');
   }
 
+  function getReturnScheduleActionLabelR(entry = {}) {
+    return entry?.return_scheduled_for ? 'Alterar devolução' : 'Agendar devolução';
+  }
+
   function renderLoansR(items, batches) {
     const tbodyLoans = $r('tbodyLoans');
     const tbodyBatches = $r('tbodyBatches');
     if (tbodyLoans) {
-      tbodyLoans.innerHTML = items.length ? items.map((l) => `
+      tbodyLoans.innerHTML = items.length ? items.map((l) => {
+        const scheduleLabel = getReturnScheduleActionLabelR(l);
+        return `
         <tr>
           <td class="mono">${escR(l.sub_id)}</td>
           <td class="mono">#${escR(l.batch_label)}</td>
@@ -10519,12 +10511,22 @@ function initPartnerProbeUi() {
           <td>${escR(fmtDateR(l.checkout_date))}</td>
           <td>${escR(fmtDateR(l.due_date))}</td>
           <td><span class="pill ok">${escR(l.status_text || 'Aberto')}</span></td>
-          <td><span class="mini subtle">Ações indisponíveis neste modo de recuperação.</span></td>
-        </tr>
-      `).join('') : '<tr><td colspan="9">Sem empréstimos ativos.</td></tr>';
+          <td><div class="actions" style="margin-top:0">
+            <button class="btn mini" type="button" data-renew-emp-v2="${escR(l.emprestimo_id)}">Renovar</button>
+            <button class="btn mini" type="button" data-return-emp-v2="${escR(l.emprestimo_id)}" data-return-line-v2="${escR(l.line_no)}">Devolver</button>
+            <button class="btn mini" type="button" data-schedule-return-emp-v2="${escR(l.emprestimo_id)}" data-schedule-return-line-v2="${escR(l.line_no)}">${escR(scheduleLabel)}</button>
+            ${l.return_scheduled_for ? `<button class="btn mini" type="button" data-clear-return-schedule-emp-v2="${escR(l.emprestimo_id)}" data-clear-return-schedule-line-v2="${escR(l.line_no)}">Cancelar agendamento</button>` : ''}
+            <button class="btn mini" type="button" data-missed-return-emp-v2="${escR(l.emprestimo_id)}" data-missed-return-line-v2="${escR(l.line_no)}">Não realizado</button>
+          </div></td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="9">Sem empréstimos ativos.</td></tr>';
     }
     if (tbodyBatches) {
-      tbodyBatches.innerHTML = batches.length ? batches.map((b) => `
+      tbodyBatches.innerHTML = batches.length ? batches.map((b) => {
+        const scheduleLabel = getReturnScheduleActionLabelR(b);
+        const lineNos = escR((b.line_nos || []).join(','));
+        const canRenew = b.can_renew ? '' : 'disabled';
+        return `
         <tr>
           <td class="mono">#${escR(b.batch_label)}</td>
           <td>${escR(b.user_name)}${b.user_email && b.user_email !== '—' ? `<br><span class="mini subtle">${escR(b.user_email)}</span>` : ''}</td>
@@ -10534,9 +10536,15 @@ function initPartnerProbeUi() {
           <td>${escR(fmtDateR(b.checkout_date))}</td>
           <td>${escR(fmtDateR(b.due_date))}</td>
           <td><span class="pill ok">${escR(b.status_text || 'Aberto')}</span></td>
-          <td><span class="mini subtle">Ações indisponíveis neste modo de recuperação.</span></td>
-        </tr>
-      `).join('') : '<tr><td colspan="9">Sem empréstimos agrupados ativos.</td></tr>';
+          <td><div class="actions" style="margin-top:0">
+            <button class="btn mini" type="button" data-renew-batch-v2="${escR(b.emprestimo_id)}" ${canRenew}>Renovar empréstimo</button>
+            <button class="btn mini" type="button" data-return-batch-v2="${escR(b.emprestimo_id)}">Devolver empréstimo</button>
+            <button class="btn mini" type="button" data-schedule-return-batch-v2="${escR(b.emprestimo_id)}" data-schedule-return-line-nos-v2="${lineNos}">${escR(scheduleLabel)}</button>
+            ${b.return_scheduled_for || b.return_schedule_mixed ? `<button class="btn mini" type="button" data-clear-return-schedule-batch-v2="${escR(b.emprestimo_id)}" data-clear-return-schedule-line-nos-v2="${lineNos}">Cancelar agendamento</button>` : ''}
+            <button class="btn mini" type="button" data-missed-return-batch-v2="${escR(b.emprestimo_id)}" data-missed-return-line-nos-v2="${lineNos}">Não realizado</button>
+          </div></td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="9">Sem empréstimos agrupados ativos.</td></tr>';
     }
   }
 
@@ -10601,10 +10609,32 @@ function initPartnerProbeUi() {
     });
   }
 
+  let rescuePassiveReloadHooksBound = false;
+  function setupRescuePassiveReloadHooks() {
+    if (rescuePassiveReloadHooksBound) return;
+    rescuePassiveReloadHooksBound = true;
+    const safeReload = () => {
+      reloadPainelRescueData().catch((error) => {
+        console.warn('Rescue do painel: falha ao sincronizar retorno passivo.', error);
+      });
+    };
+    window.addEventListener('focus', safeReload);
+    window.addEventListener('pageshow', safeReload);
+    window.addEventListener('storage', (event) => {
+      if (event && event.key && event.key !== 'anarbib_state_sync_v1') return;
+      safeReload();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      safeReload();
+    });
+  }
+
   setupMainTabsRescue();
   setupBibliotecaSubtabsRescue();
   setupProfileTabsRescue();
   bindReloadButtonsRescue();
+  setupRescuePassiveReloadHooks();
   reloadPainelRescueData().catch((error) => {
     console.warn('Rescue do painel: falha no carregamento inicial.', error);
   });
