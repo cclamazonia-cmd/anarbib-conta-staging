@@ -9704,6 +9704,306 @@ function initPartnerProbeUi() {
     // Revalidação automática de auth por foco, retorno de página, storage e tentativa tardia desativada aqui.
     // A sincronização auth do painel fica restrita ao fluxo normal do Supabase, como na catalogação.
 
+
+    function bindStaticActionRouterFallback(){
+      if (window.__anarbibPainelStaticActionRouterBound) return;
+      window.__anarbibPainelStaticActionRouterBound = true;
+
+      document.addEventListener('click', async (event) => {
+        const button = event.target?.closest?.('button[id]');
+        if (!button || button.disabled) return;
+
+        const id = String(button.id || '').trim();
+        if (!id) return;
+
+        const handledIds = new Set([
+          'btnSaveServiceState',
+          'btnSaveLibrarySchedule',
+          'btnSaveLocalRules',
+          'btnSaveLibraryIdentity',
+          'btnSaveLibraryTheme',
+          'btnResetLibraryTheme',
+          'btnOpenLibraryRegimento',
+          'btnSaveLibraryRegimentoDraft',
+          'btnPublishLibraryRegimento',
+          'btnDepublishLibraryRegimento',
+          'btnRefreshInterlibRequests',
+          'btnSendInterlibRequest',
+          'btnAcceptInterlibRequest',
+          'btnRefuseInterlibRequest',
+          'btnRegistrarSaida',
+          'btnDevolverId',
+          'btnDevolverSubIds',
+          'btnConfirmarSelecionados',
+          'btnCancelarSelecionados',
+          'btnApplyResWorkflowStage',
+          'btnApplyConsultWorkflowStage',
+          'btnRecarregarRes',
+          'btnRecarregarConsultas',
+          'btnRecarregarTrabalhoDia',
+          'btnAddInternalTask',
+          'btnClearInternalTaskForm',
+          'btnRecarregarLoans',
+          'btnRecarregarLotes',
+          'btnBuscarPerfil',
+          'btnSalvarPerfil',
+          'btnRecarregarPerfil'
+        ]);
+
+        if (!handledIds.has(id)) return;
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        try {
+          switch (id) {
+            case 'btnSaveServiceState':
+              await saveLibraryServiceState();
+              return;
+
+            case 'btnSaveLibrarySchedule':
+              await saveLibrarySchedule();
+              return;
+
+            case 'btnSaveLocalRules':
+              await saveLocalRules();
+              return;
+
+            case 'btnSaveLibraryIdentity':
+              await saveLibraryIdentity();
+              return;
+
+            case 'btnSaveLibraryTheme':
+              await saveLibraryTheme();
+              return;
+
+            case 'btnResetLibraryTheme':
+              await saveLibraryTheme({ reset: true });
+              return;
+
+            case 'btnOpenLibraryRegimento':
+              await openLibraryRegimento();
+              return;
+
+            case 'btnSaveLibraryRegimentoDraft':
+              await saveLibraryRegimentoDraft();
+              return;
+
+            case 'btnPublishLibraryRegimento':
+              await saveLibraryRegimentoPublish();
+              return;
+
+            case 'btnDepublishLibraryRegimento':
+              await saveLibraryRegimentoDepublish();
+              return;
+
+            case 'btnRefreshInterlibRequests':
+              await loadInterlibraryRequests();
+              return;
+
+            case 'btnSendInterlibRequest':
+              await saveInterlibraryRequest();
+              return;
+
+            case 'btnAcceptInterlibRequest':
+              await saveInterlibraryDecision('accepted');
+              return;
+
+            case 'btnRefuseInterlibRequest':
+              await saveInterlibraryDecision('refused');
+              return;
+
+            case 'btnRegistrarSaida':
+              await registerLoan();
+              return;
+
+            case 'btnDevolverId':
+              await returnTotalById();
+              return;
+
+            case 'btnDevolverSubIds':
+              await returnPartialBySubIds();
+              return;
+
+            case 'btnConfirmarSelecionados':
+              await confirmReservations([...selectedReservaIds]);
+              return;
+
+            case 'btnCancelarSelecionados':
+              await cancelReservations([...selectedReservaIds]);
+              return;
+
+            case 'btnApplyResWorkflowStage': {
+              const stage = $('resWorkflowStage')?.value || '';
+              const pickupScheduledFor = toIsoFromLocalInput($('resScheduleAt')?.value);
+              if (!stage) {
+                setStatus('statusRes', 'Escolhe uma etapa do fluxo para aplicar.', 'warn');
+                return;
+              }
+              if (isReservationPickupScheduledStage(stage) && !pickupScheduledFor) {
+                setStatus('statusRes', stage === 're-retirada_agendada'
+                  ? 'Informe data e hora para reagendar a retirada.'
+                  : 'Informe data e hora para agendar a retirada.', 'warn');
+                return;
+              }
+              setStatus('statusRes', 'Aplicando etapa...', 'warn');
+              await setReservationWorkflowStage(stage, selectedReservationRows(), {
+                note: $('resWorkflowNote')?.value.trim() || '',
+                pickupScheduledFor: isReservationPickupScheduledStage(stage) ? pickupScheduledFor : null,
+                targetStatusId: 'statusRes'
+              });
+              writePainelStateSync('reservations');
+              return;
+            }
+
+            case 'btnApplyConsultWorkflowStage': {
+              const stage = $('consultWorkflowStage')?.value || '';
+              const consultationScheduledFor = toIsoFromLocalInput($('consultScheduleAt')?.value);
+              if (!stage) {
+                setStatus('statusConsultas', 'Escolhe uma etapa do fluxo para aplicar.', 'warn');
+                return;
+              }
+              if (stage === 'consulta_agendada' && !consultationScheduledFor) {
+                setStatus('statusConsultas', 'Informe data e hora para agendar a consulta.', 'warn');
+                return;
+              }
+              setStatus('statusConsultas', 'Aplicando etapa...', 'warn');
+              await setConsultationWorkflowStage(stage, selectedConsultationRows(), {
+                note: $('consultWorkflowNote')?.value.trim() || '',
+                consultationScheduledFor: stage === 'consulta_agendada' ? consultationScheduledFor : null,
+                targetStatusId: 'statusConsultas'
+              });
+              writePainelStateSync('consultations');
+              return;
+            }
+
+            case 'btnRecarregarRes':
+              await refreshReservationsOnly();
+              return;
+
+            case 'btnRecarregarConsultas':
+              await refreshConsultationsOnly();
+              return;
+
+            case 'btnRecarregarTrabalhoDia':
+              renderTrabalhoDoDia();
+              setStatus('statusTrabalhoDia', 'Prioridades recalculadas.', 'ok');
+              return;
+
+            case 'btnAddInternalTask':
+              await addInternalTask();
+              return;
+
+            case 'btnClearInternalTaskForm':
+              clearInternalTaskForm();
+              return;
+
+            case 'btnRecarregarLoans':
+            case 'btnRecarregarLotes':
+              await refreshLoansOnly();
+              return;
+
+            case 'btnBuscarPerfil': {
+              const btn = $('btnBuscarPerfil');
+              if (!btn || btn.disabled) return;
+              const requestSerial = ++profileLookupRequestSerial;
+              clearStatus('statusPerfilBusca');
+              clearStatus('statusPerfil');
+              resetProfileEditorState();
+              const lookup = normalizeProfileLookup($('searchEmail').value);
+              if (!lookup) {
+                setStatus('statusPerfilBusca', 'Informe um ID público ou e-mail.', 'warn');
+                return;
+              }
+              btn.disabled = true;
+              setStatus('statusPerfilBusca', 'Buscando cadastro…', 'warn');
+              try {
+                const data = await runProfileLookupWithTimeout(lookup, { applyToEditor: false });
+                if (requestSerial !== profileLookupRequestSerial) return;
+                fillProfileEditor(data);
+                clearStatus('statusPerfilBusca');
+                setStatus('statusPerfil', 'Perfil carregado.', 'ok');
+              } catch (error) {
+                if (requestSerial !== profileLookupRequestSerial) return;
+                resetProfileEditorState();
+                setStatus('statusPerfilBusca', error?.message || String(error), 'bad', false);
+              } finally {
+                if (requestSerial === profileLookupRequestSerial) btn.disabled = false;
+              }
+              return;
+            }
+
+            case 'btnSalvarPerfil':
+              button.disabled = true;
+              try {
+                await saveProfile();
+              } catch (error) {
+                setStatus('statusPerfil', error?.message || String(error), 'bad', false);
+              } finally {
+                button.disabled = false;
+              }
+              return;
+
+            case 'btnRecarregarPerfil':
+              if (!editingProfileId) {
+                setStatus('statusPerfil', 'Busque um perfil primeiro.', 'warn');
+                return;
+              }
+              try {
+                await loadProfileById(editingProfileId);
+                await Promise.allSettled([refreshReservationsOnly({silent:true}), refreshLoansOnly({silent:true})]);
+                setStatus('statusPerfil', 'Perfil recarregado.', 'ok');
+              } catch (error) {
+                setStatus('statusPerfil', error?.message || String(error), 'bad', false);
+              }
+              return;
+
+            default:
+              return;
+          }
+        } catch (error) {
+          const msg = error?.message || String(error) || 'Erro inesperado.';
+          if (id === 'btnApplyResWorkflowStage' || id === 'btnConfirmarSelecionados' || id === 'btnCancelarSelecionados' || id === 'btnRecarregarRes') {
+            setStatus('statusRes', msg, 'bad', false);
+          } else if (id === 'btnApplyConsultWorkflowStage' || id === 'btnRecarregarConsultas') {
+            setStatus('statusConsultas', msg, 'bad', false);
+          } else if (id === 'btnRegistrarSaida') {
+            setStatus('statusSaida', msg, 'bad', false);
+          } else if (id === 'btnDevolverId' || id === 'btnDevolverSubIds') {
+            setStatus('statusDev', msg, 'bad', false);
+          } else if (id === 'btnRecarregarLoans') {
+            setStatus('statusLoans', msg, 'bad', false);
+          } else if (id === 'btnRecarregarLotes') {
+            setStatus('statusBatches', msg, 'bad', false);
+          } else if (id === 'btnBuscarPerfil') {
+            setStatus('statusPerfilBusca', msg, 'bad', false);
+          } else if (id === 'btnSalvarPerfil' || id === 'btnRecarregarPerfil') {
+            setStatus('statusPerfil', msg, 'bad', false);
+          } else if (id.startsWith('btnSaveLibrary') || id.startsWith('btnOpenLibrary') || id.startsWith('btnPublishLibrary') || id.startsWith('btnDepublishLibrary')) {
+            const statusMap = {
+              btnSaveServiceState: 'serviceStateMsg',
+              btnSaveLibrarySchedule: 'libraryScheduleMsg',
+              btnSaveLocalRules: 'localRulesMsg',
+              btnSaveLibraryIdentity: 'libraryIdentityMsg',
+              btnSaveLibraryTheme: 'libraryThemeMsg',
+              btnResetLibraryTheme: 'libraryThemeMsg',
+              btnOpenLibraryRegimento: 'libraryRegimentoMsg',
+              btnSaveLibraryRegimentoDraft: 'libraryRegimentoMsg',
+              btnPublishLibraryRegimento: 'libraryRegimentoMsg',
+              btnDepublishLibraryRegimento: 'libraryRegimentoMsg'
+            };
+            setStatus(statusMap[id] || 'statusPerfil', msg, 'bad', false);
+          } else if (id.startsWith('btnRefreshInterlib') || id.startsWith('btnSendInterlib') || id.startsWith('btnAcceptInterlib') || id.startsWith('btnRefuseInterlib')) {
+            setStatus('interlibRequestsMsg', msg, 'bad', false);
+          } else if (id === 'btnAddInternalTask' || id === 'btnClearInternalTaskForm' || id === 'btnRecarregarTrabalhoDia') {
+            setStatus(id === 'btnRecarregarTrabalhoDia' ? 'statusTrabalhoDia' : 'statusTarefasInternas', msg, 'bad', false);
+          }
+        }
+      }, true);
+    }
+
+    bindStaticActionRouterFallback();
+
     try {
       initPartnerProbeUi();
     } catch (error) {
