@@ -6567,37 +6567,6 @@ function belemNowParts(){
         console.warn('Painel: leitura api.reserva_itens_followup_ui falhou; tentando fallback local.', attempt.error);
       } else {
         rows = attempt.data || [];
-        const reservaIdsFromApi = Array.from(new Set((rows || []).map((row) => Number(firstFilledValue(row?.reserva_id, row?.reservation_id, row?.id, 0))).filter((id) => Number.isFinite(id) && id > 0)));
-        if (reservaIdsFromApi.length) {
-          const workflowsRes = await supabase
-            .from('reserva_item_workflow_v2')
-            .select('reserva_id,line_no,workflow_stage,workflow_note,pickup_scheduled_for,updated_at,pickup_reply_status,pickup_reply_note,pickup_reply_at')
-            .in('reserva_id', reservaIdsFromApi)
-            .order('updated_at', { ascending:false });
-          if (!workflowsRes.error) {
-            const latestWorkflow = new Map();
-            for (const workflowRow of (workflowsRes.data || [])) {
-              const key = `${workflowRow?.reserva_id}|${workflowRow?.line_no}`;
-              if (!latestWorkflow.has(key)) latestWorkflow.set(key, workflowRow);
-            }
-            rows = (rows || []).map((row) => {
-              const reservaId = Number(firstFilledValue(row?.reserva_id, row?.reservation_id, row?.id, 0));
-              const lineNo = Number(firstFilledValue(row?.line_no, row?.reservation_line_no, row?.item_no, 1)) || 1;
-              const workflow = latestWorkflow.get(`${reservaId}|${lineNo}`) || {};
-              if (!workflow || !Object.keys(workflow).length) return row;
-              return {
-                ...row,
-                workflow_stage_effective: workflow?.workflow_stage || row?.workflow_stage_effective || row?.workflow_stage || row?.stage || null,
-                workflow_stage_updated_at_effective: workflow?.updated_at || row?.workflow_stage_updated_at_effective || row?.workflow_stage_updated_at || row?.updated_at || null,
-                workflow_note: workflow?.workflow_note ?? row?.workflow_note ?? row?.note ?? row?.notes ?? null,
-                pickup_scheduled_for: workflow?.pickup_scheduled_for ?? row?.pickup_scheduled_for ?? row?.scheduled_pickup_for ?? row?.retirada_agendada_para ?? null,
-                pickup_reply_status: workflow?.pickup_reply_status ?? row?.pickup_reply_status ?? null,
-                pickup_reply_note: workflow?.pickup_reply_note ?? row?.pickup_reply_note ?? null,
-                pickup_reply_at: workflow?.pickup_reply_at ?? row?.pickup_reply_at ?? null,
-              };
-            });
-          }
-        }
       }
 
       if (!rows.length) {
@@ -6678,11 +6647,7 @@ function belemNowParts(){
     }
 
     function consultationLooksActiveForWorkflow(row){
-      const itemStatus = String(firstFilledValue(row?.item_status, row?.status, '')).trim().toLowerCase();
-      const stage = String(firstFilledValue(row?.workflow_stage_effective, row?.workflow_stage, '')).trim().toLowerCase();
-      if (['cancelada_leitor', 'cancelada_biblioteca', 'expirada', 'consulta_realizada', 'consultada'].includes(itemStatus)) return false;
-      if (['cancelada_leitor', 'cancelada_biblioteca', 'expirada', 'consulta_realizada'].includes(stage)) return false;
-      return itemStatus === 'ativa' || !itemStatus;
+      return String(firstFilledValue(row?.item_status, row?.status, '')).trim().toLowerCase() === 'ativa';
     }
 
     const buildConsultationSyntheticId = (consultaId, lineNo) => Number(`${consultaId}${String(lineNo).padStart(3, '0')}`);
@@ -6860,39 +6825,12 @@ function belemNowParts(){
       const attempt = await apiFrom('api', 'consulta_itens_followup_ui')
         .select('*')
         .eq('library_id', libraryId)
+        .eq('item_status', 'ativa')
         .limit(800);
       if (attempt.error) {
         console.warn('Painel: leitura api.consulta_itens_followup_ui falhou; tentando fallback local.', attempt.error);
       } else {
         rows = attempt.data || [];
-        const consultaIdsFromApi = Array.from(new Set((rows || []).map((row) => Number(firstFilledValue(row?.consulta_id, row?.id, 0))).filter((id) => Number.isFinite(id) && id > 0)));
-        if (consultaIdsFromApi.length) {
-          const workflowsRes = await supabase
-            .from('consulta_item_workflow_v2')
-            .select('consulta_id,line_no,workflow_stage,workflow_note,consultation_scheduled_for,updated_at')
-            .in('consulta_id', consultaIdsFromApi)
-            .order('updated_at', { ascending:false });
-          if (!workflowsRes.error) {
-            const latestWorkflow = new Map();
-            for (const workflowRow of (workflowsRes.data || [])) {
-              const key = `${workflowRow?.consulta_id}|${workflowRow?.line_no}`;
-              if (!latestWorkflow.has(key)) latestWorkflow.set(key, workflowRow);
-            }
-            rows = (rows || []).map((row) => {
-              const consultaId = Number(firstFilledValue(row?.consulta_id, row?.id, 0));
-              const lineNo = Number(firstFilledValue(row?.line_no, row?.consultation_line_no, row?.item_no, 1)) || 1;
-              const workflow = latestWorkflow.get(`${consultaId}|${lineNo}`) || {};
-              if (!workflow || !Object.keys(workflow).length) return row;
-              return {
-                ...row,
-                workflow_stage_effective: workflow?.workflow_stage || row?.workflow_stage_effective || row?.workflow_stage || null,
-                workflow_stage_updated_at_effective: workflow?.updated_at || row?.workflow_stage_updated_at_effective || row?.workflow_stage_updated_at || row?.updated_at || null,
-                workflow_note: workflow?.workflow_note ?? row?.workflow_note ?? row?.note ?? row?.notes ?? null,
-                consultation_scheduled_for: workflow?.consultation_scheduled_for ?? row?.consultation_scheduled_for ?? row?.scheduled_for ?? null,
-              };
-            });
-          }
-        }
       }
 
       if (!rows.length) {
@@ -8454,49 +8392,6 @@ async function fetchActiveLoans(){
       }
     }
 
-    function updateBulkSelectionButtons(){
-      const reservationSelected = selectedReservationRows();
-      const consultationSelected = selectedConsultationRows();
-      const hasReservationSelection = reservationSelected.length > 0;
-      const hasConsultationSelection = consultationSelected.length > 0;
-
-      if ($('btnConfirmarSelecionados')) $('btnConfirmarSelecionados').disabled = !hasReservationSelection;
-      if ($('btnCancelarSelecionados')) $('btnCancelarSelecionados').disabled = !hasReservationSelection;
-      if ($('btnApplyResWorkflowStage')) $('btnApplyResWorkflowStage').disabled = !hasReservationSelection;
-      if ($('btnApplyConsultWorkflowStage')) $('btnApplyConsultWorkflowStage').disabled = !hasConsultationSelection;
-
-      updateReservationWorkflowStageOptions();
-      updateConsultationWorkflowStageOptions();
-    }
-
-    window.__anarbibPainelUpdateBulkSelectionButtons = updateBulkSelectionButtons;
-    window.__anarbibPainelMainHooks = {
-      fetchActiveReservations,
-      fetchActiveConsultations,
-      fetchActiveLoans,
-      renderReservationTable,
-      renderConsultationTable,
-      renderLoansTable,
-      renderBatchTable,
-      renderCounts,
-      renderProfileLists,
-      updateBulkSelectionButtons,
-    };
-    window.__anarbibToggleReservaSelection = (id, checked) => {
-      const numericId = Number(id);
-      if (!Number.isFinite(numericId)) return;
-      if (checked) selectedReservaIds.add(numericId); else selectedReservaIds.delete(numericId);
-      renderReservationTable();
-      updateBulkSelectionButtons();
-    };
-    window.__anarbibToggleConsultaSelection = (id, checked) => {
-      const numericId = Number(id);
-      if (!Number.isFinite(numericId)) return;
-      if (checked) selectedConsultaIds.add(numericId); else selectedConsultaIds.delete(numericId);
-      renderConsultationTable();
-      updateBulkSelectionButtons();
-    };
-
     function bindReservationSelection(){
       $('tbodyRes').addEventListener('click', (ev) => {
         const check = ev.target.closest('[data-reserva-check]');
@@ -8878,16 +8773,8 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
         setStatus('statusConsultas', error?.message || 'Erro ao aplicar etapa.', 'bad');
       }
     });
-    const btnRecarregarRes = $('btnRecarregarRes');
-    if (btnRecarregarRes) {
-      btnRecarregarRes.dataset.mainReloadBound = 'true';
-      btnRecarregarRes.addEventListener('click', () => refreshReservationsOnly());
-    }
-    const btnRecarregarConsultas = $('btnRecarregarConsultas');
-    if (btnRecarregarConsultas) {
-      btnRecarregarConsultas.dataset.mainReloadBound = 'true';
-      btnRecarregarConsultas.addEventListener('click', () => refreshConsultationsOnly());
-    }
+    $('btnRecarregarRes').addEventListener('click', () => refreshReservationsOnly());
+    $('btnRecarregarConsultas')?.addEventListener('click', () => refreshConsultationsOnly());
     $('btnRecarregarTrabalhoDia')?.addEventListener('click', () => { renderTrabalhoDoDia(); setStatus('statusTrabalhoDia', 'Prioridades recalculadas.', 'ok'); });
     $('btnAddInternalTask')?.addEventListener('click', async () => {
       const btn = $('btnAddInternalTask');
@@ -8897,16 +8784,8 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
       finally { btn.disabled = false; }
     });
     $('btnClearInternalTaskForm')?.addEventListener('click', clearInternalTaskForm);
-    const btnRecarregarLoans = $('btnRecarregarLoans');
-    if (btnRecarregarLoans) {
-      btnRecarregarLoans.dataset.mainReloadBound = 'true';
-      btnRecarregarLoans.addEventListener('click', () => refreshLoansOnly());
-    }
-    const btnRecarregarLotes = $('btnRecarregarLotes');
-    if (btnRecarregarLotes) {
-      btnRecarregarLotes.dataset.mainReloadBound = 'true';
-      btnRecarregarLotes.addEventListener('click', () => refreshLoansOnly());
-    }
+    $('btnRecarregarLoans').addEventListener('click', () => refreshLoansOnly());
+    $('btnRecarregarLotes').addEventListener('click', () => refreshLoansOnly());
     $('btnBuscarPerfil').addEventListener('click', async () => {
       const btn = $('btnBuscarPerfil');
       if (!btn || btn.disabled) return;
@@ -9765,12 +9644,6 @@ function initPartnerProbeUi() {
 
   const $r = (id) => document.getElementById(id);
   const $$r = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-  function apiFromR(schema, relation) {
-    if (typeof supabase?.schema === 'function') {
-      return supabase.schema(schema).from(relation);
-    }
-    return supabase.from(`${schema}.${relation}`);
-  }
   const escR = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmtDateR = (v) => {
     if (!v) return '—';
@@ -10017,79 +9890,17 @@ function initPartnerProbeUi() {
     if (!libraryId) return [];
     let rows = [];
     try {
-      const { data, error } = await apiFromR('api', 'consulta_itens_followup_ui')
+      const { data, error } = await supabase
+        .from('api.consulta_itens_followup_ui')
         .select('*')
         .eq('library_id', libraryId)
         .eq('item_status', 'ativa')
         .limit(800);
       if (!error) rows = data || [];
     } catch (_e) {}
-
-    if (!rows.length) {
-      try {
-        const { data: consultas, error: e1 } = await supabase
-          .from('consultas_locais_v2')
-          .select('id,user_id,library_id,created_at,updated_at,status_global')
-          .eq('library_id', libraryId)
-          .order('created_at', { ascending: false })
-          .limit(400);
-        if (e1) throw e1;
-        const consultaIds = (consultas || []).map((row) => Number(row?.id)).filter((id) => Number.isFinite(id) && id > 0);
-        if (consultaIds.length) {
-          const { data: linhas, error: e2 } = await supabase
-            .from('consulta_linhas_v2')
-            .select('id,consulta_id,line_no,sub_id,book_id,holding_id,bib_ref,titulo_cache,autor_cache,editora_cache,ano_cache,item_status,expires_at,notes,updated_at')
-            .in('consulta_id', consultaIds);
-          if (e2) throw e2;
-          const { data: workflows, error: e3 } = await supabase
-            .from('consulta_item_workflow_v2')
-            .select('consulta_id,line_no,workflow_stage,workflow_note,consultation_scheduled_for,updated_at')
-            .in('consulta_id', consultaIds)
-            .order('updated_at', { ascending: false });
-          if (e3) throw e3;
-          const latestWorkflow = new Map();
-          for (const workflowRow of (workflows || [])) {
-            const key = `${workflowRow?.consulta_id}|${workflowRow?.line_no}`;
-            if (!latestWorkflow.has(key)) latestWorkflow.set(key, workflowRow);
-          }
-          const consultasById = new Map((consultas || []).map((row) => [Number(row.id), row]));
-          rows = (linhas || []).map((linha) => {
-            const consulta = consultasById.get(Number(linha?.consulta_id)) || {};
-            const workflow = latestWorkflow.get(`${linha?.consulta_id}|${linha?.line_no}`) || {};
-            return {
-              consulta_id: linha?.consulta_id,
-              consulta_item_id: linha?.id,
-              line_no: linha?.line_no,
-              sub_id: linha?.sub_id,
-              user_id: consulta?.user_id,
-              library_id: consulta?.library_id,
-              consulta_created_at: consulta?.created_at,
-              consulta_updated_at: consulta?.updated_at,
-              consulta_status: consulta?.status_global,
-              book_id: linha?.book_id,
-              holding_id: linha?.holding_id,
-              bib_ref: linha?.bib_ref,
-              rotulo: null,
-              autor: linha?.autor_cache,
-              titulo: linha?.titulo_cache,
-              editora: linha?.editora_cache,
-              ano: linha?.ano_cache,
-              item_status: linha?.item_status,
-              expires_at: linha?.expires_at,
-              workflow_stage_effective: workflow?.workflow_stage || null,
-              workflow_note: workflow?.workflow_note || null,
-              consultation_scheduled_for: workflow?.consultation_scheduled_for || null,
-              workflow_stage_updated_at_effective: workflow?.updated_at || linha?.updated_at || consulta?.updated_at || consulta?.created_at || null,
-            };
-          });
-        }
-      } catch (_e) {}
-    }
-
     if (!rows.length) return [];
-    const filtered = (rows || []).filter((row) => String(firstFilledR(row?.item_status, row?.status, '')).trim().toLowerCase() === 'ativa');
-    const profiles = await loadProfilesMapR(filtered.map((r) => firstFilledR(r?.user_id, null)));
-    return filtered.map((row) => {
+    const profiles = await loadProfilesMapR(rows.map((r) => firstFilledR(r?.user_id, null)));
+    return rows.map((row) => {
       const user = profiles.get(String(firstFilledR(row?.user_id, ''))) || {};
       const consultaId = Number(firstFilledR(row?.consulta_id, row?.id, 0));
       const lineNo = Number(firstFilledR(row?.line_no, 1)) || 1;
@@ -10108,7 +9919,6 @@ function initPartnerProbeUi() {
       };
     });
   }
-
 
   async function fetchLoansR() {
     const libraryId = await resolveLibraryIdR();
@@ -10178,12 +9988,11 @@ function initPartnerProbeUi() {
     if (!tbody) return;
     if (!rows.length) {
       tbody.innerHTML = '<tr><td colspan="8">Sem reservas ativas.</td></tr>';
-      window.__anarbibPainelUpdateBulkSelectionButtons && window.__anarbibPainelUpdateBulkSelectionButtons();
       return;
     }
     tbody.innerHTML = rows.map((r) => `
-      <tr data-reserva-row="${escR(r.id)}" class="clickable-row">
-        <td><input type="checkbox" data-reserva-check="${escR(r.id)}" aria-label="Selecionar ${escR(r.sub_id)}" onclick="event.stopPropagation()" onchange="window.__anarbibToggleReservaSelection && window.__anarbibToggleReservaSelection(${escR(r.id)}, this.checked)"></td>
+      <tr>
+        <td><input type="checkbox" disabled aria-label="Selecionar ${escR(r.sub_id)}"></td>
         <td class="mono">${escR(r.sub_id)}</td>
         <td>${escR(r.user_name)}${r.user_email && r.user_email !== '—' ? `<br><span class="mini subtle">${escR(r.user_email)}</span>` : ''}</td>
         <td>${escR(r.titulo)}${r.autor ? `<br><span class="mini subtle">${escR(r.autor)}</span>` : ''}</td>
@@ -10193,7 +10002,6 @@ function initPartnerProbeUi() {
         <td>${escR(fmtDateTimeR(r.validade))}</td>
       </tr>
     `).join('');
-    window.__anarbibPainelUpdateBulkSelectionButtons && window.__anarbibPainelUpdateBulkSelectionButtons();
   }
 
   function renderConsultationsR(rows) {
@@ -10201,12 +10009,11 @@ function initPartnerProbeUi() {
     if (!tbody) return;
     if (!rows.length) {
       tbody.innerHTML = '<tr><td colspan="9">Sem consultas locais ativas.</td></tr>';
-      window.__anarbibPainelUpdateBulkSelectionButtons && window.__anarbibPainelUpdateBulkSelectionButtons();
       return;
     }
     tbody.innerHTML = rows.map((c) => `
-      <tr data-consulta-row="${escR(c.id)}" class="clickable-row">
-        <td><input type="checkbox" data-consulta-check="${escR(c.id)}" aria-label="Selecionar ${escR(c.sub_id)}" onclick="event.stopPropagation()" onchange="window.__anarbibToggleConsultaSelection && window.__anarbibToggleConsultaSelection(${escR(c.id)}, this.checked)"></td>
+      <tr>
+        <td><input type="checkbox" disabled aria-label="Selecionar ${escR(c.sub_id)}"></td>
         <td>#${escR(c.consulta_id)}</td>
         <td class="mono">${escR(c.sub_id)}</td>
         <td>${escR(c.user_name)}${c.user_email && c.user_email !== '—' ? `<br><span class="mini subtle">${escR(c.user_email)}</span>` : ''}</td>
@@ -10217,7 +10024,6 @@ function initPartnerProbeUi() {
         <td>${escR(fmtDateTimeR(c.validade))}</td>
       </tr>
     `).join('');
-    window.__anarbibPainelUpdateBulkSelectionButtons && window.__anarbibPainelUpdateBulkSelectionButtons();
   }
 
   function renderLoansR(items, batches) {
@@ -10257,28 +10063,6 @@ function initPartnerProbeUi() {
 
   async function reloadPainelRescueData() {
     try {
-      const hooks = window.__anarbibPainelMainHooks;
-      if (hooks
-          && typeof hooks.fetchActiveReservations === 'function'
-          && typeof hooks.fetchActiveConsultations === 'function'
-          && typeof hooks.fetchActiveLoans === 'function'
-          && typeof hooks.renderReservationTable === 'function'
-          && typeof hooks.renderConsultationTable === 'function') {
-        await Promise.all([
-          hooks.fetchActiveReservations(),
-          hooks.fetchActiveConsultations(),
-          hooks.fetchActiveLoans()
-        ]);
-        hooks.renderReservationTable();
-        hooks.renderConsultationTable();
-        if (typeof hooks.renderLoansTable === 'function') hooks.renderLoansTable();
-        if (typeof hooks.renderBatchTable === 'function') hooks.renderBatchTable();
-        if (typeof hooks.renderCounts === 'function') hooks.renderCounts();
-        if (typeof hooks.renderProfileLists === 'function') hooks.renderProfileLists();
-        if (typeof hooks.updateBulkSelectionButtons === 'function') hooks.updateBulkSelectionButtons();
-        return;
-      }
-
       const [reservations, consultations, loans] = await Promise.all([
         fetchReservationsR(),
         fetchConsultationsR(),
@@ -10310,7 +10094,7 @@ function initPartnerProbeUi() {
     ];
     map.forEach(([id, fn]) => {
       const el = $r(id);
-      if (!el || el.dataset.mainReloadBound === 'true' || el.dataset.rescueReloadBound === 'true') return;
+      if (!el || el.dataset.rescueReloadBound === 'true') return;
       el.dataset.rescueReloadBound = 'true';
       el.addEventListener('click', () => fn());
     });
