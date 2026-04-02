@@ -528,6 +528,28 @@ button[type="submit"] *,
     .book-title-link:focus{
       text-decoration:underline;
     }
+    .card a.book-title-link:not(.secondary),
+    .card a.book-title-link:not(.secondary):visited,
+    .card a.book-title-link:not(.secondary):hover,
+    .card a.book-title-link:not(.secondary):focus,
+    .card a.book-title-link:not(.secondary):active,
+    .tab-panel a.book-title-link:not(.secondary),
+    .tab-panel a.book-title-link:not(.secondary):visited,
+    .tab-panel a.book-title-link:not(.secondary):hover,
+    .tab-panel a.book-title-link:not(.secondary):focus,
+    .tab-panel a.book-title-link:not(.secondary):active{
+      color:#ffffff !important;
+      -webkit-text-fill-color:#ffffff !important;
+      font-style:italic;
+      font-weight:700;
+      text-decoration:none;
+    }
+    .card a.book-title-link:not(.secondary):hover,
+    .card a.book-title-link:not(.secondary):focus,
+    .tab-panel a.book-title-link:not(.secondary):hover,
+    .tab-panel a.book-title-link:not(.secondary):focus{
+      text-decoration:underline;
+    }
     .book-availability-inline{
       color:#f0f0f0;
       font-size:.92rem;
