@@ -2551,7 +2551,9 @@
         });
       }
 
-      await bootHydratePainelAuthChrome();
+      bootHydratePainelAuthChrome().catch((error) => {
+        console.warn('Bootstrap mínimo do painel: hidratação inicial falhou.', error);
+      });
     }
   </script>
 
@@ -9689,17 +9691,23 @@ function initPartnerProbeUi() {
     }
 
     initializePainelUiOnce();
-    const bootstrapPainelSession = await requireSession({ attempts: 40, delayMs: 150 });
-    painelAuthBootstrapping = false;
-    await syncPainelAuthState(bootstrapPainelSession, { reloadData: !!bootstrapPainelSession?.user?.id, allowAnonymousReset: false });
+    requireSession({ attempts: 40, delayMs: 150 })
+      .then(async (bootstrapPainelSession) => {
+        painelAuthBootstrapping = false;
+        await syncPainelAuthState(bootstrapPainelSession, { reloadData: !!bootstrapPainelSession?.user?.id, allowAnonymousReset: false });
 
-    supabase.auth.onAuthStateChange(async (event, nextSession) => {
-      const eventName = String(event || '').trim().toUpperCase();
-      if (painelAuthBootstrapping && eventName === 'INITIAL_SESSION' && !nextSession?.user?.id) return;
-      initializePainelUiOnce();
-      const allowAnonymousReset = false; // ignora SIGNED_OUT passivo; o logout explícito já reseta e redireciona.
-      await syncPainelAuthState(nextSession, { reloadData: false, allowAnonymousReset });
-    });
+        supabase.auth.onAuthStateChange(async (event, nextSession) => {
+          const eventName = String(event || '').trim().toUpperCase();
+          if (painelAuthBootstrapping && eventName === 'INITIAL_SESSION' && !nextSession?.user?.id) return;
+          initializePainelUiOnce();
+          const allowAnonymousReset = false; // ignora SIGNED_OUT passivo; o logout explícito já reseta e redireciona.
+          await syncPainelAuthState(nextSession, { reloadData: false, allowAnonymousReset });
+        });
+      })
+      .catch((error) => {
+        painelAuthBootstrapping = false;
+        console.warn('Painel: bootstrap principal de auth falhou.', error);
+      });
 
     // Revalidação automática de auth por foco, retorno de página, storage e tentativa tardia desativada aqui.
     // A sincronização auth do painel fica restrita ao fluxo normal do Supabase, como na catalogação.
@@ -9933,7 +9941,9 @@ function initPartnerProbeUi() {
               return;
             }
 
-            case 'btnSalvarPerfil':
+            case 'btnSalvarPerfil': {
+              const button = $('btnSalvarPerfil');
+              if (!button || button.disabled) return;
               button.disabled = true;
               try {
                 await saveProfile();
@@ -9943,6 +9953,7 @@ function initPartnerProbeUi() {
                 button.disabled = false;
               }
               return;
+            }
 
             case 'btnRecarregarPerfil':
               if (!editingProfileId) {
@@ -10578,7 +10589,9 @@ function initPartnerProbeUi() {
   setupBibliotecaSubtabsRescue();
   setupProfileTabsRescue();
   bindReloadButtonsRescue();
-  await reloadPainelRescueData();
+  reloadPainelRescueData().catch((error) => {
+    console.warn('Rescue do painel: falha no carregamento inicial.', error);
+  });
 </script>
 
 </body>
