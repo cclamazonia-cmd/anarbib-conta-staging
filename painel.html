@@ -7910,6 +7910,14 @@ async function fetchActiveLoans(){
     }
 
 
+    function formatBrDateInputValue(value){
+      const digits = String(value || '').replace(/\D+/g, '').slice(0, 8);
+      if (!digits) return '';
+      if (digits.length <= 2) return digits;
+      if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+      return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+    }
+
     function normalizeBrDateToIso(value){
       const raw = String(value || '').trim();
       const m = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -7996,8 +8004,20 @@ async function fetchActiveLoans(){
     }
 
     function setupConsultationScheduleBuilder(){
-      $('consultScheduleDate')?.addEventListener('input', () => syncConsultationScheduleBuilder({ silent: true }));
+      $('consultScheduleDate')?.addEventListener('input', (event) => {
+        const input = event?.target;
+        if (input && typeof input.value === 'string') {
+          const formatted = formatBrDateInputValue(input.value);
+          if (input.value !== formatted) input.value = formatted;
+        }
+        syncConsultationScheduleBuilder({ silent: true });
+      });
       $('consultScheduleDate')?.addEventListener('change', () => syncConsultationScheduleBuilder({ silent: true }));
+      $('consultScheduleDate')?.addEventListener('blur', () => {
+        const input = $('consultScheduleDate');
+        if (input) input.value = formatBrDateInputValue(input.value || '');
+        syncConsultationScheduleBuilder({ silent: true });
+      });
       $('consultScheduleStart')?.addEventListener('input', () => syncConsultationScheduleBuilder({ silent: true }));
       $('consultScheduleStart')?.addEventListener('change', () => syncConsultationScheduleBuilder({ silent: true }));
       $('consultScheduleStart')?.addEventListener('blur', () => {
@@ -8485,23 +8505,23 @@ async function fetchActiveLoans(){
       if (painelStateSyncHooksBound) return;
       painelStateSyncHooksBound = true;
 
-      /* storage hook removed on request */
-      /* removed: sync by PAINEL_STATE_SYNC_KEY via storage event */
-      /* focus hook removed on request */
-      /* removed: applyPainelStateSync('focus') */
-      /* pageshow hook removed on request */
-      /* removed: applyPainelStateSync('pageshow') */
-      /* visibilitychange hook removed on request */
-      /* removed visibility guard for visible state */
-      /* removed: applyPainelStateSync('visibilitychange') */
-      /* no passive page/window sync hooks remain here */
-      /* explicit refresh buttons and direct actions remain active */
-      /* end removed passive painel state hooks */
-      /* padding line 01 */
-      /* padding line 02 */
-      /* padding line 03 */
-      /* padding line 04 */
-      /* padding line 05 */
+      window.addEventListener('storage', async (event) => {
+        if (event.key !== PAINEL_STATE_SYNC_KEY) return;
+        await applyPainelStateSync('storage');
+      });
+
+      window.addEventListener('focus', async () => {
+        await applyPainelStateSync('focus');
+      });
+
+      window.addEventListener('pageshow', async () => {
+        await applyPainelStateSync('pageshow');
+      });
+
+      document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState !== 'visible') return;
+        await applyPainelStateSync('visibilitychange');
+      });
     }
 
     function findProfileReservations(userId){

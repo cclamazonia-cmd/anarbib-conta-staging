@@ -1773,6 +1773,7 @@ button[type="submit"] *,
     let publicServiceState = null;
     let currentContaIdentity = null;
     let activeReservationBibRefs = new Set();
+    let activeReservationRowsForLoans = [];
 
     const SERVICE_MODE_LABELS = {
       funcionamento_normal: "Funcionamento normal",
@@ -2238,7 +2239,7 @@ button[type="submit"] *,
       if (!session?.user?.id) return;
 
       if (scope === 'reservations') {
-        await Promise.allSettled([renderActiveReservations(), renderHistory()]);
+        await Promise.allSettled([renderActiveReservations(), renderLoans(), renderHistory()]);
         return;
       }
       if (scope === 'consultations') {
@@ -2292,7 +2293,7 @@ button[type="submit"] *,
         return;
       }
       if (activeTab === 'curso') {
-        await renderLoans();
+        await Promise.allSettled([renderActiveReservations(), renderLoans()]);
         return;
       }
       if (activeTab === 'historico') {
@@ -3149,8 +3150,28 @@ function reservationPickupReplyActions(row) {
       ], "reservation-actions");
     }
 
+    function reservationShowsInLoansTab(row) {
+      const stage = String(row?.workflow_stage_effective || "").trim();
+      return ["pronta_para_retirada", "retirada_a_combinar", "retirada_agendada", "re-retirada_agendada", "nao_retirada"].includes(stage);
+    }
+
+    function reservationLoanProgressActions(row) {
+      if (reservationNeedsPickupReply(row?.workflow_stage_effective) && !String(row?.pickup_reply_status || "").trim()) {
+        return buildActionGrid([
+          `<button type="button" class="secondary mini-btn" data-pickup-reply-loan-bridge="${row.reserva_id}|${row.line_no}|confirmado_leitor">Aceitar agendamento</button>`,
+          `<button type="button" class="secondary mini-btn" data-pickup-reply-loan-bridge="${row.reserva_id}|${row.line_no}|recusado_leitor">Recusar proposta</button>`
+        ], "reservation-actions");
+      }
+      const pickupReplyLabel = translatePickupReplyStatus(row?.pickup_reply_status);
+      if (pickupReplyLabel) {
+        return `<div class="reservation-actions single-action"><span class="tag-muted">${escapeHtml(pickupReplyLabel)}</span></div>`;
+      }
+      return `<div class="reservation-actions single-action"><span class="tag-muted">Aguardando a próxima etapa da retirada.</span></div>`;
+    }
+
     async function renderActiveReservations() {
       if (!activeReservationsEl) return;
+      activeReservationRowsForLoans = [];
       if (activeReserveMsg) activeReserveMsg.textContent = "";
       activeReservationsEl.textContent = "Carregando...";
 
@@ -3164,6 +3185,7 @@ function reservationPickupReplyActions(row) {
         .order("line_no", { ascending: true });
 
       if (!v2Priority.error && (v2Priority.data || []).length) {
+        activeReservationRowsForLoans = Array.isArray(v2Priority.data) ? v2Priority.data.slice() : [];
         setActiveReservationBibRefs(v2Priority.data || []);
         setChipText(chipContaReservas, "Reservas ativas", String((v2Priority.data || []).length));
         const rotulosMap = await fetchRotulosMapByBibRefs((v2Priority.data || []).map((r) => r.bib_ref));
@@ -3235,8 +3257,7 @@ function reservationPickupReplyActions(row) {
               return;
             }
             activeReserveMsg.textContent = "Reserva cancelada.";
-            await renderActiveReservations();
-            await renderHistory();
+            await Promise.allSettled([renderActiveReservations(), renderLoans(), renderHistory()]);
             writeContaStateSync('reservations');
           });
         });
@@ -3263,8 +3284,7 @@ function reservationPickupReplyActions(row) {
             activeReserveMsg.textContent = replyStatus === "confirmado_leitor"
               ? "Horário confirmado. A biblioteca foi avisada."
               : "Resposta registrada. A biblioteca foi avisada para propor outro horário.";
-            await renderActiveReservations();
-            await renderHistory();
+            await Promise.allSettled([renderActiveReservations(), renderLoans(), renderHistory()]);
             writeContaStateSync('reservations');
           });
         });
@@ -3580,6 +3600,43 @@ function reservationPickupReplyActions(row) {
       let sections = [];
       let activeLoanCount = 0;
 
+      const reservationBridgeRows = activeReservationRowsForLoans.filter((row) => reservationShowsInLoansTab(row));
+      if (reservationBridgeRows.length) {
+        const bridgeRows = reservationBridgeRows.map((r) => {
+          const workflowLabel = reservationWorkflowLabel(r);
+          const workflowDetails = reservationWorkflowDetailLines(r);
+          return `<tr>
+            <td>#${r.reserva_id}</td>
+            <td class="mono">${escapeHtml(r.sub_id || "—")}</td>
+            <td>${escapeHtml(r.titulo || "Livro")}${r.autor ? `<br><small>${escapeHtml(r.autor)}</small>` : ""}</td>
+            <td class="mono">${escapeHtml(r.bib_ref || "—")}</td>
+            <td class="mono">${escapeHtml(r.rotulo || "—")}</td>
+            <td><b>${escapeHtml(workflowLabel)}</b>${workflowDetails.length ? `<br><small>${workflowDetails.map((line) => escapeHtml(line)).join("<br>")}</small>` : ""}</td>
+            <td>${reservationLoanProgressActions(r)}</td>
+          </tr>`;
+        }).join("");
+        const bridgeCards = reservationBridgeRows.map((r) => {
+          const workflowLabel = reservationWorkflowLabel(r);
+          const workflowDetails = reservationWorkflowDetailLines(r);
+          return `
+            <article class="mobile-card">
+              <h4>${escapeHtml(r.titulo || "Livro")}</h4>
+              ${r.autor ? `<p class="author">${escapeHtml(r.autor)}</p>` : ""}
+              <div class="mobile-kv">
+                <div class="k">Lote</div><div class="v">#${escapeHtml(r.reserva_id)}</div>
+                <div class="k">Livro</div><div class="v mono">${escapeHtml(r.sub_id || "—")}</div>
+                <div class="k">Referência</div><div class="v mono">${escapeHtml(r.bib_ref || "—")}</div>
+                <div class="k">Rótulo</div><div class="v mono">${escapeHtml(r.rotulo || "—")}</div>
+                <div class="k">Situação</div><div class="v"><b>${escapeHtml(workflowLabel)}</b>${workflowDetails.length ? `<br><small>${workflowDetails.map((line) => escapeHtml(line)).join("<br>")}</small>` : ""}</div>
+              </div>
+              <div class="mobile-actions">
+                ${reservationLoanProgressActions(r)}
+              </div>
+            </article>`;
+        }).join("");
+        sections.push(`<section class="mobile-section"><div class="panel-head"><h3 style="margin:0 0 6px;">Retiradas em andamento</h3><p class="small" style="margin:0;">As propostas de retirada e as respostas do leitor também aparecem aqui, até a retirada efetiva.</p></div><div class="desktop-only"><div class="table-scroll"><table class="list-table"><thead><tr><th>Lote</th><th>Livro</th><th>Título</th><th>Referência</th><th>Rótulo</th><th>Situação</th><th>Ação</th></tr></thead><tbody>${bridgeRows}</tbody></table></div></div><div class="mobile-only mobile-cards">${bridgeCards}</div></section>`);
+      }
+
       if (v2.error) {
         console.error("renderLoans errors", { v2: v2.error });
         if (isMissingRelationError(v2.error)) {
@@ -3694,6 +3751,34 @@ function reservationPickupReplyActions(row) {
       }
       setChipText(chipContaEmprestimos, "Empréstimos em curso", String(activeLoanCount));
       loansEl.innerHTML = sections.join("");
+
+      loansEl.querySelectorAll("[data-pickup-reply-loan-bridge]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const [rid, lineNo, replyStatus] = String(btn.getAttribute("data-pickup-reply-loan-bridge") || "").split("|");
+          const reservaId = Number(rid);
+          const reservaLineNo = Number(lineNo);
+          if (!reservaId || !reservaLineNo || !replyStatus) return;
+          const proceed = window.confirm(replyStatus === "confirmado_leitor"
+            ? "Confirma que poderá retirar o livro nesse horário?"
+            : "Confirma que você quer recusar esta proposta de horário?");
+          if (!proceed) return;
+          btn.disabled = true;
+          setLoanMsgText(replyStatus === "confirmado_leitor"
+            ? "Registrando o aceite do agendamento..."
+            : "Registrando a recusa da proposta...");
+          const res = await setReservaPickupReply(reservaId, reservaLineNo, replyStatus, null);
+          if (res.error) {
+            setLoanMsgText("Erro ao registrar sua resposta: " + res.error.message, 2000);
+            btn.disabled = false;
+            return;
+          }
+          setLoanMsgText(replyStatus === "confirmado_leitor"
+            ? "Agendamento aceito. A biblioteca foi avisada."
+            : "Proposta recusada. A biblioteca foi avisada para propor outro horário.", 2000);
+          await Promise.allSettled([renderActiveReservations(), renderLoans(), renderHistory()]);
+          writeContaStateSync('reservations');
+        });
+      });
 
       loansEl.querySelectorAll("[data-open-return-editor]").forEach((btn) => {
         btn.addEventListener("click", () => {
