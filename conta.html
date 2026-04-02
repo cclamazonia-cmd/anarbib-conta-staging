@@ -752,63 +752,62 @@ button[type="submit"] *,
     }
 
 
-    /* empréstimos em curso — ajuste fino desktop */
+
+    /* empréstimos em curso — ajustement vertical desktop */
     @media (min-width: 761px){
       #tab-curso .list-table{
-        table-layout:auto;
-        min-width:1040px;
+        min-width:980px;
       }
-      #tab-curso .list-table th:nth-child(1),
-      #tab-curso .list-table td:nth-child(1){ width:74px; white-space:nowrap; }
-      #tab-curso .list-table th:nth-child(2),
-      #tab-curso .list-table td:nth-child(2){ width:76px; white-space:nowrap; }
-      #tab-curso .list-table th:nth-child(4),
-      #tab-curso .list-table td:nth-child(4){ width:112px; }
-      #tab-curso .list-table th:nth-child(5),
-      #tab-curso .list-table td:nth-child(5){ width:132px; }
-      #tab-curso .list-table th:nth-child(6),
-      #tab-curso .list-table td:nth-child(6){ width:96px; }
-      #tab-curso .list-table th:nth-child(7),
-      #tab-curso .list-table td:nth-child(7){ width:96px; }
-      #tab-curso .list-table th:nth-child(8),
-      #tab-curso .list-table td:nth-child(8){ width:120px; }
       #tab-curso .list-table th:nth-child(9),
-      #tab-curso .list-table td:nth-child(9){ width:1%; white-space:nowrap; }
-      #tab-curso .list-table th:nth-child(3),
-      #tab-curso .list-table td:nth-child(3){ width:auto; min-width:340px; }
-      #tab-curso .list-table td:nth-child(3){ line-height:1.35; }
-
+      #tab-curso .list-table td:nth-child(9){
+        width:220px;
+        min-width:220px;
+        white-space:normal;
+      }
       #tab-curso .loan-actions{
         display:flex;
+        flex-direction:column;
         flex-wrap:nowrap;
-        gap:8px;
-        align-items:center;
+        align-items:stretch;
         justify-content:flex-start;
+        gap:8px;
+        width:100%;
+        max-width:220px;
       }
-      #tab-curso .loan-actions .action-slot-empty{ display:none; }
+      #tab-curso .loan-actions .action-slot-empty{
+        display:none;
+      }
       #tab-curso .loan-actions .mini-btn,
       #tab-curso .loan-actions .mini-btn:hover,
       #tab-curso .loan-actions .mini-btn:focus,
       #tab-curso .loan-actions .mini-btn:active{
-        width:auto;
+        width:100%;
         min-width:0;
-        flex:0 0 auto;
-        padding-left:12px;
-        padding-right:12px;
-        font-size:.86rem;
+        max-width:220px;
+        justify-content:center;
         white-space:nowrap;
         overflow:hidden;
         text-overflow:ellipsis;
       }
-
-      #tab-curso .return-editor{
-        grid-template-columns:132px 132px max-content;
-        width:max-content;
-        max-width:100%;
+      #tab-curso .loan-actions .mini-btn[disabled],
+      #tab-curso .loan-actions .mini-btn[disabled]:hover,
+      #tab-curso .loan-actions .mini-btn[disabled]:focus,
+      #tab-curso .loan-actions .mini-btn[disabled]:active{
+        cursor:not-allowed;
+        opacity:.52;
+        filter:grayscale(.18);
       }
-      #tab-curso .return-editor input[type="date"],
-      #tab-curso .return-editor input[type="time"]{
-        min-width:0;
+      #tab-curso .return-editor{
+        grid-template-columns:minmax(0, 1fr);
+        width:100%;
+        max-width:220px;
+      }
+      #tab-curso .return-editor .mini-btn,
+      #tab-curso .return-editor .mini-btn:hover,
+      #tab-curso .return-editor .mini-btn:focus,
+      #tab-curso .return-editor .mini-btn:active{
+        width:100%;
+        max-width:220px;
       }
     }
 
@@ -2803,10 +2802,15 @@ button[type="submit"] *,
       return `<div class="${className}">${slots.join("")}</div>`;
     }
 
-    function buildLoanRenewButtonV2(emprestimoId) {
-      return !userIsRestricted
-        ? `<button type="button" class="secondary mini-btn" data-renew-v2="${emprestimoId}">Renovar (uma única vez)</button>`
-        : `<button type="button" class="secondary mini-btn" disabled>Renovação bloqueada</button>`;
+    function buildLoanRenewButtonV2(emprestimoId, options = {}) {
+      const alreadyRenewed = options?.alreadyRenewed === true;
+      if (userIsRestricted) {
+        return `<button type="button" class="secondary mini-btn" disabled>Renovação bloqueada</button>`;
+      }
+      if (alreadyRenewed) {
+        return `<button type="button" class="secondary mini-btn" disabled>Renovado</button>`;
+      }
+      return `<button type="button" class="secondary mini-btn" data-renew-v2="${emprestimoId}">Renovar (uma única vez)</button>`;
     }
 
     function reservationCancelOnlyAction(row) {
@@ -3590,7 +3594,7 @@ function reservationPickupReplyActions(row) {
       if (!v2.error && (v2.data || []).length) {
         activeLoanCount += (v2.data || []).length;
         const rows = v2.data.map((r) => {
-          const renewBtn = buildLoanRenewButtonV2(r.emprestimo_id);
+          const renewBtn = buildLoanRenewButtonV2(r.emprestimo_id, { alreadyRenewed: r.return_schedule_status === "emprestimo_prorrogado" || !!r.extended_until });
 
           const key = `${r.emprestimo_id}|${r.line_no}`;
           const dueShown = r.extended_until || r.due_at;
@@ -3636,7 +3640,7 @@ function reservationPickupReplyActions(row) {
           </tr>`;
         }).join("");
         const mobileCards = v2.data.map((r) => {
-          const renewBtn = buildLoanRenewButtonV2(r.emprestimo_id);
+          const renewBtn = buildLoanRenewButtonV2(r.emprestimo_id, { alreadyRenewed: r.return_schedule_status === "emprestimo_prorrogado" || !!r.extended_until });
 
           const key = `${r.emprestimo_id}|${r.line_no}`;
           const dueShown = r.extended_until || r.due_at;
