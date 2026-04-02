@@ -664,6 +664,11 @@
                   Biblioteca — essencial
                   <span class="hint">Funcionamento, horários, regras locais e identidade</span>
                 </button>
+                <!-- bloco inserido: subaba comunicações -->
+                <button class="biblioteca-subtab-btn" id="btnBibliotecaComunicacoes" type="button" data-biblioteca-subtab="comunicacoes" role="tab" aria-selected="false" aria-controls="bibliotecaSubtabComunicacoes">
+                  Biblioteca — comunicações
+                  <span class="hint">E-mails, notificações, relatórios e modo de envio</span>
+                </button>
                 <button class="biblioteca-subtab-btn" id="btnBibliotecaGestaoCompleta" type="button" data-biblioteca-subtab="gestao-completa" role="tab" aria-selected="false" aria-controls="bibliotecaSubtabGestaoCompleta">
                   Biblioteca — gestão completa
                   <span class="hint">Tema visual, regimento e parâmetros locais avançados</span>
@@ -876,6 +881,194 @@
                       <button class="btn" id="btnSaveLibraryIdentity" type="button">Salvar identidade</button>
                     </div>
                     <div class="status" id="libraryIdentityMsg"></div>
+                  </div>
+                </div>
+              </div>
+
+
+              <!-- bloco inserido: painel comunicações -->
+              <div class="biblioteca-subtab-panel" id="bibliotecaSubtabComunicacoes" data-biblioteca-subtab-panel="comunicacoes" role="tabpanel" aria-labelledby="btnBibliotecaComunicacoes">
+                <div class="grid">
+                  <div class="card">
+                    <div class="section-head">
+                      <div>
+                        <h2>Identidade de envio</h2>
+                        <div class="mini">Base local para a futura resolução de remetente, resposta e assinatura dos e-mails desta biblioteca.</div>
+                      </div>
+                    </div>
+                    <div class="row3" style="margin-top:12px">
+                      <div>
+                        <label for="mailSenderDisplayName">Nome visível do remetente</label>
+                        <input class="input" id="mailSenderDisplayName" type="text" placeholder="Ex.: Biblioteca Terra Livre">
+                      </div>
+                      <div>
+                        <label for="mailReplyToName">Nome para resposta</label>
+                        <input class="input" id="mailReplyToName" type="text" placeholder="Ex.: Equipe da biblioteca">
+                      </div>
+                      <div>
+                        <label for="mailReplyToEmail">E-mail para resposta</label>
+                        <input class="input" id="mailReplyToEmail" type="email" placeholder="Ex.: contato@biblioteca.org">
+                      </div>
+                    </div>
+                    <div style="margin-top:12px">
+                      <label for="mailSignatureShort">Assinatura curta</label>
+                      <input class="input" id="mailSignatureShort" type="text" placeholder="Ex.: Equipe de circulação da biblioteca">
+                    </div>
+                    <div style="margin-top:12px">
+                      <label for="mailFooterLocal">Rodapé local do e-mail</label>
+                      <textarea class="textarea" id="mailFooterLocal" placeholder="Ex.: Em caso de dúvida, responde a este e-mail ou entra em contato pelos canais da biblioteca."></textarea>
+                    </div>
+                    <div class="row" style="margin-top:12px">
+                      <div>
+                        <label class="checkline" for="mailUseLibraryNameAsSender">
+                          <input id="mailUseLibraryNameAsSender" type="checkbox">
+                          <span>Usar automaticamente o nome público da biblioteca como remetente visível</span>
+                        </label>
+                      </div>
+                      <div>
+                        <label class="checkline" for="mailUseLibraryLogo">
+                          <input id="mailUseLibraryLogo" type="checkbox">
+                          <span>Usar o logo desta biblioteca nos e-mails enviados ao público</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div class="muted-box" style="margin-top:12px">
+                      <label for="mailIdentityStateNote">Resumo atual</label>
+                      <input class="input" id="mailIdentityStateNote" type="text" value="" placeholder="Sem identidade de envio definida ainda." readonly>
+                    </div>
+                    <div class="actions">
+                      <button class="btn" id="btnSaveMailIdentity" type="button">Salvar identidade de envio</button>
+                    </div>
+                    <div class="status" id="mailIdentityMsg"></div>
+                  </div>
+
+                  <div class="card">
+                    <div class="section-head">
+                      <div>
+                        <h2>Notificações e destinatárias/os</h2>
+                        <div class="mini">Pré-configuração local das mensagens automáticas e dos contatos internos desta biblioteca.</div>
+                      </div>
+                    </div>
+                    <div class="row" style="margin-top:12px">
+                      <div>
+                        <label class="checkline" for="notifReservationCreated">
+                          <input id="notifReservationCreated" type="checkbox">
+                          <span>Confirmação de reserva</span>
+                        </label>
+                      </div>
+                      <div>
+                        <label class="checkline" for="notifReservationStatusChange">
+                          <input id="notifReservationStatusChange" type="checkbox">
+                          <span>Mudança de situação da reserva</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div class="row" style="margin-top:12px">
+                      <div>
+                        <label class="checkline" for="notifReservationWorkflow">
+                          <input id="notifReservationWorkflow" type="checkbox">
+                          <span>Etapas de retirada</span>
+                        </label>
+                      </div>
+                      <div>
+                        <label class="checkline" for="notifLoanLifecycle">
+                          <input id="notifLoanLifecycle" type="checkbox">
+                          <span>Criação, prorrogação e devolução de empréstimo</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div class="row" style="margin-top:12px">
+                      <div>
+                        <label class="checkline" for="notifLoanReminders">
+                          <input id="notifLoanReminders" type="checkbox">
+                          <span>Lembretes de prazo</span>
+                        </label>
+                      </div>
+                      <div>
+                        <label class="checkline" for="notifReadingRecommendations">
+                          <input id="notifReadingRecommendations" type="checkbox">
+                          <span>Recomendações de leitura</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div class="row3" style="margin-top:12px">
+                      <div>
+                        <label for="mailAdminNotificationEmail">E-mail principal da biblioteca</label>
+                        <input class="input" id="mailAdminNotificationEmail" type="email" placeholder="Ex.: biblioteca@rede.org">
+                      </div>
+                      <div>
+                        <label for="mailWeeklyReportEmail">E-mail do relatório semanal</label>
+                        <input class="input" id="mailWeeklyReportEmail" type="email" placeholder="Ex.: relatorios@rede.org">
+                      </div>
+                      <div>
+                        <label for="mailSevereAlertEmail">E-mail para atrasos graves</label>
+                        <input class="input" id="mailSevereAlertEmail" type="email" placeholder="Ex.: equipe@rede.org">
+                      </div>
+                    </div>
+                    <div class="actions">
+                      <button class="btn" id="btnSaveNotificationPolicies" type="button">Salvar notificações</button>
+                    </div>
+                    <div class="status" id="notificationPoliciesMsg"></div>
+                  </div>
+
+                  <div class="card">
+                    <div class="section-head">
+                      <div>
+                        <h2>Modo de envio e prévia</h2>
+                        <div class="mini">Espaço reservado para o futuro modo de envio por biblioteca e para a pré-visualização das mensagens.</div>
+                      </div>
+                    </div>
+                    <div class="row" style="margin-top:12px">
+                      <div>
+                        <label for="mailDeliveryMode">Modo atual</label>
+                        <select class="select" id="mailDeliveryMode">
+                          <option value="platform_shared">Envio mutualizado pelo AnarBib</option>
+                          <option value="platform_shared_local_reply">Envio mutualizado com resposta local</option>
+                          <option value="library_own_transport">Envio próprio da biblioteca</option>
+                          <option value="disabled">Envio desativado</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label for="mailPreviewKind">Tipo de mensagem</label>
+                        <select class="select" id="mailPreviewKind">
+                          <option value="reservation_created">Reserva recebida</option>
+                          <option value="reservation_ready">Livro pronto para retirada</option>
+                          <option value="loan_created">Empréstimo criado</option>
+                          <option value="loan_due_soon">Lembrete de prazo</option>
+                          <option value="weekly_report">Relatório semanal</option>
+                          <option value="reading_recommendations">Recomendações</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="row3" style="margin-top:12px">
+                      <div>
+                        <label for="mailTransportState">Situação técnica</label>
+                        <input class="input" id="mailTransportState" type="text" value="" placeholder="Sem verificação ainda." readonly>
+                      </div>
+                      <div>
+                        <label for="mailTransportLastTestedAt">Último teste</label>
+                        <input class="input" id="mailTransportLastTestedAt" type="text" value="" placeholder="Ainda não testado." readonly>
+                      </div>
+                      <div>
+                        <label for="mailTransportChannel">Canal ativo</label>
+                        <input class="input" id="mailTransportChannel" type="text" value="" placeholder="Será resolvido automaticamente." readonly>
+                      </div>
+                    </div>
+                    <div style="margin-top:12px">
+                      <label for="mailPreviewResolvedIdentity">Identidade resolvida</label>
+                      <input class="input" id="mailPreviewResolvedIdentity" type="text" value="" placeholder="Será montada a partir da configuração da biblioteca." readonly>
+                    </div>
+                    <div style="margin-top:12px">
+                      <label for="mailPreviewSummary">Resumo da prévia</label>
+                      <textarea class="textarea" id="mailPreviewSummary" readonly placeholder="A prévia do assunto, do cabeçalho e do rodapé aparecerá aqui."></textarea>
+                    </div>
+                    <div class="actions">
+                      <button class="btn" id="btnSaveMailDeliveryMode" type="button">Salvar modo de envio</button>
+                      <button class="btn" id="btnTestMailDeliveryMode" type="button">Testar configuração</button>
+                      <button class="btn" id="btnGenerateMailPreview" type="button">Gerar prévia</button>
+                    </div>
+                    <div class="status" id="mailDeliveryModeMsg"></div>
+                    <div class="status" id="mailPreviewMsg"></div>
                   </div>
                 </div>
               </div>
@@ -4123,6 +4316,221 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
       $('btnResetLibraryTheme')?.addEventListener('click', () => saveLibraryTheme({ reset: true }));
     }
 
+    /* bloco inserido: comunicações da biblioteca */
+    const LIBRARY_COMMUNICATIONS_DELIVERY_MODES = [
+      'platform_shared',
+      'platform_shared_local_reply',
+      'library_own_transport',
+      'disabled'
+    ];
+    let currentLibraryCommunicationsState = null;
+
+    function getEmptyLibraryCommunicationsState(){
+      return {
+        sender_display_name: '',
+        reply_to_name: '',
+        reply_to_email: '',
+        signature_short: '',
+        footer_local: '',
+        use_library_name_as_sender: true,
+        use_library_logo: true,
+        reservation_created_enabled: true,
+        reservation_status_enabled: true,
+        reservation_workflow_enabled: true,
+        loan_lifecycle_enabled: true,
+        loan_reminders_enabled: true,
+        reading_recommendations_enabled: false,
+        admin_notification_email: '',
+        weekly_report_email: '',
+        severe_alert_email: '',
+        delivery_mode: 'platform_shared',
+        transport_state: 'Ainda não testado.',
+        transport_last_tested_at: '',
+        transport_channel: ''
+      };
+    }
+
+    function cloneLibraryCommunicationsState(input){
+      return {
+        ...getEmptyLibraryCommunicationsState(),
+        ...(input && typeof input === 'object' ? input : {})
+      };
+    }
+
+    function normalizeLibraryCommunicationsDeliveryMode(value){
+      const normalized = String(value || '').trim();
+      return LIBRARY_COMMUNICATIONS_DELIVERY_MODES.includes(normalized) ? normalized : 'platform_shared';
+    }
+
+    function summarizeLibraryCommunicationsIdentity(state){
+      const source = cloneLibraryCommunicationsState(state);
+      const sender = String(source.use_library_name_as_sender
+        ? (currentLibraryRow?.short_name || currentLibraryRow?.name || source.sender_display_name || 'Biblioteca')
+        : (source.sender_display_name || currentLibraryRow?.short_name || currentLibraryRow?.name || 'Biblioteca')
+      ).trim();
+      const replyTo = String(source.reply_to_email || currentLibraryContactProfile?.contact_email || 'sem e-mail de resposta').trim();
+      const modeLabels = {
+        platform_shared: 'envio mutualizado',
+        platform_shared_local_reply: 'envio mutualizado com resposta local',
+        library_own_transport: 'envio próprio',
+        disabled: 'envio desativado'
+      };
+      return `${sender} · resposta para ${replyTo} · ${modeLabels[normalizeLibraryCommunicationsDeliveryMode(source.delivery_mode)] || 'modo indefinido'}`;
+    }
+
+    function getLibraryCommunicationsSeed(){
+      const base = getEmptyLibraryCommunicationsState();
+      return {
+        ...base,
+        sender_display_name: String(currentLibraryRow?.short_name || currentLibraryRow?.name || '').trim(),
+        reply_to_name: String(currentLibraryContactProfile?.contact_name || currentLibraryRow?.short_name || '').trim(),
+        reply_to_email: String(currentLibraryContactProfile?.contact_email || '').trim(),
+        signature_short: String(currentLibraryContactProfile?.contact_role || '').trim(),
+        footer_local: String(currentLibraryContactProfile?.postal_address || '').trim(),
+        admin_notification_email: String(currentLibraryContactProfile?.contact_email || '').trim(),
+        weekly_report_email: String(currentLibraryContactProfile?.contact_email || '').trim(),
+        severe_alert_email: String(currentLibraryContactProfile?.contact_email || '').trim(),
+      };
+    }
+
+    function collectLibraryCommunicationsStateFromForm(){
+      const current = cloneLibraryCommunicationsState(currentLibraryCommunicationsState);
+      return {
+        ...current,
+        sender_display_name: String($('mailSenderDisplayName')?.value || '').trim(),
+        reply_to_name: String($('mailReplyToName')?.value || '').trim(),
+        reply_to_email: String($('mailReplyToEmail')?.value || '').trim(),
+        signature_short: String($('mailSignatureShort')?.value || '').trim(),
+        footer_local: String($('mailFooterLocal')?.value || '').trim(),
+        use_library_name_as_sender: !!$('mailUseLibraryNameAsSender')?.checked,
+        use_library_logo: !!$('mailUseLibraryLogo')?.checked,
+        reservation_created_enabled: !!$('notifReservationCreated')?.checked,
+        reservation_status_enabled: !!$('notifReservationStatusChange')?.checked,
+        reservation_workflow_enabled: !!$('notifReservationWorkflow')?.checked,
+        loan_lifecycle_enabled: !!$('notifLoanLifecycle')?.checked,
+        loan_reminders_enabled: !!$('notifLoanReminders')?.checked,
+        reading_recommendations_enabled: !!$('notifReadingRecommendations')?.checked,
+        admin_notification_email: String($('mailAdminNotificationEmail')?.value || '').trim(),
+        weekly_report_email: String($('mailWeeklyReportEmail')?.value || '').trim(),
+        severe_alert_email: String($('mailSevereAlertEmail')?.value || '').trim(),
+        delivery_mode: normalizeLibraryCommunicationsDeliveryMode($('mailDeliveryMode')?.value),
+        transport_state: String($('mailTransportState')?.value || '').trim(),
+        transport_last_tested_at: String($('mailTransportLastTestedAt')?.value || '').trim(),
+        transport_channel: String($('mailTransportChannel')?.value || '').trim()
+      };
+    }
+
+    function refreshLibraryCommunicationsIdentitySummary(){
+      const next = collectLibraryCommunicationsStateFromForm();
+      if ($('mailIdentityStateNote')) $('mailIdentityStateNote').value = summarizeLibraryCommunicationsIdentity(next);
+      if ($('mailPreviewResolvedIdentity')) $('mailPreviewResolvedIdentity').value = summarizeLibraryCommunicationsIdentity(next);
+    }
+
+    function renderLibraryCommunications(state){
+      const source = cloneLibraryCommunicationsState(state);
+      if ($('mailSenderDisplayName')) $('mailSenderDisplayName').value = source.sender_display_name || '';
+      if ($('mailReplyToName')) $('mailReplyToName').value = source.reply_to_name || '';
+      if ($('mailReplyToEmail')) $('mailReplyToEmail').value = source.reply_to_email || '';
+      if ($('mailSignatureShort')) $('mailSignatureShort').value = source.signature_short || '';
+      if ($('mailFooterLocal')) $('mailFooterLocal').value = source.footer_local || '';
+      if ($('mailUseLibraryNameAsSender')) $('mailUseLibraryNameAsSender').checked = !!source.use_library_name_as_sender;
+      if ($('mailUseLibraryLogo')) $('mailUseLibraryLogo').checked = !!source.use_library_logo;
+      if ($('notifReservationCreated')) $('notifReservationCreated').checked = !!source.reservation_created_enabled;
+      if ($('notifReservationStatusChange')) $('notifReservationStatusChange').checked = !!source.reservation_status_enabled;
+      if ($('notifReservationWorkflow')) $('notifReservationWorkflow').checked = !!source.reservation_workflow_enabled;
+      if ($('notifLoanLifecycle')) $('notifLoanLifecycle').checked = !!source.loan_lifecycle_enabled;
+      if ($('notifLoanReminders')) $('notifLoanReminders').checked = !!source.loan_reminders_enabled;
+      if ($('notifReadingRecommendations')) $('notifReadingRecommendations').checked = !!source.reading_recommendations_enabled;
+      if ($('mailAdminNotificationEmail')) $('mailAdminNotificationEmail').value = source.admin_notification_email || '';
+      if ($('mailWeeklyReportEmail')) $('mailWeeklyReportEmail').value = source.weekly_report_email || '';
+      if ($('mailSevereAlertEmail')) $('mailSevereAlertEmail').value = source.severe_alert_email || '';
+      if ($('mailDeliveryMode')) $('mailDeliveryMode').value = normalizeLibraryCommunicationsDeliveryMode(source.delivery_mode);
+      if ($('mailTransportState')) $('mailTransportState').value = source.transport_state || 'Ainda não testado.';
+      if ($('mailTransportLastTestedAt')) $('mailTransportLastTestedAt').value = source.transport_last_tested_at || '';
+      if ($('mailTransportChannel')) $('mailTransportChannel').value = source.transport_channel || '';
+      if ($('mailPreviewSummary')) $('mailPreviewSummary').value = '';
+      refreshLibraryCommunicationsIdentitySummary();
+    }
+
+    function generateLibraryCommunicationsPreview(){
+      const source = collectLibraryCommunicationsStateFromForm();
+      const previewKind = String($('mailPreviewKind')?.value || 'reservation_created').trim();
+      const previewLabels = {
+        reservation_created: 'Reserva recebida',
+        reservation_ready: 'Livro pronto para retirada',
+        loan_created: 'Empréstimo criado',
+        loan_due_soon: 'Lembrete de prazo',
+        weekly_report: 'Relatório semanal',
+        reading_recommendations: 'Recomendações'
+      };
+      const summary = [
+        `Tipo: ${previewLabels[previewKind] || previewKind}`,
+        `Identidade: ${summarizeLibraryCommunicationsIdentity(source)}`,
+        `Logo nos e-mails: ${source.use_library_logo ? 'sim' : 'não'}`,
+        `Rodapé local: ${source.footer_local || 'não definido'}`
+      ].join('\n');
+      if ($('mailPreviewSummary')) $('mailPreviewSummary').value = summary;
+      if ($('mailPreviewMsg')) setStatus('mailPreviewMsg', 'Prévia local gerada. Esta etapa ainda não envia nem salva nada na base.', 'ok', false);
+    }
+
+    async function loadLibraryCommunications(){
+      currentLibraryCommunicationsState = getLibraryCommunicationsSeed();
+      renderLibraryCommunications(currentLibraryCommunicationsState);
+      clearStatus('mailIdentityMsg');
+      clearStatus('notificationPoliciesMsg');
+      clearStatus('mailDeliveryModeMsg');
+      clearStatus('mailPreviewMsg');
+    }
+
+    function setupLibraryCommunicationsActions(){
+      const liveIds = [
+        'mailSenderDisplayName',
+        'mailReplyToName',
+        'mailReplyToEmail',
+        'mailSignatureShort',
+        'mailFooterLocal',
+        'mailUseLibraryNameAsSender',
+        'mailUseLibraryLogo',
+        'mailAdminNotificationEmail',
+        'mailWeeklyReportEmail',
+        'mailSevereAlertEmail',
+        'mailDeliveryMode'
+      ];
+      liveIds.forEach((id) => {
+        const el = $(id);
+        if (!el || el.dataset.commBound === 'true') return;
+        const eventName = (el.tagName === 'SELECT' || el.type === 'checkbox') ? 'change' : 'input';
+        el.addEventListener(eventName, refreshLibraryCommunicationsIdentitySummary);
+        el.dataset.commBound = 'true';
+      });
+
+      $('btnSaveMailIdentity')?.addEventListener('click', () => {
+        currentLibraryCommunicationsState = collectLibraryCommunicationsStateFromForm();
+        refreshLibraryCommunicationsIdentitySummary();
+        setStatus('mailIdentityMsg', 'Interface preparada. A gravação em base será ligada na próxima etapa SQL/RPC.', 'ok', false);
+      });
+
+      $('btnSaveNotificationPolicies')?.addEventListener('click', () => {
+        currentLibraryCommunicationsState = collectLibraryCommunicationsStateFromForm();
+        setStatus('notificationPoliciesMsg', 'Interface preparada. As políticas ainda não foram ligadas ao backend.', 'ok', false);
+      });
+
+      $('btnSaveMailDeliveryMode')?.addEventListener('click', () => {
+        currentLibraryCommunicationsState = collectLibraryCommunicationsStateFromForm();
+        setStatus('mailDeliveryModeMsg', 'Modo de envio reservado no front. A persistência será ligada com o SQL desta etapa.', 'ok', false);
+      });
+
+      $('btnTestMailDeliveryMode')?.addEventListener('click', () => {
+        if ($('mailTransportState')) $('mailTransportState').value = 'Teste local pendente de backend';
+        if ($('mailTransportLastTestedAt')) $('mailTransportLastTestedAt').value = fmtDateTimeBelem(nowISO());
+        if ($('mailTransportChannel')) $('mailTransportChannel').value = normalizeLibraryCommunicationsDeliveryMode($('mailDeliveryMode')?.value);
+        setStatus('mailDeliveryModeMsg', 'Teste local simulado. O teste real depende da função SQL/RPC.', 'warn', false);
+      });
+
+      $('btnGenerateMailPreview')?.addEventListener('click', generateLibraryCommunicationsPreview);
+    }
+    /* fim do bloco inserido: comunicações da biblioteca */
+
     let currentLibraryScheduleBinding = null;
     let currentLibraryScheduleStateRow = null;
 
@@ -6389,6 +6797,7 @@ function belemNowParts(){
       safePainelUiInit('construtor de consulta local', () => setupConsultationScheduleBuilder());
       safePainelUiInit('identidade da biblioteca', () => setupLibraryIdentityActions());
       safePainelUiInit('tema da biblioteca', () => setupLibraryThemeActions());
+      safePainelUiInit('comunicações da biblioteca', () => setupLibraryCommunicationsActions());
       safePainelUiInit('governança documental', () => setupDocGovernanceActions());
       safePainelUiInit('agendamento de reservas', () => bindResScheduleAtParts());
       safePainelUiInit('editor de devolução', () => setupReturnScheduleEditor());
@@ -10099,6 +10508,7 @@ function initPartnerProbeUi() {
       const steps = [
         ['loadLibraryServiceState', () => loadLibraryServiceState()],
         ['loadLibraryIdentity', () => loadLibraryIdentity()],
+        ['loadLibraryCommunications', () => loadLibraryCommunications()],
         ['loadLibraryTheme', () => loadLibraryTheme()],
         ['loadDocGovernance', () => loadDocGovernance()],
         ['loadInterlibraryRequests', () => loadInterlibraryRequests({ silent:true })],
