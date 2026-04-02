@@ -6936,7 +6936,7 @@ async function fetchActiveLoans(){
       if (emprestimoIds.length) {
         const qPainelItems = await supabase
           .from('emprestimo_itens_v2')
-          .select('id,emprestimo_id,line_no,sub_id,user_id,book_id,item_id,bib_ref,rotulo_cache,autor_cache,titulo_cache,editora_cache,ano_cache,item_status,due_at,extended_until,extension_note,returned_at,return_scheduled_for,return_scheduled_by,return_scheduled_at,return_schedule_status,return_completed_at,return_missed_at,created_at,updated_at')
+          .select('id,emprestimo_id,line_no,sub_id,book_id,item_id,bib_ref,rotulo_cache,autor_cache,titulo_cache,editora_cache,ano_cache,item_status,due_at,extended_until,extension_note,returned_at,return_scheduled_for,return_scheduled_by,return_scheduled_at,return_schedule_status,return_completed_at,return_missed_at,created_at,updated_at')
           .in('emprestimo_id', emprestimoIds)
           .eq('item_status', 'aberto')
           .order('emprestimo_id', { ascending:false })
