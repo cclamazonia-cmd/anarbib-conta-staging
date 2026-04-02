@@ -9714,6 +9714,8 @@ function initPartnerProbeUi() {
 
 
     function bindStaticActionRouterFallback(){
+      window.__anarbibPainelStaticActionRouterDisabled = true;
+      return;
       if (window.__anarbibPainelStaticActionRouterBound) return;
       window.__anarbibPainelStaticActionRouterBound = true;
 
