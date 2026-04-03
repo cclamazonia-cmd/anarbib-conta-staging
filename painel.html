@@ -4327,6 +4327,10 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
 
     function getEmptyLibraryCommunicationsState(){
       return {
+        library_id: '',
+        slug: '',
+        library_name: '',
+        library_short_name: '',
         sender_display_name: '',
         reply_to_name: '',
         reply_to_email: '',
@@ -4334,19 +4338,29 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         footer_local: '',
         use_library_name_as_sender: true,
         use_library_logo: true,
+        sender_visible_email: '',
         reservation_created_enabled: true,
         reservation_status_enabled: true,
         reservation_workflow_enabled: true,
+        local_consultation_enabled: true,
         loan_lifecycle_enabled: true,
         loan_reminders_enabled: true,
+        loan_overdue_enabled: true,
+        profile_restriction_enabled: true,
+        mid_loan_message_enabled: false,
         reading_recommendations_enabled: false,
+        admin_copy_reservations_enabled: true,
+        admin_copy_loans_enabled: true,
+        tech_alerts_enabled: true,
+        task_alerts_enabled: true,
         admin_notification_email: '',
         weekly_report_email: '',
         severe_alert_email: '',
         delivery_mode: 'platform_shared',
-        transport_state: 'Ainda não testado.',
+        transport_state: 'not_tested',
         transport_last_tested_at: '',
-        transport_channel: ''
+        transport_channel: '',
+        channel_active: true
       };
     }
 
@@ -4365,10 +4379,10 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
     function summarizeLibraryCommunicationsIdentity(state){
       const source = cloneLibraryCommunicationsState(state);
       const sender = String(source.use_library_name_as_sender
-        ? (currentLibraryRow?.short_name || currentLibraryRow?.name || source.sender_display_name || 'Biblioteca')
-        : (source.sender_display_name || currentLibraryRow?.short_name || currentLibraryRow?.name || 'Biblioteca')
+        ? (source.library_short_name || source.library_name || currentLibraryRow?.short_name || currentLibraryRow?.name || source.sender_display_name || 'Biblioteca')
+        : (source.sender_display_name || source.library_short_name || source.library_name || currentLibraryRow?.short_name || currentLibraryRow?.name || 'Biblioteca')
       ).trim();
-      const replyTo = String(source.reply_to_email || currentLibraryContactProfile?.contact_email || 'sem e-mail de resposta').trim();
+      const replyTo = String(source.reply_to_email || source.admin_notification_email || currentLibraryContactProfile?.contact_email || 'sem e-mail de resposta').trim();
       const modeLabels = {
         platform_shared: 'envio mutualizado',
         platform_shared_local_reply: 'envio mutualizado com resposta local',
@@ -4382,14 +4396,61 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
       const base = getEmptyLibraryCommunicationsState();
       return {
         ...base,
-        sender_display_name: String(currentLibraryRow?.short_name || currentLibraryRow?.name || '').trim(),
-        reply_to_name: String(currentLibraryContactProfile?.contact_name || currentLibraryRow?.short_name || '').trim(),
+        library_id: String(currentLibraryRow?.id || '').trim(),
+        slug: String(currentLibraryRow?.slug || '').trim(),
+        library_name: String(currentLibraryRow?.name || '').trim(),
+        library_short_name: String(currentLibraryRow?.short_name || '').trim(),
+        sender_display_name: '',
+        reply_to_name: String(currentLibraryContactProfile?.contact_name || currentLibraryRow?.short_name || currentLibraryRow?.name || '').trim(),
         reply_to_email: String(currentLibraryContactProfile?.contact_email || '').trim(),
         signature_short: String(currentLibraryContactProfile?.contact_role || '').trim(),
         footer_local: String(currentLibraryContactProfile?.postal_address || '').trim(),
         admin_notification_email: String(currentLibraryContactProfile?.contact_email || '').trim(),
         weekly_report_email: String(currentLibraryContactProfile?.contact_email || '').trim(),
         severe_alert_email: String(currentLibraryContactProfile?.contact_email || '').trim(),
+      };
+    }
+
+    function normalizeLibraryCommunicationsFromContext(payload){
+      const seed = getLibraryCommunicationsSeed();
+      const source = payload && typeof payload === 'object' ? payload : {};
+      return {
+        ...seed,
+        ...source,
+        library_id: String(source.library_id || seed.library_id || '').trim(),
+        slug: String(source.slug || seed.slug || '').trim(),
+        library_name: String(source.library_name || seed.library_name || '').trim(),
+        library_short_name: String(source.library_short_name || seed.library_short_name || '').trim(),
+        sender_display_name: String(source.sender_display_name || '').trim(),
+        reply_to_name: String(source.reply_to_name || seed.reply_to_name || '').trim(),
+        reply_to_email: String(source.reply_to_email || seed.reply_to_email || '').trim(),
+        signature_short: String(source.signature_short || seed.signature_short || '').trim(),
+        footer_local: String(source.footer_local || seed.footer_local || '').trim(),
+        use_library_name_as_sender: source.use_library_name_as_sender !== false,
+        use_library_logo: source.use_library_logo !== false,
+        sender_visible_email: String(source.sender_visible_email || '').trim(),
+        reservation_created_enabled: source.reservation_created_enabled !== false,
+        reservation_status_enabled: source.reservation_status_enabled !== false,
+        reservation_workflow_enabled: source.reservation_workflow_enabled !== false,
+        local_consultation_enabled: source.local_consultation_enabled !== false,
+        loan_lifecycle_enabled: source.loan_lifecycle_enabled !== false,
+        loan_reminders_enabled: source.loan_reminders_enabled !== false,
+        loan_overdue_enabled: source.loan_overdue_enabled !== false,
+        profile_restriction_enabled: source.profile_restriction_enabled !== false,
+        mid_loan_message_enabled: source.mid_loan_message_enabled === true,
+        reading_recommendations_enabled: source.reading_recommendations_enabled === true,
+        admin_copy_reservations_enabled: source.admin_copy_reservations_enabled !== false,
+        admin_copy_loans_enabled: source.admin_copy_loans_enabled !== false,
+        tech_alerts_enabled: source.tech_alerts_enabled !== false,
+        task_alerts_enabled: source.task_alerts_enabled !== false,
+        admin_notification_email: String(source.admin_notification_email || seed.admin_notification_email || '').trim(),
+        weekly_report_email: String(source.weekly_report_email || seed.weekly_report_email || '').trim(),
+        severe_alert_email: String(source.severe_alert_email || seed.severe_alert_email || '').trim(),
+        delivery_mode: normalizeLibraryCommunicationsDeliveryMode(source.delivery_mode || seed.delivery_mode),
+        transport_state: String(source.transport_state || seed.transport_state || 'not_tested').trim() || 'not_tested',
+        transport_last_tested_at: String(source.last_tested_at || source.transport_last_tested_at || '').trim(),
+        transport_channel: String(source.transport_channel || '').trim(),
+        channel_active: source.channel_active !== false,
       };
     }
 
@@ -4414,9 +4475,55 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         weekly_report_email: String($('mailWeeklyReportEmail')?.value || '').trim(),
         severe_alert_email: String($('mailSevereAlertEmail')?.value || '').trim(),
         delivery_mode: normalizeLibraryCommunicationsDeliveryMode($('mailDeliveryMode')?.value),
-        transport_state: String($('mailTransportState')?.value || '').trim(),
-        transport_last_tested_at: String($('mailTransportLastTestedAt')?.value || '').trim(),
-        transport_channel: String($('mailTransportChannel')?.value || '').trim()
+      };
+    }
+
+    function buildLibraryNotificationProfilePayload(state){
+      const source = cloneLibraryCommunicationsState(state);
+      return {
+        sender_display_name: source.sender_display_name || null,
+        reply_to_name: source.reply_to_name || null,
+        reply_to_email: source.reply_to_email || null,
+        signature_short: source.signature_short || null,
+        footer_local: source.footer_local || null,
+        use_library_name_as_sender: source.use_library_name_as_sender === true,
+        use_library_logo: source.use_library_logo === true,
+        sender_visible_email: source.sender_visible_email || null,
+      };
+    }
+
+    function buildLibraryNotificationPoliciesPayload(state){
+      const source = cloneLibraryCommunicationsState(state);
+      return {
+        reservation_created_enabled: source.reservation_created_enabled === true,
+        reservation_status_enabled: source.reservation_status_enabled === true,
+        reservation_workflow_enabled: source.reservation_workflow_enabled === true,
+        local_consultation_enabled: source.local_consultation_enabled !== false,
+        loan_lifecycle_enabled: source.loan_lifecycle_enabled === true,
+        loan_reminders_enabled: source.loan_reminders_enabled === true,
+        loan_overdue_enabled: source.loan_overdue_enabled !== false,
+        profile_restriction_enabled: source.profile_restriction_enabled !== false,
+        mid_loan_message_enabled: source.mid_loan_message_enabled === true,
+        reading_recommendations_enabled: source.reading_recommendations_enabled === true,
+        admin_copy_reservations_enabled: source.admin_copy_reservations_enabled !== false,
+        admin_copy_loans_enabled: source.admin_copy_loans_enabled !== false,
+        tech_alerts_enabled: source.tech_alerts_enabled !== false,
+        task_alerts_enabled: source.task_alerts_enabled !== false,
+      };
+    }
+
+    function buildLibraryMailChannelPayload(state){
+      const source = cloneLibraryCommunicationsState(state);
+      const deliveryMode = normalizeLibraryCommunicationsDeliveryMode(source.delivery_mode);
+      const active = source.channel_active !== false && deliveryMode !== 'disabled';
+      return {
+        delivery_mode: deliveryMode,
+        admin_notification_email: source.admin_notification_email || null,
+        weekly_report_email: source.weekly_report_email || null,
+        severe_alert_email: source.severe_alert_email || null,
+        transport_state: active ? 'not_tested' : 'disabled',
+        transport_channel: null,
+        active,
       };
     }
 
@@ -4445,41 +4552,134 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
       if ($('mailWeeklyReportEmail')) $('mailWeeklyReportEmail').value = source.weekly_report_email || '';
       if ($('mailSevereAlertEmail')) $('mailSevereAlertEmail').value = source.severe_alert_email || '';
       if ($('mailDeliveryMode')) $('mailDeliveryMode').value = normalizeLibraryCommunicationsDeliveryMode(source.delivery_mode);
-      if ($('mailTransportState')) $('mailTransportState').value = source.transport_state || 'Ainda não testado.';
-      if ($('mailTransportLastTestedAt')) $('mailTransportLastTestedAt').value = source.transport_last_tested_at || '';
+      if ($('mailTransportState')) $('mailTransportState').value = source.transport_state || 'not_tested';
+      if ($('mailTransportLastTestedAt')) $('mailTransportLastTestedAt').value = source.transport_last_tested_at ? fmtDateTimeBelem(source.transport_last_tested_at) : '';
       if ($('mailTransportChannel')) $('mailTransportChannel').value = source.transport_channel || '';
       if ($('mailPreviewSummary')) $('mailPreviewSummary').value = '';
       refreshLibraryCommunicationsIdentitySummary();
     }
 
-    function generateLibraryCommunicationsPreview(){
-      const source = collectLibraryCommunicationsStateFromForm();
-      const previewKind = String($('mailPreviewKind')?.value || 'reservation_created').trim();
-      const previewLabels = {
-        reservation_created: 'Reserva recebida',
-        reservation_ready: 'Livro pronto para retirada',
-        loan_created: 'Empréstimo criado',
-        loan_due_soon: 'Lembrete de prazo',
-        weekly_report: 'Relatório semanal',
-        reading_recommendations: 'Recomendações'
-      };
-      const summary = [
-        `Tipo: ${previewLabels[previewKind] || previewKind}`,
-        `Identidade: ${summarizeLibraryCommunicationsIdentity(source)}`,
-        `Logo nos e-mails: ${source.use_library_logo ? 'sim' : 'não'}`,
-        `Rodapé local: ${source.footer_local || 'não definido'}`
-      ].join('\n');
-      if ($('mailPreviewSummary')) $('mailPreviewSummary').value = summary;
-      if ($('mailPreviewMsg')) setStatus('mailPreviewMsg', 'Prévia local gerada. Esta etapa ainda não envia nem salva nada na base.', 'ok', false);
+    async function getLibraryNotificationLibraryId(){
+      const direct = normalizeLibraryId(currentLibraryRow?.id || currentLibraryCommunicationsState?.library_id || '');
+      if (direct) return direct;
+      const resolved = await resolveCurrentLibraryIdentity();
+      const libraryId = normalizeLibraryId(resolved?.id || '');
+      if (!libraryId) throw new Error('Biblioteca ativa não identificada para gerir comunicações.');
+      return libraryId;
     }
 
     async function loadLibraryCommunications(){
-      currentLibraryCommunicationsState = getLibraryCommunicationsSeed();
-      renderLibraryCommunications(currentLibraryCommunicationsState);
       clearStatus('mailIdentityMsg');
       clearStatus('notificationPoliciesMsg');
       clearStatus('mailDeliveryModeMsg');
       clearStatus('mailPreviewMsg');
+      try {
+        const libraryId = await getLibraryNotificationLibraryId();
+        const { data, error } = await supabase.rpc('get_library_notification_context', {
+          p_library_id: libraryId
+        });
+        if (error) throw error;
+        currentLibraryCommunicationsState = normalizeLibraryCommunicationsFromContext(data || { library_id: libraryId });
+        renderLibraryCommunications(currentLibraryCommunicationsState);
+      } catch (e) {
+        currentLibraryCommunicationsState = getLibraryCommunicationsSeed();
+        renderLibraryCommunications(currentLibraryCommunicationsState);
+        setStatus('mailDeliveryModeMsg', 'Não consegui carregar as comunicações da biblioteca: ' + (e.message || String(e)), 'bad', false);
+      }
+    }
+
+    async function saveLibraryMailIdentity(){
+      clearStatus('mailIdentityMsg');
+      const libraryId = await getLibraryNotificationLibraryId();
+      const next = collectLibraryCommunicationsStateFromForm();
+      const { error } = await supabase.rpc('upsert_library_notification_profile', {
+        p_library_id: libraryId,
+        p_profile: buildLibraryNotificationProfilePayload(next)
+      });
+      if (error) throw error;
+      await loadLibraryCommunications();
+      setStatus('mailIdentityMsg', 'Identidade de envio salva.', 'ok', false);
+    }
+
+    async function saveLibraryNotificationPolicies(){
+      clearStatus('notificationPoliciesMsg');
+      const libraryId = await getLibraryNotificationLibraryId();
+      const next = collectLibraryCommunicationsStateFromForm();
+      const { error } = await supabase.rpc('upsert_library_notification_policies', {
+        p_library_id: libraryId,
+        p_policies: buildLibraryNotificationPoliciesPayload(next)
+      });
+      if (error) throw error;
+      await loadLibraryCommunications();
+      setStatus('notificationPoliciesMsg', 'Políticas de notificação salvas.', 'ok', false);
+    }
+
+    async function saveLibraryMailDeliveryMode(){
+      clearStatus('mailDeliveryModeMsg');
+      const libraryId = await getLibraryNotificationLibraryId();
+      const next = collectLibraryCommunicationsStateFromForm();
+      const { error } = await supabase.rpc('upsert_library_mail_channel', {
+        p_library_id: libraryId,
+        p_channel: buildLibraryMailChannelPayload(next)
+      });
+      if (error) throw error;
+      await loadLibraryCommunications();
+      setStatus('mailDeliveryModeMsg', 'Modo de envio salvo.', 'ok', false);
+    }
+
+    async function generateLibraryCommunicationsPreview(){
+      clearStatus('mailPreviewMsg');
+      const libraryId = await getLibraryNotificationLibraryId();
+      const previewKind = String($('mailPreviewKind')?.value || 'reservation_created').trim() || 'reservation_created';
+      const { data, error } = await supabase.rpc('preview_library_notification', {
+        p_library_id: libraryId,
+        p_kind: previewKind
+      });
+      if (error) throw error;
+      if ($('mailPreviewResolvedIdentity')) $('mailPreviewResolvedIdentity').value = String(data?.resolved_identity || summarizeLibraryCommunicationsIdentity(currentLibraryCommunicationsState)).trim();
+      if ($('mailPreviewSummary')) $('mailPreviewSummary').value = [
+        data?.subject ? `Assunto: ${data.subject}` : '',
+        data?.summary ? String(data.summary).trim() : ''
+      ].filter(Boolean).join('\n');
+      if (data?.context && typeof data.context === 'object') {
+        currentLibraryCommunicationsState = normalizeLibraryCommunicationsFromContext(data.context);
+      }
+      setStatus('mailPreviewMsg', 'Prévia gerada a partir da configuração salva da biblioteca.', 'ok', false);
+    }
+
+    async function testLibraryMailDeliveryMode(){
+      clearStatus('mailDeliveryModeMsg');
+      const libraryId = await getLibraryNotificationLibraryId();
+      const { data, error } = await supabase.rpc('test_library_mail_channel', {
+        p_library_id: libraryId
+      });
+      if (error) throw error;
+      if ($('mailTransportState')) $('mailTransportState').value = String(data?.transport_state || '').trim();
+      if ($('mailTransportLastTestedAt')) $('mailTransportLastTestedAt').value = data?.last_tested_at ? fmtDateTimeBelem(data.last_tested_at) : '';
+      if ($('mailTransportChannel')) $('mailTransportChannel').value = String(data?.transport_channel || '').trim();
+      await loadLibraryCommunications();
+      setStatus('mailDeliveryModeMsg', String(data?.message || 'Teste executado.').trim(), data?.ok ? 'ok' : 'warn', false);
+    }
+
+    function bindLibraryCommunicationsButton(id, handler){
+      const el = $(id);
+      if (!el || el.dataset.commClickBound === 'true') return;
+      el.addEventListener('click', async () => {
+        const previousDisabled = el.disabled;
+        el.disabled = true;
+        try {
+          await handler();
+        } catch (e) {
+          const msg = e?.message || String(e);
+          if (id === 'btnSaveMailIdentity') setStatus('mailIdentityMsg', 'Não consegui salvar a identidade de envio: ' + msg, 'bad', false);
+          else if (id === 'btnSaveNotificationPolicies') setStatus('notificationPoliciesMsg', 'Não consegui salvar as notificações: ' + msg, 'bad', false);
+          else if (id === 'btnSaveMailDeliveryMode' || id === 'btnTestMailDeliveryMode') setStatus('mailDeliveryModeMsg', msg.startsWith('Não consegui') ? msg : 'Não consegui atualizar o modo de envio: ' + msg, 'bad', false);
+          else if (id === 'btnGenerateMailPreview') setStatus('mailPreviewMsg', 'Não consegui gerar a prévia: ' + msg, 'bad', false);
+        } finally {
+          el.disabled = previousDisabled;
+        }
+      });
+      el.dataset.commClickBound = 'true';
     }
 
     function setupLibraryCommunicationsActions(){
@@ -4504,30 +4704,11 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         el.dataset.commBound = 'true';
       });
 
-      $('btnSaveMailIdentity')?.addEventListener('click', () => {
-        currentLibraryCommunicationsState = collectLibraryCommunicationsStateFromForm();
-        refreshLibraryCommunicationsIdentitySummary();
-        setStatus('mailIdentityMsg', 'Interface preparada. A gravação em base será ligada na próxima etapa SQL/RPC.', 'ok', false);
-      });
-
-      $('btnSaveNotificationPolicies')?.addEventListener('click', () => {
-        currentLibraryCommunicationsState = collectLibraryCommunicationsStateFromForm();
-        setStatus('notificationPoliciesMsg', 'Interface preparada. As políticas ainda não foram ligadas ao backend.', 'ok', false);
-      });
-
-      $('btnSaveMailDeliveryMode')?.addEventListener('click', () => {
-        currentLibraryCommunicationsState = collectLibraryCommunicationsStateFromForm();
-        setStatus('mailDeliveryModeMsg', 'Modo de envio reservado no front. A persistência será ligada com o SQL desta etapa.', 'ok', false);
-      });
-
-      $('btnTestMailDeliveryMode')?.addEventListener('click', () => {
-        if ($('mailTransportState')) $('mailTransportState').value = 'Teste local pendente de backend';
-        if ($('mailTransportLastTestedAt')) $('mailTransportLastTestedAt').value = fmtDateTimeBelem(nowISO());
-        if ($('mailTransportChannel')) $('mailTransportChannel').value = normalizeLibraryCommunicationsDeliveryMode($('mailDeliveryMode')?.value);
-        setStatus('mailDeliveryModeMsg', 'Teste local simulado. O teste real depende da função SQL/RPC.', 'warn', false);
-      });
-
-      $('btnGenerateMailPreview')?.addEventListener('click', generateLibraryCommunicationsPreview);
+      bindLibraryCommunicationsButton('btnSaveMailIdentity', saveLibraryMailIdentity);
+      bindLibraryCommunicationsButton('btnSaveNotificationPolicies', saveLibraryNotificationPolicies);
+      bindLibraryCommunicationsButton('btnSaveMailDeliveryMode', saveLibraryMailDeliveryMode);
+      bindLibraryCommunicationsButton('btnTestMailDeliveryMode', testLibraryMailDeliveryMode);
+      bindLibraryCommunicationsButton('btnGenerateMailPreview', generateLibraryCommunicationsPreview);
     }
     /* fim do bloco inserido: comunicações da biblioteca */
 
