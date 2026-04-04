@@ -4663,8 +4663,8 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         $('mailPreviewSummary').value = [
           String(data?.subject || '').trim(),
           String(data?.summary || '').trim()
-        ].filter(Boolean).join('
-');
+        ].filter(Boolean).join(
+          '\n');
       }
       setStatus('mailPreviewMsg', 'Prévia gerada a partir da configuração salva da biblioteca.', 'ok', false);
     }
