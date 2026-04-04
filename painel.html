@@ -605,7 +605,7 @@
       <nav class="tabs-nav" role="tablist" aria-label="Seções do painel">
         <button class="tab-btn active" type="button" data-tab="funcionamento" role="tab" aria-selected="true" aria-controls="tab-funcionamento">
           Biblioteca
-          <span class="hint">Funcionamento, horários, regras locais e tema</span>
+          <span class="hint">Funcionamento, comunicações, relações externas e gestão local</span>
         </button>
         <button class="tab-btn" type="button" data-tab="acoes" role="tab" aria-selected="false" aria-controls="tab-acoes">
           Ações
@@ -650,11 +650,11 @@
               <div class="section-head">
                 <div>
                   <h2>Biblioteca</h2>
-                  <div class="mini">Configuração local da biblioteca: funcionamento, horários, regras de circulação, identidade e tema visual.</div>
+                  <div class="mini">Configuração local da biblioteca: funcionamento, comunicações, governança documental, relações externas, identidade e tema visual.</div>
                 </div>
               </div>
               <div class="muted-box" style="margin-top:12px">
-                <div class="mini">Ajustes próprios da biblioteca para funcionamento, circulação, identidade e apresentação pública.</div>
+                <div class="mini">Ajustes próprios da biblioteca para circulação, comunicações, cooperação interbibliotecas e apresentação pública.</div>
               </div>
             </div>
 
@@ -4360,7 +4360,7 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         transport_state: 'not_tested',
         transport_last_tested_at: '',
         transport_channel: '',
-        channel_active: true
+        channel_active: true,
       };
     }
 
@@ -4378,9 +4378,10 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
 
     function summarizeLibraryCommunicationsIdentity(state){
       const source = cloneLibraryCommunicationsState(state);
-      const sender = String(source.use_library_name_as_sender
-        ? (source.library_short_name || source.library_name || currentLibraryRow?.short_name || currentLibraryRow?.name || source.sender_display_name || 'Biblioteca')
-        : (source.sender_display_name || source.library_short_name || source.library_name || currentLibraryRow?.short_name || currentLibraryRow?.name || 'Biblioteca')
+      const sender = String(
+        source.use_library_name_as_sender
+          ? (source.library_short_name || currentLibraryRow?.short_name || source.library_name || currentLibraryRow?.name || source.sender_display_name || 'Biblioteca')
+          : (source.sender_display_name || source.library_short_name || currentLibraryRow?.short_name || source.library_name || currentLibraryRow?.name || 'Biblioteca')
       ).trim();
       const replyTo = String(source.reply_to_email || source.admin_notification_email || currentLibraryContactProfile?.contact_email || 'sem e-mail de resposta').trim();
       const modeLabels = {
@@ -4400,7 +4401,7 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         slug: String(currentLibraryRow?.slug || '').trim(),
         library_name: String(currentLibraryRow?.name || '').trim(),
         library_short_name: String(currentLibraryRow?.short_name || '').trim(),
-        sender_display_name: '',
+        sender_display_name: String(currentLibraryRow?.short_name || currentLibraryRow?.name || '').trim(),
         reply_to_name: String(currentLibraryContactProfile?.contact_name || currentLibraryRow?.short_name || currentLibraryRow?.name || '').trim(),
         reply_to_email: String(currentLibraryContactProfile?.contact_email || '').trim(),
         signature_short: String(currentLibraryContactProfile?.contact_role || '').trim(),
@@ -4408,20 +4409,24 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         admin_notification_email: String(currentLibraryContactProfile?.contact_email || '').trim(),
         weekly_report_email: String(currentLibraryContactProfile?.contact_email || '').trim(),
         severe_alert_email: String(currentLibraryContactProfile?.contact_email || '').trim(),
+        delivery_mode: 'platform_shared',
+        transport_state: 'not_tested',
+        transport_last_tested_at: '',
+        transport_channel: '',
+        channel_active: true,
       };
     }
 
     function normalizeLibraryCommunicationsFromContext(payload){
-      const seed = getLibraryCommunicationsSeed();
       const source = payload && typeof payload === 'object' ? payload : {};
+      const seed = getLibraryCommunicationsSeed();
       return {
         ...seed,
-        ...source,
         library_id: String(source.library_id || seed.library_id || '').trim(),
         slug: String(source.slug || seed.slug || '').trim(),
         library_name: String(source.library_name || seed.library_name || '').trim(),
         library_short_name: String(source.library_short_name || seed.library_short_name || '').trim(),
-        sender_display_name: String(source.sender_display_name || '').trim(),
+        sender_display_name: String(source.sender_display_name || seed.sender_display_name || '').trim(),
         reply_to_name: String(source.reply_to_name || seed.reply_to_name || '').trim(),
         reply_to_email: String(source.reply_to_email || seed.reply_to_email || '').trim(),
         signature_short: String(source.signature_short || seed.signature_short || '').trim(),
@@ -4475,6 +4480,9 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         weekly_report_email: String($('mailWeeklyReportEmail')?.value || '').trim(),
         severe_alert_email: String($('mailSevereAlertEmail')?.value || '').trim(),
         delivery_mode: normalizeLibraryCommunicationsDeliveryMode($('mailDeliveryMode')?.value),
+        transport_state: String($('mailTransportState')?.value || '').trim(),
+        transport_last_tested_at: String($('mailTransportLastTestedAt')?.value || '').trim(),
+        transport_channel: String($('mailTransportChannel')?.value || '').trim()
       };
     }
 
@@ -4512,17 +4520,26 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
       };
     }
 
-    function buildLibraryMailChannelPayload(state){
+    function buildLibraryMailChannelPayload(state, options={}){
       const source = cloneLibraryCommunicationsState(state);
       const deliveryMode = normalizeLibraryCommunicationsDeliveryMode(source.delivery_mode);
       const active = source.channel_active !== false && deliveryMode !== 'disabled';
+      const preserveTechnicalState = options?.preserveTechnicalState === true;
+      const current = cloneLibraryCommunicationsState(currentLibraryCommunicationsState);
       return {
         delivery_mode: deliveryMode,
         admin_notification_email: source.admin_notification_email || null,
         weekly_report_email: source.weekly_report_email || null,
         severe_alert_email: source.severe_alert_email || null,
-        transport_state: active ? 'not_tested' : 'disabled',
-        transport_channel: null,
+        transport_state: preserveTechnicalState
+          ? (active ? (String(current.transport_state || 'not_tested').trim() || 'not_tested') : 'disabled')
+          : (active ? 'not_tested' : 'disabled'),
+        transport_channel: preserveTechnicalState
+          ? (active ? (String(current.transport_channel || '').trim() || null) : null)
+          : null,
+        last_tested_at: preserveTechnicalState
+          ? (active ? (String(current.transport_last_tested_at || '').trim() || null) : null)
+          : null,
         active,
       };
     }
@@ -4610,8 +4627,13 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         p_policies: buildLibraryNotificationPoliciesPayload(next)
       });
       if (error) throw error;
+      const { error: channelError } = await supabase.rpc('upsert_library_mail_channel', {
+        p_library_id: libraryId,
+        p_channel: buildLibraryMailChannelPayload(next, { preserveTechnicalState: true })
+      });
+      if (channelError) throw channelError;
       await loadLibraryCommunications();
-      setStatus('notificationPoliciesMsg', 'Políticas de notificação salvas.', 'ok', false);
+      setStatus('notificationPoliciesMsg', 'Políticas e destinatárias/os salvos.', 'ok', false);
     }
 
     async function saveLibraryMailDeliveryMode(){
@@ -4620,11 +4642,11 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
       const next = collectLibraryCommunicationsStateFromForm();
       const { error } = await supabase.rpc('upsert_library_mail_channel', {
         p_library_id: libraryId,
-        p_channel: buildLibraryMailChannelPayload(next)
+        p_channel: buildLibraryMailChannelPayload(next, { preserveTechnicalState: false })
       });
       if (error) throw error;
       await loadLibraryCommunications();
-      setStatus('mailDeliveryModeMsg', 'Modo de envio salvo.', 'ok', false);
+      setStatus('mailDeliveryModeMsg', 'Modo de envio e canal local salvos.', 'ok', false);
     }
 
     async function generateLibraryCommunicationsPreview(){
@@ -4636,13 +4658,13 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
         p_kind: previewKind
       });
       if (error) throw error;
-      if ($('mailPreviewResolvedIdentity')) $('mailPreviewResolvedIdentity').value = String(data?.resolved_identity || summarizeLibraryCommunicationsIdentity(currentLibraryCommunicationsState)).trim();
-      if ($('mailPreviewSummary')) $('mailPreviewSummary').value = [
-        data?.subject ? `Assunto: ${data.subject}` : '',
-        data?.summary ? String(data.summary).trim() : ''
-      ].filter(Boolean).join('\n');
-      if (data?.context && typeof data.context === 'object') {
-        currentLibraryCommunicationsState = normalizeLibraryCommunicationsFromContext(data.context);
+      if ($('mailPreviewResolvedIdentity')) $('mailPreviewResolvedIdentity').value = String(data?.resolved_identity || summarizeLibraryCommunicationsIdentity(collectLibraryCommunicationsStateFromForm()) || '').trim();
+      if ($('mailPreviewSummary')) {
+        $('mailPreviewSummary').value = [
+          String(data?.subject || '').trim(),
+          String(data?.summary || '').trim()
+        ].filter(Boolean).join('
+');
       }
       setStatus('mailPreviewMsg', 'Prévia gerada a partir da configuração salva da biblioteca.', 'ok', false);
     }
@@ -4663,10 +4685,8 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
 
     function bindLibraryCommunicationsButton(id, handler){
       const el = $(id);
-      if (!el || el.dataset.commClickBound === 'true') return;
+      if (!el || el.dataset.commActionBound === 'true') return;
       el.addEventListener('click', async () => {
-        const previousDisabled = el.disabled;
-        el.disabled = true;
         try {
           await handler();
         } catch (e) {
@@ -4675,11 +4695,9 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
           else if (id === 'btnSaveNotificationPolicies') setStatus('notificationPoliciesMsg', 'Não consegui salvar as notificações: ' + msg, 'bad', false);
           else if (id === 'btnSaveMailDeliveryMode' || id === 'btnTestMailDeliveryMode') setStatus('mailDeliveryModeMsg', msg.startsWith('Não consegui') ? msg : 'Não consegui atualizar o modo de envio: ' + msg, 'bad', false);
           else if (id === 'btnGenerateMailPreview') setStatus('mailPreviewMsg', 'Não consegui gerar a prévia: ' + msg, 'bad', false);
-        } finally {
-          el.disabled = previousDisabled;
         }
       });
-      el.dataset.commClickBound = 'true';
+      el.dataset.commActionBound = 'true';
     }
 
     function setupLibraryCommunicationsActions(){
