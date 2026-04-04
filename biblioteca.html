@@ -1,0 +1,953 @@
+<!doctype html>
+<html lang="pt-BR" data-library-slug="default" data-theme-slug="default" data-library-name="AnarBib">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AnarBib – biblioteca</title>
+  <link rel="stylesheet" href="./assets/css/theme-base.css">
+  <script src="./assets/js/library-context.js" defer></script>
+  <script src="./assets/js/theme-loader.js" defer></script>
+  <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
+  <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
+  <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
+  <style>
+    :root{
+      --panel:var(--brand-panel-bg,rgba(10,10,10,.90));
+      --text:var(--brand-text,#f4f4f4);
+      --muted:var(--brand-muted,rgba(255,255,255,.78));
+      --red:var(--brand-color-primary,#7a0b14);
+      --red2:var(--brand-color-primary,#bb1e2c);
+      --line:var(--brand-panel-border,rgba(255,255,255,.12));
+      --shadow:var(--brand-shadow,0 16px 38px rgba(0,0,0,.42));
+      --ok:#4ade80;
+      --warn:#fbbf24;
+      --bad:#fb7185;
+      --info:#60a5fa;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;color:var(--text);font-family:var(--brand-font-body,Inter,Segoe UI,Arial,sans-serif)}
+    body{background:transparent}
+    a,a:visited{color:inherit;text-decoration:none}
+    .wrap{max-width:1680px;margin:0 auto;padding:24px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{height:64px;width:auto;max-width:170px;object-fit:contain;display:block;flex-shrink:0;filter:drop-shadow(0 8px 18px rgba(0,0,0,.35))}
+    .btn{border:1px solid var(--line);background:rgba(12,12,12,.84);color:var(--text);border-radius:14px;padding:10px 12px;cursor:pointer;box-shadow:var(--shadow);font-weight:900;font-size:.95rem;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+    .btn.primary{border:none;background:linear-gradient(135deg,var(--red2),var(--red))}
+    .btn:hover{border-color:rgba(255,255,255,.22)}
+    .btn:disabled{opacity:.58;cursor:default}
+    .btn.mini{padding:7px 10px;font-size:.85rem;border-radius:12px}
+    .hero{border:1px solid var(--line);background:linear-gradient(135deg,var(--red2),var(--panel));border-radius:22px;padding:18px;box-shadow:var(--shadow);margin-bottom:16px}
+    .hero h1{margin:0 0 6px;font-size:1.5rem}
+    .hero p{margin:0;color:rgba(255,255,255,.92)}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .chip{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.12);background:rgba(10,10,10,.72);padding:7px 10px;border-radius:999px;font-size:.9rem;color:rgba(255,255,255,.86)}
+    .grid{display:grid;grid-template-columns:1fr;gap:14px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+    .card{border:1px solid rgba(255,255,255,.10);background:var(--panel);border-radius:22px;padding:16px;box-shadow:var(--shadow)}
+    .card h2,.card h3{margin:0}
+    .section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .mini{font-size:.86rem;color:var(--muted)}
+    .muted-box{border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:10px 12px;background:rgba(255,255,255,.03)}
+    .status{margin-top:10px;font-size:.92rem;min-height:1.2em}
+    .status.ok{color:var(--ok)} .status.warn{color:var(--warn)} .status.bad{color:var(--bad)} .status.info{color:var(--info)}
+    .empty{padding:14px;border:1px dashed rgba(255,255,255,.14);border-radius:14px;color:#cfcfcf}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.12);font-size:.82rem;background:rgba(255,255,255,.04)}
+    .pill.ok{color:#b7ffcf}.pill.warn{color:#ffe6a0}.pill.bad{color:#ffc0cb}.pill.info{color:#bfdbfe}
+    .stack{display:flex;flex-direction:column;gap:12px}
+    .kv-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .kv{border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:12px;background:rgba(255,255,255,.03)}
+    .kv-label{font-size:.8rem;color:#ffe3e7;text-transform:uppercase;letter-spacing:.04em;font-weight:800;margin-bottom:6px}
+    .kv-value{line-height:1.45;word-break:break-word;overflow-wrap:anywhere}
+    .tabs-layout{display:flex;gap:14px;align-items:flex-start;margin-top:8px}
+    .tabs-nav{width:280px;display:flex;flex-direction:column;gap:8px;flex:0 0 auto}
+    .tab-btn{width:100%;text-align:left;cursor:pointer;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.22);color:#fff;transition:transform .06s ease,background .12s ease,border-color .12s ease,opacity .12s ease}
+    .tab-btn:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.22)}
+    .tab-btn.active{background:rgba(200,0,0,.26);border-color:rgba(255,255,255,.28)}
+    .tab-btn .hint{display:block;margin-top:4px;color:#cfcfcf;font-size:.85rem;line-height:1.2}
+    .tabs-panels{flex:1 1 auto;min-width:0}
+    .tab-panel{display:none}
+    .tab-panel.active{display:block}
+    .tableWrap{overflow:auto;max-height:58vh;border-radius:16px;border:1px solid rgba(255,255,255,.10)}
+    table{width:100%;border-collapse:separate;border-spacing:0;min-width:860px;background:rgba(10,10,10,.35)}
+    thead th{position:sticky;top:0;z-index:2;text-align:left;padding:12px 14px;background:linear-gradient(180deg,#26060a,#160407);color:#fff;border-bottom:1px solid rgba(255,255,255,.10);font-size:.86rem;text-transform:uppercase;letter-spacing:.05em}
+    tbody td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06);vertical-align:top;word-break:break-word;overflow-wrap:anywhere}
+    tbody tr:hover td{background:rgba(179,0,24,.08)}
+    pre.json-box{margin:0;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.84rem;line-height:1.45}
+    details{border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:12px;background:rgba(255,255,255,.03)}
+    details summary{cursor:pointer;font-weight:800}
+    @media (max-width:980px){
+      .row,.row3,.kv-grid{grid-template-columns:1fr}
+      .tabs-layout{flex-direction:column}
+      .tabs-nav{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px;overflow:visible;padding-bottom:0}
+      .tab-btn{width:100%;min-height:56px;white-space:normal;text-align:left;align-items:flex-start}
+      .tab-btn .hint{display:none}
+      .tableWrap{max-height:none}
+      table{min-width:720px}
+    }
+    @media (max-width:560px){
+      .wrap{padding:14px}
+      .tabs-nav{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <img id="brandLogo" data-brand-logo class="logo" src="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png" alt="AnarBib">
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a class="btn" id="btnPainel" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html">Voltar ao painel</a>
+        <a class="btn" id="btnCatalogacao" href="https://cclamazonia-cmd.github.io/anarbib-staging/catalogacao.html">Catalogação</a>
+        <a class="btn" id="btnCatalogo" href="https://cclamazonia-cmd.github.io/anarbib-staging/index.html">Voltar ao catálogo</a>
+        <a class="btn" id="btnManual" href="https://cclamazonia-cmd.github.io/anarbib-staging/Manual_do_AnarBib.pdf" target="_blank" rel="noopener noreferrer">Manual do AnarBib</a>
+        <button class="btn primary" id="btnSair" type="button" data-auth-mode="login" data-auth-href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html">Login</button>
+      </div>
+    </div>
+
+    <div class="hero">
+      <h1 id="pageHeroTitle">Biblioteca — gestão institucional</h1>
+      <p id="pageHeroSubtitle">Pilotage global, regimento, règles de circulation, communications, documents et tâches internes.</p>
+      <p id="helloLine"></p>
+      <div class="chips">
+        <span class="chip" id="chipFuncao">Função: —</span>
+        <span class="chip" id="chipEmail">E-mail: —</span>
+        <span class="chip" id="chipBiblioteca">Biblioteca: —</span>
+        <span class="chip" id="chipServiceMode">Modo: —</span>
+        <span class="chip" id="chipWorkspace">Workspace institucional: —</span>
+      </div>
+    </div>
+
+    <div class="tabs-layout">
+      <nav class="tabs-nav" role="tablist" aria-label="Seções da biblioteca">
+        <button class="tab-btn active" type="button" data-tab="identidade" role="tab" aria-selected="true" aria-controls="tab-identidade">
+          Identidade e funcionamento
+          <span class="hint">Biblioteca ativa, funcionamento, horários e parâmetros locais</span>
+        </button>
+        <button class="tab-btn" type="button" data-tab="comunicacoes" role="tab" aria-selected="false" aria-controls="tab-comunicacoes">
+          Comunicações
+          <span class="hint">Identidade de envio, canais et contexte notificação</span>
+        </button>
+        <button class="tab-btn" type="button" data-tab="regimento" role="tab" aria-selected="false" aria-controls="tab-regimento">
+          Regimento e regras de circulação
+          <span class="hint">Documents institutionnels et surfaces canoniques de politique</span>
+        </button>
+        <button class="tab-btn" type="button" data-tab="documentos" role="tab" aria-selected="false" aria-controls="tab-documentos">
+          Documentos e relações externas
+          <span class="hint">Governança documental et coopération</span>
+        </button>
+        <button class="tab-btn" type="button" data-tab="tarefas" role="tab" aria-selected="false" aria-controls="tab-tarefas">
+          Tarefas internas
+          <span class="hint">Lecture seule des tâches internes</span>
+        </button>
+      </nav>
+
+      <div class="tabs-panels">
+        <section id="tab-identidade" class="tab-panel active" data-tab="identidade" role="tabpanel">
+          <div class="stack">
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h2>Identidade e funcionamento</h2>
+                  <div class="mini">Lecture directe des données institutionnelles déjà utilisées par le front actuel.</div>
+                </div>
+                <div class="actions"><button class="btn mini" id="btnRefreshIdentity" type="button">Atualizar</button></div>
+              </div>
+              <div class="status" id="identityStatus"></div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Resumo da biblioteca</h3><div class="mini">Identité, contact principal et service public.</div></div></div>
+              <div id="identityGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
+            </div>
+            <div class="row">
+              <div class="card">
+                <div class="section-head"><div><h3>Horários e consulta local</h3><div class="mini">Résumé des horaires textuels et structurés.</div></div></div>
+                <div id="scheduleGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
+              </div>
+              <div class="card">
+                <div class="section-head"><div><h3>Parâmetros locais atuais</h3><div class="mini">Bloc local encore en place tant que la couche canonique complète n’est pas branchée partout.</div></div></div>
+                <div id="localRulesGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Workspace institucional</h3><div class="mini">Première lecture de la nouvelle surface backend canonique.</div></div></div>
+              <div class="status" id="workspaceStatus"></div>
+              <div id="workspaceSummary" class="kv-grid"><div class="empty">Carregando…</div></div>
+              <details style="margin-top:12px">
+                <summary>Ver JSON bruto do workspace</summary>
+                <pre id="workspaceJson" class="json-box">{}</pre>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-comunicacoes" class="tab-panel" data-tab="comunicacoes" role="tabpanel">
+          <div class="stack">
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h2>Comunicações</h2>
+                  <div class="mini">Lecture seule de l’identité de notification et du canal mail de la bibliothèque.</div>
+                </div>
+                <div class="actions"><button class="btn mini" id="btnRefreshComms" type="button">Atualizar</button></div>
+              </div>
+              <div class="status" id="communicationsStatus"></div>
+            </div>
+            <div class="row">
+              <div class="card">
+                <div class="section-head"><div><h3>Identidade de envio</h3><div class="mini">Contexte de notification résolu par backend.</div></div></div>
+                <div id="communicationsIdentityGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
+              </div>
+              <div class="card">
+                <div class="section-head"><div><h3>Políticas e destinatárias/os</h3><div class="mini">État des activations et des adresses de suivi.</div></div></div>
+                <div id="communicationsPolicyGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Canal e transporte</h3><div class="mini">Mode d’envoi, état technique et prévisualisation résumée.</div></div></div>
+              <div id="communicationsTransportGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
+              <details style="margin-top:12px">
+                <summary>Ver JSON bruto das comunicações</summary>
+                <pre id="communicationsJson" class="json-box">{}</pre>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-regimento" class="tab-panel" data-tab="regimento" role="tabpanel">
+          <div class="stack">
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h2>Regimento e regras de circulação</h2>
+                  <div class="mini">Première consommation front des surfaces canoniques prévues pour cette page.</div>
+                </div>
+                <div class="actions"><button class="btn mini" id="btnRefreshRegimento" type="button">Atualizar</button></div>
+              </div>
+              <div class="status" id="regimentoStatus"></div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Documentos de regimento</h3><div class="mini">Surface dédiée aux documents institutionnels.</div></div></div>
+              <div class="tableWrap">
+                <table>
+                  <thead><tr><th>Documento</th><th>Situação</th><th>Versão</th><th>Atualizado</th><th>Ligação</th></tr></thead>
+                  <tbody id="tbodyRegulationDocs"><tr><td colspan="5">Carregando…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Policy sets de circulação</h3><div class="mini">Lecture des jeux de politiques actifs et disponibles.</div></div></div>
+              <div class="tableWrap">
+                <table>
+                  <thead><tr><th>Policy set</th><th>Situação</th><th>Escopo</th><th>Ativo</th><th>Resumo</th></tr></thead>
+                  <tbody id="tbodyPolicySets"><tr><td colspan="5">Carregando…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Règles atomiques</h3><div class="mini">Lecture des règles individuelles de circulation.</div></div></div>
+              <div class="tableWrap">
+                <table>
+                  <thead><tr><th>Regra</th><th>Scope</th><th>Prioridade</th><th>Valor</th><th>Observação</th></tr></thead>
+                  <tbody id="tbodyPolicyRules"><tr><td colspan="5">Carregando…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-documentos" class="tab-panel" data-tab="documentos" role="tabpanel">
+          <div class="stack">
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h2>Documentos e relações externas</h2>
+                  <div class="mini">Lecture de la gouvernance documentaire et du contexte de coopération.</div>
+                </div>
+                <div class="actions"><button class="btn mini" id="btnRefreshDocuments" type="button">Atualizar</button></div>
+              </div>
+              <div class="status" id="documentsStatus"></div>
+            </div>
+            <div class="row">
+              <div class="card">
+                <div class="section-head"><div><h3>Governança documental</h3><div class="mini">Lecture directe du socle de gouvernance existant.</div></div></div>
+                <div id="governanceGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
+              </div>
+              <div class="card">
+                <div class="section-head"><div><h3>Workspace — bloc documents / relações</h3><div class="mini">Résumé latéral du workspace institutionnel.</div></div></div>
+                <div id="documentsWorkspaceGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>JSON brut de governança</h3><div class="mini">Aide au raccord du prochain patch.</div></div></div>
+              <pre id="governanceJson" class="json-box">{}</pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-tarefas" class="tab-panel" data-tab="tarefas" role="tabpanel">
+          <div class="stack">
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h2>Tarefas internas</h2>
+                  <div class="mini">Lecture seule des tâches déjà stockées pour la bibliothèque.</div>
+                </div>
+                <div class="actions"><button class="btn mini" id="btnRefreshTasks" type="button">Atualizar</button></div>
+              </div>
+              <div class="status" id="tasksStatus"></div>
+            </div>
+            <div class="card">
+              <div class="tableWrap">
+                <table>
+                  <thead><tr><th>Tarefa</th><th>Prioridade</th><th>Situação</th><th>Responsável</th><th>Prazo</th><th>Criada em</th></tr></thead>
+                  <tbody id="tbodyTasks"><tr><td colspan="6">Carregando…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from "./js/blmf-supabase.js";
+
+    const FALLBACK_CONFIG = {
+      ROUTES: {
+        blog: "https://cclamazonia.noblogs.org/",
+        catalogo: "https://cclamazonia-cmd.github.io/anarbib-staging/index.html",
+        catalogacao: "https://cclamazonia-cmd.github.io/anarbib-staging/catalogacao.html",
+        cadastro: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html",
+        conta: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html",
+        painel: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html",
+        manual: "https://cclamazonia-cmd.github.io/anarbib-staging/Manual_do_AnarBib.pdf"
+      }
+    };
+
+    let CONFIG = FALLBACK_CONFIG;
+    let applyPageChrome = function(_pageKey, options = {}) {
+      const routes = CONFIG?.ROUTES || {};
+      const routeMap = options?.routeMap || {};
+      Object.entries(routeMap).forEach(([id, routeKey]) => {
+        const el = document.getElementById(id);
+        const href = routes?.[routeKey];
+        if (el && href) el.href = href;
+      });
+    };
+
+    try {
+      const mod = await import("./shared/config.js");
+      if (mod?.CONFIG) {
+        CONFIG = {
+          ...FALLBACK_CONFIG,
+          ...mod.CONFIG,
+          ROUTES: { ...(FALLBACK_CONFIG.ROUTES || {}), ...((mod.CONFIG && mod.CONFIG.ROUTES) || {}) }
+        };
+      }
+      if (typeof mod?.applyPageChrome === "function") applyPageChrome = mod.applyPageChrome;
+    } catch (error) {
+      console.warn("config.js ausente ou com falha; usando fallback interno.", error);
+    }
+
+    applyPageChrome("biblioteca", {
+      logoId: "brandLogo",
+      heroTitleId: "pageHeroTitle",
+      heroSubtitleId: "pageHeroSubtitle",
+      routeMap: {
+        btnPainel: "painel",
+        btnCatalogacao: "catalogacao",
+        btnCatalogo: "catalogo",
+        btnManual: "manual"
+      }
+    });
+
+    const $ = (id) => document.getElementById(id);
+    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+    const TAB_STORAGE_KEY = 'anarbib_biblioteca_active_tab';
+
+    let session = null;
+    let currentIdentityRow = null;
+    let currentAccessRow = null;
+    let currentLibraryRow = null;
+    let currentServiceState = null;
+    let currentContactProfile = null;
+    let currentCommunicationsContext = null;
+    let currentWorkspace = null;
+    let currentGovernance = null;
+
+    function esc(value){
+      return String(value ?? '').replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    }
+    function fmtDateTime(value){
+      if (!value) return '—';
+      const d = new Date(value);
+      return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleString('pt-BR');
+    }
+    function fmtDate(value){
+      if (!value) return '—';
+      const d = new Date(String(value).length <= 10 ? `${value}T00:00:00` : value);
+      return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString('pt-BR');
+    }
+    function normalizeLibraryId(value){
+      const v = String(value || '').trim();
+      return v || null;
+    }
+    function firstFilledValue(...values){
+      for (const value of values){
+        if (value === 0) return value;
+        if (typeof value === 'string' && value.trim()) return value.trim();
+        if (value !== null && value !== undefined && value !== '') return value;
+      }
+      return '';
+    }
+    function safeJsonObject(value){
+      if (!value) return {};
+      if (typeof value === 'object' && !Array.isArray(value)) return value;
+      if (typeof value !== 'string') return {};
+      try {
+        const parsed = JSON.parse(value);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+      } catch {
+        return {};
+      }
+    }
+    function setChip(id, text){ const el = $(id); if (el) el.textContent = text; }
+    function setStatus(id, msg='', cls=''){ const el = $(id); if (!el) return; el.className = 'status' + (cls ? ` ${cls}` : ''); el.textContent = msg || ''; }
+    function asArray(data){ return Array.isArray(data) ? data : (data == null ? [] : [data]); }
+    function displayValue(value){
+      if (value == null || value === '') return '—';
+      if (typeof value === 'boolean') return value ? 'Sim' : 'Não';
+      if (Array.isArray(value)) return value.length ? value.join(', ') : '—';
+      if (typeof value === 'object') return JSON.stringify(value, null, 2);
+      return String(value);
+    }
+    function renderKvGrid(hostId, entries){
+      const host = $(hostId);
+      if (!host) return;
+      if (!Array.isArray(entries) || !entries.length) {
+        host.innerHTML = '<div class="empty">Nenhum dado disponível.</div>';
+        return;
+      }
+      host.innerHTML = entries.map(([label, value]) => `
+        <div class="kv">
+          <div class="kv-label">${esc(label)}</div>
+          <div class="kv-value">${esc(displayValue(value))}</div>
+        </div>
+      `).join('');
+    }
+    function normalizeWorkspaceObject(input){
+      if (!input) return {};
+      if (Array.isArray(input)) return input[0] && typeof input[0] === 'object' ? input[0] : { rows: input };
+      if (typeof input === 'object') return input;
+      return { value: input };
+    }
+    function summarizeObjectEntries(obj, max=12){
+      return Object.entries(obj || {}).slice(0, max).map(([key, value]) => [key, Array.isArray(value) ? `${value.length} item(ns)` : (value && typeof value === 'object' ? 'objeto' : value)]);
+    }
+
+    function activateTab(nextTab){
+      const wanted = String(nextTab || 'identidade');
+      $$('.tab-btn').forEach((btn) => {
+        const active = btn.dataset.tab === wanted;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      $$('.tab-panel').forEach((panel) => panel.classList.toggle('active', panel.dataset.tab === wanted));
+      try { sessionStorage.setItem(TAB_STORAGE_KEY, wanted); } catch (_e) {}
+    }
+
+    function setupTabs(){
+      $$('.tab-btn').forEach((btn) => {
+        btn.addEventListener('click', () => activateTab(btn.dataset.tab || 'identidade'));
+      });
+      let stored = '';
+      try { stored = sessionStorage.getItem(TAB_STORAGE_KEY) || ''; } catch (_e) {}
+      activateTab(stored || 'identidade');
+    }
+
+    async function resolveSession(attempts = 8, delayMs = 180) {
+      for (let i = 0; i < attempts; i += 1) {
+        try {
+          const { data: { session } = {} } = await supabase.auth.getSession();
+          if (session?.user?.id) return session;
+        } catch (error) {
+          console.warn('Biblioteca: getSession falhou.', error);
+        }
+        try {
+          const { data } = await supabase.auth.getUser();
+          if (data?.user?.id) {
+            const { data: { session } = {} } = await supabase.auth.getSession();
+            if (session?.user?.id) return session;
+          }
+        } catch (error) {
+          console.warn('Biblioteca: getUser falhou.', error);
+        }
+        if (i < attempts - 1) await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+      return null;
+    }
+
+    function pickCurrentLibrarianAccess(rows) {
+      const normalizedRows = Array.isArray(rows) ? rows : [];
+      const activeRows = normalizedRows.filter((row) => String(row?.status || 'active').toLowerCase() === 'active');
+      const librarianRows = activeRows.filter((row) => {
+        const role = String(row?.role || '').toLowerCase();
+        return (role === 'librarian' || row?.is_librarian === true) && row?.is_restricted !== true && row?.can_access_painel !== false;
+      });
+      return librarianRows.find((row) => row?.is_primary === true) || librarianRows[0] || null;
+    }
+
+    async function fetchAccessRows(userId) {
+      const rows = [];
+      const seen = new Set();
+      let profileRow = null;
+      const pushRows = (input) => {
+        const normalizedRows = Array.isArray(input) ? input : (input ? [input] : []);
+        for (const row of normalizedRows) {
+          if (!row || typeof row !== 'object') continue;
+          const key = JSON.stringify([
+            String(row?.user_id || row?.id || userId || '').trim(),
+            String(row?.library_id || row?.library_slug || row?.default_library_slug || '').trim(),
+            String(row?.role || '').trim(),
+            String(row?.status || '').trim(),
+          ]);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          rows.push(row);
+        }
+      };
+
+      const attempts = [
+        () => (typeof supabase.schema === 'function' ? supabase.schema('api').from('my_access').select('*') : supabase.from('api.my_access').select('*')),
+        () => (typeof supabase.schema === 'function' ? supabase.schema('api').from('my_session_context').select('*').limit(1) : supabase.from('api.my_session_context').select('*').limit(1)),
+        () => supabase.from('my_access').select('*'),
+        () => supabase.from('my_session_context').select('*').limit(1),
+      ];
+
+      for (const run of attempts) {
+        try {
+          const res = await run();
+          if (!res?.error) pushRows(Array.isArray(res?.data) ? res.data : (res?.data ? [res.data] : []));
+        } catch (_e) {}
+      }
+
+      try {
+        const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+        if (!error && data) profileRow = data;
+      } catch (_e) {}
+
+      if (rows.length) return { rows, profileRow };
+
+      if (profileRow?.is_librarian === true && profileRow?.is_restricted !== true) {
+        pushRows({
+          user_id: userId,
+          role: 'librarian',
+          status: 'active',
+          is_librarian: true,
+          is_primary: true,
+          is_restricted: false,
+          can_access_painel: true,
+          library_id: profileRow?.library_id || profileRow?.default_library_id || null,
+          library_slug: profileRow?.library_slug || profileRow?.default_library_slug || '',
+          library_name: profileRow?.library_name || profileRow?.default_library_name || ''
+        });
+      }
+      return { rows, profileRow };
+    }
+
+    function updateTopbarAuthButton(isLoggedIn) {
+      const btn = $('btnSair');
+      if (!btn) return;
+      btn.dataset.authMode = isLoggedIn ? 'logout' : 'login';
+      btn.textContent = isLoggedIn ? 'Logout' : 'Login';
+      btn.title = isLoggedIn ? 'Encerrar sessão e voltar ao cadastro' : 'Ir para o cadastro / login';
+      btn.disabled = false;
+    }
+
+    async function adoptSessionState() {
+      session = await resolveSession();
+      updateTopbarAuthButton(!!session?.user?.id);
+      if (!session?.user?.id) {
+        currentIdentityRow = null;
+        currentAccessRow = null;
+        currentLibraryRow = null;
+        setChip('chipFuncao', 'Função: —');
+        setChip('chipEmail', 'E-mail: —');
+        setChip('chipBiblioteca', 'Biblioteca: —');
+        setChip('chipServiceMode', 'Modo: —');
+        setChip('chipWorkspace', 'Workspace institucional: sem sessão');
+        $('helloLine').textContent = 'Faz login com uma conta bibliotecária para abrir a gestão institucional.';
+        return false;
+      }
+
+      const accessState = await fetchAccessRows(session.user.id);
+      currentIdentityRow = accessState.profileRow || null;
+      currentAccessRow = pickCurrentLibrarianAccess(accessState.rows);
+      if (!currentAccessRow) {
+        setChip('chipFuncao', 'Função: sem acesso');
+        setChip('chipEmail', `E-mail: ${session.user.email || '—'}`);
+        setChip('chipBiblioteca', 'Biblioteca: —');
+        $('helloLine').textContent = 'A sessão existe, mas não encontrei um acesso bibliotecário ativo para esta conta.';
+        return false;
+      }
+
+      setChip('chipFuncao', 'Função: bibliotecária/o');
+      setChip('chipEmail', `E-mail: ${session.user.email || '—'}`);
+      $('helloLine').textContent = `Sessão ativa para ${session.user.email || 'bibliotecária/o'} — página institucional em modo leitura.`;
+      return true;
+    }
+
+    async function resolveCurrentLibraryIdentity() {
+      const candidates = [
+        currentAccessRow?.library_id,
+        currentIdentityRow?.library_id,
+        currentAccessRow?.default_library_id,
+        currentIdentityRow?.default_library_id,
+      ].map(normalizeLibraryId).filter(Boolean);
+      if (candidates.length) return { id: candidates[0], row: null };
+
+      const slug = String(
+        currentAccessRow?.library_slug ||
+        currentAccessRow?.default_library_slug ||
+        currentIdentityRow?.library_slug ||
+        currentIdentityRow?.default_library_slug ||
+        ''
+      ).trim();
+
+      if (slug) {
+        const { data, error } = await supabase
+          .from('libraries')
+          .select('id,slug,name,short_name')
+          .eq('slug', slug)
+          .maybeSingle();
+        if (error) throw error;
+        if (data?.id) return { id: normalizeLibraryId(data.id), row: data };
+      }
+      return { id: null, row: null };
+    }
+
+    async function fetchCurrentLibraryRow() {
+      const resolved = await resolveCurrentLibraryIdentity();
+      const libraryId = normalizeLibraryId(resolved?.id);
+      if (!libraryId) throw new Error('Biblioteca ativa não identificada.');
+      const { data, error } = await supabase.from('libraries').select('*').eq('id', libraryId).maybeSingle();
+      if (error) throw error;
+      currentLibraryRow = { ...(resolved?.row || {}), ...(data || {}), id: libraryId };
+      setChip('chipBiblioteca', `Biblioteca: ${currentLibraryRow?.short_name || currentLibraryRow?.name || currentLibraryRow?.slug || libraryId}`);
+      return currentLibraryRow;
+    }
+
+    async function fetchLibraryContactProfile(libraryId) {
+      const { data, error } = await supabase
+        .from('library_contact_profiles')
+        .select('library_id,contact_name,contact_role,contact_email,contact_phone,contact_whatsapp,contact_alternate,postal_address,updated_at')
+        .eq('library_id', libraryId)
+        .maybeSingle();
+      if (error) throw error;
+      return data || { library_id: libraryId };
+    }
+
+    async function loadIdentityPanel() {
+      try {
+        const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const libraryId = normalizeLibraryId(row?.id);
+        const { data: serviceData, error: serviceError } = await supabase
+          .from('library_service_state')
+          .select('library_id,service_mode,public_message,allows_new_reservations,allows_new_loans,consultation_timezone,max_simultaneous_consultations,consultation_schedule_struct,updated_at,service_schedule_text')
+          .eq('library_id', libraryId)
+          .maybeSingle();
+        if (serviceError) throw serviceError;
+        currentServiceState = serviceData || { library_id: libraryId };
+        currentContactProfile = await fetchLibraryContactProfile(libraryId);
+
+        const serviceMode = String(currentServiceState?.service_mode || '—').trim() || '—';
+        setChip('chipServiceMode', `Modo: ${serviceMode}`);
+        renderKvGrid('identityGrid', [
+          ['Nome completo', row?.name || '—'],
+          ['Nome abreviado', row?.short_name || '—'],
+          ['Slug', row?.slug || '—'],
+          ['Contato principal', currentContactProfile?.contact_name || '—'],
+          ['Papel do contato', currentContactProfile?.contact_role || '—'],
+          ['E-mail', currentContactProfile?.contact_email || '—'],
+          ['Telefone', currentContactProfile?.contact_phone || '—'],
+          ['WhatsApp', currentContactProfile?.contact_whatsapp || '—'],
+          ['Endereço postal', currentContactProfile?.postal_address || '—'],
+          ['Modo atual', serviceMode],
+          ['Reservas públicas abertas', currentServiceState?.allows_new_reservations],
+          ['Empréstimos públicos abertos', currentServiceState?.allows_new_loans],
+          ['Mensagem pública', currentServiceState?.public_message || '—'],
+          ['Atualizado em', fmtDateTime(currentServiceState?.updated_at)]
+        ]);
+
+        const scheduleStruct = safeJsonObject(currentServiceState?.consultation_schedule_struct);
+        renderKvGrid('scheduleGrid', [
+          ['Fuso da consulta local', currentServiceState?.consultation_timezone || 'America/Belem'],
+          ['Capacidade simultânea', currentServiceState?.max_simultaneous_consultations || 1],
+          ['Horários textuais', currentServiceState?.service_schedule_text ? JSON.stringify(currentServiceState.service_schedule_text) : '—'],
+          ['Agenda estruturada', Object.keys(scheduleStruct).length ? JSON.stringify(scheduleStruct) : '—']
+        ]);
+
+        const localRules = safeJsonObject(firstFilledValue(row?.local_rules, row?.circulation_local_rules, row?.non_member_rules, currentServiceState?.local_rules));
+        renderKvGrid('localRulesGrid', Object.keys(localRules).length ? summarizeObjectEntries(localRules, 10) : [
+          ['Estado', 'Nenhum bloco local legível encontrado neste front'],
+          ['Observação', 'A camada canônica de policy sets / policy rules aparece no separador seguinte.']
+        ]);
+
+        setStatus('identityStatus', 'Identidade e funcionamento carregados.', 'ok');
+      } catch (error) {
+        renderKvGrid('identityGrid', []);
+        renderKvGrid('scheduleGrid', []);
+        renderKvGrid('localRulesGrid', []);
+        setStatus('identityStatus', 'Não consegui carregar a identidade e o funcionamento: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function loadCommunicationsPanel() {
+      try {
+        const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const libraryId = normalizeLibraryId(row?.id);
+        const { data, error } = await supabase.rpc('get_library_notification_context', { p_library_id: libraryId });
+        if (error) throw error;
+        currentCommunicationsContext = data || { library_id: libraryId };
+        renderKvGrid('communicationsIdentityGrid', [
+          ['Sender display name', data?.sender_display_name || '—'],
+          ['Reply-to name', data?.reply_to_name || '—'],
+          ['Reply-to e-mail', data?.reply_to_email || '—'],
+          ['Assinatura curta', data?.signature_short || '—'],
+          ['Rodapé local', data?.footer_local || '—'],
+          ['Usar nome da biblioteca como sender', data?.use_library_name_as_sender],
+          ['Usar logo da biblioteca', data?.use_library_logo],
+          ['Identidade resolvida', data?.resolved_identity || '—']
+        ]);
+        renderKvGrid('communicationsPolicyGrid', [
+          ['Reserva criada', data?.reservation_created_enabled],
+          ['Mudança de status de reserva', data?.reservation_status_enabled],
+          ['Workflow de reserva', data?.reservation_workflow_enabled],
+          ['Consulta local', data?.local_consultation_enabled],
+          ['Ciclo de empréstimo', data?.loan_lifecycle_enabled],
+          ['Lembretes de empréstimo', data?.loan_reminders_enabled],
+          ['Overdue', data?.loan_overdue_enabled],
+          ['Admin cópia de reservas', data?.admin_copy_reservations_enabled],
+          ['Admin cópia de empréstimos', data?.admin_copy_loans_enabled],
+          ['E-mail admin', data?.admin_notification_email || '—'],
+          ['Relatório semanal', data?.weekly_report_email || '—'],
+          ['Alertas graves', data?.severe_alert_email || '—']
+        ]);
+        renderKvGrid('communicationsTransportGrid', [
+          ['Modo de envio', data?.delivery_mode || '—'],
+          ['Canal técnico', data?.transport_channel || '—'],
+          ['Estado do transporte', data?.transport_state || '—'],
+          ['Último teste', fmtDateTime(data?.transport_last_tested_at || data?.last_tested_at)],
+          ['Sender visible e-mail', data?.sender_visible_email || '—']
+        ]);
+        $('communicationsJson').textContent = JSON.stringify(data || {}, null, 2);
+        setStatus('communicationsStatus', 'Comunicações carregadas.', 'ok');
+      } catch (error) {
+        renderKvGrid('communicationsIdentityGrid', []);
+        renderKvGrid('communicationsPolicyGrid', []);
+        renderKvGrid('communicationsTransportGrid', []);
+        $('communicationsJson').textContent = '{}';
+        setStatus('communicationsStatus', 'Não consegui carregar as comunicações: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function callLibraryScopedRpc(rpcName) {
+      const libraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
+      const librarySlug = String(currentLibraryRow?.slug || currentAccessRow?.library_slug || currentIdentityRow?.library_slug || '').trim();
+      const attempts = [
+        {},
+        { p_library_id: libraryId },
+        { library_id: libraryId },
+        { p_target_library_id: libraryId },
+        { p_library_slug: librarySlug },
+        { library_slug: librarySlug }
+      ];
+      let lastError = null;
+      for (const args of attempts) {
+        try {
+          const cleaned = Object.fromEntries(Object.entries(args).filter(([, value]) => value != null && value !== ''));
+          const { data, error } = await supabase.rpc(rpcName, cleaned);
+          if (!error) return data;
+          lastError = error;
+          const message = String(error?.message || '').toLowerCase();
+          const retryable = message.includes('function') || message.includes('signature') || message.includes('parameter') || message.includes('schema cache');
+          if (!retryable) throw error;
+        } catch (error) {
+          lastError = error;
+          const message = String(error?.message || '').toLowerCase();
+          const retryable = message.includes('function') || message.includes('signature') || message.includes('parameter') || message.includes('schema cache');
+          if (!retryable) throw error;
+        }
+      }
+      throw lastError || new Error(`RPC indisponível: ${rpcName}`);
+    }
+
+    function renderRowsTable(tbodyId, rows, columns, emptyMessage='Nenhum dado disponível.') {
+      const tbody = $(tbodyId);
+      if (!tbody) return;
+      const normalizedRows = asArray(rows).filter((row) => row && typeof row === 'object');
+      if (!normalizedRows.length) {
+        tbody.innerHTML = `<tr><td colspan="${columns.length}">${esc(emptyMessage)}</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = normalizedRows.map((row) => `<tr>${columns.map((column) => {
+        const raw = typeof column.value === 'function' ? column.value(row) : row?.[column.value];
+        return `<td>${esc(displayValue(raw))}</td>`;
+      }).join('')}</tr>`).join('');
+    }
+
+    async function loadWorkspaceAndPolicies() {
+      try {
+        currentWorkspace = normalizeWorkspaceObject(await callLibraryScopedRpc('get_library_institutional_workspace'));
+        const workspaceSummary = summarizeObjectEntries(currentWorkspace, 12);
+        renderKvGrid('workspaceSummary', workspaceSummary.length ? workspaceSummary : [['Estado', 'Workspace sem chaves legíveis']]);
+        renderKvGrid('documentsWorkspaceGrid', workspaceSummary.length ? workspaceSummary.slice(0, 8) : [['Estado', 'Sem resumo disponível']]);
+        $('workspaceJson').textContent = JSON.stringify(currentWorkspace || {}, null, 2);
+        setChip('chipWorkspace', 'Workspace institucional: carregado');
+        setStatus('workspaceStatus', 'Workspace institucional carregado.', 'ok');
+      } catch (error) {
+        currentWorkspace = {};
+        renderKvGrid('workspaceSummary', []);
+        renderKvGrid('documentsWorkspaceGrid', []);
+        $('workspaceJson').textContent = '{}';
+        setChip('chipWorkspace', 'Workspace institucional: indisponível');
+        setStatus('workspaceStatus', 'Não consegui carregar o workspace institucional: ' + (error.message || String(error)), 'warn');
+      }
+
+      try {
+        const docs = await callLibraryScopedRpc('get_library_regulation_documents_ui');
+        renderRowsTable('tbodyRegulationDocs', docs, [
+          { value: (row) => firstFilledValue(row?.title, row?.document_title, row?.kind, row?.slug, row?.id, '—') },
+          { value: (row) => firstFilledValue(row?.status, row?.publication_status, row?.state, '—') },
+          { value: (row) => firstFilledValue(row?.version, row?.version_label, row?.label, '—') },
+          { value: (row) => fmtDateTime(firstFilledValue(row?.updated_at, row?.published_at, row?.created_at, '')) },
+          { value: (row) => firstFilledValue(row?.public_url, row?.url, row?.published_url, row?.draft_url, '—') }
+        ], 'Nenhum documento de regimento disponível.');
+      } catch (error) {
+        renderRowsTable('tbodyRegulationDocs', [], [1,2,3,4,5].map((n) => ({ value: () => n })), 'Falha ao carregar os documentos de regimento: ' + (error.message || String(error)));
+      }
+
+      try {
+        const policySets = await callLibraryScopedRpc('get_library_circulation_policy_sets_ui');
+        renderRowsTable('tbodyPolicySets', policySets, [
+          { value: (row) => firstFilledValue(row?.name, row?.title, row?.policy_set_name, row?.slug, row?.id, '—') },
+          { value: (row) => firstFilledValue(row?.status, row?.state, row?.publication_status, '—') },
+          { value: (row) => firstFilledValue(row?.scope, row?.material_scope, row?.reader_scope, row?.applies_to, '—') },
+          { value: (row) => firstFilledValue(row?.is_active, row?.active, row?.enabled, '—') },
+          { value: (row) => firstFilledValue(row?.summary, row?.description, row?.note, row?.label, '—') }
+        ], 'Nenhum policy set disponível.');
+      } catch (error) {
+        renderRowsTable('tbodyPolicySets', [], [1,2,3,4,5].map((n) => ({ value: () => n })), 'Falha ao carregar os policy sets: ' + (error.message || String(error)));
+      }
+
+      try {
+        const rules = await callLibraryScopedRpc('get_library_circulation_policy_rules_ui');
+        renderRowsTable('tbodyPolicyRules', rules, [
+          { value: (row) => firstFilledValue(row?.name, row?.label, row?.rule_name, row?.rule_kind, row?.id, '—') },
+          { value: (row) => firstFilledValue(row?.scope, row?.material_scope, row?.reader_scope, row?.applies_to, '—') },
+          { value: (row) => firstFilledValue(row?.priority, row?.sort_order, row?.weight, '—') },
+          { value: (row) => firstFilledValue(row?.value, row?.resolved_value, row?.rule_value, row?.duration_days, row?.max_renewals, '—') },
+          { value: (row) => firstFilledValue(row?.note, row?.description, row?.summary, '—') }
+        ], 'Nenhuma regra atômica disponível.');
+        setStatus('regimentoStatus', 'Documentos, policy sets e règles carregados.', 'ok');
+      } catch (error) {
+        renderRowsTable('tbodyPolicyRules', [], [1,2,3,4,5].map((n) => ({ value: () => n })), 'Falha ao carregar as règles: ' + (error.message || String(error)));
+        setStatus('regimentoStatus', 'Uma ou mais surfaces canoniques ainda não responderam: ' + (error.message || String(error)), 'warn');
+      }
+    }
+
+    async function loadGovernancePanel() {
+      try {
+        const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const libraryId = normalizeLibraryId(row?.id);
+        const { data, error } = await supabase
+          .from('library_document_governance')
+          .select('library_id,config,updated_at,updated_by')
+          .eq('library_id', libraryId)
+          .maybeSingle();
+        if (error) throw error;
+        currentGovernance = safeJsonObject(data?.config || {});
+        const summary = summarizeObjectEntries(currentGovernance, 12);
+        renderKvGrid('governanceGrid', summary.length ? summary : [['Estado', 'Nenhuma governança dedicada salva para esta biblioteca.']]);
+        $('governanceJson').textContent = JSON.stringify(data || {}, null, 2);
+        setStatus('documentsStatus', 'Governança documental carregada.', 'ok');
+      } catch (error) {
+        currentGovernance = {};
+        renderKvGrid('governanceGrid', []);
+        $('governanceJson').textContent = '{}';
+        setStatus('documentsStatus', 'Não consegui carregar a governança documental: ' + (error.message || String(error)), 'warn');
+      }
+    }
+
+    async function loadTasksPanel() {
+      try {
+        const { data, error } = await supabase
+          .from('painel_internal_tasks')
+          .select('id,title,description,priority,status,owner,due_date,tags,created_at')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        renderRowsTable('tbodyTasks', data, [
+          { value: (row) => row?.description ? `${row?.title || '—'} — ${row?.description}` : (row?.title || '—') },
+          { value: (row) => row?.priority || '—' },
+          { value: (row) => row?.status || '—' },
+          { value: (row) => row?.owner || '—' },
+          { value: (row) => fmtDate(row?.due_date) },
+          { value: (row) => fmtDateTime(row?.created_at) }
+        ], 'Nenhuma tarefa interna disponível.');
+        setStatus('tasksStatus', 'Tarefas internas carregadas.', 'ok');
+      } catch (error) {
+        renderRowsTable('tbodyTasks', [], [1,2,3,4,5,6].map((n) => ({ value: () => n })), 'Falha ao carregar as tarefas internas: ' + (error.message || String(error)));
+        setStatus('tasksStatus', 'Não consegui carregar as tarefas internas: ' + (error.message || String(error)), 'warn');
+      }
+    }
+
+    async function refreshAllInstitutionalPanels() {
+      const hasAccess = await adoptSessionState();
+      if (!hasAccess) return;
+      await fetchCurrentLibraryRow();
+      await Promise.all([
+        loadIdentityPanel(),
+        loadCommunicationsPanel(),
+        loadWorkspaceAndPolicies(),
+        loadGovernancePanel(),
+        loadTasksPanel()
+      ]);
+    }
+
+    $('btnRefreshIdentity')?.addEventListener('click', loadIdentityPanel);
+    $('btnRefreshComms')?.addEventListener('click', loadCommunicationsPanel);
+    $('btnRefreshRegimento')?.addEventListener('click', loadWorkspaceAndPolicies);
+    $('btnRefreshDocuments')?.addEventListener('click', loadGovernancePanel);
+    $('btnRefreshTasks')?.addEventListener('click', loadTasksPanel);
+
+    $('btnSair')?.addEventListener('click', async () => {
+      const btn = $('btnSair');
+      const authMode = String(btn?.dataset?.authMode || 'login').trim().toLowerCase();
+      if (authMode !== 'logout') {
+        window.location.href = String(btn?.dataset?.authHref || CONFIG?.ROUTES?.cadastro || FALLBACK_CONFIG.ROUTES.cadastro);
+        return;
+      }
+      btn.disabled = true;
+      try {
+        await supabase.auth.signOut();
+      } catch (_e) {
+      } finally {
+        window.location.href = String(btn?.dataset?.authHref || CONFIG?.ROUTES?.cadastro || FALLBACK_CONFIG.ROUTES.cadastro);
+      }
+    });
+
+    setupTabs();
+    await refreshAllInstitutionalPanels();
+
+    supabase.auth.onAuthStateChange((_event, newSession) => {
+      session = newSession || null;
+      updateTopbarAuthButton(!!session?.user?.id);
+    });
+  </script>
+</body>
+</html>
