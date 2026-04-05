@@ -96,6 +96,8 @@
     .state-box{border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:14px;background:rgba(255,255,255,.03)}
     .state-box strong{display:block;font-size:1rem;margin-bottom:6px}
     .state-box .state-note{margin-top:8px;color:var(--muted);font-size:.9rem;line-height:1.4}
+    .state-steps{margin:10px 0 0 18px;padding:0;display:flex;flex-direction:column;gap:6px}
+    .state-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
     .hidden{display:none !important}
     @media (max-width:980px){
       .row,.row3,.kv-grid,.editor-grid,.editor-grid-3{grid-template-columns:1fr}
@@ -256,10 +258,15 @@
                 </div>
               </div>
               <div id="regimeStateBox" class="state-box">Carregando…</div>
+              <div id="regimeActionBox" class="state-box" style="margin-top:12px">Carregando…</div>
             </div>
             <div class="card">
               <div class="section-head">
                 <div><h3>Edição mínima</h3><div class="mini">Aqui dá para criar, alterar, colocar em uso e excluir, sem mexer no restante da página.</div></div>
+              </div>
+              <div class="muted-box" style="margin-bottom:12px">
+                <strong style="display:block;margin-bottom:6px">Ordem mais simples para preencher</strong>
+                <div class="inline-note">1. Registrar ou revisar o texto da biblioteca. 2. Criar um conjunto de regras. 3. Criar pelo menos uma regra detalhada. 4. Colocar o conjunto em uso.</div>
               </div>
               <div class="editor-shell">
                 <div class="subcard">
@@ -654,8 +661,47 @@
       if (row?.regulation_document_id) return 'Ligado a um texto da biblioteca';
       return 'Provisório / sem texto ligado';
     }
+    function focusEditorField(inputId) {
+      const input = $(inputId);
+      if (!input) return;
+      input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      try { input.focus({ preventScroll: true }); } catch (_e) { input.focus(); }
+    }
+
+    function pickSuggestedPolicySet() {
+      return currentPolicySets.find((row) => row?.is_active !== true && String(row?.status || '').trim() !== 'archived') || currentPolicySets[0] || null;
+    }
+
+    function handleRegimeAssistAction(action) {
+      if (action === 'documento') {
+        resetRegulationDocForm();
+        focusEditorField('regulationDocVersion');
+        return;
+      }
+      if (action === 'conjunto') {
+        resetPolicySetForm();
+        const activeDoc = currentRegulationDocs.find((row) => row?.is_active === true) || null;
+        if (activeDoc?.id) $('policySetRegulationDocumentId').value = String(activeDoc.id);
+        focusEditorField('policySetLabel');
+        return;
+      }
+      if (action === 'regra') {
+        resetPolicyRuleForm();
+        focusEditorField('policyRuleLabel');
+        return;
+      }
+      if (action === 'ativar-conjunto') {
+        const row = pickSuggestedPolicySet();
+        if (row) {
+          loadPolicySetIntoForm(row);
+          focusEditorField('btnActivatePolicySet');
+        }
+      }
+    }
+
     function renderRegimeState(){
       const box = $('regimeStateBox');
+      const actionBox = $('regimeActionBox');
       if (!box) return;
       const activeDoc = currentRegulationDocs.find((row) => row?.is_active === true) || null;
       const activeSet = currentPolicySets.find((row) => row?.is_active === true) || currentPolicySets.find((row) => String(row?.status || '').trim() === 'active') || null;
@@ -665,6 +711,18 @@
       let title = 'Biblioteca sem regras locais definidas';
       let text = 'Nenhum texto em uso e nenhum conjunto de regras em uso foi encontrado.';
       let note = 'Enquanto isso, o backend precisa resolver regras provisórias padrão para não bloquear conta, index, painel e livro.';
+      let nextTitle = 'Próximo passo sugerido';
+      let steps = [
+        'Registra primeiro o texto principal da biblioteca.',
+        'Cria um conjunto de regras para empréstimo, reserva e consulta.',
+        'Adiciona pelo menos uma regra detalhada.',
+        'Coloca o conjunto em uso.'
+      ];
+      let actions = [
+        { label: 'Novo texto', action: 'documento', variant: 'soft' },
+        { label: 'Novo conjunto', action: 'conjunto', variant: 'soft' },
+        { label: 'Nova regra', action: 'regra', variant: 'soft' }
+      ];
 
       if (activeSet && linkedDoc) {
         const kind = friendlyDocumentKind(linkedDoc?.doc_kind).toLowerCase();
@@ -672,25 +730,71 @@
         title = linkedDoc?.doc_kind === 'regimento' ? 'Regras do regimento em uso' : 'Regras ligadas a um texto da biblioteca em uso';
         text = `O conjunto “${firstFilledValue(activeSet?.label, activeSet?.id, '—')}” está em uso e está ligado ao ${kind}${linkedDoc?.version_label ? `, versão ${linkedDoc.version_label}` : ''}.`;
         note = 'Esta é a situação esperada quando as regras aplicadas no sistema acompanham o texto público da biblioteca.';
+        nextTitle = 'O que revisar quando houver mudança';
+        steps = [
+          'Se o texto público mudar, revisa o conjunto em uso.',
+          'Confere se as regras detalhadas continuam batendo com o texto.',
+          'Salva os ajustes antes de trocar o conjunto em uso.'
+        ];
+        actions = [
+          { label: 'Editar conjunto em uso', action: 'ativar-conjunto', variant: '' },
+          { label: 'Nova regra', action: 'regra', variant: 'soft' }
+        ];
       } else if (activeSet && !linkedDoc) {
         tone = 'warn';
         title = 'Regras provisórias em uso';
         text = `O conjunto “${firstFilledValue(activeSet?.label, activeSet?.id, '—')}” está em uso, mas ainda não está ligado a nenhum texto da biblioteca.`;
         note = 'Isso permite que o sistema continue funcionando enquanto a biblioteca ainda não definiu ou ainda não ligou seu regimento local.';
+        steps = [
+          'Registra ou revisa o texto principal da biblioteca.',
+          'Liga o conjunto em uso a esse texto.',
+          'Confere se as regras detalhadas batem com o texto público.'
+        ];
+        actions = [
+          { label: 'Novo texto', action: 'documento', variant: 'soft' },
+          { label: 'Editar conjunto em uso', action: 'ativar-conjunto', variant: '' }
+        ];
       } else if (!activeSet && activeDoc) {
         tone = 'warn';
         title = 'Texto em uso, mas regras ainda não ativadas';
         text = `O texto “${friendlyDocumentKind(activeDoc?.doc_kind)}”${activeDoc?.version_label ? `, versão ${activeDoc.version_label}` : ''} está em uso, mas nenhum conjunto de regras foi colocado em uso.`;
         note = 'A biblioteca precisa colocar um conjunto em uso para que o sistema saiba quais prazos, reservas e prorrogações aplicar.';
+        steps = [
+          'Cria um conjunto ligado a esse texto, se ainda não existir.',
+          'Adiciona pelo menos uma regra detalhada.',
+          'Coloca o conjunto em uso.'
+        ];
+        actions = [
+          { label: 'Novo conjunto', action: 'conjunto', variant: '' },
+          { label: 'Nova regra', action: 'regra', variant: 'soft' },
+          { label: 'Colocar conjunto em uso', action: 'ativar-conjunto', variant: 'soft' }
+        ];
       } else if (!activeSet && currentPolicySets.length) {
         tone = 'warn';
         title = 'Há conjuntos cadastrados, mas nenhum em uso';
         text = 'A biblioteca já tem conjuntos de regras cadastrados, porém nenhum deles foi colocado em uso.';
         note = 'Sem um conjunto em uso, a biblioteca depende apenas das regras provisórias padrão resolvidas no backend.';
+        steps = [
+          'Escolhe o conjunto que deve valer agora.',
+          'Confere se ele tem pelo menos uma regra detalhada.',
+          'Coloca o conjunto em uso.'
+        ];
+        actions = [
+          { label: 'Escolher conjunto', action: 'ativar-conjunto', variant: '' },
+          { label: 'Nova regra', action: 'regra', variant: 'soft' }
+        ];
       }
 
       box.innerHTML = `<strong>${esc(title)}</strong><div>${esc(text)}</div><div class="state-note">${esc(note)}</div>`;
       box.className = `state-box ${tone}`;
+      if (actionBox) {
+        actionBox.className = `state-box ${tone}`;
+        actionBox.innerHTML = `
+          <strong>${esc(nextTitle)}</strong>
+          <ol class="state-steps">${steps.map((step) => `<li>${esc(step)}</li>`).join('')}</ol>
+          <div class="state-actions">${actions.map((item) => `<button class="btn mini ${item.variant || ''}" type="button" data-regime-assist="${esc(item.action)}">${esc(item.label)}</button>`).join('')}</div>
+        `;
+      }
     }
 
     function activateTab(nextTab){
@@ -1624,6 +1728,11 @@
     $('btnDeletePolicyRule')?.addEventListener('click', () => deletePolicyRule());
 
     $('tab-regimento')?.addEventListener('click', async (event) => {
+      const assistBtn = event.target.closest('[data-regime-assist]');
+      if (assistBtn) {
+        handleRegimeAssistAction(String(assistBtn.dataset.regimeAssist || ''));
+        return;
+      }
       const regDocEditBtn = event.target.closest('[data-reg-doc-edit]');
       if (regDocEditBtn) {
         const row = currentRegulationDocs.find((item) => String(item?.id || '') === String(regDocEditBtn.dataset.regDocEdit || ''));
