@@ -660,6 +660,24 @@
       lines.push(`Consulta no local: ${row?.consultation_allowed === false ? 'não' : 'sim'}`);
       return lines;
     }
+    function friendlyRuleObservation(row){
+      const lines = [];
+      const publicNote = firstFilledValue(row?.public_note);
+      const internalNote = firstFilledValue(row?.internal_note);
+      if (publicNote) lines.push(`Mensagem ao público: ${publicNote}`);
+      if (internalNote) lines.push(`Observação interna: ${internalNote}`);
+      if (lines.length) return lines;
+      if (row?.consultation_only === true) {
+        return ['Sem observação escrita.', 'Esta regra já indica consulta somente no local.'];
+      }
+      if (row?.loan_allowed === false) {
+        return ['Sem observação escrita.', 'Esta regra já indica que não há empréstimo.'];
+      }
+      if (row?.reservation_allowed === false) {
+        return ['Sem observação escrita.', 'Esta regra já indica que não há reserva.'];
+      }
+      return ['Sem observação escrita.', 'O sentido desta regra aparece nos campos ao lado.'];
+    }
     function normalizeScopeInputValue(value){
       const raw = String(value || '').trim().toLowerCase();
       if (!raw || raw === 'qualquer') return 'any';
@@ -1532,13 +1550,13 @@
       }
       tbody.innerHTML = normalizedRows.map((row) => {
         const limitsLines = friendlyPolicyRuleLimits(row);
-        const noteText = [firstFilledValue(row?.public_note), firstFilledValue(row?.internal_note)].filter(Boolean).join(' · ') || '—';
+        const observationLines = friendlyRuleObservation(row);
         return `<tr>
           <td>${esc(firstFilledValue(row?.rule_label, row?.policy_label, row?.id, '—'))}${row?.is_active ? '<div class="inline-note">Regra em uso</div>' : ''}</td>
           <td>${esc(friendlyPolicyRuleScope(row))}</td>
           <td>${esc(firstFilledValue(row?.priority, '—'))}</td>
           <td>${limitsLines.map((line) => `<div>${esc(line)}</div>`).join('')}</td>
-          <td>${esc(noteText)}</td>
+          <td>${observationLines.map((line) => `<div>${esc(line)}</div>`).join('')}</td>
           <td><div class="editor-actions"><button class="btn mini soft" type="button" data-policy-rule-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini danger" type="button" data-policy-rule-delete="${esc(String(row?.id || ''))}">Excluir</button></div></td>
         </tr>`;
       }).join('');
