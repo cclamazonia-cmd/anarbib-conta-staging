@@ -871,7 +871,7 @@ button[type="submit"] *,
         </button>
         <button class="tab-btn" type="button" data-tab="curso" role="tab" aria-selected="false" aria-controls="tab-curso">
           Empréstimos em curso
-          <span class="hint">Visualização por lote e por livro, com prazos previstos e situação detalhada. Cada empréstimo só pode ser renovado uma única vez.</span>
+          <span class="hint">Visualização por lote e por livro, com prazos previstos e situação detalhada. As prorrogações seguem a política ativa da biblioteca.</span>
         </button>
         <button class="tab-btn" type="button" data-tab="historico" role="tab" aria-selected="false" aria-controls="tab-historico">
           Histórico
@@ -2808,10 +2808,8 @@ button[type="submit"] *,
       if (userIsRestricted) {
         return `<button type="button" class="secondary mini-btn" disabled>Renovação bloqueada</button>`;
       }
-      if (alreadyRenewed) {
-        return `<button type="button" class="secondary mini-btn" disabled>Renovado</button>`;
-      }
-      return `<button type="button" class="secondary mini-btn" data-renew-v2="${emprestimoId}">Renovar (uma única vez)</button>`;
+      const btnLabel = alreadyRenewed ? "Verificar prorrogação" : "Solicitar prorrogação";
+      return `<button type="button" class="secondary mini-btn" data-renew-v2="${emprestimoId}">${btnLabel}</button>`;
     }
 
     function reservationCancelOnlyAction(row) {
@@ -3739,7 +3737,7 @@ function reservationPickupReplyActions(row) {
               </div>
             </article>`;
         }).join("");
-        sections.push(`<section class="mobile-section"><div class="panel-head"><h3 style="margin:0 0 6px;">Empréstimos por lote</h3><p class="small" style="margin:0;">Visualização por lote e por livro, com prazos previstos e situação detalhada. Cada empréstimo só pode ser renovado uma única vez.</p></div><div class="desktop-only"><div class="table-scroll"><table class="list-table"><thead><tr><th>Lote</th><th>Livro</th><th>Título</th><th>Referência</th><th>Rótulo</th><th>Saída em</th><th>Prazo</th><th>Situação</th><th>Ação</th></tr></thead><tbody>${rows}</tbody></table></div></div><div class="mobile-only mobile-cards">${mobileCards}</div></section>`);
+        sections.push(`<section class="mobile-section"><div class="panel-head"><h3 style="margin:0 0 6px;">Empréstimos por lote</h3><p class="small" style="margin:0;">Visualização por lote e por livro, com prazos previstos e situação detalhada. As prorrogações seguem a política ativa da biblioteca.</p></div><div class="desktop-only"><div class="table-scroll"><table class="list-table"><thead><tr><th>Lote</th><th>Livro</th><th>Título</th><th>Referência</th><th>Rótulo</th><th>Saída em</th><th>Prazo</th><th>Situação</th><th>Ação</th></tr></thead><tbody>${rows}</tbody></table></div></div><div class="mobile-only mobile-cards">${mobileCards}</div></section>`);
       }
 
       // fallback legacy removido
@@ -3877,7 +3875,7 @@ function reservationPickupReplyActions(row) {
         btn.addEventListener("click", async () => {
           const loanId = Number(btn.getAttribute("data-renew-v2"));
           if (!loanId) return;
-          const proceed = window.confirm("Atenção: cada empréstimo só pode ser renovado uma única vez. Deseja continuar?");
+          const proceed = window.confirm("A prorrogação seguirá as regras ativas da biblioteca. Deseja continuar?");
           if (!proceed) return;
           btn.disabled = true;
           setLoanMsgText("Processando renovação...");
