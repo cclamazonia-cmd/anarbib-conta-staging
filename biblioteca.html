@@ -78,8 +78,24 @@
     pre.json-box{margin:0;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.84rem;line-height:1.45}
     details{border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:12px;background:rgba(255,255,255,.03)}
     details summary{cursor:pointer;font-weight:800}
+    .editor-shell{display:grid;grid-template-columns:1fr;gap:12px}
+    .editor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .editor-grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .field{display:flex;flex-direction:column;gap:8px}
+    .field label{font-size:.82rem;color:#ffe3e7;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+    .input,.select,.textarea{width:100%;border:1px solid rgba(255,255,255,.16);background:rgba(10,10,10,.88);color:#fff;border-radius:14px;padding:12px 13px;font-size:.94rem;outline:none;box-shadow:var(--shadow)}
+    .textarea{min-height:108px;resize:vertical;font-family:inherit}
+    .check-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+    .check-item{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03)}
+    .check-item input{margin:0}
+    .editor-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .subcard{border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:14px;background:rgba(255,255,255,.03)}
+    .inline-note{font-size:.84rem;color:var(--muted);line-height:1.35}
+    .btn.danger{border-color:rgba(251,113,133,.42);background:rgba(90,16,28,.72)}
+    .btn.soft{background:rgba(255,255,255,.06)}
+    .hidden{display:none !important}
     @media (max-width:980px){
-      .row,.row3,.kv-grid{grid-template-columns:1fr}
+      .row,.row3,.kv-grid,.editor-grid,.editor-grid-3{grid-template-columns:1fr}
       .tabs-layout{flex-direction:column}
       .tabs-nav{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px;overflow:visible;padding-bottom:0}
       .tab-btn{width:100%;min-height:56px;white-space:normal;text-align:left;align-items:flex-start}
@@ -223,18 +239,117 @@
               <div class="section-head">
                 <div>
                   <h2>Regimento e regras de circulação</h2>
-                  <div class="mini">Primeiro consumo front das superfícies canônicas previstas para esta página.</div>
+                  <div class="mini">Leitura e edição mínima dos documentos institucionais, policy sets e regras atômicas.</div>
                 </div>
                 <div class="actions"><button class="btn mini" id="btnRefreshRegimento" type="button">Atualizar</button></div>
               </div>
               <div class="status" id="regimentoStatus"></div>
             </div>
             <div class="card">
+              <div class="section-head">
+                <div><h3>Edição mínima</h3><div class="mini">Patch local da fase 2: criar, editar, ativar e excluir sem mexer no restante da página.</div></div>
+              </div>
+              <div class="editor-shell">
+                <div class="subcard">
+                  <div class="section-head">
+                    <div><h3>Documento institucional</h3><div class="mini">Regimento, anexo de circulação ou outro documento institucional.</div></div>
+                    <div class="editor-actions">
+                      <button class="btn mini soft" id="btnNewRegulationDoc" type="button">Novo documento</button>
+                      <button class="btn mini" id="btnCancelRegulationDoc" type="button">Limpar</button>
+                    </div>
+                  </div>
+                  <div class="editor-grid">
+                    <input id="regulationDocId" type="hidden">
+                    <div class="field"><label for="regulationDocKind">Tipo</label><select id="regulationDocKind" class="select"><option value="regimento">Regimento</option><option value="circulation_appendix">Anexo de circulação</option><option value="other">Outro</option></select></div>
+                    <div class="field"><label for="regulationDocVersion">Versão</label><input id="regulationDocVersion" class="input" type="text" placeholder="Ex.: 2026.1"></div>
+                    <div class="field"><label for="regulationDocPublicationStatus">Situação</label><select id="regulationDocPublicationStatus" class="select"><option value="draft_only">Rascunho</option><option value="published">Publicado</option><option value="archived">Arquivado</option></select></div>
+                    <div class="field"><label for="regulationDocBucket">Bucket</label><input id="regulationDocBucket" class="input" type="text" placeholder="library-regimentos"></div>
+                    <div class="field"><label for="regulationDocDraftPath">Caminho rascunho</label><input id="regulationDocDraftPath" class="input" type="text" placeholder="pasta/arquivo.pdf"></div>
+                    <div class="field"><label for="regulationDocPublicPath">Caminho público</label><input id="regulationDocPublicPath" class="input" type="text" placeholder="publico/arquivo.pdf"></div>
+                    <div class="field"><label for="regulationDocSourceNote">Nota de origem</label><input id="regulationDocSourceNote" class="input" type="text" placeholder="Observação curta"></div>
+                    <div class="field" style="grid-column:1 / -1"><label for="regulationDocMetadata">Metadata (JSON)</label><textarea id="regulationDocMetadata" class="textarea" placeholder='{}'></textarea></div>
+                  </div>
+                  <div class="editor-actions" style="margin-top:12px">
+                    <button class="btn mini primary" id="btnSaveRegulationDoc" type="button">Salvar documento</button>
+                    <button class="btn mini" id="btnActivateRegulationDoc" type="button" disabled>Ativar / desativar</button>
+                  </div>
+                  <div class="status" id="regulationDocEditorStatus"></div>
+                </div>
+                <div class="subcard">
+                  <div class="section-head">
+                    <div><h3>Policy set</h3><div class="mini">Conjunto de regras ligado opcionalmente a um documento institucional.</div></div>
+                    <div class="editor-actions">
+                      <button class="btn mini soft" id="btnNewPolicySet" type="button">Novo conjunto</button>
+                      <button class="btn mini" id="btnCancelPolicySet" type="button">Limpar</button>
+                    </div>
+                  </div>
+                  <div class="editor-grid">
+                    <input id="policySetId" type="hidden">
+                    <div class="field"><label for="policySetLabel">Título</label><input id="policySetLabel" class="input" type="text" placeholder="Nome do conjunto"></div>
+                    <div class="field"><label for="policySetStatus">Situação</label><select id="policySetStatus" class="select"><option value="draft">Rascunho</option><option value="active">Ativo</option><option value="archived">Arquivado</option></select></div>
+                    <div class="field"><label for="policySetRegulationDocumentId">Documento ligado</label><select id="policySetRegulationDocumentId" class="select"><option value="">Sem vínculo</option></select></div>
+                    <div class="field"><label for="policySetConfigVersion">Config version</label><input id="policySetConfigVersion" class="input" type="number" min="1" step="1" value="1"></div>
+                    <div class="field"><label for="policySetEffectiveFrom">Válido desde</label><input id="policySetEffectiveFrom" class="input" type="date"></div>
+                    <div class="field"><label for="policySetEffectiveUntil">Válido até</label><input id="policySetEffectiveUntil" class="input" type="date"></div>
+                    <div class="field"><label for="policySetActivationNote">Nota de ativação</label><input id="policySetActivationNote" class="input" type="text" placeholder="Observação curta"></div>
+                    <div class="field"><label for="policySetScopeNote">Nota de escopo</label><input id="policySetScopeNote" class="input" type="text" placeholder="Escopo resumido"></div>
+                    <div class="field" style="grid-column:1 / -1"><label for="policySetMetadata">Metadata (JSON)</label><textarea id="policySetMetadata" class="textarea" placeholder='{}'></textarea></div>
+                  </div>
+                  <div class="editor-actions" style="margin-top:12px">
+                    <button class="btn mini primary" id="btnSavePolicySet" type="button">Salvar conjunto</button>
+                    <button class="btn mini" id="btnActivatePolicySet" type="button" disabled>Ativar conjunto</button>
+                  </div>
+                  <div class="status" id="policySetEditorStatus"></div>
+                </div>
+                <div class="subcard">
+                  <div class="section-head">
+                    <div><h3>Regra atômica</h3><div class="mini">Edição mínima das regras da política ativa ou de outro conjunto selecionado.</div></div>
+                    <div class="editor-actions">
+                      <button class="btn mini soft" id="btnNewPolicyRule" type="button">Nova regra</button>
+                      <button class="btn mini" id="btnCancelPolicyRule" type="button">Limpar</button>
+                    </div>
+                  </div>
+                  <div class="editor-grid-3">
+                    <input id="policyRuleId" type="hidden">
+                    <div class="field"><label for="policyRulePolicySetId">Policy set</label><select id="policyRulePolicySetId" class="select"><option value="">Selecione</option></select></div>
+                    <div class="field"><label for="policyRuleLabel">Rótulo</label><input id="policyRuleLabel" class="input" type="text" placeholder="Ex.: 1 item / 21 dias"></div>
+                    <div class="field"><label for="policyRulePriority">Prioridade</label><input id="policyRulePriority" class="input" type="number" min="0" step="1" value="100"></div>
+                    <div class="field"><label for="policyRuleCirculationMode">Circulação</label><select id="policyRuleCirculationMode" class="select"><option value="loan">Empréstimo</option><option value="consultation">Consulta</option><option value="mixed">Misto</option></select></div>
+                    <div class="field"><label for="policyRuleMaterialScope">Material scope</label><input id="policyRuleMaterialScope" class="input" type="text" value="any"></div>
+                    <div class="field"><label for="policyRuleReaderScope">Reader scope</label><input id="policyRuleReaderScope" class="input" type="text" value="any"></div>
+                    <div class="field"><label for="policyRuleQuantityMin">Quantidade mín.</label><input id="policyRuleQuantityMin" class="input" type="number" min="1" step="1" value="1"></div>
+                    <div class="field"><label for="policyRuleQuantityMax">Quantidade máx.</label><input id="policyRuleQuantityMax" class="input" type="number" min="1" step="1"></div>
+                    <div class="field"><label for="policyRuleLoanDays">Dias de empréstimo</label><input id="policyRuleLoanDays" class="input" type="number" min="0" step="1"></div>
+                    <div class="field"><label for="policyRuleRenewalMaxCount">Máx. prorrogações</label><input id="policyRuleRenewalMaxCount" class="input" type="number" min="0" step="1"></div>
+                    <div class="field"><label for="policyRuleRenewalDays">Dias por prorrogação</label><input id="policyRuleRenewalDays" class="input" type="number" min="0" step="1"></div>
+                    <div class="field"><label for="policyRulePublicNote">Nota pública</label><input id="policyRulePublicNote" class="input" type="text" placeholder="Mensagem curta para leitura pública"></div>
+                  </div>
+                  <div class="check-row" style="margin-top:12px">
+                    <label class="check-item"><input id="policyRuleIsActive" type="checkbox" checked> Regra ativa</label>
+                    <label class="check-item"><input id="policyRuleLoanAllowed" type="checkbox" checked> Empréstimo permitido</label>
+                    <label class="check-item"><input id="policyRuleReservationAllowed" type="checkbox" checked> Reserva permitida</label>
+                    <label class="check-item"><input id="policyRuleConsultationAllowed" type="checkbox" checked> Consulta permitida</label>
+                    <label class="check-item"><input id="policyRuleConsultationOnly" type="checkbox"> Somente consulta</label>
+                    <label class="check-item"><input id="policyRuleRenewable" type="checkbox" checked> Renovável</label>
+                  </div>
+                  <div class="editor-grid" style="margin-top:12px">
+                    <div class="field"><label for="policyRuleInternalNote">Nota interna</label><textarea id="policyRuleInternalNote" class="textarea" placeholder="Observação interna"></textarea></div>
+                    <div class="field"><label for="policyRuleMetadata">Metadata (JSON)</label><textarea id="policyRuleMetadata" class="textarea" placeholder='{}'></textarea></div>
+                  </div>
+                  <div class="editor-actions" style="margin-top:12px">
+                    <button class="btn mini primary" id="btnSavePolicyRule" type="button">Salvar regra</button>
+                    <button class="btn mini danger" id="btnDeletePolicyRule" type="button" disabled>Excluir regra</button>
+                  </div>
+                  <div class="status" id="policyRuleEditorStatus"></div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
               <div class="section-head"><div><h3>Documentos de regimento</h3><div class="mini">Superfície dedicada aos documentos institucionais.</div></div></div>
               <div class="tableWrap">
                 <table>
-                  <thead><tr><th>Documento</th><th>Situação</th><th>Versão</th><th>Atualizado</th><th>Ligação</th></tr></thead>
-                  <tbody id="tbodyRegulationDocs"><tr><td colspan="5">Carregando…</td></tr></tbody>
+                  <thead><tr><th>Documento</th><th>Situação</th><th>Versão</th><th>Atualizado</th><th>Ligação</th><th>Ações</th></tr></thead>
+                  <tbody id="tbodyRegulationDocs"><tr><td colspan="6">Carregando…</td></tr></tbody>
                 </table>
               </div>
             </div>
@@ -242,8 +357,8 @@
               <div class="section-head"><div><h3>Policy sets de circulação</h3><div class="mini">Leitura dos conjuntos de políticas ativos e disponíveis.</div></div></div>
               <div class="tableWrap">
                 <table>
-                  <thead><tr><th>Policy set</th><th>Situação</th><th>Escopo</th><th>Ativo</th><th>Resumo</th></tr></thead>
-                  <tbody id="tbodyPolicySets"><tr><td colspan="5">Carregando…</td></tr></tbody>
+                  <thead><tr><th>Policy set</th><th>Situação</th><th>Escopo</th><th>Ativo</th><th>Resumo</th><th>Ações</th></tr></thead>
+                  <tbody id="tbodyPolicySets"><tr><td colspan="6">Carregando…</td></tr></tbody>
                 </table>
               </div>
             </div>
@@ -251,8 +366,8 @@
               <div class="section-head"><div><h3>Regras atômicas</h3><div class="mini">Leitura das regras individuais de circulação.</div></div></div>
               <div class="tableWrap">
                 <table>
-                  <thead><tr><th>Regra</th><th>Scope</th><th>Prioridade</th><th>Valor</th><th>Observação</th></tr></thead>
-                  <tbody id="tbodyPolicyRules"><tr><td colspan="5">Carregando…</td></tr></tbody>
+                  <thead><tr><th>Regra</th><th>Scope</th><th>Prioridade</th><th>Valor</th><th>Observação</th><th>Ações</th></tr></thead>
+                  <tbody id="tbodyPolicyRules"><tr><td colspan="6">Carregando…</td></tr></tbody>
                 </table>
               </div>
             </div>
@@ -379,6 +494,9 @@
     let currentCommunicationsContext = null;
     let currentWorkspace = null;
     let currentGovernance = null;
+    let currentRegulationDocs = [];
+    let currentPolicySets = [];
+    let currentPolicyRules = [];
 
     function esc(value){
       return String(value ?? '').replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
@@ -800,6 +918,383 @@
         return `<td>${esc(displayValue(raw))}</td>`;
       }).join('')}</tr>`).join('');
     }
+    function parseJsonTextareaValue(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('O campo JSON precisa conter um objeto.');
+      }
+      return parsed;
+    }
+
+    function toPrettyJson(value) {
+      const obj = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+      return JSON.stringify(obj, null, 2);
+    }
+
+    function toInputDateValue(value) {
+      if (!value) return '';
+      const s = String(value).trim();
+      return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : '';
+    }
+
+    function toInputDateTimeValue(value) {
+      if (!value) return '';
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return '';
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function boolValue(inputId) {
+      return !!($(inputId)?.checked);
+    }
+
+    function fillSelectOptions(selectId, rows, placeholder, mapper) {
+      const select = $(selectId);
+      if (!select) return;
+      const options = [`<option value="">${esc(placeholder)}</option>`].concat(asArray(rows).map((row) => {
+        const entry = mapper(row);
+        return `<option value="${esc(entry.value)}">${esc(entry.label)}</option>`;
+      }));
+      select.innerHTML = options.join('');
+    }
+
+    function syncRegimentoEditorOptions() {
+      fillSelectOptions('policySetRegulationDocumentId', currentRegulationDocs, 'Sem vínculo', (row) => ({
+        value: String(row?.id || ''),
+        label: `${firstFilledValue(row?.version_label, row?.doc_kind, row?.id)}${row?.is_active ? ' · ativo' : ''}`
+      }));
+      fillSelectOptions('policyRulePolicySetId', currentPolicySets, 'Selecione', (row) => ({
+        value: String(row?.id || ''),
+        label: `${firstFilledValue(row?.label, row?.id)}${row?.is_active ? ' · ativo' : ''}`
+      }));
+    }
+
+    function resetRegulationDocForm() {
+      $('regulationDocId').value = '';
+      $('regulationDocKind').value = 'regimento';
+      $('regulationDocVersion').value = '';
+      $('regulationDocPublicationStatus').value = 'draft_only';
+      $('regulationDocBucket').value = 'library-regimentos';
+      $('regulationDocDraftPath').value = '';
+      $('regulationDocPublicPath').value = '';
+      $('regulationDocSourceNote').value = '';
+      $('regulationDocMetadata').value = toPrettyJson({});
+      $('btnActivateRegulationDoc').disabled = true;
+      $('btnActivateRegulationDoc').textContent = 'Ativar / desativar';
+      setStatus('regulationDocEditorStatus', '');
+    }
+
+    function loadRegulationDocIntoForm(row) {
+      $('regulationDocId').value = row?.id ? String(row.id) : '';
+      $('regulationDocKind').value = firstFilledValue(row?.doc_kind, 'regimento');
+      $('regulationDocVersion').value = firstFilledValue(row?.version_label);
+      $('regulationDocPublicationStatus').value = firstFilledValue(row?.publication_status, 'draft_only');
+      $('regulationDocBucket').value = firstFilledValue(row?.storage_bucket, 'library-regimentos');
+      $('regulationDocDraftPath').value = firstFilledValue(row?.storage_path_draft);
+      $('regulationDocPublicPath').value = firstFilledValue(row?.storage_path_public);
+      $('regulationDocSourceNote').value = firstFilledValue(row?.source_note);
+      $('regulationDocMetadata').value = toPrettyJson(row?.metadata);
+      $('btnActivateRegulationDoc').disabled = !row?.id;
+      $('btnActivateRegulationDoc').textContent = row?.is_active ? 'Desativar documento' : 'Ativar documento';
+      setStatus('regulationDocEditorStatus', row?.id ? `Documento ${row.id} carregado para edição.` : '', row?.id ? 'info' : '');
+    }
+
+    function collectRegulationDocPayload() {
+      const payload = {
+        doc_kind: $('regulationDocKind').value,
+        version_label: String($('regulationDocVersion').value || '').trim(),
+        publication_status: $('regulationDocPublicationStatus').value,
+        storage_bucket: String($('regulationDocBucket').value || '').trim() || 'library-regimentos',
+        storage_path_draft: String($('regulationDocDraftPath').value || '').trim() || null,
+        storage_path_public: String($('regulationDocPublicPath').value || '').trim() || null,
+        source_note: String($('regulationDocSourceNote').value || '').trim() || null,
+        metadata: parseJsonTextareaValue($('regulationDocMetadata').value)
+      };
+      const id = String($('regulationDocId').value || '').trim();
+      if (id) payload.id = id;
+      if (!payload.version_label) throw new Error('Versão obrigatória para o documento.');
+      return payload;
+    }
+
+    function resetPolicySetForm() {
+      $('policySetId').value = '';
+      $('policySetLabel').value = '';
+      $('policySetStatus').value = 'draft';
+      $('policySetRegulationDocumentId').value = '';
+      $('policySetConfigVersion').value = '1';
+      $('policySetEffectiveFrom').value = '';
+      $('policySetEffectiveUntil').value = '';
+      $('policySetActivationNote').value = '';
+      $('policySetScopeNote').value = '';
+      $('policySetMetadata').value = toPrettyJson({});
+      $('btnActivatePolicySet').disabled = true;
+      setStatus('policySetEditorStatus', '');
+    }
+
+    function loadPolicySetIntoForm(row) {
+      $('policySetId').value = row?.id ? String(row.id) : '';
+      $('policySetLabel').value = firstFilledValue(row?.label);
+      $('policySetStatus').value = firstFilledValue(row?.status, 'draft');
+      $('policySetRegulationDocumentId').value = row?.regulation_document_id != null ? String(row.regulation_document_id) : '';
+      $('policySetConfigVersion').value = String(firstFilledValue(row?.config_version, 1));
+      $('policySetEffectiveFrom').value = toInputDateValue(row?.effective_from);
+      $('policySetEffectiveUntil').value = toInputDateValue(row?.effective_until);
+      $('policySetActivationNote').value = firstFilledValue(row?.activation_note);
+      $('policySetScopeNote').value = firstFilledValue(row?.scope_note);
+      $('policySetMetadata').value = toPrettyJson(row?.metadata);
+      $('btnActivatePolicySet').disabled = !row?.id;
+      setStatus('policySetEditorStatus', row?.id ? `Policy set ${row.id} carregado para edição.` : '', row?.id ? 'info' : '');
+    }
+
+    function collectPolicySetPayload() {
+      const payload = {
+        label: String($('policySetLabel').value || '').trim() || 'Novo conjunto de regras',
+        status: $('policySetStatus').value,
+        regulation_document_id: String($('policySetRegulationDocumentId').value || '').trim() || null,
+        config_version: Math.max(Number($('policySetConfigVersion').value || 1) || 1, 1),
+        effective_from: String($('policySetEffectiveFrom').value || '').trim() || null,
+        effective_until: String($('policySetEffectiveUntil').value || '').trim() || null,
+        activation_note: String($('policySetActivationNote').value || '').trim() || null,
+        scope_note: String($('policySetScopeNote').value || '').trim() || null,
+        metadata: parseJsonTextareaValue($('policySetMetadata').value)
+      };
+      const id = String($('policySetId').value || '').trim();
+      if (id) payload.id = id;
+      return payload;
+    }
+
+    function resetPolicyRuleForm() {
+      $('policyRuleId').value = '';
+      $('policyRulePolicySetId').value = currentPolicySets.find((row) => row?.is_active)?.id ? String(currentPolicySets.find((row) => row?.is_active)?.id) : '';
+      $('policyRuleLabel').value = '';
+      $('policyRulePriority').value = '100';
+      $('policyRuleCirculationMode').value = 'loan';
+      $('policyRuleMaterialScope').value = 'any';
+      $('policyRuleReaderScope').value = 'any';
+      $('policyRuleQuantityMin').value = '1';
+      $('policyRuleQuantityMax').value = '';
+      $('policyRuleLoanDays').value = '';
+      $('policyRuleRenewalMaxCount').value = '';
+      $('policyRuleRenewalDays').value = '';
+      $('policyRulePublicNote').value = '';
+      $('policyRuleInternalNote').value = '';
+      $('policyRuleMetadata').value = toPrettyJson({});
+      $('policyRuleIsActive').checked = true;
+      $('policyRuleLoanAllowed').checked = true;
+      $('policyRuleReservationAllowed').checked = true;
+      $('policyRuleConsultationAllowed').checked = true;
+      $('policyRuleConsultationOnly').checked = false;
+      $('policyRuleRenewable').checked = true;
+      $('btnDeletePolicyRule').disabled = true;
+      setStatus('policyRuleEditorStatus', '');
+    }
+
+    function loadPolicyRuleIntoForm(row) {
+      $('policyRuleId').value = row?.id ? String(row.id) : '';
+      $('policyRulePolicySetId').value = row?.policy_set_id != null ? String(row.policy_set_id) : '';
+      $('policyRuleLabel').value = firstFilledValue(row?.rule_label);
+      $('policyRulePriority').value = String(firstFilledValue(row?.priority, 100));
+      $('policyRuleCirculationMode').value = firstFilledValue(row?.circulation_mode, 'loan');
+      $('policyRuleMaterialScope').value = firstFilledValue(row?.material_scope, 'any');
+      $('policyRuleReaderScope').value = firstFilledValue(row?.reader_scope, 'any');
+      $('policyRuleQuantityMin').value = String(firstFilledValue(row?.quantity_min, 1));
+      $('policyRuleQuantityMax').value = row?.quantity_max != null ? String(row.quantity_max) : '';
+      $('policyRuleLoanDays').value = row?.loan_days != null ? String(row.loan_days) : '';
+      $('policyRuleRenewalMaxCount').value = row?.renewal_max_count != null ? String(row.renewal_max_count) : '';
+      $('policyRuleRenewalDays').value = row?.renewal_days != null ? String(row.renewal_days) : '';
+      $('policyRulePublicNote').value = firstFilledValue(row?.public_note);
+      $('policyRuleInternalNote').value = firstFilledValue(row?.internal_note);
+      $('policyRuleMetadata').value = toPrettyJson(row?.metadata);
+      $('policyRuleIsActive').checked = row?.is_active !== false;
+      $('policyRuleLoanAllowed').checked = row?.loan_allowed !== false;
+      $('policyRuleReservationAllowed').checked = row?.reservation_allowed !== false;
+      $('policyRuleConsultationAllowed').checked = row?.consultation_allowed !== false;
+      $('policyRuleConsultationOnly').checked = row?.consultation_only === true;
+      $('policyRuleRenewable').checked = row?.renewable !== false;
+      $('btnDeletePolicyRule').disabled = !row?.id;
+      setStatus('policyRuleEditorStatus', row?.id ? `Regra ${row.id} carregada para edição.` : '', row?.id ? 'info' : '');
+    }
+
+    function collectPolicyRulePayload() {
+      const payload = {
+        rule_label: String($('policyRuleLabel').value || '').trim() || 'Nova regra',
+        priority: Math.max(Number($('policyRulePriority').value || 100) || 100, 0),
+        circulation_mode: String($('policyRuleCirculationMode').value || 'loan').trim() || 'loan',
+        material_scope: String($('policyRuleMaterialScope').value || 'any').trim() || 'any',
+        reader_scope: String($('policyRuleReaderScope').value || 'any').trim() || 'any',
+        quantity_min: Math.max(Number($('policyRuleQuantityMin').value || 1) || 1, 1),
+        quantity_max: String($('policyRuleQuantityMax').value || '').trim() || null,
+        loan_days: String($('policyRuleLoanDays').value || '').trim() || null,
+        renewal_max_count: String($('policyRuleRenewalMaxCount').value || '').trim() || null,
+        renewal_days: String($('policyRuleRenewalDays').value || '').trim() || null,
+        public_note: String($('policyRulePublicNote').value || '').trim() || null,
+        internal_note: String($('policyRuleInternalNote').value || '').trim() || null,
+        is_active: boolValue('policyRuleIsActive'),
+        loan_allowed: boolValue('policyRuleLoanAllowed'),
+        reservation_allowed: boolValue('policyRuleReservationAllowed'),
+        consultation_allowed: boolValue('policyRuleConsultationAllowed'),
+        consultation_only: boolValue('policyRuleConsultationOnly'),
+        renewable: boolValue('policyRuleRenewable'),
+        metadata: parseJsonTextareaValue($('policyRuleMetadata').value)
+      };
+      const id = String($('policyRuleId').value || '').trim();
+      if (id) payload.id = id;
+      const policySetId = String($('policyRulePolicySetId').value || '').trim();
+      if (!policySetId) throw new Error('Selecione um policy set para a regra.');
+      return { policySetId, payload };
+    }
+
+    function renderRegulationDocsTable(rows) {
+      const tbody = $('tbodyRegulationDocs');
+      const normalizedRows = asArray(rows).filter((row) => row && typeof row === 'object');
+      if (!tbody) return;
+      if (!normalizedRows.length) {
+        tbody.innerHTML = '<tr><td colspan="6">Nenhum documento de regimento disponível.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = normalizedRows.map((row) => {
+        const link = firstFilledValue(row?.storage_path_public, row?.storage_path_draft, '—');
+        const actionLabel = row?.is_active ? 'Desativar' : 'Ativar';
+        return `<tr>
+          <td>${esc(firstFilledValue(row?.doc_kind, 'regimento'))}</td>
+          <td>${esc(firstFilledValue(row?.publication_status, '—'))}${row?.is_active ? '<div class="inline-note">Documento ativo</div>' : ''}</td>
+          <td>${esc(firstFilledValue(row?.version_label, '—'))}</td>
+          <td>${esc(fmtDateTime(firstFilledValue(row?.updated_at, row?.created_at, '')))}</td>
+          <td>${esc(link)}</td>
+          <td><div class="editor-actions"><button class="btn mini soft" type="button" data-reg-doc-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini" type="button" data-reg-doc-toggle="${esc(String(row?.id || ''))}">${esc(actionLabel)}</button></div></td>
+        </tr>`;
+      }).join('');
+    }
+
+    function renderPolicySetsTable(rows) {
+      const tbody = $('tbodyPolicySets');
+      const normalizedRows = asArray(rows).filter((row) => row && typeof row === 'object');
+      if (!tbody) return;
+      if (!normalizedRows.length) {
+        tbody.innerHTML = '<tr><td colspan="6">Nenhum policy set disponível.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = normalizedRows.map((row) => {
+        const scopeText = [firstFilledValue(row?.regulation_doc_kind), firstFilledValue(row?.regulation_version_label), firstFilledValue(row?.effective_from), firstFilledValue(row?.effective_until)].filter(Boolean).join(' · ') || '—';
+        const resumeText = `${firstFilledValue(row?.scope_note, row?.activation_note, '—')}${row?.rule_count != null ? ` · ${row.rule_count} regra(s)` : ''}`;
+        return `<tr>
+          <td>${esc(firstFilledValue(row?.label, row?.id, '—'))}</td>
+          <td>${esc(firstFilledValue(row?.status, '—'))}</td>
+          <td>${esc(scopeText)}</td>
+          <td>${esc(row?.is_active ? 'Sim' : 'Não')}</td>
+          <td>${esc(resumeText)}</td>
+          <td><div class="editor-actions"><button class="btn mini soft" type="button" data-policy-set-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini" type="button" data-policy-set-activate="${esc(String(row?.id || ''))}">Ativar</button></div></td>
+        </tr>`;
+      }).join('');
+    }
+
+    function renderPolicyRulesTable(rows) {
+      const tbody = $('tbodyPolicyRules');
+      const normalizedRows = asArray(rows).filter((row) => row && typeof row === 'object');
+      if (!tbody) return;
+      if (!normalizedRows.length) {
+        tbody.innerHTML = '<tr><td colspan="6">Nenhuma regra atômica disponível.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = normalizedRows.map((row) => {
+        const valueText = [`dias: ${firstFilledValue(row?.loan_days, '—')}`, `renovações: ${firstFilledValue(row?.renewal_max_count, '—')}`, `+dias: ${firstFilledValue(row?.renewal_days, '—')}`].join(' · ');
+        const noteText = [firstFilledValue(row?.public_note), firstFilledValue(row?.internal_note)].filter(Boolean).join(' · ') || '—';
+        return `<tr>
+          <td>${esc(firstFilledValue(row?.rule_label, row?.policy_label, row?.id, '—'))}${row?.is_active ? '<div class="inline-note">Regra ativa</div>' : ''}</td>
+          <td>${esc([firstFilledValue(row?.circulation_mode), firstFilledValue(row?.material_scope), firstFilledValue(row?.reader_scope)].filter(Boolean).join(' · ') || '—')}</td>
+          <td>${esc(firstFilledValue(row?.priority, '—'))}</td>
+          <td>${esc(valueText)}</td>
+          <td>${esc(noteText)}</td>
+          <td><div class="editor-actions"><button class="btn mini soft" type="button" data-policy-rule-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini danger" type="button" data-policy-rule-delete="${esc(String(row?.id || ''))}">Excluir</button></div></td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function saveRegulationDoc() {
+      try {
+        setStatus('regulationDocEditorStatus', 'Salvando documento…', 'info');
+        const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const payload = collectRegulationDocPayload();
+        await supabase.rpc('upsert_library_regulation_document', { p_library_id: row.id, p_document: payload }).then(({ error }) => { if (error) throw error; });
+        setStatus('regulationDocEditorStatus', 'Documento salvo.', 'ok');
+        await loadWorkspaceAndPolicies();
+      } catch (error) {
+        setStatus('regulationDocEditorStatus', 'Falha ao salvar documento: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function toggleRegulationDocActive() {
+      try {
+        const id = String($('regulationDocId').value || '').trim();
+        if (!id) throw new Error('Nenhum documento selecionado.');
+        const current = currentRegulationDocs.find((row) => String(row?.id || '') === id);
+        const makeActive = !(current?.is_active === true);
+        setStatus('regulationDocEditorStatus', makeActive ? 'Ativando documento…' : 'Desativando documento…', 'info');
+        await supabase.rpc('set_library_regulation_document_active', { p_document_id: Number(id), p_make_active: makeActive }).then(({ error }) => { if (error) throw error; });
+        setStatus('regulationDocEditorStatus', makeActive ? 'Documento ativado.' : 'Documento desativado.', 'ok');
+        await loadWorkspaceAndPolicies();
+      } catch (error) {
+        setStatus('regulationDocEditorStatus', 'Falha ao alterar o documento: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function savePolicySet() {
+      try {
+        setStatus('policySetEditorStatus', 'Salvando conjunto…', 'info');
+        const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const payload = collectPolicySetPayload();
+        await supabase.rpc('upsert_library_circulation_policy_set', { p_library_id: row.id, p_payload: payload }).then(({ error }) => { if (error) throw error; });
+        setStatus('policySetEditorStatus', 'Policy set salvo.', 'ok');
+        await loadWorkspaceAndPolicies();
+      } catch (error) {
+        setStatus('policySetEditorStatus', 'Falha ao salvar o policy set: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function activatePolicySet() {
+      try {
+        const id = String($('policySetId').value || '').trim();
+        if (!id) throw new Error('Nenhum policy set selecionado.');
+        setStatus('policySetEditorStatus', 'Ativando conjunto…', 'info');
+        await supabase.rpc('set_library_circulation_policy_set_active', { p_policy_set_id: Number(id) }).then(({ error }) => { if (error) throw error; });
+        setStatus('policySetEditorStatus', 'Policy set ativado.', 'ok');
+        await loadWorkspaceAndPolicies();
+      } catch (error) {
+        setStatus('policySetEditorStatus', 'Falha ao ativar o conjunto: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function savePolicyRule() {
+      try {
+        setStatus('policyRuleEditorStatus', 'Salvando regra…', 'info');
+        const { policySetId, payload } = collectPolicyRulePayload();
+        await supabase.rpc('upsert_library_circulation_policy_rule', { p_policy_set_id: Number(policySetId), p_rule: payload }).then(({ error }) => { if (error) throw error; });
+        setStatus('policyRuleEditorStatus', 'Regra salva.', 'ok');
+        await loadWorkspaceAndPolicies();
+      } catch (error) {
+        setStatus('policyRuleEditorStatus', 'Falha ao salvar a regra: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function deletePolicyRule(ruleId = null) {
+      try {
+        const id = String(ruleId || $('policyRuleId').value || '').trim();
+        if (!id) throw new Error('Nenhuma regra selecionada.');
+        if (!window.confirm('Excluir esta regra atômica? Esta ação é irreversível.')) return;
+        setStatus('policyRuleEditorStatus', 'Excluindo regra…', 'info');
+        await supabase.rpc('delete_library_circulation_policy_rule', { p_rule_id: Number(id) }).then(({ error }) => { if (error) throw error; });
+        setStatus('policyRuleEditorStatus', 'Regra excluída.', 'ok');
+        resetPolicyRuleForm();
+        await loadWorkspaceAndPolicies();
+      } catch (error) {
+        setStatus('policyRuleEditorStatus', 'Falha ao excluir a regra: ' + (error.message || String(error)), 'bad');
+      }
+    }
 
     async function loadWorkspaceAndPolicies() {
       try {
@@ -819,45 +1314,58 @@
         setStatus('workspaceStatus', 'Não consegui carregar o workspace institucional: ' + (error.message || String(error)), 'warn');
       }
 
+      let docsError = null;
+      let policySetsError = null;
+      let rulesError = null;
+
       try {
-        const docs = await callLibraryScopedRpc('get_library_regulation_documents_ui');
-        renderRowsTable('tbodyRegulationDocs', docs, [
-          { value: (row) => firstFilledValue(row?.title, row?.document_title, row?.kind, row?.slug, row?.id, '—') },
-          { value: (row) => firstFilledValue(row?.status, row?.publication_status, row?.state, '—') },
-          { value: (row) => firstFilledValue(row?.version, row?.version_label, row?.label, '—') },
-          { value: (row) => fmtDateTime(firstFilledValue(row?.updated_at, row?.published_at, row?.created_at, '')) },
-          { value: (row) => firstFilledValue(row?.public_url, row?.url, row?.published_url, row?.draft_url, '—') }
-        ], 'Nenhum documento de regimento disponível.');
+        currentRegulationDocs = asArray(await callLibraryScopedRpc('get_library_regulation_documents_ui')).filter((row) => row && typeof row === 'object');
+        renderRegulationDocsTable(currentRegulationDocs);
       } catch (error) {
-        renderRowsTable('tbodyRegulationDocs', [], [1,2,3,4,5].map((n) => ({ value: () => n })), 'Falha ao carregar os documentos de regimento: ' + (error.message || String(error)));
+        currentRegulationDocs = [];
+        renderRowsTable('tbodyRegulationDocs', [], [1,2,3,4,5,6].map((n) => ({ value: () => n })), 'Falha ao carregar os documentos de regimento: ' + (error.message || String(error)));
+        docsError = error;
       }
 
       try {
-        const policySets = await callLibraryScopedRpc('get_library_circulation_policy_sets_ui');
-        renderRowsTable('tbodyPolicySets', policySets, [
-          { value: (row) => firstFilledValue(row?.name, row?.title, row?.policy_set_name, row?.slug, row?.id, '—') },
-          { value: (row) => firstFilledValue(row?.status, row?.state, row?.publication_status, '—') },
-          { value: (row) => firstFilledValue(row?.scope, row?.material_scope, row?.reader_scope, row?.applies_to, '—') },
-          { value: (row) => firstFilledValue(row?.is_active, row?.active, row?.enabled, '—') },
-          { value: (row) => firstFilledValue(row?.summary, row?.description, row?.note, row?.label, '—') }
-        ], 'Nenhum policy set disponível.');
+        currentPolicySets = asArray(await callLibraryScopedRpc('get_library_circulation_policy_sets_ui')).filter((row) => row && typeof row === 'object');
+        renderPolicySetsTable(currentPolicySets);
       } catch (error) {
-        renderRowsTable('tbodyPolicySets', [], [1,2,3,4,5].map((n) => ({ value: () => n })), 'Falha ao carregar os policy sets: ' + (error.message || String(error)));
+        currentPolicySets = [];
+        renderRowsTable('tbodyPolicySets', [], [1,2,3,4,5,6].map((n) => ({ value: () => n })), 'Falha ao carregar os policy sets: ' + (error.message || String(error)));
+        policySetsError = error;
       }
 
       try {
-        const rules = await callLibraryScopedRpc('get_library_circulation_policy_rules_ui');
-        renderRowsTable('tbodyPolicyRules', rules, [
-          { value: (row) => firstFilledValue(row?.name, row?.label, row?.rule_name, row?.rule_kind, row?.id, '—') },
-          { value: (row) => firstFilledValue(row?.scope, row?.material_scope, row?.reader_scope, row?.applies_to, '—') },
-          { value: (row) => firstFilledValue(row?.priority, row?.sort_order, row?.weight, '—') },
-          { value: (row) => firstFilledValue(row?.value, row?.resolved_value, row?.rule_value, row?.duration_days, row?.max_renewals, '—') },
-          { value: (row) => firstFilledValue(row?.note, row?.description, row?.summary, '—') }
-        ], 'Nenhuma regra atômica disponível.');
-        setStatus('regimentoStatus', 'Documentos, policy sets e regras carregados.', 'ok');
+        const ruleBuckets = [];
+        for (const policySet of currentPolicySets) {
+          if (!policySet?.id) continue;
+          try {
+            const { data, error } = await supabase.rpc('get_library_circulation_policy_rules_ui', { p_policy_set_id: Number(policySet.id) });
+            if (error) throw error;
+            ruleBuckets.push(...asArray(data).filter((row) => row && typeof row === 'object'));
+          } catch (error) {
+            rulesError = error;
+          }
+        }
+        currentPolicyRules = ruleBuckets.sort((a, b) => Number(a?.priority || 0) - Number(b?.priority || 0) || Number(a?.id || 0) - Number(b?.id || 0));
+        renderPolicyRulesTable(currentPolicyRules);
       } catch (error) {
-        renderRowsTable('tbodyPolicyRules', [], [1,2,3,4,5].map((n) => ({ value: () => n })), 'Falha ao carregar as regras: ' + (error.message || String(error)));
-        setStatus('regimentoStatus', 'Uma ou mais superfícies canônicas ainda não responderam: ' + (error.message || String(error)), 'warn');
+        currentPolicyRules = [];
+        renderRowsTable('tbodyPolicyRules', [], [1,2,3,4,5,6].map((n) => ({ value: () => n })), 'Falha ao carregar as regras: ' + (error.message || String(error)));
+        rulesError = error;
+      }
+
+      syncRegimentoEditorOptions();
+      if (!$('regulationDocId').value) resetRegulationDocForm();
+      if (!$('policySetId').value) resetPolicySetForm();
+      if (!$('policyRuleId').value) resetPolicyRuleForm();
+
+      if (docsError || policySetsError || rulesError) {
+        const message = (rulesError || policySetsError || docsError)?.message || String(rulesError || policySetsError || docsError);
+        setStatus('regimentoStatus', 'Uma ou mais superfícies canônicas ainda não responderam: ' + message, 'warn');
+      } else {
+        setStatus('regimentoStatus', 'Documentos, policy sets e regras carregados. Edição mínima pronta.', 'ok');
       }
     }
 
@@ -924,6 +1432,61 @@
     $('btnRefreshRegimento')?.addEventListener('click', loadWorkspaceAndPolicies);
     $('btnRefreshDocuments')?.addEventListener('click', loadGovernancePanel);
     $('btnRefreshTasks')?.addEventListener('click', loadTasksPanel);
+    $('btnNewRegulationDoc')?.addEventListener('click', resetRegulationDocForm);
+    $('btnCancelRegulationDoc')?.addEventListener('click', resetRegulationDocForm);
+    $('btnSaveRegulationDoc')?.addEventListener('click', saveRegulationDoc);
+    $('btnActivateRegulationDoc')?.addEventListener('click', toggleRegulationDocActive);
+    $('btnNewPolicySet')?.addEventListener('click', resetPolicySetForm);
+    $('btnCancelPolicySet')?.addEventListener('click', resetPolicySetForm);
+    $('btnSavePolicySet')?.addEventListener('click', savePolicySet);
+    $('btnActivatePolicySet')?.addEventListener('click', activatePolicySet);
+    $('btnNewPolicyRule')?.addEventListener('click', resetPolicyRuleForm);
+    $('btnCancelPolicyRule')?.addEventListener('click', resetPolicyRuleForm);
+    $('btnSavePolicyRule')?.addEventListener('click', savePolicyRule);
+    $('btnDeletePolicyRule')?.addEventListener('click', () => deletePolicyRule());
+
+    $('tab-regimento')?.addEventListener('click', async (event) => {
+      const regDocEditBtn = event.target.closest('[data-reg-doc-edit]');
+      if (regDocEditBtn) {
+        const row = currentRegulationDocs.find((item) => String(item?.id || '') === String(regDocEditBtn.dataset.regDocEdit || ''));
+        if (row) loadRegulationDocIntoForm(row);
+        return;
+      }
+      const regDocToggleBtn = event.target.closest('[data-reg-doc-toggle]');
+      if (regDocToggleBtn) {
+        const row = currentRegulationDocs.find((item) => String(item?.id || '') === String(regDocToggleBtn.dataset.regDocToggle || ''));
+        if (row) {
+          loadRegulationDocIntoForm(row);
+          await toggleRegulationDocActive();
+        }
+        return;
+      }
+      const policySetEditBtn = event.target.closest('[data-policy-set-edit]');
+      if (policySetEditBtn) {
+        const row = currentPolicySets.find((item) => String(item?.id || '') === String(policySetEditBtn.dataset.policySetEdit || ''));
+        if (row) loadPolicySetIntoForm(row);
+        return;
+      }
+      const policySetActivateBtn = event.target.closest('[data-policy-set-activate]');
+      if (policySetActivateBtn) {
+        const row = currentPolicySets.find((item) => String(item?.id || '') === String(policySetActivateBtn.dataset.policySetActivate || ''));
+        if (row) {
+          loadPolicySetIntoForm(row);
+          await activatePolicySet();
+        }
+        return;
+      }
+      const policyRuleEditBtn = event.target.closest('[data-policy-rule-edit]');
+      if (policyRuleEditBtn) {
+        const row = currentPolicyRules.find((item) => String(item?.id || '') === String(policyRuleEditBtn.dataset.policyRuleEdit || ''));
+        if (row) loadPolicyRuleIntoForm(row);
+        return;
+      }
+      const policyRuleDeleteBtn = event.target.closest('[data-policy-rule-delete]');
+      if (policyRuleDeleteBtn) {
+        await deletePolicyRule(String(policyRuleDeleteBtn.dataset.policyRuleDelete || ''));
+      }
+    });
 
     $('btnSair')?.addEventListener('click', async () => {
       const btn = $('btnSair');
@@ -942,6 +1505,9 @@
     });
 
     setupTabs();
+    resetRegulationDocForm();
+    resetPolicySetForm();
+    resetPolicyRuleForm();
     await refreshAllInstitutionalPanels();
 
     supabase.auth.onAuthStateChange((_event, newSession) => {
