@@ -999,6 +999,61 @@
       }
     }
 
+    const CANONICAL_API_RPCS = new Set([
+      'get_library_institutional_workspace',
+      'get_library_regulation_documents_ui',
+      'get_library_circulation_policy_sets_ui',
+      'get_library_circulation_policy_rules_ui'
+    ]);
+
+    function getCanonicalSurfaceLabel(rpcName) {
+      const labels = {
+        get_library_institutional_workspace: 'resumo geral da biblioteca',
+        get_library_regulation_documents_ui: 'textos da biblioteca',
+        get_library_circulation_policy_sets_ui: 'conjuntos de regras',
+        get_library_circulation_policy_rules_ui: 'regras detalhadas'
+      };
+      return labels[rpcName] || rpcName;
+    }
+
+    function explainCanonicalSurfaceError(rpcName, error) {
+      const message = String(error?.message || error || '').trim();
+      if (!CANONICAL_API_RPCS.has(rpcName)) return message || `Falha ao carregar ${rpcName}.`;
+      if (/could not find the function|schema cache|function\s+/i.test(message)) {
+        return `A superfície canônica “${getCanonicalSurfaceLabel(rpcName)}” não foi encontrada na base ativa. Verifica se a função existe no esquema api e se o cache da API já foi atualizado.`;
+      }
+      return message || `Falha ao carregar ${getCanonicalSurfaceLabel(rpcName)}.`;
+    }
+
+    async function callRpcOnSchema(schemaName, rpcName, args = {}) {
+      const cleaned = Object.fromEntries(Object.entries(args).filter(([, value]) => value != null && value !== ''));
+      if (schemaName === 'api' && typeof supabase.schema === 'function') {
+        return await supabase.schema('api').rpc(rpcName, cleaned);
+      }
+      return await supabase.rpc(rpcName, cleaned);
+    }
+
+    async function callRpcWithSchemaFallback(rpcName, args = {}) {
+      const schemaOrder = CANONICAL_API_RPCS.has(rpcName) ? ['api', 'public'] : ['public', 'api'];
+      let lastError = null;
+      for (const schemaName of schemaOrder) {
+        try {
+          const { data, error } = await callRpcOnSchema(schemaName, rpcName, args);
+          if (!error) return data;
+          lastError = error;
+          const message = String(error?.message || '').toLowerCase();
+          const retryable = message.includes('function') || message.includes('signature') || message.includes('parameter') || message.includes('schema cache');
+          if (!retryable) throw error;
+        } catch (error) {
+          lastError = error;
+          const message = String(error?.message || '').toLowerCase();
+          const retryable = message.includes('function') || message.includes('signature') || message.includes('parameter') || message.includes('schema cache');
+          if (!retryable) throw error;
+        }
+      }
+      throw lastError || new Error(`RPC indisponível: ${rpcName}`);
+    }
+
     async function callLibraryScopedRpc(rpcName) {
       const libraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
       const librarySlug = String(currentLibraryRow?.slug || currentAccessRow?.library_slug || currentIdentityRow?.library_slug || '').trim();
@@ -1013,13 +1068,7 @@
       let lastError = null;
       for (const args of attempts) {
         try {
-          const cleaned = Object.fromEntries(Object.entries(args).filter(([, value]) => value != null && value !== ''));
-          const { data, error } = await supabase.rpc(rpcName, cleaned);
-          if (!error) return data;
-          lastError = error;
-          const message = String(error?.message || '').toLowerCase();
-          const retryable = message.includes('function') || message.includes('signature') || message.includes('parameter') || message.includes('schema cache');
-          if (!retryable) throw error;
+          return await callRpcWithSchemaFallback(rpcName, args);
         } catch (error) {
           lastError = error;
           const message = String(error?.message || '').toLowerCase();
@@ -1437,7 +1486,7 @@
         renderKvGrid('documentsWorkspaceGrid', []);
         $('workspaceJson').textContent = '{}';
         setChip('chipWorkspace', 'Resumo geral da biblioteca: indisponível');
-        setStatus('workspaceStatus', 'Não consegui carregar o resumo geral da biblioteca: ' + (error.message || String(error)), 'warn');
+        setStatus('workspaceStatus', 'Não consegui carregar o resumo geral da biblioteca: ' + explainCanonicalSurfaceError('get_library_institutional_workspace', error), 'warn');
       }
 
       let docsError = null;
@@ -1449,7 +1498,7 @@
         renderRegulationDocsTable(currentRegulationDocs);
       } catch (error) {
         currentRegulationDocs = [];
-        renderRowsTable('tbodyRegulationDocs', [], [1,2,3,4,5,6].map((n) => ({ value: () => n })), 'Falha ao carregar os documentos de regimento: ' + (error.message || String(error)));
+        renderRowsTable('tbodyRegulationDocs', [], [1,2,3,4,5,6].map((n) => ({ value: () => n })), 'Falha ao carregar os documentos de regimento: ' + explainCanonicalSurfaceError('get_library_regulation_documents_ui', error));
         docsError = error;
       }
 
@@ -1458,7 +1507,7 @@
         renderPolicySetsTable(currentPolicySets);
       } catch (error) {
         currentPolicySets = [];
-        renderRowsTable('tbodyPolicySets', [], [1,2,3,4,5,6].map((n) => ({ value: () => n })), 'Falha ao carregar os conjuntos de regras: ' + (error.message || String(error)));
+        renderRowsTable('tbodyPolicySets', [], [1,2,3,4,5,6].map((n) => ({ value: () => n })), 'Falha ao carregar os conjuntos de regras: ' + explainCanonicalSurfaceError('get_library_circulation_policy_sets_ui', error));
         policySetsError = error;
       }
 
@@ -1467,7 +1516,8 @@
         for (const policySet of currentPolicySets) {
           if (!policySet?.id) continue;
           try {
-            const { data, error } = await supabase.rpc('get_library_circulation_policy_rules_ui', { p_policy_set_id: Number(policySet.id) });
+            const data = await callRpcWithSchemaFallback('get_library_circulation_policy_rules_ui', { p_policy_set_id: Number(policySet.id) });
+            const error = null;
             if (error) throw error;
             ruleBuckets.push(...asArray(data).filter((row) => row && typeof row === 'object'));
           } catch (error) {
@@ -1478,7 +1528,7 @@
         renderPolicyRulesTable(currentPolicyRules);
       } catch (error) {
         currentPolicyRules = [];
-        renderRowsTable('tbodyPolicyRules', [], [1,2,3,4,5,6].map((n) => ({ value: () => n })), 'Falha ao carregar as regras: ' + (error.message || String(error)));
+        renderRowsTable('tbodyPolicyRules', [], [1,2,3,4,5,6].map((n) => ({ value: () => n })), 'Falha ao carregar as regras: ' + explainCanonicalSurfaceError('get_library_circulation_policy_rules_ui', error));
         rulesError = error;
       }
 
@@ -1489,7 +1539,8 @@
       renderRegimeState();
 
       if (docsError || policySetsError || rulesError) {
-        const message = (rulesError || policySetsError || docsError)?.message || String(rulesError || policySetsError || docsError);
+        const failedRpcName = rulesError ? 'get_library_circulation_policy_rules_ui' : (policySetsError ? 'get_library_circulation_policy_sets_ui' : 'get_library_regulation_documents_ui');
+        const message = explainCanonicalSurfaceError(failedRpcName, rulesError || policySetsError || docsError);
         setStatus('regimentoStatus', 'Uma ou mais superfícies canônicas ainda não responderam: ' + message, 'warn');
       } else {
         setStatus('regimentoStatus', 'Textos, conjuntos de regras e regras detalhadas carregados. Veja abaixo se a biblioteca está com regras do regimento ou com regras provisórias.', 'ok');
