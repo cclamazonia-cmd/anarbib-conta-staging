@@ -101,7 +101,7 @@
 
     <div class="section-card">
       <h2>Antes de enviar</h2>
-      <p>Esta é uma primeira versão de concepção da página. O formulário já está estruturado para o fluxo correto, mas o envio automático ao backend ainda precisa ser ligado na próxima etapa.</p>
+      <p>Para enviar esta solicitação, entre primeiro na sua conta em <b>Cadastro</b>. O envio registrará um pedido institucional real no sistema, em status inicial <b>pendente</b>, para análise posterior da coordenação da rede.</p>
     </div>
 
     <p class="requiredLegend"><span class="reqMark">*</span> Campo obrigatório</p>
@@ -220,61 +220,183 @@
         <span>Confirmo que os dados informados podem ser usados para contato sobre a entrada na rede AnarBib. <span class="reqMark">*</span></span>
       </label>
 
-      <button type="submit">Preparar solicitação</button>
+      <button type="submit" id="submitBtn">Enviar solicitação</button>
       <button type="button" class="btn" id="backBtn">Voltar</button>
       <p id="msg" class="msg" aria-live="polite"></p>
     </form>
 
     <section id="summaryCard" class="summary-card" aria-live="polite">
-      <h2>Resumo da solicitação</h2>
-      <p>O formulário foi validado visualmente. Esta primeira versão ainda precisa do raccord backend antes de entrar em produção, mas a estrutura institucional do pedido já está pronta.</p>
+      <h2>Solicitação enviada</h2>
+      <p>O pedido institucional foi registrado com sucesso. Guarde as informações abaixo: elas resumem o conteúdo enviado e o identificador inicial da solicitação.</p>
       <div id="summaryGrid" class="summary-grid"></div>
     </section>
   </main>
 
-  <script>
+  <script type="module">
+    import { supabase } from "./js/blmf-supabase.js";
+
     const form = document.getElementById('solicitacaoForm');
     const msg = document.getElementById('msg');
     const summaryCard = document.getElementById('summaryCard');
     const summaryGrid = document.getElementById('summaryGrid');
     const backBtn = document.getElementById('backBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const contactEmailInput = document.getElementById('contactEmail');
 
     function setMsg(text = '', kind = '') {
       msg.textContent = text;
       msg.className = kind ? `msg ${kind}` : 'msg';
     }
 
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function setSubmitting(isSubmitting) {
+      if (!submitBtn) return;
+      submitBtn.disabled = isSubmitting;
+      submitBtn.textContent = isSubmitting ? 'Enviando...' : 'Enviar solicitação';
+    }
+
+    function mapRequestError(error) {
+      const raw = String(error?.message || '').toLowerCase();
+
+      if (
+        raw.includes('você precisa estar conectado') ||
+        raw.includes('voce precisa estar conectado') ||
+        raw.includes('permission denied') ||
+        raw.includes('42501')
+      ) {
+        return 'Você precisa entrar na sua conta em Cadastro antes de enviar esta solicitação.';
+      }
+
+      if (raw.includes('nome da biblioteca')) return 'Informe o nome da biblioteca.';
+      if (raw.includes('cidade da biblioteca')) return 'Informe a cidade da biblioteca.';
+      if (raw.includes('e-mail principal da biblioteca')) return 'Informe o e-mail principal da biblioteca.';
+      if (raw.includes('nome da pessoa responsável')) return 'Informe o nome da pessoa responsável pelo primeiro contato.';
+      if (raw.includes('e-mail da pessoa responsável')) return 'Informe o e-mail da pessoa responsável.';
+      if (raw.includes('breve apresentação')) return 'Informe uma breve apresentação da biblioteca ou coletivo.';
+      if (raw.includes('situação atual inválida')) return 'Selecione a situação atual da iniciativa.';
+      if (raw.includes('as duas confirmações obrigatórias')) return 'Marque as duas confirmações obrigatórias para continuar.';
+
+      return 'Não foi possível enviar a solicitação agora. Tente novamente.';
+    }
+
+    function buildSummary(row, formValues) {
+      const requestId = row?.id || '—';
+      const status = row?.request_status || 'pendente';
+      const submittedAt = row?.created_at
+        ? new Date(row.created_at).toLocaleString('pt-BR')
+        : '—';
+
+      const fields = [
+        ['ID da solicitação', requestId],
+        ['Status inicial', status],
+        ['Biblioteca', formValues.p_library_name],
+        ['Sigla', formValues.p_library_short_name || '—'],
+        ['Cidade / país', `${formValues.p_city} / ${formValues.p_country}`],
+        ['Contato principal', formValues.p_contact_name],
+        ['E-mail principal', formValues.p_library_email],
+        ['Primeiro perfil responsável', formValues.p_first_manager_intent],
+        ['Situação atual', formValues.p_project_stage],
+        ['Enviada em', submittedAt],
+        ['Apresentação', formValues.p_summary]
+      ];
+
+      summaryGrid.innerHTML = fields.map(([label, value]) => `
+        <div class="summary-item">
+          <b>${escapeHtml(label)}</b>
+          <div>${escapeHtml(value || '—')}</div>
+        </div>
+      `).join('');
+      summaryCard.style.display = 'block';
+    }
+
+    async function prefillSessionHints() {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const sessionEmail = data?.session?.user?.email || '';
+        if (sessionEmail && contactEmailInput && !contactEmailInput.value.trim()) {
+          contactEmailInput.value = sessionEmail;
+        }
+      } catch (_) {}
+    }
+
     backBtn.addEventListener('click', () => {
       window.location.href = './criar-conta.html';
     });
 
-    form.addEventListener('submit', (e) => {
+    prefillSessionHints();
+
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       setMsg('');
+      summaryCard.style.display = 'none';
+      summaryGrid.innerHTML = '';
+
       if (!form.checkValidity()) {
         form.reportValidity();
         return;
       }
 
-      const fields = [
-        ['Biblioteca', document.getElementById('libraryName').value.trim()],
-        ['Sigla', document.getElementById('libraryShortName').value.trim() || '—'],
-        ['Cidade / país', `${document.getElementById('city').value.trim()} / ${document.getElementById('country').value.trim()}`],
-        ['Contato principal', document.getElementById('contactName').value.trim()],
-        ['E-mail principal', document.getElementById('libraryEmail').value.trim()],
-        ['Primeiro perfil responsável', document.getElementById('firstManager').value],
-        ['Situação atual', document.getElementById('projectStage').value],
-        ['Apresentação', document.getElementById('summary').value.trim()]
-      ];
+      const { data: sessionData } = await supabase.auth.getSession();
+      const currentUser = sessionData?.session?.user || null;
+      if (!currentUser?.id) {
+        setMsg('Você precisa entrar na sua conta em Cadastro antes de enviar esta solicitação.', 'warn');
+        return;
+      }
 
-      summaryGrid.innerHTML = fields.map(([label, value]) => `
-        <div class="summary-item">
-          <b>${label}</b>
-          <div>${String(value || '—').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-        </div>
-      `).join('');
-      summaryCard.style.display = 'block';
-      setMsg('Estrutura validada. Próxima etapa: ligar esta página ao backend de solicitações institucionais.', 'warn');
+      const payload = {
+        p_library_name: document.getElementById('libraryName').value.trim(),
+        p_library_short_name: document.getElementById('libraryShortName').value.trim() || null,
+        p_city: document.getElementById('city').value.trim(),
+        p_state_region: document.getElementById('state').value.trim() || null,
+        p_country: document.getElementById('country').value.trim(),
+        p_library_email: document.getElementById('libraryEmail').value.trim(),
+        p_library_phone: document.getElementById('libraryPhone').value.trim() || null,
+        p_library_address: document.getElementById('libraryAddress').value.trim() || null,
+        p_project_stage: document.getElementById('projectStage').value,
+        p_contact_name: document.getElementById('contactName').value.trim(),
+        p_contact_email: document.getElementById('contactEmail').value.trim(),
+        p_contact_phone: document.getElementById('contactPhone').value.trim() || null,
+        p_contact_role: document.getElementById('contactRole').value.trim() || null,
+        p_first_manager_intent: document.getElementById('firstManager').value,
+        p_summary: document.getElementById('summary').value.trim(),
+        p_public_profile: document.getElementById('publicProfile').value.trim() || null,
+        p_collection_profile: document.getElementById('collectionProfile').value.trim() || null,
+        p_needs: document.getElementById('needs').value.trim() || null,
+        p_confirm_real: document.getElementById('confirmReal').checked,
+        p_confirm_contact: document.getElementById('confirmContact').checked
+      };
+
+      try {
+        setSubmitting(true);
+
+        const { data, error } = await supabase.rpc('fn_submit_library_request', payload);
+        if (error) throw error;
+
+        const row = Array.isArray(data) ? data[0] : data;
+        buildSummary(row, payload);
+        form.reset();
+        if (contactEmailInput && currentUser.email) {
+          contactEmailInput.value = currentUser.email;
+        }
+
+        setMsg(
+          'Solicitação enviada com sucesso. A coordenação da rede analisará as informações antes de qualquer acesso às áreas de gestão bibliotecária.',
+          'ok'
+        );
+      } catch (error) {
+        console.error('AnarBib solicitar-biblioteca submit error:', error);
+        setMsg(mapRequestError(error), 'warn');
+      } finally {
+        setSubmitting(false);
+      }
     });
   </script>
 </body>
