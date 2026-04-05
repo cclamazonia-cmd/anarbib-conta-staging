@@ -234,6 +234,43 @@
     .msg.ok{color:var(--ok)}
     .msg.warn{color:var(--warn)}
     .msg.bad{color:var(--bad)}
+
+    .institutional-card{
+      border:1px solid rgba(255,255,255,.10);
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(10,10,10,.90));
+      border-radius:22px;
+      padding:16px;
+      box-shadow:var(--shadow);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      flex-wrap:wrap;
+    }
+    .institutional-copy{min-width:0;flex:1 1 520px}
+    .institutional-copy h2{
+      margin:0 0 8px;
+      font-size:1.12rem;
+      font-family:var(--brand-font-heading, var(--brand-font-body, Inter,Segoe UI,Arial,sans-serif));
+    }
+    .institutional-copy p{
+      margin:0;
+      color:#f0f0f0;
+      line-height:1.45;
+    }
+    .institutional-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      flex:0 0 auto;
+    }
+    .institutional-mini{
+      margin-top:8px;
+      color:#d8d8d8;
+      font-size:.92rem;
+      line-height:1.45;
+    }
     @media (max-width:980px){
       .wrap{padding:16px}
       .topbar{align-items:flex-start}
@@ -275,6 +312,16 @@
       <p id="pageHeroSubtitle">Abertura de conta (leitor/a/e)</p>
     </div>
 
+    <section class="institutional-card" aria-label="Entrada de biblioteca na rede">
+      <div class="institutional-copy">
+        <h2>Sua biblioteca ou coletivo quer entrar na rede AnarBib?</h2>
+        <p>Esta página cria apenas a sua <b>conta pessoal de leitor/a/e</b>. O acesso às áreas internas de gestão da biblioteca não é liberado automaticamente aqui.</p>
+        <div class="institutional-mini">Se você já tem uma conta pessoal ou se quer iniciar o processo institucional da sua biblioteca, use a solicitação específica de entrada na rede.</div>
+      </div>
+      <div class="institutional-actions">
+        <a class="btn primary" id="btnSolicitarBiblioteca" href="./solicitar-biblioteca.html">Solicitar entrada de biblioteca</a>
+      </div>
+    </section>
 
     <div class="notice" role="group" aria-label="Biblioteca de referência">
       <label for="librarySelect">Selecionar biblioteca de referência <span class="reqMark">*</span></label>
@@ -663,6 +710,7 @@
         blog: "https://cclamazonia.noblogs.org",
         catalogo: "https://cclamazonia-cmd.github.io/anarbib-staging/index.html",
         cadastro: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html",
+        solicitarBiblioteca: "./solicitar-biblioteca.html",
         regimentoPage: "https://cclamazonia.noblogs.org/files/2026/03/Regimento-BLMF-v2.3.pdf"
       }
     };
@@ -705,6 +753,7 @@
             btnBlog: "blog",
             btnCatalogo: "catalogo",
             btnCadastro: "cadastro",
+            btnSolicitarBiblioteca: "solicitarBiblioteca",
             btnRegimentoTop: "regimentoPage"
           }
         });
@@ -907,6 +956,7 @@
       btnBlog: FALLBACK_CONFIG.ROUTES.blog,
       btnCatalogo: FALLBACK_CONFIG.ROUTES.catalogo,
       btnCadastro: FALLBACK_CONFIG.ROUTES.cadastro,
+      btnSolicitarBiblioteca: FALLBACK_CONFIG.ROUTES.solicitarBiblioteca,
       btnRegimentoTop: FALLBACK_CONFIG.ROUTES.regimentoPage
     }).forEach(([id, href]) => {
       const a = document.getElementById(id);

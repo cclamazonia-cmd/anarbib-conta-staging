@@ -205,6 +205,15 @@
       <p>Entrar · Esqueci minha senha · Redefinir senha</p>
     </div>
 
+    <section class="notice" id="networkEntryBox" aria-label="Entrada de biblioteca na rede">
+      <b>Sua biblioteca ou coletivo quer entrar na rede AnarBib?</b>
+      <div class="small">Se você representa uma biblioteca, um arquivo, um centro de documentação ou outra iniciativa semelhante, use um caminho separado do cadastro de leitor/a/e.</div>
+      <div class="small">Essa solicitação não libera acesso imediato às áreas internas de gestão. Primeiro, ela será analisada pela coordenação da rede.</div>
+      <div class="rowbtn" style="margin-top:10px;">
+        <button id="goSolicitarBiblioteca" class="btn" type="button">Solicitar entrada de biblioteca</button>
+      </div>
+    </section>
+
     <!-- LOGIN -->
     <section id="loginBox">
       <form id="loginForm">
@@ -284,6 +293,7 @@
       BLOG: "https://cclamazonia.noblogs.org",
       CATALOGO: "https://cclamazonia-cmd.github.io/anarbib-staging/index.html",
       CRIAR: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/criar-conta.html",
+      SOLICITAR_BIBLIOTECA: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/solicitar-biblioteca.html",
       CADASTRO: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html",
       CONTA: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html",
       PAINEL: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html",
@@ -296,6 +306,10 @@
 
     document.getElementById("goCriarConta").addEventListener("click", () => {
       window.location.href = ROUTES.CRIAR;
+    });
+
+    document.getElementById("goSolicitarBiblioteca").addEventListener("click", () => {
+      window.location.href = ROUTES.SOLICITAR_BIBLIOTECA;
     });
 
     const loginBox = document.getElementById("loginBox");
