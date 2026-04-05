@@ -562,6 +562,9 @@
     .consult-slot-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
     .consult-slot-hint{margin-top:6px}
     .consult-slot-select-empty{color:rgba(255,255,255,.72)}
+
+    .institucional-parked{display:none !important}
+
     @media (max-width:980px){
       .consult-structured-times,.consult-slot-grid{grid-template-columns:1fr}
     }
@@ -579,6 +582,7 @@
       <div style="display:flex;gap:10px;flex-wrap:wrap">
           <a class="btn" id="btnCatalogo" href="https://cclamazonia-cmd.github.io/anarbib-staging/index.html">Voltar ao catálogo</a>
         <a class="btn" id="btnCatalogacao" href="https://cclamazonia-cmd.github.io/anarbib-staging/catalogacao.html">Catalogação</a>
+        <a class="btn" id="btnBiblioteca" href="biblioteca.html">Biblioteca</a>
         <a class="btn" id="btnManual" href="https://cclamazonia-cmd.github.io/anarbib-staging/Manual_do_AnarBib.pdf" target="_blank" rel="noopener noreferrer">Manual do AnarBib</a>
         <a class="btn" id="btnModoLeitor" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html">Ir para modo leitor</a>
         <button class="btn primary" id="btnSair" type="button" data-auth-mode="login" data-auth-href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html">Login</button>
@@ -603,24 +607,14 @@
 
     <div class="tabs-layout">
       <nav class="tabs-nav" role="tablist" aria-label="Seções do painel">
-        <button class="tab-btn active" type="button" data-tab="funcionamento" role="tab" aria-selected="true" aria-controls="tab-funcionamento">
-          Biblioteca
-          <span class="hint">Funcionamento, comunicações, relações externas e gestão local</span>
+        <button class="tab-btn active" type="button" data-tab="trabalho-do-dia" role="tab" aria-selected="true" aria-controls="tab-trabalho-do-dia">
+          Trabalho do dia
+          <span class="hint">Síntese operacional e prioridades do dia</span>
         </button>
         <button class="tab-btn" type="button" data-tab="acoes" role="tab" aria-selected="false" aria-controls="tab-acoes">
           Ações
           <span class="hint">Registrar saída e devolução</span>
         </button>
-
-        <button class="tab-btn" type="button" data-tab="trabalho-do-dia" role="tab" aria-selected="false" aria-controls="tab-trabalho-do-dia">
-          Trabalho do dia
-          <span class="hint">Prioridades automáticas da BLMF</span>
-        </button>
-        <button class="tab-btn" type="button" data-tab="tarefas-internas" role="tab" aria-selected="false" aria-controls="tab-tarefas-internas">
-          Tarefas internas
-          <span class="hint">Organização prática da biblioteca</span>
-        </button>
-
         <button class="tab-btn" type="button" data-tab="reservas" role="tab" aria-selected="false" aria-controls="tab-reservas">
           Reservas ativas
           <span class="hint">Confirmar retirada ou cancelar</span>
@@ -644,7 +638,7 @@
       </nav>
 
       <div class="tabs-panels">
-        <section id="tab-funcionamento" class="tab-panel active" data-tab="funcionamento" role="tabpanel">
+        <section id="tab-funcionamento" class="tab-panel hidden institucional-parked" data-tab="funcionamento" role="tabpanel" aria-hidden="true">
           <div class="stack">
             <div class="card">
               <div class="section-head">
@@ -1606,7 +1600,7 @@
         </section>
 
 
-        <section id="tab-trabalho-do-dia" class="tab-panel" data-tab="trabalho-do-dia" role="tabpanel">
+        <section id="tab-trabalho-do-dia" class="tab-panel active" data-tab="trabalho-do-dia" role="tabpanel">
           <div class="grid">
             <div class="card">
               <div class="section-head">
@@ -1632,7 +1626,7 @@
           </div>
         </section>
 
-        <section id="tab-tarefas-internas" class="tab-panel" data-tab="tarefas-internas" role="tabpanel">
+        <section id="tab-tarefas-internas" class="tab-panel hidden institucional-parked" data-tab="tarefas-internas" role="tabpanel" aria-hidden="true">
           <div class="grid">
             <div class="card">
               <div class="section-head">
@@ -6903,7 +6897,7 @@ function belemNowParts(){
       const panels = $$('.tab-panel[data-tab]');
       const validTabs = new Set(btns.map((btn) => btn.dataset.tab).filter(Boolean));
       function activate(tab, { pushHash = true } = {}){
-        const nextTab = validTabs.has(tab) ? tab : 'funcionamento';
+        const nextTab = validTabs.has(tab) ? tab : 'trabalho-do-dia';
         btns.forEach((btn) => {
           const active = btn.dataset.tab === nextTab;
           btn.classList.toggle('active', active);
@@ -6941,7 +6935,7 @@ function belemNowParts(){
       let stored = '';
       try { stored = sessionStorage.getItem(PAINEL_ACTIVE_TAB_STORAGE_KEY) || ''; } catch (_e) {}
       const initial = (location.hash || '').replace('#', '') || stored;
-      activate(validTabs.has(initial) ? initial : 'funcionamento', { pushHash: false });
+      activate(validTabs.has(initial) ? initial : 'trabalho-do-dia', { pushHash: false });
     }
 
     function setupProfileTabs(){
@@ -11256,7 +11250,7 @@ function initPartnerProbeUi() {
     if (!btns.length || !panels.length) return;
     const valid = new Set(btns.map((b) => b.dataset.tab).filter(Boolean));
     const activate = (tab, { pushHash = true } = {}) => {
-      const next = valid.has(tab) ? tab : 'funcionamento';
+      const next = valid.has(tab) ? tab : 'trabalho-do-dia';
       btns.forEach((btn) => {
         const active = btn.dataset.tab === next;
         btn.classList.toggle('active', active);
@@ -11269,7 +11263,7 @@ function initPartnerProbeUi() {
     btns.forEach((btn) => {
       if (btn.dataset.rescueBound === 'true') return;
       btn.dataset.rescueBound = 'true';
-      btn.addEventListener('click', () => activate(btn.dataset.tab || 'funcionamento'));
+      btn.addEventListener('click', () => activate(btn.dataset.tab || 'trabalho-do-dia'));
     });
     if (!window.__anarbibPainelRescueHashBound) {
       window.__anarbibPainelRescueHashBound = true;
@@ -11281,7 +11275,7 @@ function initPartnerProbeUi() {
     let stored = '';
     try { stored = sessionStorage.getItem('anarbib_painel_active_tab') || ''; } catch (_e) {}
     const initial = (location.hash || '').replace('#', '') || stored;
-    activate(valid.has(initial) ? initial : 'funcionamento', { pushHash: false });
+    activate(valid.has(initial) ? initial : 'trabalho-do-dia', { pushHash: false });
   }
 
   function setupBibliotecaSubtabsRescue() {
@@ -11730,3 +11724,9 @@ function initPartnerProbeUi() {
 <!-- padding retained line count 01 -->
 <!-- padding retained line count 02 -->
 </html>
+
+<!-- patch padding scission -->
+<!-- patch padding scission -->
+<!-- patch padding scission -->
+<!-- patch padding scission -->
+<!-- patch padding scission -->
