@@ -610,6 +610,56 @@
       if (raw === 'any') return 'qualquer';
       return raw;
     }
+    function friendlyQuantityRange(minValue, maxValue){
+      const min = minValue != null && String(minValue).trim() !== '' ? Number(minValue) : null;
+      const max = maxValue != null && String(maxValue).trim() !== '' ? Number(maxValue) : null;
+      if (min != null && max != null) {
+        if (min === max) return `${min} item(ns)`;
+        return `de ${min} até ${max} itens`;
+      }
+      if (min != null) return `a partir de ${min} item(ns)`;
+      if (max != null) return `até ${max} itens`;
+      return 'quantidade livre';
+    }
+    function friendlyPolicyRuleScope(row){
+      const parts = [];
+      const mode = friendlyCirculationMode(row?.circulation_mode);
+      if (mode) parts.push(mode);
+      const material = friendlyScopeValue(row?.material_scope);
+      if (material) parts.push(`material: ${material}`);
+      const reader = friendlyScopeValue(row?.reader_scope);
+      if (reader) parts.push(`público: ${reader}`);
+      const amount = friendlyQuantityRange(row?.quantity_min, row?.quantity_max);
+      if (amount) parts.push(amount);
+      return parts.join(' · ') || '—';
+    }
+    function friendlyPolicyRuleLimits(row){
+      const lines = [];
+      if (row?.loan_allowed === false || row?.consultation_only === true) {
+        lines.push('Empréstimo: não');
+      } else if (row?.loan_days != null && String(row.loan_days).trim() !== '') {
+        lines.push(`Empréstimo: ${row.loan_days} dia(s)`);
+      } else {
+        lines.push('Empréstimo: sem prazo informado');
+      }
+
+      if (row?.renewable === false || row?.renewal_max_count === 0) {
+        lines.push('Prorrogação: não');
+      } else {
+        const maxRenewals = row?.renewal_max_count != null && String(row.renewal_max_count).trim() !== ''
+          ? `${row.renewal_max_count} vez(es)`
+          : 'sem limite informado';
+        const renewalDays = row?.renewal_days != null && String(row.renewal_days).trim() !== ''
+          ? `${row.renewal_days} dia(s) por vez`
+          : 'sem prazo informado';
+        lines.push(`Prorrogação: ${maxRenewals}`);
+        lines.push(`Cada prorrogação: ${renewalDays}`);
+      }
+
+      lines.push(`Reserva: ${row?.reservation_allowed === false ? 'não' : 'sim'}`);
+      lines.push(`Consulta no local: ${row?.consultation_allowed === false ? 'não' : 'sim'}`);
+      return lines;
+    }
     function normalizeScopeInputValue(value){
       const raw = String(value || '').trim().toLowerCase();
       if (!raw || raw === 'qualquer') return 'any';
@@ -1477,17 +1527,17 @@
       const normalizedRows = asArray(rows).filter((row) => row && typeof row === 'object');
       if (!tbody) return;
       if (!normalizedRows.length) {
-        tbody.innerHTML = '<tr><td colspan="6">Nenhuma regra atômica disponível.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6">Nenhuma regra detalhada disponível.</td></tr>';
         return;
       }
       tbody.innerHTML = normalizedRows.map((row) => {
-        const valueText = [`dias: ${firstFilledValue(row?.loan_days, '—')}`, `renovações: ${firstFilledValue(row?.renewal_max_count, '—')}`, `+dias: ${firstFilledValue(row?.renewal_days, '—')}`].join(' · ');
+        const limitsLines = friendlyPolicyRuleLimits(row);
         const noteText = [firstFilledValue(row?.public_note), firstFilledValue(row?.internal_note)].filter(Boolean).join(' · ') || '—';
         return `<tr>
           <td>${esc(firstFilledValue(row?.rule_label, row?.policy_label, row?.id, '—'))}${row?.is_active ? '<div class="inline-note">Regra em uso</div>' : ''}</td>
-          <td>${esc([friendlyCirculationMode(row?.circulation_mode), friendlyScopeValue(row?.material_scope), friendlyScopeValue(row?.reader_scope)].filter(Boolean).join(' · ') || '—')}</td>
+          <td>${esc(friendlyPolicyRuleScope(row))}</td>
           <td>${esc(firstFilledValue(row?.priority, '—'))}</td>
-          <td>${esc(valueText)}</td>
+          <td>${limitsLines.map((line) => `<div>${esc(line)}</div>`).join('')}</td>
           <td>${esc(noteText)}</td>
           <td><div class="editor-actions"><button class="btn mini soft" type="button" data-policy-rule-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini danger" type="button" data-policy-rule-delete="${esc(String(row?.id || ''))}">Excluir</button></div></td>
         </tr>`;
