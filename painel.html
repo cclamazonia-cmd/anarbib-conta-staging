@@ -7837,8 +7837,8 @@ async function fetchActiveLoans(){
           return_completed_at: r.return_completed_at || null,
           return_missed_at: r.return_missed_at || null,
           extended_once: !!emprestimo?.extended_once || !!r.extended_until,
-          can_renew: overdueDays <= 0 && !(!!emprestimo?.extended_once || !!r.extended_until),
-          status_text: overdueDays > 0 ? `Atrasado (${overdueDays} dia(s))` : ((!!emprestimo?.extended_once || !!r.extended_until) ? 'Renovado' : 'Em curso'),
+          can_renew: overdueDays <= 0,
+          status_text: overdueDays > 0 ? `Atrasado (${overdueDays} dia(s))` : ((!!emprestimo?.extended_once || !!r.extended_until) ? 'Prazo atualizado' : 'Em curso'),
           status_class: overdueDays > 0 ? 'bad' : ((!!emprestimo?.extended_once || !!r.extended_until) ? 'warn' : 'ok'),
           raw: { ...emprestimo, ...r },
         };
@@ -7867,7 +7867,7 @@ async function fetchActiveLoans(){
           return_schedule_status: returnStatuses.length === 1 ? returnStatuses[0] : null,
           return_schedule_mixed: returnStatuses.length > 1 || returnMoments.length > 1,
           return_scheduled_for: returnMoments.length === 1 ? returnMoments[0] : null,
-          status_text: items.some((x) => x.status_class === 'bad') ? 'Com atraso' : (items.some((x) => x.extended_once) ? 'Renovado' : 'Em curso'),
+          status_text: items.some((x) => x.status_class === 'bad') ? 'Com atraso' : (items.some((x) => x.extended_once) ? 'Prazo atualizado' : 'Em curso'),
           status_class: items.some((x) => x.status_class === 'bad') ? 'bad' : (items.some((x) => x.extended_once) ? 'warn' : 'ok'),
           can_renew: items.every((x) => !!x.can_renew),
           source: 'v2',
@@ -8489,7 +8489,7 @@ async function fetchActiveLoans(){
       }
       tbody.innerHTML = rows.map((l) => {
         const renewBtn = l.source === 'v2'
-          ? `<button class="btn mini" type="button" data-renew-emp-v2="${esc(l.emprestimo_id)}">Renovar</button>`
+          ? `<button class="btn mini" type="button" data-renew-emp-v2="${esc(l.emprestimo_id)}">Solicitar prorrogação</button>`
           : '';
         const returnBtn = l.source === 'v2'
           ? `<button class="btn mini" type="button" data-return-emp-v2="${esc(l.emprestimo_id)}" data-return-line-v2="${esc(l.line_no)}">Devolver</button>`
@@ -8526,7 +8526,7 @@ async function fetchActiveLoans(){
       }
       tbody.innerHTML = rows.map((b) => {
         const renewBtn = b.source === 'v2'
-          ? `<button class="btn mini" type="button" data-renew-batch-v2="${esc(b.emprestimo_id)}" ${b.can_renew ? '' : 'disabled'}>Renovar empréstimo</button>`
+          ? `<button class="btn mini" type="button" data-renew-batch-v2="${esc(b.emprestimo_id)}" ${b.can_renew ? '' : 'disabled'}>Solicitar prorrogação</button>`
           : '';
         const returnBtn = b.source === 'v2'
           ? `<button class="btn mini" type="button" data-return-batch-v2="${esc(b.emprestimo_id)}">Devolver empréstimo</button>`
@@ -8772,7 +8772,7 @@ async function fetchActiveLoans(){
             <td>
               <div class="actions" style="margin-top:0">
                 ${l.source === 'v2'
-                  ? `<button class="btn mini" type="button" data-renew-emp-v2="${l.emprestimo_id}" ${l.can_renew ? '' : 'disabled'}>Renovar</button>
+                  ? `<button class="btn mini" type="button" data-renew-emp-v2="${l.emprestimo_id}" ${l.can_renew ? '' : 'disabled'}>Solicitar prorrogação</button>
                      <button class="btn mini" type="button" data-return-emp-v2="${l.emprestimo_id}" data-return-line-v2="${l.line_no}">Devolver</button>
                      <button class="btn mini" type="button" data-schedule-return-emp-v2="${l.emprestimo_id}" data-schedule-return-line-v2="${l.line_no}">${esc(scheduleLabel)}</button>
                      ${l.return_scheduled_for ? `<button class="btn mini" type="button" data-clear-return-schedule-emp-v2="${l.emprestimo_id}" data-clear-return-schedule-line-v2="${l.line_no}">Cancelar agendamento</button>` : ''}
@@ -9426,20 +9426,42 @@ async function fetchActiveLoans(){
         $('btnDevolverSubIds').disabled = false;
       }
     }
+    function isMissingLoanRenewRpcError(error){
+      const raw = String(error?.message || error?.details || error?.hint || error || '').toLowerCase();
+      return raw.includes('function')
+        || raw.includes('schema cache')
+        || raw.includes('does not exist')
+        || raw.includes('could not find');
+    }
+
+    async function callLoanRenewRpc(emprestimoId){
+      const attempts = [
+        { name: 'fn_v2_extend_emprestimo', args: { p_emprestimo_id: Number(emprestimoId) } },
+        { name: 'fn_v2_extend_emprestimo_once', args: { p_emprestimo_id: Number(emprestimoId) } },
+      ];
+      let lastError = null;
+      for (const attempt of attempts){
+        const res = await supabase.rpc(attempt.name, attempt.args);
+        if (!res?.error) return { ...res, rpcName: attempt.name };
+        lastError = res.error;
+        if (!isMissingLoanRenewRpcError(res.error)) throw res.error;
+      }
+      throw lastError || new Error('RPC de prorrogação indisponível.');
+    }
+
     async function renewEmprestimoV2(emprestimoId, targetStatusId='statusLoans'){
       try {
-        setStatus(targetStatusId, 'Processando renovação...', 'warn', false);
-        const res = await supabase.rpc('fn_v2_extend_emprestimo_once', { p_emprestimo_id: Number(emprestimoId) });
-        if (res.error) throw res.error;
+        setStatus(targetStatusId, 'Verificando prorrogação pelas regras ativas da biblioteca...', 'warn', false);
+        const res = await callLoanRenewRpc(emprestimoId);
         const row = Array.isArray(res.data) ? res.data[0] : res.data;
         const ok = row?.ok !== false;
-        const newDue = row?.new_due_date;
-        const message = row?.message || (ok ? 'Renovação aplicada.' : 'Renovação recusada.');
+        const newDue = row?.new_due_date || row?.due_date || row?.extended_until || null;
+        const message = row?.message || (ok ? 'Prorrogação aplicada.' : 'Prorrogação recusada pelas regras ativas da biblioteca.');
         setStatus(targetStatusId, message + (newDue ? ` Nova devolução: ${fmtDate(newDue)}.` : ''), ok ? 'ok' : 'warn', ok);
         await refreshLoansOnly({silent:true});
         if (ok) writePainelStateSync('loans');
       } catch (e) {
-        setStatus(targetStatusId, 'Erro ao renovar: ' + (e.message || String(e)), 'bad', false);
+        setStatus(targetStatusId, 'Erro ao verificar prorrogação: ' + (e.message || String(e)), 'bad', false);
       }
     }
 
