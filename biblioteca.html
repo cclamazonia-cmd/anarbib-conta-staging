@@ -93,6 +93,9 @@
     .inline-note{font-size:.84rem;color:var(--muted);line-height:1.35}
     .btn.danger{border-color:rgba(251,113,133,.42);background:rgba(90,16,28,.72)}
     .btn.soft{background:rgba(255,255,255,.06)}
+    .state-box{border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:14px;background:rgba(255,255,255,.03)}
+    .state-box strong{display:block;font-size:1rem;margin-bottom:6px}
+    .state-box .state-note{margin-top:8px;color:var(--muted);font-size:.9rem;line-height:1.4}
     .hidden{display:none !important}
     @media (max-width:980px){
       .row,.row3,.kv-grid,.editor-grid,.editor-grid-3{grid-template-columns:1fr}
@@ -244,6 +247,15 @@
                 <div class="actions"><button class="btn mini" id="btnRefreshRegimento" type="button">Atualizar</button></div>
               </div>
               <div class="status" id="regimentoStatus"></div>
+            </div>
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h3>Como a biblioteca está funcionando agora</h3>
+                  <div class="mini">Este quadro mostra se a biblioteca está usando regras ligadas ao regimento ou regras provisórias.</div>
+                </div>
+              </div>
+              <div id="regimeStateBox" class="state-box">Carregando…</div>
             </div>
             <div class="card">
               <div class="section-head">
@@ -633,6 +645,52 @@
     }
     function summarizeObjectEntries(obj, max=12){
       return Object.entries(obj || {}).slice(0, max).map(([key, value]) => [prettySummaryKey(key), Array.isArray(value) ? `${value.length} item(ns)` : (value && typeof value === 'object' ? 'objeto' : value)]);
+    }
+    function getPolicySetOriginText(row){
+      const docKind = String(firstFilledValue(row?.regulation_doc_kind, '')).trim();
+      const version = String(firstFilledValue(row?.regulation_version_label, '')).trim();
+      if (docKind === 'regimento') return `Ligado ao regimento${version ? ` · ${version}` : ''}`;
+      if (docKind) return `Ligado a ${friendlyDocumentKind(docKind).toLowerCase()}${version ? ` · ${version}` : ''}`;
+      if (row?.regulation_document_id) return 'Ligado a um texto da biblioteca';
+      return 'Provisório / sem texto ligado';
+    }
+    function renderRegimeState(){
+      const box = $('regimeStateBox');
+      if (!box) return;
+      const activeDoc = currentRegulationDocs.find((row) => row?.is_active === true) || null;
+      const activeSet = currentPolicySets.find((row) => row?.is_active === true) || currentPolicySets.find((row) => String(row?.status || '').trim() === 'active') || null;
+      const linkedDocId = activeSet?.regulation_document_id != null ? String(activeSet.regulation_document_id) : '';
+      const linkedDoc = linkedDocId ? currentRegulationDocs.find((row) => String(row?.id || '') === linkedDocId) || null : null;
+      let tone = 'warn';
+      let title = 'Biblioteca sem regras locais definidas';
+      let text = 'Nenhum texto em uso e nenhum conjunto de regras em uso foi encontrado.';
+      let note = 'Enquanto isso, o backend precisa resolver regras provisórias padrão para não bloquear conta, index, painel e livro.';
+
+      if (activeSet && linkedDoc) {
+        const kind = friendlyDocumentKind(linkedDoc?.doc_kind).toLowerCase();
+        tone = 'ok';
+        title = linkedDoc?.doc_kind === 'regimento' ? 'Regras do regimento em uso' : 'Regras ligadas a um texto da biblioteca em uso';
+        text = `O conjunto “${firstFilledValue(activeSet?.label, activeSet?.id, '—')}” está em uso e está ligado ao ${kind}${linkedDoc?.version_label ? `, versão ${linkedDoc.version_label}` : ''}.`;
+        note = 'Esta é a situação esperada quando as regras aplicadas no sistema acompanham o texto público da biblioteca.';
+      } else if (activeSet && !linkedDoc) {
+        tone = 'warn';
+        title = 'Regras provisórias em uso';
+        text = `O conjunto “${firstFilledValue(activeSet?.label, activeSet?.id, '—')}” está em uso, mas ainda não está ligado a nenhum texto da biblioteca.`;
+        note = 'Isso permite que o sistema continue funcionando enquanto a biblioteca ainda não definiu ou ainda não ligou seu regimento local.';
+      } else if (!activeSet && activeDoc) {
+        tone = 'warn';
+        title = 'Texto em uso, mas regras ainda não ativadas';
+        text = `O texto “${friendlyDocumentKind(activeDoc?.doc_kind)}”${activeDoc?.version_label ? `, versão ${activeDoc.version_label}` : ''} está em uso, mas nenhum conjunto de regras foi colocado em uso.`;
+        note = 'A biblioteca precisa colocar um conjunto em uso para que o sistema saiba quais prazos, reservas e prorrogações aplicar.';
+      } else if (!activeSet && currentPolicySets.length) {
+        tone = 'warn';
+        title = 'Há conjuntos cadastrados, mas nenhum em uso';
+        text = 'A biblioteca já tem conjuntos de regras cadastrados, porém nenhum deles foi colocado em uso.';
+        note = 'Sem um conjunto em uso, a biblioteca depende apenas das regras provisórias padrão resolvidas no backend.';
+      }
+
+      box.innerHTML = `<strong>${esc(title)}</strong><div>${esc(text)}</div><div class="state-note">${esc(note)}</div>`;
+      box.className = `state-box ${tone}`;
     }
 
     function activateTab(nextTab){
@@ -1247,7 +1305,8 @@
         return;
       }
       tbody.innerHTML = normalizedRows.map((row) => {
-        const scopeText = [firstFilledValue(row?.regulation_doc_kind), firstFilledValue(row?.regulation_version_label), firstFilledValue(row?.effective_from), firstFilledValue(row?.effective_until)].filter(Boolean).join(' · ') || '—';
+        const validity = [firstFilledValue(row?.effective_from), firstFilledValue(row?.effective_until)].filter(Boolean).join(' → ');
+        const scopeText = [getPolicySetOriginText(row), validity].filter(Boolean).join(' · ') || '—';
         const resumeText = `${firstFilledValue(row?.scope_note, row?.activation_note, '—')}${row?.rule_count != null ? ` · ${row.rule_count} regra(s)` : ''}`;
         return `<tr>
           <td>${esc(firstFilledValue(row?.label, row?.id, '—'))}</td>
@@ -1427,12 +1486,13 @@
       if (!$('regulationDocId').value) resetRegulationDocForm();
       if (!$('policySetId').value) resetPolicySetForm();
       if (!$('policyRuleId').value) resetPolicyRuleForm();
+      renderRegimeState();
 
       if (docsError || policySetsError || rulesError) {
         const message = (rulesError || policySetsError || docsError)?.message || String(rulesError || policySetsError || docsError);
         setStatus('regimentoStatus', 'Uma ou mais superfícies canônicas ainda não responderam: ' + message, 'warn');
       } else {
-        setStatus('regimentoStatus', 'Textos, conjuntos de regras e regras detalhadas carregados. Edição básica pronta.', 'ok');
+        setStatus('regimentoStatus', 'Textos, conjuntos de regras e regras detalhadas carregados. Veja abaixo se a biblioteca está com regras do regimento ou com regras provisórias.', 'ok');
       }
     }
 
