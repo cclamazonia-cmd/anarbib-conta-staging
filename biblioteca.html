@@ -1438,7 +1438,7 @@
       $('regulationDocMetadata').value = toPrettyJson(row?.metadata);
       $('btnActivateRegulationDoc').disabled = !row?.id;
       $('btnActivateRegulationDoc').textContent = row?.is_active ? 'Tirar de uso' : 'Colocar em uso';
-      setStatus('regulationDocEditorStatus', row?.id ? `Texto ${row.id} carregado para edição.` : '', row?.id ? 'info' : '');
+      setStatus('regulationDocEditorStatus', row?.id ? `Texto ${row.id} carregado no formulário.` : '', row?.id ? 'info' : '');
       renderRegimentoEditorChecklist();
     }
 
@@ -1487,7 +1487,7 @@
       $('policySetScopeNote').value = firstFilledValue(row?.scope_note);
       $('policySetMetadata').value = toPrettyJson(row?.metadata);
       $('btnActivatePolicySet').disabled = !row?.id;
-      setStatus('policySetEditorStatus', row?.id ? `Conjunto ${row.id} carregado para edição.` : '', row?.id ? 'info' : '');
+      setStatus('policySetEditorStatus', row?.id ? `Conjunto ${row.id} carregado no formulário.` : '', row?.id ? 'info' : '');
       renderRegimentoEditorChecklist();
     }
 
@@ -1558,7 +1558,7 @@
       $('policyRuleConsultationOnly').checked = row?.consultation_only === true;
       $('policyRuleRenewable').checked = row?.renewable !== false;
       $('btnDeletePolicyRule').disabled = !row?.id;
-      setStatus('policyRuleEditorStatus', row?.id ? `Regra ${row.id} carregada para edição.` : '', row?.id ? 'info' : '');
+      setStatus('policyRuleEditorStatus', row?.id ? `Regra ${row.id} carregada no formulário.` : '', row?.id ? 'info' : '');
       renderRegimentoEditorChecklist();
     }
 
@@ -1664,10 +1664,10 @@
         const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
         const payload = collectRegulationDocPayload();
         await supabase.rpc('upsert_library_regulation_document', { p_library_id: row.id, p_document: payload }).then(({ error }) => { if (error) throw error; });
-        setStatus('regulationDocEditorStatus', 'Texto salvo.', 'ok');
+        setStatus('regulationDocEditorStatus', 'Texto salvo. Veja abaixo se ele deve ficar em uso.', 'ok');
         await loadWorkspaceAndPolicies();
       } catch (error) {
-        setStatus('regulationDocEditorStatus', 'Falha ao salvar o texto: ' + (error.message || String(error)), 'bad');
+        setStatus('regulationDocEditorStatus', 'Não consegui salvar o texto: ' + (error.message || String(error)), 'bad');
       }
     }
 
@@ -1679,10 +1679,10 @@
         const makeActive = !(current?.is_active === true);
         setStatus('regulationDocEditorStatus', makeActive ? 'Colocando o texto em uso…' : 'Tirando o texto de uso…', 'info');
         await supabase.rpc('set_library_regulation_document_active', { p_document_id: Number(id), p_make_active: makeActive }).then(({ error }) => { if (error) throw error; });
-        setStatus('regulationDocEditorStatus', makeActive ? 'Texto colocado em uso.' : 'Texto tirado de uso.', 'ok');
+        setStatus('regulationDocEditorStatus', makeActive ? 'Texto colocado em uso. Confira abaixo se o conjunto certo está ligado a ele.' : 'Texto tirado de uso. Confira abaixo como a biblioteca ficou funcionando agora.', 'ok');
         await loadWorkspaceAndPolicies();
       } catch (error) {
-        setStatus('regulationDocEditorStatus', 'Falha ao alterar o texto: ' + (error.message || String(error)), 'bad');
+        setStatus('regulationDocEditorStatus', 'Não consegui mudar o uso deste texto: ' + (error.message || String(error)), 'bad');
       }
     }
 
@@ -1692,10 +1692,10 @@
         const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
         const payload = collectPolicySetPayload();
         await supabase.rpc('upsert_library_circulation_policy_set', { p_library_id: row.id, p_payload: payload }).then(({ error }) => { if (error) throw error; });
-        setStatus('policySetEditorStatus', 'Conjunto de regras salvo.', 'ok');
+        setStatus('policySetEditorStatus', 'Conjunto salvo. Se ele já estiver completo, podes colocá-lo em uso.', 'ok');
         await loadWorkspaceAndPolicies();
       } catch (error) {
-        setStatus('policySetEditorStatus', 'Falha ao salvar o conjunto de regras: ' + (error.message || String(error)), 'bad');
+        setStatus('policySetEditorStatus', 'Não consegui salvar o conjunto: ' + (error.message || String(error)), 'bad');
       }
     }
 
@@ -1705,10 +1705,10 @@
         if (!id) throw new Error('Nenhum conjunto de regras selecionado.');
         setStatus('policySetEditorStatus', 'Colocando o conjunto em uso…', 'info');
         await supabase.rpc('set_library_circulation_policy_set_active', { p_policy_set_id: Number(id) }).then(({ error }) => { if (error) throw error; });
-        setStatus('policySetEditorStatus', 'Conjunto de regras colocado em uso.', 'ok');
+        setStatus('policySetEditorStatus', 'Conjunto colocado em uso. Confira abaixo se ele está ligado ao texto certo.', 'ok');
         await loadWorkspaceAndPolicies();
       } catch (error) {
-        setStatus('policySetEditorStatus', 'Falha ao colocar o conjunto em uso: ' + (error.message || String(error)), 'bad');
+        setStatus('policySetEditorStatus', 'Não consegui colocar o conjunto em uso: ' + (error.message || String(error)), 'bad');
       }
     }
 
@@ -1717,10 +1717,10 @@
         setStatus('policyRuleEditorStatus', 'Salvando regra…', 'info');
         const { policySetId, payload } = collectPolicyRulePayload();
         await supabase.rpc('upsert_library_circulation_policy_rule', { p_policy_set_id: Number(policySetId), p_rule: payload }).then(({ error }) => { if (error) throw error; });
-        setStatus('policyRuleEditorStatus', 'Regra salva.', 'ok');
+        setStatus('policyRuleEditorStatus', 'Regra salva. Confira abaixo se ela aparece no conjunto esperado.', 'ok');
         await loadWorkspaceAndPolicies();
       } catch (error) {
-        setStatus('policyRuleEditorStatus', 'Falha ao salvar a regra: ' + (error.message || String(error)), 'bad');
+        setStatus('policyRuleEditorStatus', 'Não consegui salvar a regra: ' + (error.message || String(error)), 'bad');
       }
     }
 
@@ -1731,11 +1731,11 @@
         if (!window.confirm('Excluir esta regra? Esta ação é irreversível.')) return;
         setStatus('policyRuleEditorStatus', 'Excluindo regra…', 'info');
         await supabase.rpc('delete_library_circulation_policy_rule', { p_rule_id: Number(id) }).then(({ error }) => { if (error) throw error; });
-        setStatus('policyRuleEditorStatus', 'Regra excluída.', 'ok');
+        setStatus('policyRuleEditorStatus', 'Regra excluída. Confira abaixo se o conjunto ainda ficou completo.', 'ok');
         resetPolicyRuleForm();
         await loadWorkspaceAndPolicies();
       } catch (error) {
-        setStatus('policyRuleEditorStatus', 'Falha ao excluir a regra: ' + (error.message || String(error)), 'bad');
+        setStatus('policyRuleEditorStatus', 'Não consegui excluir a regra: ' + (error.message || String(error)), 'bad');
       }
     }
 
@@ -1811,9 +1811,9 @@
       if (docsError || policySetsError || rulesError) {
         const failedRpcName = rulesError ? 'get_library_circulation_policy_rules_ui' : (policySetsError ? 'get_library_circulation_policy_sets_ui' : 'get_library_regulation_documents_ui');
         const message = explainCanonicalSurfaceError(failedRpcName, rulesError || policySetsError || docsError);
-        setStatus('regimentoStatus', 'Uma parte desta aba ainda não carregou: ' + message, 'warn');
+        setStatus('regimentoStatus', 'Regimento carregado só em parte: ' + message, 'warn');
       } else {
-        setStatus('regimentoStatus', 'Textos, conjuntos de regras e regras carregados. Veja abaixo se a biblioteca está com regras do regimento ou com regras temporárias.', 'ok');
+        setStatus('regimentoStatus', 'Regimento carregado. Veja abaixo o estado atual da biblioteca, os textos, os conjuntos e as regras.', 'ok');
       }
     }
 
