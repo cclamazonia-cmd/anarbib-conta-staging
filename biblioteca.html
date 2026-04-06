@@ -710,10 +710,46 @@
       lines.push(`Consulta no local: ${row?.consultation_allowed === false ? 'não' : 'sim'}`);
       return lines;
     }
+    function simplifyVisibleRuleNote(value, kind = 'public') {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+
+      const exactMap = new Map([
+        ['Prazo transitório herdado do sistema atual para empréstimo de 1 item.', 'Enquanto a biblioteca ainda não definiu sua regra própria, vale empréstimo de 1 item.'],
+        ['Prorrogação transitória herdada do sistema atual: 1 vez por 7 dias.', 'Enquanto a biblioteca ainda não definiu sua regra própria, vale 1 prorrogação de 7 dias.'],
+        ['Reserva permitida na base transitória, sujeita aos outros guardrails já existentes.', 'Enquanto a biblioteca ainda não definiu sua regra própria, a reserva continua permitida.'],
+        ['Seed patch 2: reproduz a lógica hardcoded atual.', 'Regra provisória criada para manter o funcionamento atual.'],
+        ['Seed patch 2: reproduz a lógica hardcoded atual de extended_once + 7 dias.', 'Regra provisória criada para manter a prorrogação atual: 1 vez por 7 dias.'],
+        ['Seed patch 2: pose une règle explicite de réservation avant raccord do moteur.', 'Regra provisória criada para manter a reserva disponível nesta fase.']
+      ]);
+
+      if (exactMap.has(raw)) return exactMap.get(raw);
+
+      let text = raw
+        .replace(/Seed patch\s*\d+:/gi, 'Regra provisória:')
+        .replace(/hardcoded/gi, 'atual')
+        .replace(/guardrails/gi, 'regras de proteção')
+        .replace(/base transitória/gi, 'fase transitória')
+        .replace(/pose une règle explicite de réservation avant raccord do moteur\.?/gi, 'mantém a reserva disponível nesta fase.')
+        .replace(/reproduz a lógica hardcoded atual/gi, 'mantém o funcionamento atual')
+        .replace(/reproduz a lógica hardcoded atual de extended_once \+ 7 dias/gi, 'mantém a prorrogação atual: 1 vez por 7 dias')
+        .replace(/raccord do moteur/gi, 'integração completa do sistema')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (kind === 'internal') {
+        text = text
+          .replace(/^Regra provisória:\s*/i, 'Regra provisória criada para ')
+          .replace(/^Regra provisória criada para manter/,'Regra provisória criada para manter');
+      }
+
+      return text;
+    }
+
     function friendlyRuleObservation(row){
       const lines = [];
-      const publicNote = firstFilledValue(row?.public_note);
-      const internalNote = firstFilledValue(row?.internal_note);
+      const publicNote = simplifyVisibleRuleNote(firstFilledValue(row?.public_note), 'public');
+      const internalNote = simplifyVisibleRuleNote(firstFilledValue(row?.internal_note), 'internal');
       if (publicNote) lines.push(`Mensagem ao público: ${publicNote}`);
       if (internalNote) lines.push(`Observação interna: ${internalNote}`);
       if (lines.length) return lines;
