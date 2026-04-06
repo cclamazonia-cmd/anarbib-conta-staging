@@ -150,7 +150,7 @@
         </button>
         <button class="tab-btn" type="button" data-tab="comunicacoes" role="tab" aria-selected="false" aria-controls="tab-comunicacoes">
           Comunicações
-          <span class="hint">Identidade de envio, canais e avisos da biblioteca</span>
+          <span class="hint">Nome usado nos avisos, canais e avisos da biblioteca</span>
         </button>
         <button class="tab-btn" type="button" data-tab="regimento" role="tab" aria-selected="false" aria-controls="tab-regimento">
           Regimento e regras de circulação
@@ -173,7 +173,7 @@
               <div class="section-head">
                 <div>
                   <h2>Identidade e funcionamento</h2>
-                  <div class="mini">Leitura direta dos dados institucionais já usados pela página.</div>
+                  <div class="mini">Leitura direta das informações da biblioteca já usadas nesta página.</div>
                 </div>
                 <div class="actions"><button class="btn mini" id="btnRefreshIdentity" type="button">Atualizar</button></div>
               </div>
@@ -189,7 +189,7 @@
                 <div id="scheduleGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
               </div>
               <div class="card">
-                <div class="section-head"><div><h3>Parâmetros locais atuais</h3><div class="mini">Resumo das regras locais ainda visíveis nesta fase de transição.</div></div></div>
+                <div class="section-head"><div><h3>Regras locais atuais</h3><div class="mini">Resumo das regras locais ainda visíveis nesta fase de transição.</div></div></div>
                 <div id="localRulesGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
               </div>
             </div>
@@ -219,16 +219,16 @@
             </div>
             <div class="row">
               <div class="card">
-                <div class="section-head"><div><h3>Identidade de envio</h3><div class="mini">Dados usados pela biblioteca para enviar avisos.</div></div></div>
+                <div class="section-head"><div><h3>Nome usado nos avisos</h3><div class="mini">Dados usados pela biblioteca para enviar avisos.</div></div></div>
                 <div id="communicationsIdentityGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
               </div>
               <div class="card">
-                <div class="section-head"><div><h3>Políticas e destinatárias/os</h3><div class="mini">O que está ligado, para quem os avisos vão e como acompanhar.</div></div></div>
+                <div class="section-head"><div><h3>Quem recebe os avisos</h3><div class="mini">O que está ativo, para quem os avisos vão e como acompanhar.</div></div></div>
                 <div id="communicationsPolicyGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
               </div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Canal e transporte</h3><div class="mini">Como os avisos são enviados e qual é a situação atual do envio.</div></div></div>
+              <div class="section-head"><div><h3>Envio dos avisos</h3><div class="mini">Como os avisos saem e qual é a situação atual do envio.</div></div></div>
               <div id="communicationsTransportGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
               <details style="margin-top:12px">
                 <summary>Ver tudo das comunicações</summary>
@@ -420,7 +420,7 @@
             </div>
             <div class="row">
               <div class="card">
-                <div class="section-head"><div><h3>Governança documental</h3><div class="mini">Veja aqui os combinados e registros internos sobre documentos da biblioteca.</div></div></div>
+                <div class="section-head"><div><h3>Organização dos documentos</h3><div class="mini">Veja aqui os combinados e registros internos sobre os documentos da biblioteca.</div></div></div>
                 <div id="governanceGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
               </div>
               <div class="card">
@@ -429,7 +429,7 @@
               </div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Detalhes da governança</h3><div class="mini">Área de apoio para conferência.</div></div></div>
+              <div class="section-head"><div><h3>Detalhes dos documentos</h3><div class="mini">Área de apoio para conferência.</div></div></div>
               <pre id="governanceJson" class="json-box">{}</pre>
             </div>
           </div>
@@ -1085,7 +1085,7 @@
         renderKvGrid('identityGrid', [
           ['Nome completo', row?.name || '—'],
           ['Nome abreviado', row?.short_name || '—'],
-          ['Slug', row?.slug || '—'],
+          ['Nome curto no sistema', row?.slug || '—'],
           ['Contato principal', currentContactProfile?.contact_name || '—'],
           ['Papel do contato', currentContactProfile?.contact_role || '—'],
           ['E-mail', currentContactProfile?.contact_email || '—'],
@@ -1101,10 +1101,10 @@
 
         const scheduleStruct = safeJsonObject(currentServiceState?.consultation_schedule_struct);
         renderKvGrid('scheduleGrid', [
-          ['Fuso da consulta local', currentServiceState?.consultation_timezone || 'America/Belem'],
-          ['Capacidade simultânea', currentServiceState?.max_simultaneous_consultations || 1],
-          ['Horários textuais', currentServiceState?.service_schedule_text ? JSON.stringify(currentServiceState.service_schedule_text) : '—'],
-          ['Agenda estruturada', Object.keys(scheduleStruct).length ? JSON.stringify(scheduleStruct) : '—']
+          ['Horário local da consulta', currentServiceState?.consultation_timezone || 'America/Belem'],
+          ['Limite ao mesmo tempo', currentServiceState?.max_simultaneous_consultations || 1],
+          ['Horários escritos', currentServiceState?.service_schedule_text ? JSON.stringify(currentServiceState.service_schedule_text) : '—'],
+          ['Agenda organizada', Object.keys(scheduleStruct).length ? JSON.stringify(scheduleStruct) : '—']
         ]);
 
         const localRules = safeJsonObject(firstFilledValue(row?.local_rules, row?.circulation_local_rules, row?.non_member_rules, currentServiceState?.local_rules));
@@ -1237,14 +1237,14 @@
 
     async function callLibraryScopedRpc(rpcName) {
       const libraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
-      const librarySlug = String(currentLibraryRow?.slug || currentAccessRow?.library_slug || currentIdentityRow?.library_slug || '').trim();
+      const libraryNome curto no sistema = String(currentLibraryRow?.slug || currentAccessRow?.library_slug || currentIdentityRow?.library_slug || '').trim();
       const attempts = [
         {},
         { p_library_id: libraryId },
         { library_id: libraryId },
         { p_target_library_id: libraryId },
-        { p_library_slug: librarySlug },
-        { library_slug: librarySlug }
+        { p_library_slug: libraryNome curto no sistema },
+        { library_slug: libraryNome curto no sistema }
       ];
       let lastError = null;
       for (const args of attempts) {
@@ -1742,7 +1742,7 @@
         const summary = summarizeObjectEntries(currentGovernance, 12);
         renderKvGrid('governanceGrid', summary.length ? summary : [['Estado', 'Nenhuma governança dedicada salva para esta biblioteca.']]);
         $('governanceJson').textContent = JSON.stringify(data || {}, null, 2);
-        setStatus('documentsStatus', 'Governança documental carregada.', 'ok');
+        setStatus('documentsStatus', 'Organização dos documentos carregada.', 'ok');
       } catch (error) {
         currentGovernance = {};
         renderKvGrid('governanceGrid', []);
