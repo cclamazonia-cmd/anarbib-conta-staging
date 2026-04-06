@@ -339,7 +339,7 @@
                     <div class="editor-grid" style="margin-top:12px">
                       <div class="field"><label for="regulationDocBucket">Pasta do arquivo</label><input id="regulationDocBucket" class="input" type="text" placeholder="library-regimentos"></div>
                       <div class="field"><label for="regulationDocDraftPath">Local do arquivo rascunho</label><input id="regulationDocDraftPath" class="input" type="text" placeholder="pasta/arquivo.pdf"></div>
-                      <div class="field"><label for="regulationDocPublicPath">Local do arquivo publicado</label><input id="regulationDocPublicPath" class="input" type="text" placeholder="publico/arquivo.pdf"></div>
+                      <div class="field"><label for="regulationDocPublicPath">Local do arquivo publicado</label><input id="regulationDocPublicPath" class="input" type="text" placeholder="publico/arquivo.pdf"><div id="regulationDocPublicPathHint" class="inline-note">Para o regimento atual publicado, use sempre o alias estável da biblioteca.</div></div>
                       <div class="field" style="grid-column:1 / -1"><label for="regulationDocMetadata">Informações extras</label><textarea id="regulationDocMetadata" class="textarea" placeholder='{}'></textarea></div>
                     </div>
                   </details>
@@ -550,6 +550,8 @@
     } catch (error) {
       console.warn("config.js ausente ou com falha; usando fallback interno.", error);
     }
+
+    const REGIMENTO_PUBLIC_BUCKET = 'library-regimentos-public';
 
     applyPageChrome("biblioteca", {
       logoId: "brandLogo",
@@ -1508,19 +1510,62 @@
       }));
     }
 
+    function getCurrentLibrarySlugForRegimento() {
+      return String(
+        currentLibraryRow?.slug ||
+        currentAccessRow?.library_slug ||
+        currentAccessRow?.default_library_slug ||
+        currentIdentityRow?.library_slug ||
+        currentIdentityRow?.default_library_slug ||
+        document.documentElement?.dataset?.librarySlug ||
+        ''
+      ).trim().toLowerCase();
+    }
+
+    function getCanonicalRegimentoPublicPath(docKind = '') {
+      if (String(docKind || '').trim().toLowerCase() !== 'regimento') return '';
+      const slug = getCurrentLibrarySlugForRegimento();
+      if (!slug || slug === 'default') return '';
+      return `${slug}/regimentos/publicados/regimento-atual.pdf`;
+    }
+
+    function syncRegulationDocPublicPathHint() {
+      const input = $('regulationDocPublicPath');
+      const hint = $('regulationDocPublicPathHint');
+      const bucketInput = $('regulationDocBucket');
+      const kind = String($('regulationDocKind')?.value || 'regimento').trim().toLowerCase();
+      const canonicalPath = getCanonicalRegimentoPublicPath(kind);
+
+      if (bucketInput && kind === 'regimento' && !String(bucketInput.value || '').trim()) {
+        bucketInput.value = REGIMENTO_PUBLIC_BUCKET;
+      }
+      if (input && kind === 'regimento' && canonicalPath && !String(input.value || '').trim()) {
+        input.value = canonicalPath;
+      }
+      if (hint) {
+        hint.textContent = canonicalPath
+          ? `Para o regimento atual publicado, use: ${canonicalPath}`
+          : 'Para o regimento atual publicado, use sempre o alias estável da biblioteca.';
+      }
+      if (input) {
+        input.placeholder = canonicalPath || 'publico/arquivo.pdf';
+      }
+    }
+
     function resetRegulationDocForm() {
       $('regulationDocId').value = '';
       $('regulationDocKind').value = 'regimento';
       $('regulationDocVersion').value = '';
       $('regulationDocPublicationStatus').value = 'draft_only';
-      $('regulationDocBucket').value = 'library-regimentos';
+      $('regulationDocBucket').value = REGIMENTO_PUBLIC_BUCKET;
       $('regulationDocDraftPath').value = '';
-      $('regulationDocPublicPath').value = '';
+      $('regulationDocPublicPath').value = getCanonicalRegimentoPublicPath('regimento');
       $('regulationDocSourceNote').value = '';
       $('regulationDocMetadata').value = toPrettyJson({});
       $('btnActivateRegulationDoc').disabled = true;
       $('btnActivateRegulationDoc').textContent = 'Colocar em uso';
       setStatus('regulationDocEditorStatus', '');
+      syncRegulationDocPublicPathHint();
       renderRegimentoEditorChecklist();
     }
 
@@ -1529,14 +1574,15 @@
       $('regulationDocKind').value = firstFilledValue(row?.doc_kind, 'regimento');
       $('regulationDocVersion').value = firstFilledValue(row?.version_label);
       $('regulationDocPublicationStatus').value = firstFilledValue(row?.publication_status, 'draft_only');
-      $('regulationDocBucket').value = firstFilledValue(row?.storage_bucket, 'library-regimentos');
+      $('regulationDocBucket').value = firstFilledValue(row?.storage_bucket, REGIMENTO_PUBLIC_BUCKET);
       $('regulationDocDraftPath').value = firstFilledValue(row?.storage_path_draft);
-      $('regulationDocPublicPath').value = firstFilledValue(row?.storage_path_public);
+      $('regulationDocPublicPath').value = firstFilledValue(row?.storage_path_public, getCanonicalRegimentoPublicPath(row?.doc_kind));
       $('regulationDocSourceNote').value = firstFilledValue(row?.source_note);
       $('regulationDocMetadata').value = toPrettyJson(row?.metadata);
       $('btnActivateRegulationDoc').disabled = !row?.id;
       $('btnActivateRegulationDoc').textContent = row?.is_active ? 'Tirar de uso' : 'Colocar em uso';
       setStatus('regulationDocEditorStatus', row?.id ? `Texto ${row.id} carregado no formulário.` : '', row?.id ? 'info' : '');
+      syncRegulationDocPublicPathHint();
       renderRegimentoEditorChecklist();
     }
 
@@ -1545,9 +1591,9 @@
         doc_kind: $('regulationDocKind').value,
         version_label: String($('regulationDocVersion').value || '').trim(),
         publication_status: $('regulationDocPublicationStatus').value,
-        storage_bucket: String($('regulationDocBucket').value || '').trim() || 'library-regimentos',
+        storage_bucket: String($('regulationDocBucket').value || '').trim() || REGIMENTO_PUBLIC_BUCKET,
         storage_path_draft: String($('regulationDocDraftPath').value || '').trim() || null,
-        storage_path_public: String($('regulationDocPublicPath').value || '').trim() || null,
+        storage_path_public: String($('regulationDocPublicPath').value || '').trim() || getCanonicalRegimentoPublicPath($('regulationDocKind').value),
         source_note: String($('regulationDocSourceNote').value || '').trim() || null,
         metadata: parseJsonTextareaValue($('regulationDocMetadata').value)
       };
@@ -2008,6 +2054,8 @@
       ]);
     }
 
+    $('regulationDocKind')?.addEventListener('change', syncRegulationDocPublicPathHint);
+    $('regulationDocBucket')?.addEventListener('change', syncRegulationDocPublicPathHint);
     $('btnRefreshIdentity')?.addEventListener('click', loadIdentityPanel);
     $('btnRefreshComms')?.addEventListener('click', loadCommunicationsPanel);
     $('btnRefreshRegimento')?.addEventListener('click', loadWorkspaceAndPolicies);
