@@ -234,43 +234,6 @@
     .msg.ok{color:var(--ok)}
     .msg.warn{color:var(--warn)}
     .msg.bad{color:var(--bad)}
-
-    .institutional-card{
-      border:1px solid rgba(255,255,255,.10);
-      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(10,10,10,.90));
-      border-radius:22px;
-      padding:16px;
-      box-shadow:var(--shadow);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:16px;
-      flex-wrap:wrap;
-    }
-    .institutional-copy{min-width:0;flex:1 1 520px}
-    .institutional-copy h2{
-      margin:0 0 8px;
-      font-size:1.12rem;
-      font-family:var(--brand-font-heading, var(--brand-font-body, Inter,Segoe UI,Arial,sans-serif));
-    }
-    .institutional-copy p{
-      margin:0;
-      color:#f0f0f0;
-      line-height:1.45;
-    }
-    .institutional-actions{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      flex-wrap:wrap;
-      flex:0 0 auto;
-    }
-    .institutional-mini{
-      margin-top:8px;
-      color:#d8d8d8;
-      font-size:.92rem;
-      line-height:1.45;
-    }
     @media (max-width:980px){
       .wrap{padding:16px}
       .topbar{align-items:flex-start}
@@ -312,16 +275,6 @@
       <p id="pageHeroSubtitle">Abertura de conta (leitor/a/e)</p>
     </div>
 
-    <section class="institutional-card" aria-label="Entrada de biblioteca na rede">
-      <div class="institutional-copy">
-        <h2>Sua biblioteca ou coletivo quer entrar na rede AnarBib?</h2>
-        <p>Esta página cria apenas a sua <b>conta pessoal de leitor/a/e</b>. O acesso às áreas internas de gestão da biblioteca não é liberado automaticamente aqui.</p>
-        <div class="institutional-mini">Se você já tem uma conta pessoal ou se quer iniciar o processo institucional da sua biblioteca, use a solicitação específica de entrada na rede.</div>
-      </div>
-      <div class="institutional-actions">
-        <a class="btn primary" id="btnSolicitarBiblioteca" href="./solicitar-biblioteca.html">Solicitar entrada de biblioteca</a>
-      </div>
-    </section>
 
     <div class="notice" role="group" aria-label="Biblioteca de referência">
       <label for="librarySelect">Selecionar biblioteca de referência <span class="reqMark">*</span></label>
@@ -329,15 +282,16 @@
         <option value="">— selecione —</option>
         <option value="blmf">Biblioteca Libertária Maxwell Ferreira — Belém do Pará</option>
         <option value="btl">Biblioteca Terra Livre — São Paulo</option>
+        <option value="sem_biblioteca">Ainda sem biblioteca (vou solicitar entrada)</option>
       </select>
-      <small>A biblioteca escolhida definirá a identidade visual do cadastro, os dados de contato e o conteúdo do e-mail de boas-vindas.</small>
+      <small id="librarySelectHelp">A biblioteca escolhida definirá a identidade visual do cadastro, os dados de contato e o conteúdo do e-mail de boas-vindas.</small>
     </div>
 
 <div class="notice" role="note" aria-label="Aviso de segurança">
       <div class="identity-strip">
         <div class="identity-logos" aria-label="Identidade visual do cadastro">
           <img id="identityAnarbibLogo" class="identity-logo" src="./assets/img/libraries/anarbib/logo-anarbib.png" alt="AnarBib" />
-          <span class="identity-plus" aria-hidden="true">+</span>
+          <span id="identityPlus" class="identity-plus" aria-hidden="true">+</span>
           <img id="identityLibraryLogo" class="identity-logo" src="./assets/img/libraries/blmf/logo-blmf.png" alt="Biblioteca escolhida" />
         </div>
       </div>
@@ -710,7 +664,6 @@
         blog: "https://cclamazonia.noblogs.org",
         catalogo: "https://cclamazonia-cmd.github.io/anarbib-staging/index.html",
         cadastro: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html",
-        solicitarBiblioteca: "./solicitar-biblioteca.html",
         regimentoPage: "https://cclamazonia.noblogs.org/files/2026/03/Regimento-BLMF-v2.3.pdf"
       }
     };
@@ -753,7 +706,6 @@
             btnBlog: "blog",
             btnCatalogo: "catalogo",
             btnCadastro: "cadastro",
-            btnSolicitarBiblioteca: "solicitarBiblioteca",
             btnRegimentoTop: "regimentoPage"
           }
         });
@@ -783,7 +735,29 @@
         admin_email: "ccl-amazonia@riseup.net",
         email_delivery_mode: "normal",
         is_test_mode: false,
+        is_without_library: false,
+        payload_library_slug: "default",
         name_aliases: ["anarbib", "rede anarbib"]
+      },
+      sem_biblioteca: {
+        slug: "sem_biblioteca",
+        display_name: "AnarBib",
+        short_name: "AnarBib",
+        logo_file_key: "anarbib",
+        logo_url: LOGO_ASSETS.anarbib,
+        contact_email: "",
+        reply_to_email: "",
+        postal_address: "",
+        admin_email: "ccl-amazonia@riseup.net",
+        email_delivery_mode: "normal",
+        is_test_mode: false,
+        is_without_library: true,
+        payload_library_slug: "default",
+        name_aliases: [
+          "ainda sem biblioteca",
+          "sem biblioteca",
+          "vou solicitar entrada"
+        ]
       },
       blmf: {
         slug: "blmf",
@@ -797,6 +771,8 @@
         admin_email: "ccl-amazonia@riseup.net",
         email_delivery_mode: "normal",
         is_test_mode: false,
+        is_without_library: false,
+        payload_library_slug: "blmf",
         name_aliases: [
           "biblioteca libertária maxwell ferreira",
           "biblioteca libertaria maxwell ferreira",
@@ -816,6 +792,8 @@
         admin_email: "ccl-amazonia@riseup.net",
         email_delivery_mode: "test_only",
         is_test_mode: true,
+        is_without_library: false,
+        payload_library_slug: "btl",
         name_aliases: [
           "biblioteca terra livre",
           "btl",
@@ -871,6 +849,8 @@
         admin_email: String(baseMeta.admin_email || "ccl-amazonia@riseup.net").trim(),
         email_delivery_mode: String(baseMeta.email_delivery_mode || "normal").trim(),
         is_test_mode: Boolean(baseMeta.is_test_mode),
+        is_without_library: Boolean(baseMeta.is_without_library),
+        payload_library_slug: String(baseMeta.payload_library_slug || baseMeta.slug || "default").trim().toLowerCase(),
         logo_file_key: baseMeta.logo_file_key || ""
       };
     }
@@ -878,17 +858,22 @@
     function applyIdentityNotice(meta) {
       const libLogo = document.getElementById("identityLibraryLogo");
       const anarbibLogo = document.getElementById("identityAnarbibLogo");
+      const identityPlus = document.getElementById("identityPlus");
       const intro = document.getElementById("securityIntro");
       const idNotice = document.getElementById("securityIdNotice");
       const addrNotice = document.getElementById("libraryAddressNotice");
       const publicIdHint = document.getElementById("publicIdHint");
+      const librarySelectHelp = document.getElementById("librarySelectHelp");
 
       const libName = meta?.name || "biblioteca escolhida";
+      const isWithoutLibrary = meta?.is_without_library === true;
 
       if (anarbibLogo) anarbibLogo.src = ANARBIB_LOGO_URL;
 
       if (libLogo) {
-        if (meta?.logo_url) {
+        if (isWithoutLibrary) {
+          libLogo.style.display = "none";
+        } else if (meta?.logo_url) {
           libLogo.src = meta.logo_url;
           libLogo.alt = libName;
           libLogo.style.display = "";
@@ -897,16 +882,32 @@
         }
       }
 
+      if (identityPlus) {
+        identityPlus.style.display = isWithoutLibrary ? "none" : "";
+      }
+
+      if (librarySelectHelp) {
+        librarySelectHelp.innerHTML = isWithoutLibrary
+          ? "Você pode criar sua conta pessoal sem vínculo com uma biblioteca já ativa na rede. Depois, use a solicitação institucional para pedir a entrada da sua biblioteca no AnarBib."
+          : "A biblioteca escolhida definirá a identidade visual do cadastro, os dados de contato e o conteúdo do e-mail de boas-vindas.";
+      }
+
       if (intro) {
-        intro.innerHTML = `A senha que você receberá por e-mail é <b>provisória</b>. No primeiro acesso à <b>${libName}</b>, você entrará com essa senha provisória e deverá <b>alterar sua senha na Conta</b>.`;
+        intro.innerHTML = isWithoutLibrary
+          ? `A senha que você receberá por e-mail é <b>provisória</b>. Como esta conta inicial ainda não está vinculada a uma biblioteca já ativa na rede, você entrará primeiro no <b>AnarBib</b> e deverá <b>alterar sua senha na Conta</b> no primeiro acesso.`
+          : `A senha que você receberá por e-mail é <b>provisória</b>. No primeiro acesso à <b>${libName}</b>, você entrará com essa senha provisória e deverá <b>alterar sua senha na Conta</b>.`;
       }
 
       if (idNotice) {
-        idNotice.innerHTML = `Depois da criação da conta, seus acessos regulares serão feitos com seu <b>ID público pessoal</b>, que substituirá o uso do e-mail no login da <b>${libName}</b>.`;
+        idNotice.innerHTML = isWithoutLibrary
+          ? `Depois da criação da conta, seus acessos regulares serão feitos com seu <b>ID público pessoal</b>, que substituirá o uso do e-mail no login do <b>AnarBib</b> até que a entrada institucional da sua biblioteca seja analisada.`
+          : `Depois da criação da conta, seus acessos regulares serão feitos com seu <b>ID público pessoal</b>, que substituirá o uso do e-mail no login da <b>${libName}</b>.`;
       }
 
       if (publicIdHint) {
-        publicIdHint.innerHTML = `Guarde este identificador. Nos próximos acessos à <b>${libName}</b>, você entrará com ele e sua senha.`;
+        publicIdHint.innerHTML = isWithoutLibrary
+          ? `Guarde este identificador. Nos próximos acessos ao <b>AnarBib</b>, você entrará com ele e sua senha.`
+          : `Guarde este identificador. Nos próximos acessos à <b>${libName}</b>, você entrará com ele e sua senha.`;
       }
 
       if (addrNotice) {
@@ -918,6 +919,9 @@
         }
         if (meta?.is_test_mode) {
           pieces.push(`<b>Modo de teste:</b> os dados desta biblioteca estão em preparação e o envio de e-mails reais deve permanecer desativado.`);
+        }
+        if (isWithoutLibrary) {
+          pieces.push("Esta conta será criada sem vínculo inicial com uma biblioteca já ativa na rede.");
         }
         if (pieces.length) {
           addrNotice.innerHTML = pieces.join(" · ");
@@ -956,7 +960,6 @@
       btnBlog: FALLBACK_CONFIG.ROUTES.blog,
       btnCatalogo: FALLBACK_CONFIG.ROUTES.catalogo,
       btnCadastro: FALLBACK_CONFIG.ROUTES.cadastro,
-      btnSolicitarBiblioteca: FALLBACK_CONFIG.ROUTES.solicitarBiblioteca,
       btnRegimentoTop: FALLBACK_CONFIG.ROUTES.regimentoPage
     }).forEach(([id, href]) => {
       const a = document.getElementById(id);
@@ -1110,8 +1113,9 @@
         country: document.getElementById("country").value,
         consent_email: true,
         accept_rules: true,
-        library_slug: currentLibraryMeta.slug || "",
+        library_slug: currentLibraryMeta.payload_library_slug || currentLibraryMeta.slug || "",
         library_name: currentLibraryMeta.name || "",
+        signup_without_library: currentLibraryMeta.is_without_library === true,
         library_contact_email: currentLibraryMeta.contact_email || "",
         library_reply_to_email: currentLibraryMeta.reply_to_email || "",
         library_address: currentLibraryMeta.address || "",
@@ -1150,12 +1154,16 @@
 
         if (data.email_usuaria_enviado === false) {
           setMsg(
-            "Cadastro concluído, mas houve um problema ao enviar o e-mail automaticamente. Entre em contato com a biblioteca para receber sua senha provisória e seu ID público. Depois do primeiro acesso, altere sua senha na Conta.",
+            currentLibraryMeta.is_without_library === true
+              ? "Cadastro concluído, mas houve um problema ao enviar o e-mail automaticamente. Entre em contato com a coordenação do AnarBib para receber sua senha provisória e seu ID público. Depois do primeiro acesso, altere sua senha na Conta."
+              : "Cadastro concluído, mas houve um problema ao enviar o e-mail automaticamente. Entre em contato com a biblioteca para receber sua senha provisória e seu ID público. Depois do primeiro acesso, altere sua senha na Conta.",
             "warn"
           );
         } else {
           setMsg(
-            "Cadastro enviado com sucesso. Verifique seu e-mail (e Spam/Lixo eletrônico) para receber sua senha provisória e seu ID público definitivo. Depois do primeiro acesso, altere sua senha na Conta.",
+            currentLibraryMeta.is_without_library === true
+              ? "Cadastro enviado com sucesso. Verifique seu e-mail (e Spam/Lixo eletrônico) para receber sua senha provisória e seu ID público definitivo. Depois do primeiro acesso, altere sua senha na Conta. Em seguida, você poderá solicitar a entrada institucional da sua biblioteca na rede."
+              : "Cadastro enviado com sucesso. Verifique seu e-mail (e Spam/Lixo eletrônico) para receber sua senha provisória e seu ID público definitivo. Depois do primeiro acesso, altere sua senha na Conta.",
             "ok"
           );
         }
