@@ -282,16 +282,15 @@
         <option value="">— selecione —</option>
         <option value="blmf">Biblioteca Libertária Maxwell Ferreira — Belém do Pará</option>
         <option value="btl">Biblioteca Terra Livre — São Paulo</option>
-        <option value="sem_biblioteca">Ainda sem biblioteca (vou solicitar entrada)</option>
       </select>
-      <small id="librarySelectHelp">A biblioteca escolhida definirá a identidade visual do cadastro, os dados de contato e o conteúdo do e-mail de boas-vindas.</small>
+      <small>A biblioteca escolhida definirá a identidade visual do cadastro, os dados de contato e o conteúdo do e-mail de boas-vindas.</small>
     </div>
 
 <div class="notice" role="note" aria-label="Aviso de segurança">
       <div class="identity-strip">
         <div class="identity-logos" aria-label="Identidade visual do cadastro">
           <img id="identityAnarbibLogo" class="identity-logo" src="./assets/img/libraries/anarbib/logo-anarbib.png" alt="AnarBib" />
-          <span id="identityPlus" class="identity-plus" aria-hidden="true">+</span>
+          <span class="identity-plus" aria-hidden="true">+</span>
           <img id="identityLibraryLogo" class="identity-logo" src="./assets/img/libraries/blmf/logo-blmf.png" alt="Biblioteca escolhida" />
         </div>
       </div>
@@ -317,7 +316,7 @@
     </p>
     <p class="requiredLegend"><span class="reqMark">*</span> Campo obrigatório</p>
     <p class="hint">
-      Campos obrigatórios: <b>Nome</b>, <b>Sobrenome</b>, <b>E-mail</b>, <b>Telefone</b> e as duas caixas de confirmação.
+      Campos obrigatórios: <b>Nome</b>, <b>Sobrenome</b>, <b>E-mail</b>, <b>Telefone</b> e as confirmações aplicáveis ao seu caso.
     </p>
     <p class="hint">
       Todos os campos de endereço são opcionais, inclusive <b>Estado</b> e <b>País</b>.
@@ -623,7 +622,7 @@
 
       <hr />
 
-      <label class="checkbox" for="acceptRules">
+      <label class="checkbox" id="acceptRulesRow" for="acceptRules">
         <input type="checkbox" id="acceptRules" required />
         <span>
           Eu li e aceito o <a id="regLink" href="#" rel="noopener">Regimento</a> da Biblioteca (empréstimos, prazos, prorrogações e atrasos). <span class="reqMark">*</span>
@@ -639,7 +638,7 @@
       </label>
 
       <p id="requiredMsg" class="required" style="display:none;">
-        Para enviar o cadastro, preencha Nome, Sobrenome, E-mail e Telefone, e marque as duas caixas obrigatórias.
+        Para enviar o cadastro, preencha Nome, Sobrenome, E-mail e Telefone, e marque as confirmações obrigatórias.
       </p>
 
       <button type="submit">Enviar cadastro</button>
@@ -664,7 +663,7 @@
         blog: "https://cclamazonia.noblogs.org",
         catalogo: "https://cclamazonia-cmd.github.io/anarbib-staging/index.html",
         cadastro: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html",
-        regimentoPage: "https://cclamazonia.noblogs.org/files/2026/03/Regimento-BLMF-v2.3.pdf"
+        biblioteca: "./biblioteca.html"
       }
     };
 
@@ -705,14 +704,13 @@
           routeMap: {
             btnBlog: "blog",
             btnCatalogo: "catalogo",
-            btnCadastro: "cadastro",
-            btnRegimentoTop: "regimentoPage"
+            btnCadastro: "cadastro"
           }
         });
       }
     } catch (_) {}
 
-    const REGIMENTO_URL = FALLBACK_CONFIG.ROUTES.regimentoPage;
+    const BIBLIOTECA_BASE_URL = CONFIG.ROUTES?.biblioteca || FALLBACK_CONFIG.ROUTES.biblioteca;
 
     // Detrompeurs de logos : chaque bibliothèque doit avoir un identifiant stable
     // et un fichier dédié pour éviter les confusions de nom.
@@ -736,6 +734,7 @@
         email_delivery_mode: "normal",
         is_test_mode: false,
         is_without_library: false,
+        has_published_regimento: false,
         payload_library_slug: "default",
         name_aliases: ["anarbib", "rede anarbib"]
       },
@@ -752,12 +751,9 @@
         email_delivery_mode: "normal",
         is_test_mode: false,
         is_without_library: true,
+        has_published_regimento: false,
         payload_library_slug: "default",
-        name_aliases: [
-          "ainda sem biblioteca",
-          "sem biblioteca",
-          "vou solicitar entrada"
-        ]
+        name_aliases: ["sem biblioteca", "ainda sem biblioteca", "vou solicitar entrada"]
       },
       blmf: {
         slug: "blmf",
@@ -772,6 +768,7 @@
         email_delivery_mode: "normal",
         is_test_mode: false,
         is_without_library: false,
+        has_published_regimento: true,
         payload_library_slug: "blmf",
         name_aliases: [
           "biblioteca libertária maxwell ferreira",
@@ -793,6 +790,7 @@
         email_delivery_mode: "test_only",
         is_test_mode: true,
         is_without_library: false,
+        has_published_regimento: false,
         payload_library_slug: "btl",
         name_aliases: [
           "biblioteca terra livre",
@@ -850,9 +848,40 @@
         email_delivery_mode: String(baseMeta.email_delivery_mode || "normal").trim(),
         is_test_mode: Boolean(baseMeta.is_test_mode),
         is_without_library: Boolean(baseMeta.is_without_library),
+        has_published_regimento: Boolean(baseMeta.has_published_regimento),
         payload_library_slug: String(baseMeta.payload_library_slug || baseMeta.slug || "default").trim().toLowerCase(),
         logo_file_key: baseMeta.logo_file_key || ""
       };
+    }
+
+    function getRegimentoUrlForMeta(meta) {
+      if (!meta?.has_published_regimento) return "#";
+      const baseUrl = String(BIBLIOTECA_BASE_URL || "./biblioteca.html").trim() || "./biblioteca.html";
+      const slug = String(meta?.payload_library_slug || meta?.slug || "").trim().toLowerCase();
+      return slug ? `${baseUrl}?library=${encodeURIComponent(slug)}#regimento` : `${baseUrl}#regimento`;
+    }
+
+    function applyRegimentoVisibility(meta) {
+      const acceptRulesRow = document.getElementById("acceptRulesRow");
+      const acceptRulesInput = document.getElementById("acceptRules");
+      const regLink = document.getElementById("regLink");
+      const hasPublishedRegimento = meta?.has_published_regimento === true;
+
+      if (acceptRulesRow) {
+        acceptRulesRow.style.display = hasPublishedRegimento ? "" : "none";
+      }
+
+      if (acceptRulesInput) {
+        acceptRulesInput.required = hasPublishedRegimento;
+        if (!hasPublishedRegimento) {
+          acceptRulesInput.checked = false;
+          acceptRulesInput.setCustomValidity("");
+        }
+      }
+
+      if (regLink) {
+        regLink.href = getRegimentoUrlForMeta(meta);
+      }
     }
 
     function applyIdentityNotice(meta) {
@@ -863,7 +892,8 @@
       const idNotice = document.getElementById("securityIdNotice");
       const addrNotice = document.getElementById("libraryAddressNotice");
       const publicIdHint = document.getElementById("publicIdHint");
-      const librarySelectHelp = document.getElementById("librarySelectHelp");
+
+      applyRegimentoVisibility(meta);
 
       const libName = meta?.name || "biblioteca escolhida";
       const isWithoutLibrary = meta?.is_without_library === true;
@@ -886,15 +916,9 @@
         identityPlus.style.display = isWithoutLibrary ? "none" : "";
       }
 
-      if (librarySelectHelp) {
-        librarySelectHelp.innerHTML = isWithoutLibrary
-          ? "Você pode criar sua conta pessoal sem vínculo com uma biblioteca já ativa na rede. Depois, use a solicitação institucional para pedir a entrada da sua biblioteca no AnarBib."
-          : "A biblioteca escolhida definirá a identidade visual do cadastro, os dados de contato e o conteúdo do e-mail de boas-vindas.";
-      }
-
       if (intro) {
         intro.innerHTML = isWithoutLibrary
-          ? `A senha que você receberá por e-mail é <b>provisória</b>. Como esta conta inicial ainda não está vinculada a uma biblioteca já ativa na rede, você entrará primeiro no <b>AnarBib</b> e deverá <b>alterar sua senha na Conta</b> no primeiro acesso.`
+          ? `A senha que você receberá por e-mail é <b>provisória</b>. No primeiro acesso ao <b>AnarBib</b>, você entrará com essa senha provisória e deverá <b>alterar sua senha na Conta</b>.`
           : `A senha que você receberá por e-mail é <b>provisória</b>. No primeiro acesso à <b>${libName}</b>, você entrará com essa senha provisória e deverá <b>alterar sua senha na Conta</b>.`;
       }
 
@@ -959,18 +983,11 @@
     Object.entries({
       btnBlog: FALLBACK_CONFIG.ROUTES.blog,
       btnCatalogo: FALLBACK_CONFIG.ROUTES.catalogo,
-      btnCadastro: FALLBACK_CONFIG.ROUTES.cadastro,
-      btnRegimentoTop: FALLBACK_CONFIG.ROUTES.regimentoPage
+      btnCadastro: FALLBACK_CONFIG.ROUTES.cadastro
     }).forEach(([id, href]) => {
       const a = document.getElementById(id);
       if (a) a.href = href;
     });
-
-    // Wire regimento links
-    for (const id of ["regLinkTop", "regLink"]) {
-      const a = document.getElementById(id);
-      if (a) a.href = REGIMENTO_URL;
-    }
 
     const form = document.getElementById("cadastroForm");
     const msg = document.getElementById("msg");
@@ -1019,7 +1036,8 @@
 
 
     function validateCheckboxes() {
-      const ok = consent.checked && acceptRules.checked;
+      const requiresRegimento = currentLibraryMeta?.has_published_regimento === true;
+      const ok = consent.checked && (!requiresRegimento || acceptRules.checked);
       requiredMsg.style.display = ok ? "none" : "block";
       return ok;
     }
@@ -1112,7 +1130,7 @@
         state: document.getElementById("state").value,
         country: document.getElementById("country").value,
         consent_email: true,
-        accept_rules: true,
+        accept_rules: currentLibraryMeta.has_published_regimento === true && acceptRules.checked === true,
         library_slug: currentLibraryMeta.payload_library_slug || currentLibraryMeta.slug || "",
         library_name: currentLibraryMeta.name || "",
         signup_without_library: currentLibraryMeta.is_without_library === true,
