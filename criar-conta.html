@@ -875,6 +875,7 @@
 
       if (acceptRulesInput) {
         acceptRulesInput.required = hasPublishedRegimento;
+        acceptRulesInput.disabled = !hasPublishedRegimento;
         if (!hasPublishedRegimento) {
           acceptRulesInput.checked = false;
           acceptRulesInput.setCustomValidity("");
@@ -1132,7 +1133,7 @@
         state: document.getElementById("state").value,
         country: document.getElementById("country").value,
         consent_email: true,
-        accept_rules: currentLibraryMeta.has_published_regimento === true && acceptRules.checked === true,
+        accept_rules: currentLibraryMeta.has_published_regimento === true ? acceptRules.checked === true : true,
         library_slug: currentLibraryMeta.payload_library_slug || currentLibraryMeta.slug || "",
         library_name: currentLibraryMeta.name || "",
         signup_without_library: currentLibraryMeta.is_without_library === true,
