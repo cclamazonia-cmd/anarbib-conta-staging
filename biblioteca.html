@@ -259,6 +259,10 @@
               </div>
               <div id="regimeStateBox" class="state-box">Carregando…</div>
               <div id="regimeActionBox" class="state-box" style="margin-top:12px">Carregando…</div>
+              <div class="subcard" style="margin-top:12px">
+                <div class="section-head"><div><h3>Resumo rápido</h3><div class="mini">Veja aqui, de relance, o que já existe e o que ainda falta ligar.</div></div></div>
+                <div id="regimeQuickSummary" class="kv-grid"><div class="empty">Carregando…</div></div>
+              </div>
             </div>
             <div class="card">
               <div class="section-head">
@@ -765,6 +769,40 @@
           focusEditorField('btnActivatePolicySet');
         }
       }
+    }
+
+    function renderRegimeQuickSummary(){
+      const activeDoc = currentRegulationDocs.find((row) => row?.is_active === true) || null;
+      const activeSet = currentPolicySets.find((row) => row?.is_active === true) || currentPolicySets.find((row) => String(row?.status || '').trim() === 'active') || null;
+      const linkedDocId = activeSet?.regulation_document_id != null ? String(activeSet.regulation_document_id) : '';
+      const linkedDoc = linkedDocId ? currentRegulationDocs.find((row) => String(row?.id || '') === linkedDocId) || null : null;
+      let currentState = 'Regras temporárias em uso';
+      let nextStep = 'Registrar o texto principal da biblioteca e ligar um conjunto a ele.';
+
+      if (activeSet && linkedDoc) {
+        currentState = 'Regras do regimento em uso';
+        nextStep = 'Revisar o conjunto quando o texto público mudar.';
+      } else if (activeSet && !linkedDoc) {
+        currentState = 'Conjunto em uso sem texto ligado';
+        nextStep = 'Ligar o conjunto em uso a um texto da biblioteca.';
+      } else if (!activeSet && activeDoc) {
+        currentState = 'Texto em uso, mas conjunto ainda não ativado';
+        nextStep = 'Colocar um conjunto em uso para aplicar prazos e regras.';
+      } else if (!activeSet && currentPolicySets.length) {
+        currentState = 'Há conjuntos cadastrados, mas nenhum em uso';
+        nextStep = 'Escolher qual conjunto deve valer agora.';
+      }
+
+      renderKvGrid('regimeQuickSummary', [
+        ['Situação resumida', currentState],
+        ['Texto em uso', activeDoc ? `${friendlyDocumentKind(activeDoc?.doc_kind)}${activeDoc?.version_label ? ` · ${activeDoc.version_label}` : ''}` : 'Nenhum texto em uso'],
+        ['Conjunto em uso', activeSet ? firstFilledValue(activeSet?.label, activeSet?.id, '—') : 'Nenhum conjunto em uso'],
+        ['Textos cadastrados', currentRegulationDocs.length],
+        ['Conjuntos cadastrados', currentPolicySets.length],
+        ['Regras cadastradas', currentPolicyRules.length],
+        ['Próximo passo', nextStep],
+        ['Texto ligado ao conjunto', linkedDoc ? 'Sim' : 'Não']
+      ]);
     }
 
     function renderRegimeState(){
@@ -1718,6 +1756,7 @@
       if (!$('policySetId').value) resetPolicySetForm();
       if (!$('policyRuleId').value) resetPolicyRuleForm();
       renderRegimeState();
+      renderRegimeQuickSummary();
 
       if (docsError || policySetsError || rulesError) {
         const failedRpcName = rulesError ? 'get_library_circulation_policy_rules_ui' : (policySetsError ? 'get_library_circulation_policy_sets_ui' : 'get_library_regulation_documents_ui');
