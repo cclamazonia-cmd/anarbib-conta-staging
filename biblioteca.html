@@ -1190,11 +1190,20 @@
 
     function explainCanonicalSurfaceError(rpcName, error) {
       const message = String(error?.message || error || '').trim();
-      if (!CANONICAL_API_RPCS.has(rpcName)) return message || `Falha ao carregar ${rpcName}.`;
-      if (/could not find the function|schema cache|function\s+/i.test(message)) {
-        return `A superfície canônica “${getCanonicalSurfaceLabel(rpcName)}” não foi encontrada na base ativa. Verifica se a função existe no esquema api e se o cache da API já foi atualizado.`;
+      if (!CANONICAL_API_RPCS.has(rpcName)) {
+        return message || `Falha ao carregar ${rpcName}.`;
       }
-      return message || `Falha ao carregar ${getCanonicalSurfaceLabel(rpcName)}.`;
+      const label = getCanonicalSurfaceLabel(rpcName);
+      if (/could not find the function|schema cache|function\s+/i.test(message)) {
+        return [
+          `A parte “${label}” desta página ainda não está disponível nesta base.`,
+          'Confere se ela já foi instalada aqui e se a atualização da API já entrou em vigor.'
+        ].join(' ');
+      }
+      if (!message) {
+        return `Não consegui carregar a parte “${label}” desta página.`;
+      }
+      return `Não consegui carregar a parte “${label}” desta página: ${message}`;
     }
 
     async function callRpcOnSchema(schemaName, rpcName, args = {}) {
@@ -1658,7 +1667,7 @@
         renderKvGrid('documentsWorkspaceGrid', []);
         $('workspaceJson').textContent = '{}';
         setChip('chipWorkspace', 'Resumo geral da biblioteca: indisponível');
-        setStatus('workspaceStatus', 'Não consegui carregar o resumo geral da biblioteca: ' + explainCanonicalSurfaceError('get_library_institutional_workspace', error), 'warn');
+        setStatus('workspaceStatus', 'Não consegui carregar esta parte do resumo da biblioteca: ' + explainCanonicalSurfaceError('get_library_institutional_workspace', error), 'warn');
       }
 
       let docsError = null;
@@ -1713,7 +1722,7 @@
       if (docsError || policySetsError || rulesError) {
         const failedRpcName = rulesError ? 'get_library_circulation_policy_rules_ui' : (policySetsError ? 'get_library_circulation_policy_sets_ui' : 'get_library_regulation_documents_ui');
         const message = explainCanonicalSurfaceError(failedRpcName, rulesError || policySetsError || docsError);
-        setStatus('regimentoStatus', 'Uma ou mais superfícies canônicas ainda não responderam: ' + message, 'warn');
+        setStatus('regimentoStatus', 'Uma parte desta aba ainda não carregou: ' + message, 'warn');
       } else {
         setStatus('regimentoStatus', 'Textos, conjuntos de regras e regras detalhadas carregados. Veja abaixo se a biblioteca está com regras do regimento ou com regras provisórias.', 'ok');
       }
