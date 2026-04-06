@@ -198,7 +198,7 @@
               <div class="status" id="workspaceStatus"></div>
               <div id="workspaceSummary" class="kv-grid"><div class="empty">Carregando…</div></div>
               <details style="margin-top:12px">
-                <summary>Ver dados completos (avançado)</summary>
+                <summary>Ver tudo</summary>
                 <pre id="workspaceJson" class="json-box">{}</pre>
               </details>
             </div>
@@ -231,7 +231,7 @@
               <div class="section-head"><div><h3>Canal e transporte</h3><div class="mini">Como os avisos são enviados e qual é a situação atual do envio.</div></div></div>
               <div id="communicationsTransportGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
               <details style="margin-top:12px">
-                <summary>Ver dados completos das comunicações (avançado)</summary>
+                <summary>Ver tudo das comunicações</summary>
                 <pre id="communicationsJson" class="json-box">{}</pre>
               </details>
             </div>
@@ -285,12 +285,12 @@
                     <div class="field"><label for="regulationDocSourceNote">Observação interna</label><input id="regulationDocSourceNote" class="input" type="text" placeholder="Ex.: texto em revisão"></div>
                   </div>
                   <details style="margin-top:12px">
-                    <summary>Opções avançadas do arquivo</summary>
+                    <summary>Mais campos do texto</summary>
                     <div class="editor-grid" style="margin-top:12px">
-                      <div class="field"><label for="regulationDocBucket">Pasta técnica</label><input id="regulationDocBucket" class="input" type="text" placeholder="library-regimentos"></div>
-                      <div class="field"><label for="regulationDocDraftPath">Endereço interno do rascunho</label><input id="regulationDocDraftPath" class="input" type="text" placeholder="pasta/arquivo.pdf"></div>
-                      <div class="field"><label for="regulationDocPublicPath">Endereço interno do publicado</label><input id="regulationDocPublicPath" class="input" type="text" placeholder="publico/arquivo.pdf"></div>
-                      <div class="field" style="grid-column:1 / -1"><label for="regulationDocMetadata">Dados extras (avançado)</label><textarea id="regulationDocMetadata" class="textarea" placeholder='{}'></textarea></div>
+                      <div class="field"><label for="regulationDocBucket">Pasta do arquivo</label><input id="regulationDocBucket" class="input" type="text" placeholder="library-regimentos"></div>
+                      <div class="field"><label for="regulationDocDraftPath">Local do arquivo rascunho</label><input id="regulationDocDraftPath" class="input" type="text" placeholder="pasta/arquivo.pdf"></div>
+                      <div class="field"><label for="regulationDocPublicPath">Local do arquivo publicado</label><input id="regulationDocPublicPath" class="input" type="text" placeholder="publico/arquivo.pdf"></div>
+                      <div class="field" style="grid-column:1 / -1"><label for="regulationDocMetadata">Informações extras</label><textarea id="regulationDocMetadata" class="textarea" placeholder='{}'></textarea></div>
                     </div>
                   </details>
                   <div class="editor-actions" style="margin-top:12px">
@@ -317,11 +317,11 @@
                     <div class="field"><label for="policySetEffectiveUntil">Termina em</label><input id="policySetEffectiveUntil" class="input" type="date"></div>
                   </div>
                   <details style="margin-top:12px">
-                    <summary>Opções avançadas do conjunto</summary>
+                    <summary>Mais campos do conjunto</summary>
                     <div class="editor-grid" style="margin-top:12px">
-                      <div class="field"><label for="policySetConfigVersion">Versão interna</label><input id="policySetConfigVersion" class="input" type="number" min="1" step="1" value="1"></div>
+                      <div class="field"><label for="policySetConfigVersion">Número da versão</label><input id="policySetConfigVersion" class="input" type="number" min="1" step="1" value="1"></div>
                       <div class="field"><label for="policySetActivationNote">Observação de ativação</label><input id="policySetActivationNote" class="input" type="text" placeholder="Observação curta"></div>
-                      <div class="field" style="grid-column:1 / -1"><label for="policySetMetadata">Dados extras (avançado)</label><textarea id="policySetMetadata" class="textarea" placeholder='{}'></textarea></div>
+                      <div class="field" style="grid-column:1 / -1"><label for="policySetMetadata">Informações extras</label><textarea id="policySetMetadata" class="textarea" placeholder='{}'></textarea></div>
                     </div>
                   </details>
                   <div class="editor-actions" style="margin-top:12px">
@@ -362,10 +362,10 @@
                     <label class="check-item"><input id="policyRuleRenewable" type="checkbox" checked> Permite prorrogação</label>
                   </div>
                   <details style="margin-top:12px">
-                    <summary>Opções avançadas da regra</summary>
+                    <summary>Mais campos da regra</summary>
                     <div class="editor-grid" style="margin-top:12px">
                       <div class="field"><label for="policyRuleInternalNote">Observação interna</label><textarea id="policyRuleInternalNote" class="textarea" placeholder="Observação interna"></textarea></div>
-                      <div class="field"><label for="policyRuleMetadata">Dados extras (avançado)</label><textarea id="policyRuleMetadata" class="textarea" placeholder='{}'></textarea></div>
+                      <div class="field"><label for="policyRuleMetadata">Informações extras</label><textarea id="policyRuleMetadata" class="textarea" placeholder='{}'></textarea></div>
                     </div>
                   </details>
                   <div class="editor-actions" style="margin-top:12px">
@@ -386,7 +386,7 @@
               </div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Conjuntos de regras de empréstimo</h3><div class="mini">Leitura dos conjuntos de políticas ativos e disponíveis.</div></div></div>
+              <div class="section-head"><div><h3>Conjuntos de regras</h3><div class="mini">Leitura dos conjuntos de regras ativos e disponíveis.</div></div></div>
               <div class="tableWrap">
                 <table>
                   <thead><tr><th>Conjunto</th><th>Situação</th><th>Uso</th><th>Em uso</th><th>Resumo</th><th>Ações</th></tr></thead>
@@ -429,7 +429,7 @@
               </div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Dados completos da governança</h3><div class="mini">Área de apoio para conferência mais detalhada.</div></div></div>
+              <div class="section-head"><div><h3>Detalhes da governança</h3><div class="mini">Área de apoio para conferência.</div></div></div>
               <pre id="governanceJson" class="json-box">{}</pre>
             </div>
           </div>
@@ -727,7 +727,7 @@
       if (docKind === 'regimento') return `Ligado ao regimento${version ? ` · ${version}` : ''}`;
       if (docKind) return `Ligado a ${friendlyDocumentKind(docKind).toLowerCase()}${version ? ` · ${version}` : ''}`;
       if (row?.regulation_document_id) return 'Ligado a um texto da biblioteca';
-      return 'Provisório / sem texto ligado';
+      return 'Sem texto ligado por enquanto';
     }
     function focusEditorField(inputId) {
       const input = $(inputId);
@@ -841,7 +841,7 @@
         tone = 'warn';
         title = 'Há conjuntos cadastrados, mas nenhum em uso';
         text = 'A biblioteca já tem conjuntos de regras cadastrados, porém nenhum deles foi colocado em uso.';
-        note = 'Sem um conjunto em uso, a biblioteca depende apenas das regras provisórias padrão resolvidas no backend.';
+        note = 'Sem um conjunto em uso, a biblioteca depende apenas das regras provisórias padrão já preparadas pelo sistema.';
         steps = [
           'Escolhe o conjunto que deve valer agora.',
           'Confere se ele tem pelo menos uma regra detalhada.',
@@ -1197,7 +1197,7 @@
       if (/could not find the function|schema cache|function\s+/i.test(message)) {
         return [
           `A parte “${label}” desta página ainda não está disponível nesta base.`,
-          'Confere se ela já foi instalada aqui e se a atualização da API já entrou em vigor.'
+          'Confere se ela já foi instalada aqui e se a atualização do sistema já entrou em vigor.'
         ].join(' ');
       }
       if (!message) {
