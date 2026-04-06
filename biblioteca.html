@@ -272,6 +272,10 @@
                 <strong style="display:block;margin-bottom:6px">Ordem mais simples para preencher</strong>
                 <div class="inline-note">1. Registrar ou revisar o texto da biblioteca. 2. Criar um conjunto de regras. 3. Criar pelo menos uma regra. 4. Colocar o conjunto em uso.</div>
               </div>
+              <div class="subcard" style="margin-bottom:12px">
+                <div class="section-head"><div><h3>Checklist rápido da edição</h3><div class="mini">Este quadro ajuda a ver o que já está preenchido e o que ainda falta antes de colocar um conjunto em uso.</div></div></div>
+                <div id="regimentoEditorChecklist" class="kv-grid"><div class="empty">Carregando…</div></div>
+              </div>
               <div class="editor-shell">
                 <div class="subcard">
                   <div class="section-head">
@@ -805,6 +809,45 @@
       ]);
     }
 
+    function renderRegimentoEditorChecklist(){
+      const docId = String($('regulationDocId')?.value || '').trim();
+      const docVersion = String($('regulationDocVersion')?.value || '').trim();
+      const policySetId = String($('policySetId')?.value || '').trim();
+      const policySetLabel = String($('policySetLabel')?.value || '').trim();
+      const policySetDocId = String($('policySetRegulationDocumentId')?.value || '').trim();
+      const ruleId = String($('policyRuleId')?.value || '').trim();
+      const ruleLabel = String($('policyRuleLabel')?.value || '').trim();
+      const rulePolicySetId = String($('policyRulePolicySetId')?.value || '').trim();
+      const activeSet = currentPolicySets.find((row) => row?.is_active === true) || currentPolicySets.find((row) => String(row?.status || '').trim() === 'active') || null;
+      const activeSetRuleCount = activeSet
+        ? currentPolicyRules.filter((row) => String(row?.policy_set_id || '') === String(activeSet.id || '')).length
+        : 0;
+
+      let nextAction = 'Registrar o texto principal da biblioteca.';
+      if (docVersion && !policySetLabel) {
+        nextAction = 'Dar nome ao conjunto de regras.';
+      } else if (policySetLabel && !ruleLabel) {
+        nextAction = 'Criar pelo menos uma regra.';
+      } else if (policySetLabel && ruleLabel && !policySetDocId) {
+        nextAction = 'Ligar o conjunto a um texto da biblioteca.';
+      } else if (policySetLabel && ruleLabel) {
+        nextAction = 'Salvar e depois colocar o conjunto em uso.';
+      } else if (activeSet && activeSetRuleCount > 0) {
+        nextAction = 'Revisar o conjunto em uso e ajustar só se precisar.';
+      }
+
+      renderKvGrid('regimentoEditorChecklist', [
+        ['Texto no formulário', docVersion ? `${docId ? 'Editando texto existente' : 'Novo texto'} · versão preenchida` : `${docId ? 'Editando texto existente' : 'Novo texto'} · falta preencher a versão`],
+        ['Conjunto no formulário', policySetLabel ? `${policySetId ? 'Editando conjunto existente' : 'Novo conjunto'} · nome preenchido` : `${policySetId ? 'Editando conjunto existente' : 'Novo conjunto'} · falta dar nome`],
+        ['Texto ligado ao conjunto no formulário', policySetDocId ? 'Sim' : 'Ainda sem texto ligado'],
+        ['Regra no formulário', ruleLabel ? `${ruleId ? 'Editando regra existente' : 'Nova regra'} · nome curto preenchido` : `${ruleId ? 'Editando regra existente' : 'Nova regra'} · falta dar nome curto`],
+        ['Conjunto escolhido para a regra', rulePolicySetId ? 'Sim' : 'Falta escolher um conjunto'],
+        ['Conjunto em uso agora', activeSet ? firstFilledValue(activeSet?.label, activeSet?.id, '—') : 'Nenhum conjunto em uso'],
+        ['Regras no conjunto em uso', activeSet ? activeSetRuleCount : 'Nenhum conjunto em uso'],
+        ['Próxima ação sugerida', nextAction]
+      ]);
+    }
+
     function renderRegimeState(){
       const box = $('regimeStateBox');
       const actionBox = $('regimeActionBox');
@@ -1311,26 +1354,6 @@
         return `<td>${esc(displayValue(raw))}</td>`;
       }).join('')}</tr>`).join('');
     }
-    function pillToneByStatus(value) {
-      const raw = String(value || '').trim().toLowerCase();
-      if (!raw) return 'info';
-      if (['published', 'active', 'sim', 'em uso', 'texto em uso', 'regra em uso'].includes(raw)) return 'ok';
-      if (['draft', 'draft_only', 'rascunho'].includes(raw)) return 'warn';
-      if (['archived', 'arquivado', 'não', 'fora de uso'].includes(raw)) return 'bad';
-      return 'info';
-    }
-
-    function renderPill(label, tone = 'info') {
-      return `<span class="pill ${esc(tone)}">${esc(label)}</span>`;
-    }
-
-    function renderInfoLines(lines) {
-      const normalized = (Array.isArray(lines) ? lines : [lines])
-        .map((line) => String(line ?? '').trim())
-        .filter(Boolean);
-      if (!normalized.length) return '—';
-      return normalized.map((line) => `<div>${esc(line)}</div>`).join('');
-    }
     function parseJsonTextareaValue(value) {
       const raw = String(value || '').trim();
       if (!raw) return {};
@@ -1400,6 +1423,7 @@
       $('btnActivateRegulationDoc').disabled = true;
       $('btnActivateRegulationDoc').textContent = 'Colocar em uso';
       setStatus('regulationDocEditorStatus', '');
+      renderRegimentoEditorChecklist();
     }
 
     function loadRegulationDocIntoForm(row) {
@@ -1415,6 +1439,7 @@
       $('btnActivateRegulationDoc').disabled = !row?.id;
       $('btnActivateRegulationDoc').textContent = row?.is_active ? 'Tirar de uso' : 'Colocar em uso';
       setStatus('regulationDocEditorStatus', row?.id ? `Texto ${row.id} carregado para edição.` : '', row?.id ? 'info' : '');
+      renderRegimentoEditorChecklist();
     }
 
     function collectRegulationDocPayload() {
@@ -1447,6 +1472,7 @@
       $('policySetMetadata').value = toPrettyJson({});
       $('btnActivatePolicySet').disabled = true;
       setStatus('policySetEditorStatus', '');
+      renderRegimentoEditorChecklist();
     }
 
     function loadPolicySetIntoForm(row) {
@@ -1462,6 +1488,7 @@
       $('policySetMetadata').value = toPrettyJson(row?.metadata);
       $('btnActivatePolicySet').disabled = !row?.id;
       setStatus('policySetEditorStatus', row?.id ? `Conjunto ${row.id} carregado para edição.` : '', row?.id ? 'info' : '');
+      renderRegimentoEditorChecklist();
     }
 
     function collectPolicySetPayload() {
@@ -1505,6 +1532,7 @@
       $('policyRuleRenewable').checked = true;
       $('btnDeletePolicyRule').disabled = true;
       setStatus('policyRuleEditorStatus', '');
+      renderRegimentoEditorChecklist();
     }
 
     function loadPolicyRuleIntoForm(row) {
@@ -1531,6 +1559,7 @@
       $('policyRuleRenewable').checked = row?.renewable !== false;
       $('btnDeletePolicyRule').disabled = !row?.id;
       setStatus('policyRuleEditorStatus', row?.id ? `Regra ${row.id} carregada para edição.` : '', row?.id ? 'info' : '');
+      renderRegimentoEditorChecklist();
     }
 
     function collectPolicyRulePayload() {
@@ -1571,32 +1600,14 @@
         return;
       }
       tbody.innerHTML = normalizedRows.map((row) => {
-        const publicPath = firstFilledValue(row?.storage_path_public);
-        const draftPath = firstFilledValue(row?.storage_path_draft);
-        const statusLabel = friendlyDocumentStatus(row?.publication_status);
+        const link = firstFilledValue(row?.storage_path_public, row?.storage_path_draft, '—');
         const actionLabel = row?.is_active ? 'Tirar de uso' : 'Colocar em uso';
-        const fileLines = [];
-        if (publicPath) fileLines.push(`Publicado: ${publicPath}`);
-        if (draftPath) fileLines.push(`Rascunho: ${draftPath}`);
-        if (!fileLines.length) fileLines.push('Nenhum arquivo informado.');
         return `<tr>
-          <td>
-            <div><strong>${esc(friendlyDocumentKind(row?.doc_kind))}</strong></div>
-            ${row?.source_note ? `<div class="inline-note">${esc(row.source_note)}</div>` : ''}
-          </td>
-          <td>
-            <div>${renderPill(statusLabel, pillToneByStatus(row?.publication_status))}</div>
-            <div style="margin-top:6px">${row?.is_active ? renderPill('Texto em uso', 'ok') : renderPill('Fora de uso', 'info')}</div>
-          </td>
-          <td>
-            <div><strong>${esc(firstFilledValue(row?.version_label, '—'))}</strong></div>
-            <div class="inline-note">ID ${esc(firstFilledValue(row?.id, '—'))}</div>
-          </td>
-          <td>
-            <div>${esc(fmtDateTime(firstFilledValue(row?.updated_at, row?.created_at, '')))}</div>
-            ${row?.created_at ? `<div class="inline-note">Criado: ${esc(fmtDateTime(row.created_at))}</div>` : ''}
-          </td>
-          <td>${renderInfoLines(fileLines)}</td>
+          <td>${esc(friendlyDocumentKind(row?.doc_kind))}</td>
+          <td>${esc(friendlyDocumentStatus(row?.publication_status))}${row?.is_active ? '<div class="inline-note">Texto em uso</div>' : ''}</td>
+          <td>${esc(firstFilledValue(row?.version_label, '—'))}</td>
+          <td>${esc(fmtDateTime(firstFilledValue(row?.updated_at, row?.created_at, '')))}</td>
+          <td>${esc(link)}</td>
           <td><div class="editor-actions"><button class="btn mini soft" type="button" data-reg-doc-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini" type="button" data-reg-doc-toggle="${esc(String(row?.id || ''))}">${esc(actionLabel)}</button></div></td>
         </tr>`;
       }).join('');
@@ -1612,23 +1623,14 @@
       }
       tbody.innerHTML = normalizedRows.map((row) => {
         const validity = [firstFilledValue(row?.effective_from), firstFilledValue(row?.effective_until)].filter(Boolean).join(' → ');
-        const scopeLines = [getPolicySetOriginText(row)];
-        if (validity) scopeLines.push(`Validade: ${validity}`);
-        const resumeLines = [];
-        if (row?.scope_note) resumeLines.push(row.scope_note);
-        if (row?.activation_note) resumeLines.push(`Ativação: ${row.activation_note}`);
-        resumeLines.push(`${row?.rule_count != null ? row.rule_count : 0} regra(s)`);
+        const scopeText = [getPolicySetOriginText(row), validity].filter(Boolean).join(' · ') || '—';
+        const resumeText = `${firstFilledValue(row?.scope_note, row?.activation_note, '—')}${row?.rule_count != null ? ` · ${row.rule_count} regra(s)` : ''}`;
         return `<tr>
-          <td>
-            <div><strong>${esc(firstFilledValue(row?.label, row?.id, '—'))}</strong></div>
-            <div class="inline-note">ID ${esc(firstFilledValue(row?.id, '—'))}</div>
-          </td>
-          <td>
-            <div>${renderPill(friendlyPolicySetStatus(row?.status), pillToneByStatus(row?.status))}</div>
-          </td>
-          <td>${renderInfoLines(scopeLines)}</td>
-          <td>${row?.is_active ? renderPill('Em uso', 'ok') : renderPill('Fora de uso', 'info')}</td>
-          <td>${renderInfoLines(resumeLines)}</td>
+          <td>${esc(firstFilledValue(row?.label, row?.id, '—'))}</td>
+          <td>${esc(friendlyPolicySetStatus(row?.status))}</td>
+          <td>${esc(scopeText)}</td>
+          <td>${esc(row?.is_active ? 'Sim' : 'Não')}</td>
+          <td>${esc(resumeText)}</td>
           <td><div class="editor-actions"><button class="btn mini soft" type="button" data-policy-set-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini" type="button" data-policy-set-activate="${esc(String(row?.id || ''))}">Colocar em uso</button></div></td>
         </tr>`;
       }).join('');
@@ -1645,20 +1647,12 @@
       tbody.innerHTML = normalizedRows.map((row) => {
         const limitsLines = friendlyPolicyRuleLimits(row);
         const observationLines = friendlyRuleObservation(row);
-        const scopeLines = [friendlyPolicyRuleScope(row)];
-        if (row?.policy_label) scopeLines.push(`Conjunto: ${row.policy_label}`);
         return `<tr>
-          <td>
-            <div><strong>${esc(firstFilledValue(row?.rule_label, row?.policy_label, row?.id, '—'))}</strong></div>
-            <div style="margin-top:6px">${row?.is_active ? renderPill('Regra em uso', 'ok') : renderPill('Fora de uso', 'info')}</div>
-          </td>
-          <td>${renderInfoLines(scopeLines)}</td>
-          <td>
-            <div><strong>${esc(firstFilledValue(row?.priority, '—'))}</strong></div>
-            <div class="inline-note">Ordem de aplicação</div>
-          </td>
-          <td>${renderInfoLines(limitsLines)}</td>
-          <td>${renderInfoLines(observationLines)}</td>
+          <td>${esc(firstFilledValue(row?.rule_label, row?.policy_label, row?.id, '—'))}${row?.is_active ? '<div class="inline-note">Regra em uso</div>' : ''}</td>
+          <td>${esc(friendlyPolicyRuleScope(row))}</td>
+          <td>${esc(firstFilledValue(row?.priority, '—'))}</td>
+          <td>${limitsLines.map((line) => `<div>${esc(line)}</div>`).join('')}</td>
+          <td>${observationLines.map((line) => `<div>${esc(line)}</div>`).join('')}</td>
           <td><div class="editor-actions"><button class="btn mini soft" type="button" data-policy-rule-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini danger" type="button" data-policy-rule-delete="${esc(String(row?.id || ''))}">Excluir</button></div></td>
         </tr>`;
       }).join('');
@@ -1812,6 +1806,7 @@
       if (!$('policyRuleId').value) resetPolicyRuleForm();
       renderRegimeState();
       renderRegimeQuickSummary();
+      renderRegimentoEditorChecklist();
 
       if (docsError || policySetsError || rulesError) {
         const failedRpcName = rulesError ? 'get_library_circulation_policy_rules_ui' : (policySetsError ? 'get_library_circulation_policy_sets_ui' : 'get_library_regulation_documents_ui');
@@ -1897,6 +1892,14 @@
     $('btnCancelPolicyRule')?.addEventListener('click', resetPolicyRuleForm);
     $('btnSavePolicyRule')?.addEventListener('click', savePolicyRule);
     $('btnDeletePolicyRule')?.addEventListener('click', () => deletePolicyRule());
+
+    $('tab-regimento')?.addEventListener('input', () => {
+      renderRegimentoEditorChecklist();
+    });
+
+    $('tab-regimento')?.addEventListener('change', () => {
+      renderRegimentoEditorChecklist();
+    });
 
     $('tab-regimento')?.addEventListener('click', async (event) => {
       const assistBtn = event.target.closest('[data-regime-assist]');
