@@ -130,8 +130,8 @@
     </div>
 
     <div class="hero">
-      <h1 id="pageHeroTitle">Biblioteca — organização da biblioteca</h1>
-      <p id="pageHeroSubtitle">Informações gerais, regimento, regras de circulação, comunicações, documentos e tarefas internas.</p>
+      <h1 id="pageHeroTitle">Biblioteca — gestão institucional</h1>
+      <p id="pageHeroSubtitle">Gestão geral, regimento, regras de circulação, comunicações, documentos e tarefas internas.</p>
       <p id="helloLine"></p>
       <div class="chips">
         <span class="chip" id="chipFuncao">Função: —</span>
@@ -146,15 +146,15 @@
       <nav class="tabs-nav" role="tablist" aria-label="Seções da biblioteca">
         <button class="tab-btn active" type="button" data-tab="identidade" role="tab" aria-selected="true" aria-controls="tab-identidade">
           Identidade e funcionamento
-          <span class="hint">Biblioteca, funcionamento, horários e regras locais</span>
+          <span class="hint">Biblioteca ativa, funcionamento, horários e parâmetros locais</span>
         </button>
         <button class="tab-btn" type="button" data-tab="comunicacoes" role="tab" aria-selected="false" aria-controls="tab-comunicacoes">
           Comunicações
-          <span class="hint">Nome usado nos avisos, envio e mensagens da biblioteca</span>
+          <span class="hint">Identidade de envio, canais e avisos da biblioteca</span>
         </button>
         <button class="tab-btn" type="button" data-tab="regimento" role="tab" aria-selected="false" aria-controls="tab-regimento">
           Regimento e regras de circulação
-          <span class="hint">Textos da biblioteca, conjuntos de regras e regras</span>
+          <span class="hint">Textos da biblioteca, conjuntos de regras e regras detalhadas</span>
         </button>
         <button class="tab-btn" type="button" data-tab="documentos" role="tab" aria-selected="false" aria-controls="tab-documentos">
           Documentos e relações externas
@@ -162,7 +162,7 @@
         </button>
         <button class="tab-btn" type="button" data-tab="tarefas" role="tab" aria-selected="false" aria-controls="tab-tarefas">
           Tarefas internas
-          <span class="hint">Lista e acompanhamento das tarefas internas</span>
+          <span class="hint">Acompanhamento das tarefas internas</span>
         </button>
       </nav>
 
@@ -173,7 +173,7 @@
               <div class="section-head">
                 <div>
                   <h2>Identidade e funcionamento</h2>
-                  <div class="mini">Leitura direta das informações da biblioteca já usadas nesta página.</div>
+                  <div class="mini">Leitura direta dos dados institucionais já usados pela página.</div>
                 </div>
                 <div class="actions"><button class="btn mini" id="btnRefreshIdentity" type="button">Atualizar</button></div>
               </div>
@@ -185,20 +185,20 @@
             </div>
             <div class="row">
               <div class="card">
-                <div class="section-head"><div><h3>Horários e consulta local</h3><div class="mini">Resumo dos horários escritos e organizados.</div></div></div>
+                <div class="section-head"><div><h3>Horários e consulta local</h3><div class="mini">Resumo dos horários textuais e estruturados.</div></div></div>
                 <div id="scheduleGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
               </div>
               <div class="card">
-                <div class="section-head"><div><h3>Regras locais atuais</h3><div class="mini">Resumo das regras locais ainda visíveis nesta fase de transição.</div></div></div>
+                <div class="section-head"><div><h3>Parâmetros locais atuais</h3><div class="mini">Resumo das regras locais ainda visíveis nesta fase de transição.</div></div></div>
                 <div id="localRulesGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
               </div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Resumo geral da biblioteca</h3><div class="mini">Resumo da biblioteca, mostrado aqui de forma simplificada.</div></div></div>
+              <div class="section-head"><div><h3>Resumo geral da biblioteca</h3><div class="mini">Resumo vindo da base da biblioteca, mostrado aqui de forma simplificada.</div></div></div>
               <div class="status" id="workspaceStatus"></div>
               <div id="workspaceSummary" class="kv-grid"><div class="empty">Carregando…</div></div>
               <details style="margin-top:12px">
-                <summary>Ver tudo</summary>
+                <summary>Ver dados completos (avançado)</summary>
                 <pre id="workspaceJson" class="json-box">{}</pre>
               </details>
             </div>
@@ -219,19 +219,19 @@
             </div>
             <div class="row">
               <div class="card">
-                <div class="section-head"><div><h3>Nome usado nos avisos</h3><div class="mini">Informações usadas pela biblioteca para enviar avisos.</div></div></div>
+                <div class="section-head"><div><h3>Identidade de envio</h3><div class="mini">Dados usados pela biblioteca para enviar avisos.</div></div></div>
                 <div id="communicationsIdentityGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
               </div>
               <div class="card">
-                <div class="section-head"><div><h3>Quem recebe os avisos</h3><div class="mini">O que está ativo, para quem os avisos vão e como acompanhar.</div></div></div>
+                <div class="section-head"><div><h3>Políticas e destinatárias/os</h3><div class="mini">O que está ligado, para quem os avisos vão e como acompanhar.</div></div></div>
                 <div id="communicationsPolicyGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
               </div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Envio dos avisos</h3><div class="mini">Como os avisos saem e qual é a situação atual do envio.</div></div></div>
+              <div class="section-head"><div><h3>Canal e transporte</h3><div class="mini">Como os avisos são enviados e qual é a situação atual do envio.</div></div></div>
               <div id="communicationsTransportGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
               <details style="margin-top:12px">
-                <summary>Ver tudo das comunicações</summary>
+                <summary>Ver dados completos das comunicações (avançado)</summary>
                 <pre id="communicationsJson" class="json-box">{}</pre>
               </details>
             </div>
@@ -244,7 +244,7 @@
               <div class="section-head">
                 <div>
                   <h2>Regimento e regras de circulação</h2>
-                  <div class="mini">Leitura e edição simples dos textos da biblioteca, dos conjuntos de regras e das regras.</div>
+                  <div class="mini">Leitura e edição básica dos textos da biblioteca, dos conjuntos de regras e das regras detalhadas.</div>
                 </div>
                 <div class="actions"><button class="btn mini" id="btnRefreshRegimento" type="button">Atualizar</button></div>
               </div>
@@ -254,15 +254,11 @@
               <div class="section-head">
                 <div>
                   <h3>Como a biblioteca está funcionando agora</h3>
-                  <div class="mini">Este quadro mostra se a biblioteca está usando regras ligadas ao regimento ou regras temporárias.</div>
+                  <div class="mini">Este quadro mostra se a biblioteca está usando regras ligadas ao regimento ou regras provisórias.</div>
                 </div>
               </div>
               <div id="regimeStateBox" class="state-box">Carregando…</div>
               <div id="regimeActionBox" class="state-box" style="margin-top:12px">Carregando…</div>
-              <div class="subcard" style="margin-top:12px">
-                <div class="section-head"><div><h3>Resumo rápido</h3><div class="mini">Veja aqui, de relance, o que já existe e o que ainda falta ligar.</div></div></div>
-                <div id="regimeQuickSummary" class="kv-grid"><div class="empty">Carregando…</div></div>
-              </div>
             </div>
             <div class="card">
               <div class="section-head">
@@ -270,58 +266,12 @@
               </div>
               <div class="muted-box" style="margin-bottom:12px">
                 <strong style="display:block;margin-bottom:6px">Ordem mais simples para preencher</strong>
-                <div class="inline-note">1. Registrar ou revisar o texto da biblioteca. 2. Criar um conjunto de regras. 3. Criar pelo menos uma regra. 4. Colocar o conjunto em uso.</div>
-              </div>
-              <div class="subcard" style="margin-bottom:12px">
-                <div class="section-head"><div><h3>Checklist rápido da edição</h3><div class="mini">Este quadro ajuda a ver o que já está preenchido e o que ainda falta antes de colocar um conjunto em uso.</div></div></div>
-                <div id="regimentoEditorChecklist" class="kv-grid"><div class="empty">Carregando…</div></div>
-              </div>
-              <div class="subcard" style="margin-bottom:12px">
-                <div class="section-head"><div><h3>Guia rápido desta aba</h3><div class="mini">Use este lembrete para saber onde agir e onde conferir o resultado, sem precisar reler toda a aba.</div></div></div>
-                <div class="kv-grid">
-                  <div class="kv">
-                    <div class="kv-label">1. Texto da biblioteca</div>
-                    <div class="kv-value">Usa este bloco para registrar o regimento ou outro texto base. Depois, confere o resultado em <strong>Textos da biblioteca</strong>.</div>
-                  </div>
-                  <div class="kv">
-                    <div class="kv-label">2. Conjunto de regras</div>
-                    <div class="kv-value">Usa este bloco para juntar regras que valem juntas. Depois, confere o vínculo com o texto em <strong>Conjuntos de regras</strong>.</div>
-                  </div>
-                  <div class="kv">
-                    <div class="kv-label">3. Regra</div>
-                    <div class="kv-value">Usa este bloco para definir prazo, quantidade, reserva, consulta e prorrogação. Depois, confere a regra em <strong>Regras</strong>.</div>
-                  </div>
-                  <div class="kv">
-                    <div class="kv-label">4. Estado final</div>
-                    <div class="kv-value">Antes de sair da aba, olha sempre <strong>Como a biblioteca está funcionando agora</strong>, <strong>Resumo rápido</strong> e o <strong>Checklist rápido da edição</strong>.</div>
-                  </div>
-                </div>
-              </div>
-              <div class="subcard" style="margin-bottom:12px">
-                <div class="section-head"><div><h3>Onde conferir cada resultado</h3><div class="mini">Depois de salvar, editar ou colocar algo em uso, usa este lembrete rápido para conferir o efeito no lugar certo.</div></div></div>
-                <div class="kv-grid">
-                  <div class="kv">
-                    <div class="kv-label">Depois de mexer no texto</div>
-                    <div class="kv-value">Confere primeiro <strong>Textos da biblioteca</strong>. Se o texto ficou em uso, relê também <strong>Como a biblioteca está funcionando agora</strong>.</div>
-                  </div>
-                  <div class="kv">
-                    <div class="kv-label">Depois de mexer no conjunto</div>
-                    <div class="kv-value">Confere <strong>Conjuntos de regras</strong>, depois olha <strong>Resumo rápido</strong> e <strong>Checklist rápido da edição</strong>.</div>
-                  </div>
-                  <div class="kv">
-                    <div class="kv-label">Depois de mexer na regra</div>
-                    <div class="kv-value">Confere <strong>Regras</strong>. Se a regra mexe no conjunto em uso, relê também <strong>Como a biblioteca está funcionando agora</strong>.</div>
-                  </div>
-                  <div class="kv">
-                    <div class="kv-label">Antes de sair da aba</div>
-                    <div class="kv-value">Faz uma última checagem em <strong>Como a biblioteca está funcionando agora</strong>, <strong>Resumo rápido</strong> e nos três quadros de leitura ao final da aba.</div>
-                  </div>
-                </div>
+                <div class="inline-note">1. Registrar ou revisar o texto da biblioteca. 2. Criar um conjunto de regras. 3. Criar pelo menos uma regra detalhada. 4. Colocar o conjunto em uso.</div>
               </div>
               <div class="editor-shell">
                 <div class="subcard">
                   <div class="section-head">
-                    <div><h3>Texto da biblioteca</h3><div class="mini">Use este bloco para registrar o regimento, um anexo com regras de empréstimo ou outro texto da biblioteca.</div></div>
+                    <div><h3>Texto da biblioteca</h3><div class="mini">Use este bloco para registrar o regimento, um anexo com regras de empréstimo ou outro texto institucional.</div></div>
                     <div class="editor-actions">
                       <button class="btn mini soft" id="btnNewRegulationDoc" type="button">Novo texto</button>
                       <button class="btn mini" id="btnCancelRegulationDoc" type="button">Limpar</button>
@@ -335,12 +285,12 @@
                     <div class="field"><label for="regulationDocSourceNote">Observação interna</label><input id="regulationDocSourceNote" class="input" type="text" placeholder="Ex.: texto em revisão"></div>
                   </div>
                   <details style="margin-top:12px">
-                    <summary>Mais campos do texto</summary>
+                    <summary>Opções avançadas do arquivo</summary>
                     <div class="editor-grid" style="margin-top:12px">
-                      <div class="field"><label for="regulationDocBucket">Pasta do arquivo</label><input id="regulationDocBucket" class="input" type="text" placeholder="library-regimentos"></div>
-                      <div class="field"><label for="regulationDocDraftPath">Local do arquivo rascunho</label><input id="regulationDocDraftPath" class="input" type="text" placeholder="pasta/arquivo.pdf"></div>
-                      <div class="field"><label for="regulationDocPublicPath">Local do arquivo publicado</label><input id="regulationDocPublicPath" class="input" type="text" placeholder="publico/arquivo.pdf"><div id="regulationDocPublicPathHint" class="inline-note">Para o regimento atual publicado, use sempre o alias estável da biblioteca.</div></div>
-                      <div class="field" style="grid-column:1 / -1"><label for="regulationDocMetadata">Informações extras</label><textarea id="regulationDocMetadata" class="textarea" placeholder='{}'></textarea></div>
+                      <div class="field"><label for="regulationDocBucket">Pasta técnica</label><input id="regulationDocBucket" class="input" type="text" placeholder="library-regimentos"></div>
+                      <div class="field"><label for="regulationDocDraftPath">Endereço interno do rascunho</label><input id="regulationDocDraftPath" class="input" type="text" placeholder="pasta/arquivo.pdf"></div>
+                      <div class="field"><label for="regulationDocPublicPath">Endereço interno do publicado</label><input id="regulationDocPublicPath" class="input" type="text" placeholder="publico/arquivo.pdf"></div>
+                      <div class="field" style="grid-column:1 / -1"><label for="regulationDocMetadata">Dados extras (avançado)</label><textarea id="regulationDocMetadata" class="textarea" placeholder='{}'></textarea></div>
                     </div>
                   </details>
                   <div class="editor-actions" style="margin-top:12px">
@@ -367,11 +317,11 @@
                     <div class="field"><label for="policySetEffectiveUntil">Termina em</label><input id="policySetEffectiveUntil" class="input" type="date"></div>
                   </div>
                   <details style="margin-top:12px">
-                    <summary>Mais campos do conjunto</summary>
+                    <summary>Opções avançadas do conjunto</summary>
                     <div class="editor-grid" style="margin-top:12px">
-                      <div class="field"><label for="policySetConfigVersion">Número da versão</label><input id="policySetConfigVersion" class="input" type="number" min="1" step="1" value="1"></div>
+                      <div class="field"><label for="policySetConfigVersion">Versão interna</label><input id="policySetConfigVersion" class="input" type="number" min="1" step="1" value="1"></div>
                       <div class="field"><label for="policySetActivationNote">Observação de ativação</label><input id="policySetActivationNote" class="input" type="text" placeholder="Observação curta"></div>
-                      <div class="field" style="grid-column:1 / -1"><label for="policySetMetadata">Informações extras</label><textarea id="policySetMetadata" class="textarea" placeholder='{}'></textarea></div>
+                      <div class="field" style="grid-column:1 / -1"><label for="policySetMetadata">Dados extras (avançado)</label><textarea id="policySetMetadata" class="textarea" placeholder='{}'></textarea></div>
                     </div>
                   </details>
                   <div class="editor-actions" style="margin-top:12px">
@@ -382,7 +332,7 @@
                 </div>
                 <div class="subcard">
                   <div class="section-head">
-                    <div><h3>Regra</h3><div class="mini">Defina aqui prazo, quantidade de itens, renovação e mensagens ao público.</div></div>
+                    <div><h3>Regra detalhada</h3><div class="mini">Defina aqui prazo, quantidade de itens, renovação e mensagens ao público.</div></div>
                     <div class="editor-actions">
                       <button class="btn mini soft" id="btnNewPolicyRule" type="button">Nova regra</button>
                       <button class="btn mini" id="btnCancelPolicyRule" type="button">Limpar</button>
@@ -412,10 +362,10 @@
                     <label class="check-item"><input id="policyRuleRenewable" type="checkbox" checked> Permite prorrogação</label>
                   </div>
                   <details style="margin-top:12px">
-                    <summary>Mais campos da regra</summary>
+                    <summary>Opções avançadas da regra</summary>
                     <div class="editor-grid" style="margin-top:12px">
                       <div class="field"><label for="policyRuleInternalNote">Observação interna</label><textarea id="policyRuleInternalNote" class="textarea" placeholder="Observação interna"></textarea></div>
-                      <div class="field"><label for="policyRuleMetadata">Informações extras</label><textarea id="policyRuleMetadata" class="textarea" placeholder='{}'></textarea></div>
+                      <div class="field"><label for="policyRuleMetadata">Dados extras (avançado)</label><textarea id="policyRuleMetadata" class="textarea" placeholder='{}'></textarea></div>
                     </div>
                   </details>
                   <div class="editor-actions" style="margin-top:12px">
@@ -436,7 +386,7 @@
               </div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Conjuntos de regras</h3><div class="mini">Leitura dos conjuntos de regras ativos e disponíveis.</div></div></div>
+              <div class="section-head"><div><h3>Conjuntos de regras de empréstimo</h3><div class="mini">Leitura dos conjuntos de políticas ativos e disponíveis.</div></div></div>
               <div class="tableWrap">
                 <table>
                   <thead><tr><th>Conjunto</th><th>Situação</th><th>Uso</th><th>Em uso</th><th>Resumo</th><th>Ações</th></tr></thead>
@@ -445,7 +395,7 @@
               </div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Regras</h3><div class="mini">Leitura das regras individuais de circulação.</div></div></div>
+              <div class="section-head"><div><h3>Regras detalhadas</h3><div class="mini">Leitura das regras individuais de circulação.</div></div></div>
               <div class="tableWrap">
                 <table>
                   <thead><tr><th>Regra</th><th>Onde se aplica</th><th>Ordem</th><th>Prazo e limites</th><th>Observação</th><th>Ações</th></tr></thead>
@@ -470,16 +420,16 @@
             </div>
             <div class="row">
               <div class="card">
-                <div class="section-head"><div><h3>Organização dos documentos</h3><div class="mini">Veja aqui os combinados e registros internos sobre os documentos da biblioteca.</div></div></div>
+                <div class="section-head"><div><h3>Governança documental</h3><div class="mini">Veja aqui os combinados e registros internos sobre documentos da biblioteca.</div></div></div>
                 <div id="governanceGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
               </div>
               <div class="card">
-                <div class="section-head"><div><h3>Resumo geral — documentos e relações</h3><div class="mini">Resumo lateral das informações gerais da biblioteca.</div></div></div>
+                <div class="section-head"><div><h3>Resumo geral — documentos e relações</h3><div class="mini">Resumo lateral dos dados gerais da biblioteca.</div></div></div>
                 <div id="documentsWorkspaceGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
               </div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Detalhes dos documentos</h3><div class="mini">Área de apoio para conferência.</div></div></div>
+              <div class="section-head"><div><h3>Dados completos da governança</h3><div class="mini">Área de apoio para conferência mais detalhada.</div></div></div>
               <pre id="governanceJson" class="json-box">{}</pre>
             </div>
           </div>
@@ -491,17 +441,79 @@
               <div class="section-head">
                 <div>
                   <h2>Tarefas internas</h2>
-                  <div class="mini">Lista das tarefas já guardadas para esta biblioteca.</div>
+                  <div class="mini">Programação, acompanhamento e organização das tarefas concretas da biblioteca.</div>
                 </div>
                 <div class="actions"><button class="btn mini" id="btnRefreshTasks" type="button">Atualizar</button></div>
               </div>
               <div class="status" id="tasksStatus"></div>
             </div>
             <div class="card">
+              <div class="section-head">
+                <div>
+                  <h3>Programar tarefa interna</h3>
+                  <div class="mini">Aqui dá para registrar limpeza dos livros, arrumação, catalogação, encontros, manutenção e outras tarefas da vida concreta da biblioteca.</div>
+                </div>
+                <div class="editor-actions">
+                  <button class="btn mini soft" id="btnNewTask" type="button">Nova tarefa</button>
+                  <button class="btn mini" id="btnCancelTask" type="button">Limpar</button>
+                </div>
+              </div>
+              <div class="editor-shell">
+                <input id="taskId" type="hidden">
+                <div class="editor-grid">
+                  <div class="field"><label for="taskTitle">Tarefa</label><input id="taskTitle" class="input" type="text" placeholder="Ex.: Mutirão de catalogação de panfletos"></div>
+                  <div class="field"><label for="taskType">Tipo de tarefa</label><select id="taskType" class="select">
+                    <option value="">Selecione</option>
+                    <option value="limpeza_livros">Limpeza dos livros</option>
+                    <option value="arrumacao">Arrumação</option>
+                    <option value="catalogacao">Catalogação</option>
+                    <option value="atendimento">Atendimento</option>
+                    <option value="comunicacao">Comunicação</option>
+                    <option value="manutencao">Manutenção</option>
+                    <option value="evento">Atividade pública</option>
+                    <option value="reuniao">Reunião de organização</option>
+                    <option value="regimento">Revisão de regimento</option>
+                    <option value="outro">Outro tipo</option>
+                  </select></div>
+                  <div class="field"><label for="taskDueDate">Data prevista</label><input id="taskDueDate" class="input" type="date"></div>
+                  <div class="field"><label for="taskPriority">Prioridade</label><select id="taskPriority" class="select">
+                    <option value="baixa">Baixa</option>
+                    <option value="media">Média</option>
+                    <option value="alta">Alta</option>
+                    <option value="urgente">Urgente</option>
+                  </select></div>
+                  <div class="field"><label for="taskStatusField">Estado da tarefa</label><select id="taskStatusField" class="select">
+                    <option value="aberta">Aberta</option>
+                    <option value="em_andamento">Em andamento</option>
+                    <option value="bloqueada">Bloqueada</option>
+                    <option value="concluida">Concluída</option>
+                    <option value="arquivada">Arquivada</option>
+                  </select></div>
+                  <div class="field"><label for="taskOwner">Responsável pela organização</label><input id="taskOwner" class="input" type="text" placeholder="Ex.: Coletivo de catalogação"></div>
+                </div>
+                <div class="editor-grid">
+                  <div class="field"><label for="taskInviteEmails">E-mails dos compas convidados</label><textarea id="taskInviteEmails" class="textarea" placeholder="Um e-mail por linha ou separados por vírgula"></textarea></div>
+                  <div class="field"><label for="taskDescription">Descrição da tarefa</label><textarea id="taskDescription" class="textarea" placeholder="O que precisa ser feito, com que materiais ou em que espaço"></textarea></div>
+                </div>
+                <div class="field"><label for="taskProgress">Andamento / observações</label><textarea id="taskProgress" class="textarea" placeholder="Ex.: metade da estante já foi revista; faltam caixas e etiquetas"></textarea></div>
+              </div>
+              <div class="editor-actions" style="margin-top:12px">
+                <button class="btn mini primary" id="btnSaveTask" type="button">Salvar tarefa</button>
+                <button class="btn mini danger" id="btnDeleteTask" type="button" disabled>Excluir tarefa</button>
+              </div>
+              <div class="status" id="taskEditorStatus"></div>
+            </div>
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h3>Lista das tarefas</h3>
+                  <div class="mini">Aqui aparecem as tarefas registradas para esta biblioteca, com o tipo, o andamento e os convites.</div>
+                </div>
+              </div>
               <div class="tableWrap">
                 <table>
-                  <thead><tr><th>Tarefa</th><th>Prioridade</th><th>Situação</th><th>Responsável</th><th>Prazo</th><th>Criada em</th></tr></thead>
-                  <tbody id="tbodyTasks"><tr><td colspan="6">Carregando…</td></tr></tbody>
+                  <thead><tr><th>Tarefa</th><th>Tipo</th><th>Prioridade</th><th>Situação</th><th>Responsável</th><th>Prazo</th><th>Ações</th></tr></thead>
+                  <tbody id="tbodyTasks"><tr><td colspan="7">Carregando…</td></tr></tbody>
                 </table>
               </div>
             </div>
@@ -551,8 +563,6 @@
       console.warn("config.js ausente ou com falha; usando fallback interno.", error);
     }
 
-    const REGIMENTO_PUBLIC_BUCKET = 'library-regimentos-public';
-
     applyPageChrome("biblioteca", {
       logoId: "brandLogo",
       heroTitleId: "pageHeroTitle",
@@ -581,6 +591,7 @@
     let currentRegulationDocs = [];
     let currentPolicySets = [];
     let currentPolicyRules = [];
+    let currentTasks = [];
 
     function esc(value){
       return String(value ?? '').replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
@@ -712,46 +723,10 @@
       lines.push(`Consulta no local: ${row?.consultation_allowed === false ? 'não' : 'sim'}`);
       return lines;
     }
-    function simplifyVisibleRuleNote(value, kind = 'public') {
-      const raw = String(value || '').trim();
-      if (!raw) return '';
-
-      const exactMap = new Map([
-        ['Prazo transitório herdado do sistema atual para empréstimo de 1 item.', 'Enquanto a biblioteca ainda não definiu sua regra própria, vale empréstimo de 1 item.'],
-        ['Prorrogação transitória herdada do sistema atual: 1 vez por 7 dias.', 'Enquanto a biblioteca ainda não definiu sua regra própria, vale 1 prorrogação de 7 dias.'],
-        ['Reserva permitida na base transitória, sujeita aos outros guardrails já existentes.', 'Enquanto a biblioteca ainda não definiu sua regra própria, a reserva continua permitida.'],
-        ['Seed patch 2: reproduz a lógica hardcoded atual.', 'Regra provisória criada para manter o funcionamento atual.'],
-        ['Seed patch 2: reproduz a lógica hardcoded atual de extended_once + 7 dias.', 'Regra provisória criada para manter a prorrogação atual: 1 vez por 7 dias.'],
-        ['Seed patch 2: pose une règle explicite de réservation avant raccord do moteur.', 'Regra provisória criada para manter a reserva disponível nesta fase.']
-      ]);
-
-      if (exactMap.has(raw)) return exactMap.get(raw);
-
-      let text = raw
-        .replace(/Seed patch\s*\d+:/gi, 'Regra provisória:')
-        .replace(/hardcoded/gi, 'atual')
-        .replace(/guardrails/gi, 'regras de proteção')
-        .replace(/base transitória/gi, 'fase transitória')
-        .replace(/pose une règle explicite de réservation avant raccord do moteur\.?/gi, 'mantém a reserva disponível nesta fase.')
-        .replace(/reproduz a lógica hardcoded atual/gi, 'mantém o funcionamento atual')
-        .replace(/reproduz a lógica hardcoded atual de extended_once \+ 7 dias/gi, 'mantém a prorrogação atual: 1 vez por 7 dias')
-        .replace(/raccord do moteur/gi, 'integração completa do sistema')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-      if (kind === 'internal') {
-        text = text
-          .replace(/^Regra provisória:\s*/i, 'Regra provisória criada para ')
-          .replace(/^Regra provisória criada para manter/,'Regra provisória criada para manter');
-      }
-
-      return text;
-    }
-
     function friendlyRuleObservation(row){
       const lines = [];
-      const publicNote = simplifyVisibleRuleNote(firstFilledValue(row?.public_note), 'public');
-      const internalNote = simplifyVisibleRuleNote(firstFilledValue(row?.internal_note), 'internal');
+      const publicNote = firstFilledValue(row?.public_note);
+      const internalNote = firstFilledValue(row?.internal_note);
       if (publicNote) lines.push(`Mensagem ao público: ${publicNote}`);
       if (internalNote) lines.push(`Observação interna: ${internalNote}`);
       if (lines.length) return lines;
@@ -776,12 +751,12 @@
       const mapped = {
         regulation_documents: 'Textos da biblioteca',
         circulation_policy_sets: 'Conjuntos de regras',
-        circulation_policy_rules: 'Regras',
+        circulation_policy_rules: 'Regras detalhadas',
         active_policy_set: 'Conjunto em uso',
         current_service_state: 'Situação atual da biblioteca',
         communication_context: 'Comunicações',
         document_governance: 'Documentos internos',
-        external_relations: 'Relações com outras bibliotecas'
+        external_relations: 'Relações externas'
       };
       if (mapped[raw]) return mapped[raw];
       return raw.replace(/_/g, ' ').replace(/\w/g, (m) => m.toUpperCase());
@@ -815,7 +790,7 @@
       if (docKind === 'regimento') return `Ligado ao regimento${version ? ` · ${version}` : ''}`;
       if (docKind) return `Ligado a ${friendlyDocumentKind(docKind).toLowerCase()}${version ? ` · ${version}` : ''}`;
       if (row?.regulation_document_id) return 'Ligado a um texto da biblioteca';
-      return 'Sem texto ligado por enquanto';
+      return 'Provisório / sem texto ligado';
     }
     function focusEditorField(inputId) {
       const input = $(inputId);
@@ -855,79 +830,6 @@
       }
     }
 
-    function renderRegimeQuickSummary(){
-      const activeDoc = currentRegulationDocs.find((row) => row?.is_active === true) || null;
-      const activeSet = currentPolicySets.find((row) => row?.is_active === true) || currentPolicySets.find((row) => String(row?.status || '').trim() === 'active') || null;
-      const linkedDocId = activeSet?.regulation_document_id != null ? String(activeSet.regulation_document_id) : '';
-      const linkedDoc = linkedDocId ? currentRegulationDocs.find((row) => String(row?.id || '') === linkedDocId) || null : null;
-      let currentState = 'Regras temporárias em uso';
-      let nextStep = 'Registrar o texto principal da biblioteca e ligar um conjunto a ele.';
-
-      if (activeSet && linkedDoc) {
-        currentState = 'Regras do regimento em uso';
-        nextStep = 'Revisar o conjunto quando o texto público mudar.';
-      } else if (activeSet && !linkedDoc) {
-        currentState = 'Conjunto em uso sem texto ligado';
-        nextStep = 'Ligar o conjunto em uso a um texto da biblioteca.';
-      } else if (!activeSet && activeDoc) {
-        currentState = 'Texto em uso, mas conjunto ainda não ativado';
-        nextStep = 'Colocar um conjunto em uso para aplicar prazos e regras.';
-      } else if (!activeSet && currentPolicySets.length) {
-        currentState = 'Há conjuntos cadastrados, mas nenhum em uso';
-        nextStep = 'Escolher qual conjunto deve valer agora.';
-      }
-
-      renderKvGrid('regimeQuickSummary', [
-        ['Situação resumida', currentState],
-        ['Texto em uso', activeDoc ? `${friendlyDocumentKind(activeDoc?.doc_kind)}${activeDoc?.version_label ? ` · ${activeDoc.version_label}` : ''}` : 'Nenhum texto em uso'],
-        ['Conjunto em uso', activeSet ? firstFilledValue(activeSet?.label, activeSet?.id, '—') : 'Nenhum conjunto em uso'],
-        ['Textos cadastrados', currentRegulationDocs.length],
-        ['Conjuntos cadastrados', currentPolicySets.length],
-        ['Regras cadastradas', currentPolicyRules.length],
-        ['Próximo passo', nextStep],
-        ['Texto ligado ao conjunto', linkedDoc ? 'Sim' : 'Não']
-      ]);
-    }
-
-    function renderRegimentoEditorChecklist(){
-      const docId = String($('regulationDocId')?.value || '').trim();
-      const docVersion = String($('regulationDocVersion')?.value || '').trim();
-      const policySetId = String($('policySetId')?.value || '').trim();
-      const policySetLabel = String($('policySetLabel')?.value || '').trim();
-      const policySetDocId = String($('policySetRegulationDocumentId')?.value || '').trim();
-      const ruleId = String($('policyRuleId')?.value || '').trim();
-      const ruleLabel = String($('policyRuleLabel')?.value || '').trim();
-      const rulePolicySetId = String($('policyRulePolicySetId')?.value || '').trim();
-      const activeSet = currentPolicySets.find((row) => row?.is_active === true) || currentPolicySets.find((row) => String(row?.status || '').trim() === 'active') || null;
-      const activeSetRuleCount = activeSet
-        ? currentPolicyRules.filter((row) => String(row?.policy_set_id || '') === String(activeSet.id || '')).length
-        : 0;
-
-      let nextAction = 'Registrar o texto principal da biblioteca.';
-      if (docVersion && !policySetLabel) {
-        nextAction = 'Dar nome ao conjunto de regras.';
-      } else if (policySetLabel && !ruleLabel) {
-        nextAction = 'Criar pelo menos uma regra.';
-      } else if (policySetLabel && ruleLabel && !policySetDocId) {
-        nextAction = 'Ligar o conjunto a um texto da biblioteca.';
-      } else if (policySetLabel && ruleLabel) {
-        nextAction = 'Salvar e depois colocar o conjunto em uso.';
-      } else if (activeSet && activeSetRuleCount > 0) {
-        nextAction = 'Revisar o conjunto em uso e ajustar só se precisar.';
-      }
-
-      renderKvGrid('regimentoEditorChecklist', [
-        ['Texto no formulário', docVersion ? `${docId ? 'Editando texto existente' : 'Novo texto'} · versão preenchida` : `${docId ? 'Editando texto existente' : 'Novo texto'} · falta preencher a versão`],
-        ['Conjunto no formulário', policySetLabel ? `${policySetId ? 'Editando conjunto existente' : 'Novo conjunto'} · nome preenchido` : `${policySetId ? 'Editando conjunto existente' : 'Novo conjunto'} · falta dar nome`],
-        ['Texto ligado ao conjunto no formulário', policySetDocId ? 'Sim' : 'Ainda sem texto ligado'],
-        ['Regra no formulário', ruleLabel ? `${ruleId ? 'Editando regra existente' : 'Nova regra'} · nome curto preenchido` : `${ruleId ? 'Editando regra existente' : 'Nova regra'} · falta dar nome curto`],
-        ['Conjunto escolhido para a regra', rulePolicySetId ? 'Sim' : 'Falta escolher um conjunto'],
-        ['Conjunto em uso agora', activeSet ? firstFilledValue(activeSet?.label, activeSet?.id, '—') : 'Nenhum conjunto em uso'],
-        ['Regras no conjunto em uso', activeSet ? activeSetRuleCount : 'Nenhum conjunto em uso'],
-        ['Próxima ação sugerida', nextAction]
-      ]);
-    }
-
     function renderRegimeState(){
       const box = $('regimeStateBox');
       const actionBox = $('regimeActionBox');
@@ -939,12 +841,12 @@
       let tone = 'warn';
       let title = 'Biblioteca sem regras locais definidas';
       let text = 'Nenhum texto em uso e nenhum conjunto de regras em uso foi encontrado.';
-      let note = 'Enquanto isso, o sistema usa regras temporárias padrão para não travar as outras páginas do sistema.';
+      let note = 'Enquanto isso, o backend precisa resolver regras provisórias padrão para não bloquear conta, index, painel e livro.';
       let nextTitle = 'Próximo passo sugerido';
       let steps = [
         'Registra primeiro o texto principal da biblioteca.',
         'Cria um conjunto de regras para empréstimo, reserva e consulta.',
-        'Adiciona pelo menos uma regra.',
+        'Adiciona pelo menos uma regra detalhada.',
         'Coloca o conjunto em uso.'
       ];
       let actions = [
@@ -962,7 +864,7 @@
         nextTitle = 'O que revisar quando houver mudança';
         steps = [
           'Se o texto público mudar, revisa o conjunto em uso.',
-          'Confere se as regras continuam batendo com o texto.',
+          'Confere se as regras detalhadas continuam batendo com o texto.',
           'Salva os ajustes antes de trocar o conjunto em uso.'
         ];
         actions = [
@@ -971,13 +873,13 @@
         ];
       } else if (activeSet && !linkedDoc) {
         tone = 'warn';
-        title = 'Regras temporárias em uso';
+        title = 'Regras provisórias em uso';
         text = `O conjunto “${firstFilledValue(activeSet?.label, activeSet?.id, '—')}” está em uso, mas ainda não está ligado a nenhum texto da biblioteca.`;
         note = 'Isso permite que o sistema continue funcionando enquanto a biblioteca ainda não definiu ou ainda não ligou seu regimento local.';
         steps = [
           'Registra ou revisa o texto principal da biblioteca.',
           'Liga o conjunto em uso a esse texto.',
-          'Confere se as regras batem com o texto público.'
+          'Confere se as regras detalhadas batem com o texto público.'
         ];
         actions = [
           { label: 'Novo texto', action: 'documento', variant: 'soft' },
@@ -990,7 +892,7 @@
         note = 'A biblioteca precisa colocar um conjunto em uso para que o sistema saiba quais prazos, reservas e prorrogações aplicar.';
         steps = [
           'Cria um conjunto ligado a esse texto, se ainda não existir.',
-          'Adiciona pelo menos uma regra.',
+          'Adiciona pelo menos uma regra detalhada.',
           'Coloca o conjunto em uso.'
         ];
         actions = [
@@ -1002,10 +904,10 @@
         tone = 'warn';
         title = 'Há conjuntos cadastrados, mas nenhum em uso';
         text = 'A biblioteca já tem conjuntos de regras cadastrados, porém nenhum deles foi colocado em uso.';
-        note = 'Sem um conjunto em uso, a biblioteca depende apenas das regras temporárias padrão já preparadas pelo sistema.';
+        note = 'Sem um conjunto em uso, a biblioteca depende apenas das regras provisórias padrão resolvidas no backend.';
         steps = [
           'Escolhe o conjunto que deve valer agora.',
-          'Confere se ele tem pelo menos uma regra.',
+          'Confere se ele tem pelo menos uma regra detalhada.',
           'Coloca o conjunto em uso.'
         ];
         actions = [
@@ -1157,7 +1059,7 @@
         setChip('chipBiblioteca', 'Biblioteca: —');
         setChip('chipServiceMode', 'Modo: —');
         setChip('chipWorkspace', 'Resumo geral da biblioteca: sem sessão');
-        $('helloLine').textContent = 'Faz login com uma conta bibliotecária para abrir a área da biblioteca.';
+        $('helloLine').textContent = 'Faz login com uma conta bibliotecária para abrir a gestão institucional.';
         return false;
       }
 
@@ -1174,7 +1076,7 @@
 
       setChip('chipFuncao', 'Função: bibliotecária/o');
       setChip('chipEmail', `E-mail: ${session.user.email || '—'}`);
-      $('helloLine').textContent = `Sessão ativa para ${session.user.email || 'bibliotecária/o'} — página aberta para consulta.`;
+      $('helloLine').textContent = `Sessão ativa para ${session.user.email || 'bibliotecária/o'} — página institucional em modo leitura.`;
       return true;
     }
 
@@ -1246,7 +1148,7 @@
         renderKvGrid('identityGrid', [
           ['Nome completo', row?.name || '—'],
           ['Nome abreviado', row?.short_name || '—'],
-          ['Nome curto no sistema', row?.slug || '—'],
+          ['Slug', row?.slug || '—'],
           ['Contato principal', currentContactProfile?.contact_name || '—'],
           ['Papel do contato', currentContactProfile?.contact_role || '—'],
           ['E-mail', currentContactProfile?.contact_email || '—'],
@@ -1262,16 +1164,16 @@
 
         const scheduleStruct = safeJsonObject(currentServiceState?.consultation_schedule_struct);
         renderKvGrid('scheduleGrid', [
-          ['Horário de referência', currentServiceState?.consultation_timezone || 'America/Belem'],
-          ['Limite ao mesmo tempo', currentServiceState?.max_simultaneous_consultations || 1],
-          ['Horários escritos', currentServiceState?.service_schedule_text ? JSON.stringify(currentServiceState.service_schedule_text) : '—'],
-          ['Agenda organizada', Object.keys(scheduleStruct).length ? JSON.stringify(scheduleStruct) : '—']
+          ['Fuso da consulta local', currentServiceState?.consultation_timezone || 'America/Belem'],
+          ['Capacidade simultânea', currentServiceState?.max_simultaneous_consultations || 1],
+          ['Horários textuais', currentServiceState?.service_schedule_text ? JSON.stringify(currentServiceState.service_schedule_text) : '—'],
+          ['Agenda estruturada', Object.keys(scheduleStruct).length ? JSON.stringify(scheduleStruct) : '—']
         ]);
 
         const localRules = safeJsonObject(firstFilledValue(row?.local_rules, row?.circulation_local_rules, row?.non_member_rules, currentServiceState?.local_rules));
         renderKvGrid('localRulesGrid', Object.keys(localRules).length ? summarizeObjectEntries(localRules, 10) : [
-          ['Estado', 'Nenhum resumo local claro foi encontrado nesta página'],
-          ['Observação', 'Os conjuntos de regras e as regras aparecem na aba seguinte.']
+          ['Estado', 'Nenhum bloco local legível encontrado neste front'],
+          ['Observação', 'Os conjuntos de regras e as regras detalhadas aparecem no separador seguinte.']
         ]);
 
         setStatus('identityStatus', 'Identidade e funcionamento carregados.', 'ok');
@@ -1317,7 +1219,7 @@
         renderKvGrid('communicationsTransportGrid', [
           ['Modo de envio', data?.delivery_mode || '—'],
           ['Canal de envio', data?.transport_channel || '—'],
-          ['Situação do envio', data?.transport_state || '—'],
+          ['Estado do transporte', data?.transport_state || '—'],
           ['Último teste', fmtDateTime(data?.transport_last_tested_at || data?.last_tested_at)],
           ['E-mail mostrado no envio', data?.sender_visible_email || '—']
         ]);
@@ -1344,7 +1246,7 @@
         get_library_institutional_workspace: 'resumo geral da biblioteca',
         get_library_regulation_documents_ui: 'textos da biblioteca',
         get_library_circulation_policy_sets_ui: 'conjuntos de regras',
-        get_library_circulation_policy_rules_ui: 'regras'
+        get_library_circulation_policy_rules_ui: 'regras detalhadas'
       };
       return labels[rpcName] || rpcName;
     }
@@ -1357,8 +1259,8 @@
       const label = getCanonicalSurfaceLabel(rpcName);
       if (/could not find the function|schema cache|function\s+/i.test(message)) {
         return [
-          `A parte “${label}” desta página ainda não está disponível aqui.`,
-          'Confere se ela já foi instalada aqui e se a atualização já entrou em vigor.'
+          `A parte “${label}” desta página ainda não está disponível nesta base.`,
+          'Confere se ela já foi instalada aqui e se a atualização da API já entrou em vigor.'
         ].join(' ');
       }
       if (!message) {
@@ -1434,32 +1336,204 @@
         return `<td>${esc(displayValue(raw))}</td>`;
       }).join('')}</tr>`).join('');
     }
-    function pillToneByStatus(value) {
-      const raw = String(value || '').trim().toLowerCase();
-      if (!raw) return 'info';
-      if (['published', 'active', 'sim', 'em uso', 'texto em uso', 'regra em uso'].includes(raw)) return 'ok';
-      if (['draft', 'draft_only', 'rascunho'].includes(raw)) return 'warn';
-      if (['archived', 'arquivado', 'não', 'fora de uso'].includes(raw)) return 'bad';
-      return 'info';
-    }
 
-    function renderPill(label, tone = 'info') {
-      return `<span class="pill ${esc(tone)}">${esc(label)}</span>`;
-    }
+    const TASK_TYPE_LABELS = {
+      limpeza_livros: 'Limpeza dos livros',
+      arrumacao: 'Arrumação',
+      catalogacao: 'Catalogação',
+      atendimento: 'Atendimento',
+      comunicacao: 'Comunicação',
+      manutencao: 'Manutenção',
+      evento: 'Atividade pública',
+      reuniao: 'Reunião de organização',
+      regimento: 'Revisão de regimento',
+      outro: 'Outro tipo'
+    };
 
-    function renderInfoLines(lines) {
-      const normalized = (Array.isArray(lines) ? lines : [lines])
-        .map((line) => String(line ?? '').trim())
+    const TASK_PROGRESS_SEPARATOR = '\n\n[andamento]\n';
+
+    function normalizeEmailList(value) {
+      return String(value || '')
+        .split(/[\n,;]+/)
+        .map((item) => item.trim())
         .filter(Boolean);
-      if (!normalized.length) return '—';
-      return normalized.map((line) => `<div>${esc(line)}</div>`).join('');
+    }
+
+    function taskTypeLabel(value) {
+      const raw = String(value || '').trim();
+      return TASK_TYPE_LABELS[raw] || raw || '—';
+    }
+
+    function getTaskTypeFromTags(row) {
+      const tags = Array.isArray(row?.tags) ? row.tags : [];
+      const found = tags.find((tag) => String(tag || '').startsWith('tipo:'));
+      return found ? String(found).slice(5).trim() : '';
+    }
+
+    function getTaskInviteEmails(row) {
+      const tags = Array.isArray(row?.tags) ? row.tags : [];
+      return tags
+        .filter((tag) => String(tag || '').startsWith('convite:'))
+        .map((tag) => String(tag).slice(8).trim())
+        .filter(Boolean);
+    }
+
+    function splitTaskDescription(value) {
+      const raw = String(value || '');
+      if (!raw) return { description: '', progress: '' };
+      const marker = raw.indexOf(TASK_PROGRESS_SEPARATOR);
+      if (marker === -1) return { description: raw.trim(), progress: '' };
+      return {
+        description: raw.slice(0, marker).trim(),
+        progress: raw.slice(marker + TASK_PROGRESS_SEPARATOR.length).trim()
+      };
+    }
+
+    function buildTaskDescription(description, progress) {
+      const mainText = String(description || '').trim();
+      const progressText = String(progress || '').trim();
+      if (mainText && progressText) return `${mainText}${TASK_PROGRESS_SEPARATOR}${progressText}`;
+      return mainText || progressText || null;
+    }
+
+    function buildTaskTags(currentTags, typeValue, inviteEmails) {
+      const preserved = (Array.isArray(currentTags) ? currentTags : [])
+        .map((tag) => String(tag || '').trim())
+        .filter(Boolean)
+        .filter((tag) => !tag.startsWith('tipo:') && !tag.startsWith('convite:'));
+      const nextTags = [...preserved];
+      const type = String(typeValue || '').trim();
+      if (type) nextTags.push(`tipo:${type}`);
+      normalizeEmailList(inviteEmails).forEach((email) => nextTags.push(`convite:${email}`));
+      return nextTags;
+    }
+
+    function renderTasksTable(rows) {
+      const tbody = $('tbodyTasks');
+      const normalizedRows = asArray(rows).filter((row) => row && typeof row === 'object');
+      if (!tbody) return;
+      if (!normalizedRows.length) {
+        tbody.innerHTML = '<tr><td colspan="7">Nenhuma tarefa interna disponível.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = normalizedRows.map((row) => {
+        const parts = splitTaskDescription(row?.description);
+        const inviteEmails = getTaskInviteEmails(row);
+        const infoLines = [];
+        if (parts.description) infoLines.push(parts.description);
+        if (parts.progress) infoLines.push(`Andamento: ${parts.progress}`);
+        if (inviteEmails.length) infoLines.push(`Convidados: ${inviteEmails.join(', ')}`);
+        infoLines.push(`Criada em: ${fmtDateTime(row?.created_at)}`);
+        return `<tr>
+          <td>
+            <div><strong>${esc(firstFilledValue(row?.title, '—'))}</strong></div>
+            <div class="inline-note">${renderInfoLines(infoLines)}</div>
+          </td>
+          <td>${esc(taskTypeLabel(getTaskTypeFromTags(row)))}</td>
+          <td>${esc(firstFilledValue(row?.priority, '—'))}</td>
+          <td>${esc(firstFilledValue(row?.status, '—'))}</td>
+          <td>${esc(firstFilledValue(row?.owner, '—'))}</td>
+          <td>${esc(fmtDate(row?.due_date))}</td>
+          <td><div class="editor-actions"><button class="btn mini soft" type="button" data-task-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini danger" type="button" data-task-delete="${esc(String(row?.id || ''))}">Excluir</button></div></td>
+        </tr>`;
+      }).join('');
+    }
+
+    function resetTaskForm() {
+      $('taskId').value = '';
+      $('taskTitle').value = '';
+      $('taskType').value = '';
+      $('taskDueDate').value = '';
+      $('taskPriority').value = 'media';
+      $('taskStatusField').value = 'aberta';
+      $('taskOwner').value = '';
+      $('taskInviteEmails').value = '';
+      $('taskDescription').value = '';
+      $('taskProgress').value = '';
+      $('btnDeleteTask').disabled = true;
+      setStatus('taskEditorStatus', '');
+    }
+
+    function loadTaskIntoForm(row) {
+      const parts = splitTaskDescription(row?.description);
+      $('taskId').value = row?.id ? String(row.id) : '';
+      $('taskTitle').value = firstFilledValue(row?.title);
+      $('taskType').value = getTaskTypeFromTags(row);
+      $('taskDueDate').value = toInputDateValue(row?.due_date);
+      $('taskPriority').value = firstFilledValue(row?.priority, 'media');
+      $('taskStatusField').value = firstFilledValue(row?.status, 'aberta');
+      $('taskOwner').value = firstFilledValue(row?.owner);
+      $('taskInviteEmails').value = getTaskInviteEmails(row).join('\n');
+      $('taskDescription').value = parts.description;
+      $('taskProgress').value = parts.progress;
+      $('btnDeleteTask').disabled = !row?.id;
+      setStatus('taskEditorStatus', row?.id ? `Tarefa ${row.id} carregada no formulário.` : '', row?.id ? 'info' : '');
+    }
+
+    function collectTaskPayload() {
+      const id = String($('taskId').value || '').trim();
+      const title = String($('taskTitle').value || '').trim();
+      const description = buildTaskDescription($('taskDescription').value, $('taskProgress').value);
+      const taskType = String($('taskType').value || '').trim();
+      if (!title) throw new Error('Escreve o nome da tarefa.');
+      const currentRow = currentTasks.find((row) => String(row?.id || '') === id) || null;
+      return {
+        id: id || null,
+        payload: {
+          library_id: currentLibraryRow?.id,
+          title,
+          description,
+          priority: String($('taskPriority').value || 'media').trim() || 'media',
+          status: String($('taskStatusField').value || 'aberta').trim() || 'aberta',
+          owner: String($('taskOwner').value || '').trim() || null,
+          due_date: String($('taskDueDate').value || '').trim() || null,
+          tags: buildTaskTags(currentRow?.tags, taskType, $('taskInviteEmails').value)
+        }
+      };
+    }
+
+    async function saveTask() {
+      try {
+        setStatus('taskEditorStatus', 'Salvando tarefa…', 'info');
+        if (!currentLibraryRow?.id) await fetchCurrentLibraryRow();
+        const { id, payload } = collectTaskPayload();
+        if (!payload.library_id) throw new Error('Biblioteca ativa não identificada.');
+        if (id) {
+          const { error } = await supabase.from('painel_internal_tasks').update(payload).eq('id', id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from('painel_internal_tasks').insert(payload);
+          if (error) throw error;
+        }
+        setStatus('taskEditorStatus', 'Tarefa salva.', 'ok');
+        resetTaskForm();
+        await loadTasksPanel();
+      } catch (error) {
+        setStatus('taskEditorStatus', 'Não consegui salvar a tarefa: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function deleteTask(taskId = null) {
+      try {
+        const id = String(taskId || $('taskId').value || '').trim();
+        if (!id) throw new Error('Nenhuma tarefa selecionada.');
+        if (!window.confirm('Excluir esta tarefa? Esta ação é irreversível.')) return;
+        setStatus('taskEditorStatus', 'Excluindo tarefa…', 'info');
+        const { error } = await supabase.from('painel_internal_tasks').delete().eq('id', id);
+        if (error) throw error;
+        setStatus('taskEditorStatus', 'Tarefa excluída.', 'ok');
+        resetTaskForm();
+        await loadTasksPanel();
+      } catch (error) {
+        setStatus('taskEditorStatus', 'Não consegui excluir a tarefa: ' + (error.message || String(error)), 'bad');
+      }
     }
     function parseJsonTextareaValue(value) {
       const raw = String(value || '').trim();
       if (!raw) return {};
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-        throw new Error('Este campo precisa conter um objeto JSON.');
+        throw new Error('O campo JSON precisa conter um objeto.');
       }
       return parsed;
     }
@@ -1510,63 +1584,19 @@
       }));
     }
 
-    function getCurrentLibrarySlugForRegimento() {
-      return String(
-        currentLibraryRow?.slug ||
-        currentAccessRow?.library_slug ||
-        currentAccessRow?.default_library_slug ||
-        currentIdentityRow?.library_slug ||
-        currentIdentityRow?.default_library_slug ||
-        document.documentElement?.dataset?.librarySlug ||
-        ''
-      ).trim().toLowerCase();
-    }
-
-    function getCanonicalRegimentoPublicPath(docKind = '') {
-      if (String(docKind || '').trim().toLowerCase() !== 'regimento') return '';
-      const slug = getCurrentLibrarySlugForRegimento();
-      if (!slug || slug === 'default') return '';
-      return `${slug}/regimentos/publicados/regimento-atual.pdf`;
-    }
-
-    function syncRegulationDocPublicPathHint() {
-      const input = $('regulationDocPublicPath');
-      const hint = $('regulationDocPublicPathHint');
-      const bucketInput = $('regulationDocBucket');
-      const kind = String($('regulationDocKind')?.value || 'regimento').trim().toLowerCase();
-      const canonicalPath = getCanonicalRegimentoPublicPath(kind);
-
-      if (bucketInput && kind === 'regimento' && !String(bucketInput.value || '').trim()) {
-        bucketInput.value = REGIMENTO_PUBLIC_BUCKET;
-      }
-      if (input && kind === 'regimento' && canonicalPath && !String(input.value || '').trim()) {
-        input.value = canonicalPath;
-      }
-      if (hint) {
-        hint.textContent = canonicalPath
-          ? `Para o regimento atual publicado, use: ${canonicalPath}`
-          : 'Para o regimento atual publicado, use sempre o alias estável da biblioteca.';
-      }
-      if (input) {
-        input.placeholder = canonicalPath || 'publico/arquivo.pdf';
-      }
-    }
-
     function resetRegulationDocForm() {
       $('regulationDocId').value = '';
       $('regulationDocKind').value = 'regimento';
       $('regulationDocVersion').value = '';
       $('regulationDocPublicationStatus').value = 'draft_only';
-      $('regulationDocBucket').value = REGIMENTO_PUBLIC_BUCKET;
+      $('regulationDocBucket').value = 'library-regimentos';
       $('regulationDocDraftPath').value = '';
-      $('regulationDocPublicPath').value = getCanonicalRegimentoPublicPath('regimento');
+      $('regulationDocPublicPath').value = '';
       $('regulationDocSourceNote').value = '';
       $('regulationDocMetadata').value = toPrettyJson({});
       $('btnActivateRegulationDoc').disabled = true;
       $('btnActivateRegulationDoc').textContent = 'Colocar em uso';
       setStatus('regulationDocEditorStatus', '');
-      syncRegulationDocPublicPathHint();
-      renderRegimentoEditorChecklist();
     }
 
     function loadRegulationDocIntoForm(row) {
@@ -1574,16 +1604,14 @@
       $('regulationDocKind').value = firstFilledValue(row?.doc_kind, 'regimento');
       $('regulationDocVersion').value = firstFilledValue(row?.version_label);
       $('regulationDocPublicationStatus').value = firstFilledValue(row?.publication_status, 'draft_only');
-      $('regulationDocBucket').value = firstFilledValue(row?.storage_bucket, REGIMENTO_PUBLIC_BUCKET);
+      $('regulationDocBucket').value = firstFilledValue(row?.storage_bucket, 'library-regimentos');
       $('regulationDocDraftPath').value = firstFilledValue(row?.storage_path_draft);
-      $('regulationDocPublicPath').value = firstFilledValue(row?.storage_path_public, getCanonicalRegimentoPublicPath(row?.doc_kind));
+      $('regulationDocPublicPath').value = firstFilledValue(row?.storage_path_public);
       $('regulationDocSourceNote').value = firstFilledValue(row?.source_note);
       $('regulationDocMetadata').value = toPrettyJson(row?.metadata);
       $('btnActivateRegulationDoc').disabled = !row?.id;
       $('btnActivateRegulationDoc').textContent = row?.is_active ? 'Tirar de uso' : 'Colocar em uso';
-      setStatus('regulationDocEditorStatus', row?.id ? `Texto ${row.id} carregado no formulário.` : '', row?.id ? 'info' : '');
-      syncRegulationDocPublicPathHint();
-      renderRegimentoEditorChecklist();
+      setStatus('regulationDocEditorStatus', row?.id ? `Texto ${row.id} carregado para edição.` : '', row?.id ? 'info' : '');
     }
 
     function collectRegulationDocPayload() {
@@ -1591,9 +1619,9 @@
         doc_kind: $('regulationDocKind').value,
         version_label: String($('regulationDocVersion').value || '').trim(),
         publication_status: $('regulationDocPublicationStatus').value,
-        storage_bucket: String($('regulationDocBucket').value || '').trim() || REGIMENTO_PUBLIC_BUCKET,
+        storage_bucket: String($('regulationDocBucket').value || '').trim() || 'library-regimentos',
         storage_path_draft: String($('regulationDocDraftPath').value || '').trim() || null,
-        storage_path_public: String($('regulationDocPublicPath').value || '').trim() || getCanonicalRegimentoPublicPath($('regulationDocKind').value),
+        storage_path_public: String($('regulationDocPublicPath').value || '').trim() || null,
         source_note: String($('regulationDocSourceNote').value || '').trim() || null,
         metadata: parseJsonTextareaValue($('regulationDocMetadata').value)
       };
@@ -1616,7 +1644,6 @@
       $('policySetMetadata').value = toPrettyJson({});
       $('btnActivatePolicySet').disabled = true;
       setStatus('policySetEditorStatus', '');
-      renderRegimentoEditorChecklist();
     }
 
     function loadPolicySetIntoForm(row) {
@@ -1631,8 +1658,7 @@
       $('policySetScopeNote').value = firstFilledValue(row?.scope_note);
       $('policySetMetadata').value = toPrettyJson(row?.metadata);
       $('btnActivatePolicySet').disabled = !row?.id;
-      setStatus('policySetEditorStatus', row?.id ? `Conjunto ${row.id} carregado no formulário.` : '', row?.id ? 'info' : '');
-      renderRegimentoEditorChecklist();
+      setStatus('policySetEditorStatus', row?.id ? `Conjunto ${row.id} carregado para edição.` : '', row?.id ? 'info' : '');
     }
 
     function collectPolicySetPayload() {
@@ -1676,7 +1702,6 @@
       $('policyRuleRenewable').checked = true;
       $('btnDeletePolicyRule').disabled = true;
       setStatus('policyRuleEditorStatus', '');
-      renderRegimentoEditorChecklist();
     }
 
     function loadPolicyRuleIntoForm(row) {
@@ -1702,8 +1727,7 @@
       $('policyRuleConsultationOnly').checked = row?.consultation_only === true;
       $('policyRuleRenewable').checked = row?.renewable !== false;
       $('btnDeletePolicyRule').disabled = !row?.id;
-      setStatus('policyRuleEditorStatus', row?.id ? `Regra ${row.id} carregada no formulário.` : '', row?.id ? 'info' : '');
-      renderRegimentoEditorChecklist();
+      setStatus('policyRuleEditorStatus', row?.id ? `Regra ${row.id} carregada para edição.` : '', row?.id ? 'info' : '');
     }
 
     function collectPolicyRulePayload() {
@@ -1731,7 +1755,7 @@
       const id = String($('policyRuleId').value || '').trim();
       if (id) payload.id = id;
       const policySetId = String($('policyRulePolicySetId').value || '').trim();
-      if (!policySetId) throw new Error('Selecione um conjunto de regras para esta regra.');
+      if (!policySetId) throw new Error('Selecione um conjunto de regras para a regra detalhada.');
       return { policySetId, payload };
     }
 
@@ -1744,32 +1768,14 @@
         return;
       }
       tbody.innerHTML = normalizedRows.map((row) => {
-        const publicPath = firstFilledValue(row?.storage_path_public);
-        const draftPath = firstFilledValue(row?.storage_path_draft);
-        const statusLabel = friendlyDocumentStatus(row?.publication_status);
+        const link = firstFilledValue(row?.storage_path_public, row?.storage_path_draft, '—');
         const actionLabel = row?.is_active ? 'Tirar de uso' : 'Colocar em uso';
-        const fileLines = [];
-        if (publicPath) fileLines.push(`Publicado: ${publicPath}`);
-        if (draftPath) fileLines.push(`Rascunho: ${draftPath}`);
-        if (!fileLines.length) fileLines.push('Nenhum arquivo informado.');
         return `<tr>
-          <td>
-            <div><strong>${esc(friendlyDocumentKind(row?.doc_kind))}</strong></div>
-            ${row?.source_note ? `<div class="inline-note">${esc(row.source_note)}</div>` : ''}
-          </td>
-          <td>
-            <div>${renderPill(statusLabel, pillToneByStatus(row?.publication_status))}</div>
-            <div style="margin-top:6px">${row?.is_active ? renderPill('Texto em uso', 'ok') : renderPill('Fora de uso', 'info')}</div>
-          </td>
-          <td>
-            <div><strong>${esc(firstFilledValue(row?.version_label, '—'))}</strong></div>
-            <div class="inline-note">ID ${esc(firstFilledValue(row?.id, '—'))}</div>
-          </td>
-          <td>
-            <div>${esc(fmtDateTime(firstFilledValue(row?.updated_at, row?.created_at, '')))}</div>
-            ${row?.created_at ? `<div class="inline-note">Criado: ${esc(fmtDateTime(row.created_at))}</div>` : ''}
-          </td>
-          <td>${renderInfoLines(fileLines)}</td>
+          <td>${esc(friendlyDocumentKind(row?.doc_kind))}</td>
+          <td>${esc(friendlyDocumentStatus(row?.publication_status))}${row?.is_active ? '<div class="inline-note">Texto em uso</div>' : ''}</td>
+          <td>${esc(firstFilledValue(row?.version_label, '—'))}</td>
+          <td>${esc(fmtDateTime(firstFilledValue(row?.updated_at, row?.created_at, '')))}</td>
+          <td>${esc(link)}</td>
           <td><div class="editor-actions"><button class="btn mini soft" type="button" data-reg-doc-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini" type="button" data-reg-doc-toggle="${esc(String(row?.id || ''))}">${esc(actionLabel)}</button></div></td>
         </tr>`;
       }).join('');
@@ -1785,23 +1791,14 @@
       }
       tbody.innerHTML = normalizedRows.map((row) => {
         const validity = [firstFilledValue(row?.effective_from), firstFilledValue(row?.effective_until)].filter(Boolean).join(' → ');
-        const scopeLines = [getPolicySetOriginText(row)];
-        if (validity) scopeLines.push(`Validade: ${validity}`);
-        const resumeLines = [];
-        if (row?.scope_note) resumeLines.push(row.scope_note);
-        if (row?.activation_note) resumeLines.push(`Ativação: ${row.activation_note}`);
-        resumeLines.push(`${row?.rule_count != null ? row.rule_count : 0} regra(s)`);
+        const scopeText = [getPolicySetOriginText(row), validity].filter(Boolean).join(' · ') || '—';
+        const resumeText = `${firstFilledValue(row?.scope_note, row?.activation_note, '—')}${row?.rule_count != null ? ` · ${row.rule_count} regra(s)` : ''}`;
         return `<tr>
-          <td>
-            <div><strong>${esc(firstFilledValue(row?.label, row?.id, '—'))}</strong></div>
-            <div class="inline-note">ID ${esc(firstFilledValue(row?.id, '—'))}</div>
-          </td>
-          <td>
-            <div>${renderPill(friendlyPolicySetStatus(row?.status), pillToneByStatus(row?.status))}</div>
-          </td>
-          <td>${renderInfoLines(scopeLines)}</td>
-          <td>${row?.is_active ? renderPill('Em uso', 'ok') : renderPill('Fora de uso', 'info')}</td>
-          <td>${renderInfoLines(resumeLines)}</td>
+          <td>${esc(firstFilledValue(row?.label, row?.id, '—'))}</td>
+          <td>${esc(friendlyPolicySetStatus(row?.status))}</td>
+          <td>${esc(scopeText)}</td>
+          <td>${esc(row?.is_active ? 'Sim' : 'Não')}</td>
+          <td>${esc(resumeText)}</td>
           <td><div class="editor-actions"><button class="btn mini soft" type="button" data-policy-set-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini" type="button" data-policy-set-activate="${esc(String(row?.id || ''))}">Colocar em uso</button></div></td>
         </tr>`;
       }).join('');
@@ -1812,26 +1809,18 @@
       const normalizedRows = asArray(rows).filter((row) => row && typeof row === 'object');
       if (!tbody) return;
       if (!normalizedRows.length) {
-        tbody.innerHTML = '<tr><td colspan="6">Nenhuma regra disponível.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6">Nenhuma regra detalhada disponível.</td></tr>';
         return;
       }
       tbody.innerHTML = normalizedRows.map((row) => {
         const limitsLines = friendlyPolicyRuleLimits(row);
         const observationLines = friendlyRuleObservation(row);
-        const scopeLines = [friendlyPolicyRuleScope(row)];
-        if (row?.policy_label) scopeLines.push(`Conjunto: ${row.policy_label}`);
         return `<tr>
-          <td>
-            <div><strong>${esc(firstFilledValue(row?.rule_label, row?.policy_label, row?.id, '—'))}</strong></div>
-            <div style="margin-top:6px">${row?.is_active ? renderPill('Regra em uso', 'ok') : renderPill('Fora de uso', 'info')}</div>
-          </td>
-          <td>${renderInfoLines(scopeLines)}</td>
-          <td>
-            <div><strong>${esc(firstFilledValue(row?.priority, '—'))}</strong></div>
-            <div class="inline-note">Ordem de aplicação</div>
-          </td>
-          <td>${renderInfoLines(limitsLines)}</td>
-          <td>${renderInfoLines(observationLines)}</td>
+          <td>${esc(firstFilledValue(row?.rule_label, row?.policy_label, row?.id, '—'))}${row?.is_active ? '<div class="inline-note">Regra em uso</div>' : ''}</td>
+          <td>${esc(friendlyPolicyRuleScope(row))}</td>
+          <td>${esc(firstFilledValue(row?.priority, '—'))}</td>
+          <td>${limitsLines.map((line) => `<div>${esc(line)}</div>`).join('')}</td>
+          <td>${observationLines.map((line) => `<div>${esc(line)}</div>`).join('')}</td>
           <td><div class="editor-actions"><button class="btn mini soft" type="button" data-policy-rule-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini danger" type="button" data-policy-rule-delete="${esc(String(row?.id || ''))}">Excluir</button></div></td>
         </tr>`;
       }).join('');
@@ -1843,10 +1832,10 @@
         const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
         const payload = collectRegulationDocPayload();
         await supabase.rpc('upsert_library_regulation_document', { p_library_id: row.id, p_document: payload }).then(({ error }) => { if (error) throw error; });
-        setStatus('regulationDocEditorStatus', 'Texto salvo. Veja abaixo se ele deve ficar em uso.', 'ok');
+        setStatus('regulationDocEditorStatus', 'Texto salvo.', 'ok');
         await loadWorkspaceAndPolicies();
       } catch (error) {
-        setStatus('regulationDocEditorStatus', 'Não consegui salvar o texto: ' + (error.message || String(error)), 'bad');
+        setStatus('regulationDocEditorStatus', 'Falha ao salvar o texto: ' + (error.message || String(error)), 'bad');
       }
     }
 
@@ -1858,10 +1847,10 @@
         const makeActive = !(current?.is_active === true);
         setStatus('regulationDocEditorStatus', makeActive ? 'Colocando o texto em uso…' : 'Tirando o texto de uso…', 'info');
         await supabase.rpc('set_library_regulation_document_active', { p_document_id: Number(id), p_make_active: makeActive }).then(({ error }) => { if (error) throw error; });
-        setStatus('regulationDocEditorStatus', makeActive ? 'Texto colocado em uso. Confira abaixo se o conjunto certo está ligado a ele.' : 'Texto tirado de uso. Confira abaixo como a biblioteca ficou funcionando agora.', 'ok');
+        setStatus('regulationDocEditorStatus', makeActive ? 'Texto colocado em uso.' : 'Texto tirado de uso.', 'ok');
         await loadWorkspaceAndPolicies();
       } catch (error) {
-        setStatus('regulationDocEditorStatus', 'Não consegui mudar o uso deste texto: ' + (error.message || String(error)), 'bad');
+        setStatus('regulationDocEditorStatus', 'Falha ao alterar o texto: ' + (error.message || String(error)), 'bad');
       }
     }
 
@@ -1871,10 +1860,10 @@
         const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
         const payload = collectPolicySetPayload();
         await supabase.rpc('upsert_library_circulation_policy_set', { p_library_id: row.id, p_payload: payload }).then(({ error }) => { if (error) throw error; });
-        setStatus('policySetEditorStatus', 'Conjunto salvo. Se ele já estiver completo, podes colocá-lo em uso.', 'ok');
+        setStatus('policySetEditorStatus', 'Conjunto de regras salvo.', 'ok');
         await loadWorkspaceAndPolicies();
       } catch (error) {
-        setStatus('policySetEditorStatus', 'Não consegui salvar o conjunto: ' + (error.message || String(error)), 'bad');
+        setStatus('policySetEditorStatus', 'Falha ao salvar o conjunto de regras: ' + (error.message || String(error)), 'bad');
       }
     }
 
@@ -1884,22 +1873,22 @@
         if (!id) throw new Error('Nenhum conjunto de regras selecionado.');
         setStatus('policySetEditorStatus', 'Colocando o conjunto em uso…', 'info');
         await supabase.rpc('set_library_circulation_policy_set_active', { p_policy_set_id: Number(id) }).then(({ error }) => { if (error) throw error; });
-        setStatus('policySetEditorStatus', 'Conjunto colocado em uso. Confira abaixo se ele está ligado ao texto certo.', 'ok');
+        setStatus('policySetEditorStatus', 'Conjunto de regras colocado em uso.', 'ok');
         await loadWorkspaceAndPolicies();
       } catch (error) {
-        setStatus('policySetEditorStatus', 'Não consegui colocar o conjunto em uso: ' + (error.message || String(error)), 'bad');
+        setStatus('policySetEditorStatus', 'Falha ao colocar o conjunto em uso: ' + (error.message || String(error)), 'bad');
       }
     }
 
     async function savePolicyRule() {
       try {
-        setStatus('policyRuleEditorStatus', 'Salvando regra…', 'info');
+        setStatus('policyRuleEditorStatus', 'Salvando regra detalhada…', 'info');
         const { policySetId, payload } = collectPolicyRulePayload();
         await supabase.rpc('upsert_library_circulation_policy_rule', { p_policy_set_id: Number(policySetId), p_rule: payload }).then(({ error }) => { if (error) throw error; });
-        setStatus('policyRuleEditorStatus', 'Regra salva. Confira abaixo se ela aparece no conjunto esperado.', 'ok');
+        setStatus('policyRuleEditorStatus', 'Regra detalhada salva.', 'ok');
         await loadWorkspaceAndPolicies();
       } catch (error) {
-        setStatus('policyRuleEditorStatus', 'Não consegui salvar a regra: ' + (error.message || String(error)), 'bad');
+        setStatus('policyRuleEditorStatus', 'Falha ao salvar a regra detalhada: ' + (error.message || String(error)), 'bad');
       }
     }
 
@@ -1907,14 +1896,14 @@
       try {
         const id = String(ruleId || $('policyRuleId').value || '').trim();
         if (!id) throw new Error('Nenhuma regra selecionada.');
-        if (!window.confirm('Excluir esta regra? Esta ação é irreversível.')) return;
-        setStatus('policyRuleEditorStatus', 'Excluindo regra…', 'info');
+        if (!window.confirm('Excluir esta regra detalhada? Esta ação é irreversível.')) return;
+        setStatus('policyRuleEditorStatus', 'Excluindo regra detalhada…', 'info');
         await supabase.rpc('delete_library_circulation_policy_rule', { p_rule_id: Number(id) }).then(({ error }) => { if (error) throw error; });
-        setStatus('policyRuleEditorStatus', 'Regra excluída. Confira abaixo se o conjunto ainda ficou completo.', 'ok');
+        setStatus('policyRuleEditorStatus', 'Regra detalhada excluída.', 'ok');
         resetPolicyRuleForm();
         await loadWorkspaceAndPolicies();
       } catch (error) {
-        setStatus('policyRuleEditorStatus', 'Não consegui excluir a regra: ' + (error.message || String(error)), 'bad');
+        setStatus('policyRuleEditorStatus', 'Falha ao excluir a regra detalhada: ' + (error.message || String(error)), 'bad');
       }
     }
 
@@ -1922,7 +1911,7 @@
       try {
         currentWorkspace = normalizeWorkspaceObject(await callLibraryScopedRpc('get_library_institutional_workspace'));
         const workspaceSummary = summarizeObjectEntries(currentWorkspace, 12);
-        renderKvGrid('workspaceSummary', workspaceSummary.length ? workspaceSummary : [['Estado', 'Resumo sem informações claras']]);
+        renderKvGrid('workspaceSummary', workspaceSummary.length ? workspaceSummary : [['Estado', 'Resumo sem dados legíveis']]);
         renderKvGrid('documentsWorkspaceGrid', workspaceSummary.length ? workspaceSummary.slice(0, 8) : [['Estado', 'Sem resumo disponível']]);
         $('workspaceJson').textContent = JSON.stringify(currentWorkspace || {}, null, 2);
         setChip('chipWorkspace', 'Resumo geral da biblioteca: carregado');
@@ -1984,15 +1973,13 @@
       if (!$('policySetId').value) resetPolicySetForm();
       if (!$('policyRuleId').value) resetPolicyRuleForm();
       renderRegimeState();
-      renderRegimeQuickSummary();
-      renderRegimentoEditorChecklist();
 
       if (docsError || policySetsError || rulesError) {
         const failedRpcName = rulesError ? 'get_library_circulation_policy_rules_ui' : (policySetsError ? 'get_library_circulation_policy_sets_ui' : 'get_library_regulation_documents_ui');
         const message = explainCanonicalSurfaceError(failedRpcName, rulesError || policySetsError || docsError);
-        setStatus('regimentoStatus', 'Regimento carregado só em parte: ' + message, 'warn');
+        setStatus('regimentoStatus', 'Uma parte desta aba ainda não carregou: ' + message, 'warn');
       } else {
-        setStatus('regimentoStatus', 'Regimento carregado. Veja abaixo o estado atual da biblioteca, os textos, os conjuntos e as regras.', 'ok');
+        setStatus('regimentoStatus', 'Textos, conjuntos de regras e regras detalhadas carregados. Veja abaixo se a biblioteca está com regras do regimento ou com regras provisórias.', 'ok');
       }
     }
 
@@ -2008,35 +1995,34 @@
         if (error) throw error;
         currentGovernance = safeJsonObject(data?.config || {});
         const summary = summarizeObjectEntries(currentGovernance, 12);
-        renderKvGrid('governanceGrid', summary.length ? summary : [['Estado', 'Nenhuma organização própria dos documentos foi salva para esta biblioteca.']]);
+        renderKvGrid('governanceGrid', summary.length ? summary : [['Estado', 'Nenhuma governança dedicada salva para esta biblioteca.']]);
         $('governanceJson').textContent = JSON.stringify(data || {}, null, 2);
-        setStatus('documentsStatus', 'Documentos carregados.', 'ok');
+        setStatus('documentsStatus', 'Governança documental carregada.', 'ok');
       } catch (error) {
         currentGovernance = {};
         renderKvGrid('governanceGrid', []);
         $('governanceJson').textContent = '{}';
-        setStatus('documentsStatus', 'Não consegui carregar os documentos: ' + (error.message || String(error)), 'warn');
+        setStatus('documentsStatus', 'Não consegui carregar a governança documental: ' + (error.message || String(error)), 'warn');
       }
     }
 
     async function loadTasksPanel() {
       try {
-        const { data, error } = await supabase
+        const libraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
+        const query = supabase
           .from('painel_internal_tasks')
-          .select('id,title,description,priority,status,owner,due_date,tags,created_at')
+          .select('id,library_id,title,description,priority,status,owner,owner_user_id,due_date,tags,created_at')
+          .order('due_date', { ascending: true, nullsFirst: false })
           .order('created_at', { ascending: false });
+        const { data, error } = libraryId ? await query.eq('library_id', libraryId) : await query;
         if (error) throw error;
-        renderRowsTable('tbodyTasks', data, [
-          { value: (row) => row?.description ? `${row?.title || '—'} — ${row?.description}` : (row?.title || '—') },
-          { value: (row) => row?.priority || '—' },
-          { value: (row) => row?.status || '—' },
-          { value: (row) => row?.owner || '—' },
-          { value: (row) => fmtDate(row?.due_date) },
-          { value: (row) => fmtDateTime(row?.created_at) }
-        ], 'Nenhuma tarefa interna disponível.');
+        currentTasks = asArray(data).filter((row) => row && typeof row === 'object');
+        renderTasksTable(currentTasks);
+        if (!$('taskId').value) resetTaskForm();
         setStatus('tasksStatus', 'Tarefas internas carregadas.', 'ok');
       } catch (error) {
-        renderRowsTable('tbodyTasks', [], [1,2,3,4,5,6].map((n) => ({ value: () => n })), 'Falha ao carregar as tarefas internas: ' + (error.message || String(error)));
+        currentTasks = [];
+        renderRowsTable('tbodyTasks', [], [1,2,3,4,5,6,7].map((n) => ({ value: () => n })), 'Falha ao carregar as tarefas internas: ' + (error.message || String(error)));
         setStatus('tasksStatus', 'Não consegui carregar as tarefas internas: ' + (error.message || String(error)), 'warn');
       }
     }
@@ -2054,13 +2040,15 @@
       ]);
     }
 
-    $('regulationDocKind')?.addEventListener('change', syncRegulationDocPublicPathHint);
-    $('regulationDocBucket')?.addEventListener('change', syncRegulationDocPublicPathHint);
     $('btnRefreshIdentity')?.addEventListener('click', loadIdentityPanel);
     $('btnRefreshComms')?.addEventListener('click', loadCommunicationsPanel);
     $('btnRefreshRegimento')?.addEventListener('click', loadWorkspaceAndPolicies);
     $('btnRefreshDocuments')?.addEventListener('click', loadGovernancePanel);
     $('btnRefreshTasks')?.addEventListener('click', loadTasksPanel);
+    $('btnNewTask')?.addEventListener('click', resetTaskForm);
+    $('btnCancelTask')?.addEventListener('click', resetTaskForm);
+    $('btnSaveTask')?.addEventListener('click', saveTask);
+    $('btnDeleteTask')?.addEventListener('click', () => deleteTask());
     $('btnNewRegulationDoc')?.addEventListener('click', resetRegulationDocForm);
     $('btnCancelRegulationDoc')?.addEventListener('click', resetRegulationDocForm);
     $('btnSaveRegulationDoc')?.addEventListener('click', saveRegulationDoc);
@@ -2073,14 +2061,6 @@
     $('btnCancelPolicyRule')?.addEventListener('click', resetPolicyRuleForm);
     $('btnSavePolicyRule')?.addEventListener('click', savePolicyRule);
     $('btnDeletePolicyRule')?.addEventListener('click', () => deletePolicyRule());
-
-    $('tab-regimento')?.addEventListener('input', () => {
-      renderRegimentoEditorChecklist();
-    });
-
-    $('tab-regimento')?.addEventListener('change', () => {
-      renderRegimentoEditorChecklist();
-    });
 
     $('tab-regimento')?.addEventListener('click', async (event) => {
       const assistBtn = event.target.closest('[data-regime-assist]');
@@ -2130,6 +2110,19 @@
       }
     });
 
+    $('tab-tarefas')?.addEventListener('click', async (event) => {
+      const editBtn = event.target.closest('[data-task-edit]');
+      if (editBtn) {
+        const row = currentTasks.find((item) => String(item?.id || '') === String(editBtn.dataset.taskEdit || ''));
+        if (row) loadTaskIntoForm(row);
+        return;
+      }
+      const deleteBtn = event.target.closest('[data-task-delete]');
+      if (deleteBtn) {
+        await deleteTask(String(deleteBtn.dataset.taskDelete || ''));
+      }
+    });
+
     $('btnSair')?.addEventListener('click', async () => {
       const btn = $('btnSair');
       const authMode = String(btn?.dataset?.authMode || 'login').trim().toLowerCase();
@@ -2147,6 +2140,7 @@
     });
 
     setupTabs();
+    resetTaskForm();
     resetRegulationDocForm();
     resetPolicySetForm();
     resetPolicyRuleForm();
@@ -2156,6 +2150,16 @@
       session = newSession || null;
       updateTopbarAuthButton(!!session?.user?.id);
     });
+
+
+
+
+
+
+
+
+
+
   </script>
 </body>
 </html>
