@@ -185,7 +185,7 @@
             </div>
             <div class="row">
               <div class="card">
-                <div class="section-head"><div><h3>Horários e consulta local</h3><div class="mini">Resumo dos horários textuais e estruturados.</div></div></div>
+                <div class="section-head"><div><h3>Horários e consulta local</h3><div class="mini">Resumo dos horários escritos e organizados.</div></div></div>
                 <div id="scheduleGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
               </div>
               <div class="card">
@@ -194,7 +194,7 @@
               </div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Resumo geral da biblioteca</h3><div class="mini">Resumo vindo da base da biblioteca, mostrado aqui de forma simplificada.</div></div></div>
+              <div class="section-head"><div><h3>Resumo geral da biblioteca</h3><div class="mini">Resumo da biblioteca, mostrado aqui de forma simplificada.</div></div></div>
               <div class="status" id="workspaceStatus"></div>
               <div id="workspaceSummary" class="kv-grid"><div class="empty">Carregando…</div></div>
               <details style="margin-top:12px">
@@ -254,7 +254,7 @@
               <div class="section-head">
                 <div>
                   <h3>Como a biblioteca está funcionando agora</h3>
-                  <div class="mini">Este quadro mostra se a biblioteca está usando regras ligadas ao regimento ou regras provisórias.</div>
+                  <div class="mini">Este quadro mostra se a biblioteca está usando regras ligadas ao regimento ou regras temporárias.</div>
                 </div>
               </div>
               <div id="regimeStateBox" class="state-box">Carregando…</div>
@@ -778,7 +778,7 @@
       let tone = 'warn';
       let title = 'Biblioteca sem regras locais definidas';
       let text = 'Nenhum texto em uso e nenhum conjunto de regras em uso foi encontrado.';
-      let note = 'Enquanto isso, o backend precisa resolver regras provisórias padrão para não bloquear conta, index, painel e livro.';
+      let note = 'Enquanto isso, o sistema usa regras temporárias padrão para não travar conta, catálogo, painel e livro.';
       let nextTitle = 'Próximo passo sugerido';
       let steps = [
         'Registra primeiro o texto principal da biblioteca.',
@@ -810,7 +810,7 @@
         ];
       } else if (activeSet && !linkedDoc) {
         tone = 'warn';
-        title = 'Regras provisórias em uso';
+        title = 'Regras temporárias em uso';
         text = `O conjunto “${firstFilledValue(activeSet?.label, activeSet?.id, '—')}” está em uso, mas ainda não está ligado a nenhum texto da biblioteca.`;
         note = 'Isso permite que o sistema continue funcionando enquanto a biblioteca ainda não definiu ou ainda não ligou seu regimento local.';
         steps = [
@@ -841,7 +841,7 @@
         tone = 'warn';
         title = 'Há conjuntos cadastrados, mas nenhum em uso';
         text = 'A biblioteca já tem conjuntos de regras cadastrados, porém nenhum deles foi colocado em uso.';
-        note = 'Sem um conjunto em uso, a biblioteca depende apenas das regras provisórias padrão já preparadas pelo sistema.';
+        note = 'Sem um conjunto em uso, a biblioteca depende apenas das regras temporárias já preparadas pelo sistema.';
         steps = [
           'Escolhe o conjunto que deve valer agora.',
           'Confere se ele tem pelo menos uma regra detalhada.',
@@ -1013,7 +1013,7 @@
 
       setChip('chipFuncao', 'Função: bibliotecária/o');
       setChip('chipEmail', `E-mail: ${session.user.email || '—'}`);
-      $('helloLine').textContent = `Sessão ativa para ${session.user.email || 'bibliotecária/o'} — página institucional em modo leitura.`;
+      $('helloLine').textContent = `Sessão ativa para ${session.user.email || 'bibliotecária/o'} — página institucional em modo consulta.`;
       return true;
     }
 
@@ -1109,7 +1109,7 @@
 
         const localRules = safeJsonObject(firstFilledValue(row?.local_rules, row?.circulation_local_rules, row?.non_member_rules, currentServiceState?.local_rules));
         renderKvGrid('localRulesGrid', Object.keys(localRules).length ? summarizeObjectEntries(localRules, 10) : [
-          ['Estado', 'Nenhum bloco local legível encontrado neste front'],
+          ['Estado', 'Nenhum resumo local legível encontrado nesta página'],
           ['Observação', 'Os conjuntos de regras e as regras detalhadas aparecem no separador seguinte.']
         ]);
 
@@ -1724,7 +1724,7 @@
         const message = explainCanonicalSurfaceError(failedRpcName, rulesError || policySetsError || docsError);
         setStatus('regimentoStatus', 'Uma parte desta aba ainda não carregou: ' + message, 'warn');
       } else {
-        setStatus('regimentoStatus', 'Textos, conjuntos de regras e regras detalhadas carregados. Veja abaixo se a biblioteca está com regras do regimento ou com regras provisórias.', 'ok');
+        setStatus('regimentoStatus', 'Textos, conjuntos de regras e regras detalhadas carregados. Veja abaixo se a biblioteca está com regras do regimento ou com regras temporárias.', 'ok');
       }
     }
 
