@@ -276,6 +276,27 @@
                 <div class="section-head"><div><h3>Checklist rápido da edição</h3><div class="mini">Este quadro ajuda a ver o que já está preenchido e o que ainda falta antes de colocar um conjunto em uso.</div></div></div>
                 <div id="regimentoEditorChecklist" class="kv-grid"><div class="empty">Carregando…</div></div>
               </div>
+              <div class="subcard" style="margin-bottom:12px">
+                <div class="section-head"><div><h3>Guia rápido desta aba</h3><div class="mini">Use este lembrete para saber onde agir e onde conferir o resultado, sem precisar reler toda a aba.</div></div></div>
+                <div class="kv-grid">
+                  <div class="kv">
+                    <div class="kv-label">1. Texto da biblioteca</div>
+                    <div class="kv-value">Usa este bloco para registrar o regimento ou outro texto base. Depois, confere o resultado em <strong>Textos da biblioteca</strong>.</div>
+                  </div>
+                  <div class="kv">
+                    <div class="kv-label">2. Conjunto de regras</div>
+                    <div class="kv-value">Usa este bloco para juntar regras que valem juntas. Depois, confere o vínculo com o texto em <strong>Conjuntos de regras</strong>.</div>
+                  </div>
+                  <div class="kv">
+                    <div class="kv-label">3. Regra</div>
+                    <div class="kv-value">Usa este bloco para definir prazo, quantidade, reserva, consulta e prorrogação. Depois, confere a regra em <strong>Regras</strong>.</div>
+                  </div>
+                  <div class="kv">
+                    <div class="kv-label">4. Estado final</div>
+                    <div class="kv-value">Antes de sair da aba, olha sempre <strong>Como a biblioteca está funcionando agora</strong>, <strong>Resumo rápido</strong> e o <strong>Checklist rápido da edição</strong>.</div>
+                  </div>
+                </div>
+              </div>
               <div class="editor-shell">
                 <div class="subcard">
                   <div class="section-head">
@@ -1354,26 +1375,6 @@
         return `<td>${esc(displayValue(raw))}</td>`;
       }).join('')}</tr>`).join('');
     }
-    function pillToneByStatus(value) {
-      const raw = String(value || '').trim().toLowerCase();
-      if (!raw) return 'info';
-      if (['published', 'active', 'sim', 'em uso', 'texto em uso', 'regra em uso'].includes(raw)) return 'ok';
-      if (['draft', 'draft_only', 'rascunho'].includes(raw)) return 'warn';
-      if (['archived', 'arquivado', 'não', 'fora de uso'].includes(raw)) return 'bad';
-      return 'info';
-    }
-
-    function renderPill(label, tone = 'info') {
-      return `<span class="pill ${esc(tone)}">${esc(label)}</span>`;
-    }
-
-    function renderInfoLines(lines) {
-      const normalized = (Array.isArray(lines) ? lines : [lines])
-        .map((line) => String(line ?? '').trim())
-        .filter(Boolean);
-      if (!normalized.length) return '—';
-      return normalized.map((line) => `<div>${esc(line)}</div>`).join('');
-    }
     function parseJsonTextareaValue(value) {
       const raw = String(value || '').trim();
       if (!raw) return {};
@@ -1620,32 +1621,14 @@
         return;
       }
       tbody.innerHTML = normalizedRows.map((row) => {
-        const publicPath = firstFilledValue(row?.storage_path_public);
-        const draftPath = firstFilledValue(row?.storage_path_draft);
-        const statusLabel = friendlyDocumentStatus(row?.publication_status);
+        const link = firstFilledValue(row?.storage_path_public, row?.storage_path_draft, '—');
         const actionLabel = row?.is_active ? 'Tirar de uso' : 'Colocar em uso';
-        const fileLines = [];
-        if (publicPath) fileLines.push(`Publicado: ${publicPath}`);
-        if (draftPath) fileLines.push(`Rascunho: ${draftPath}`);
-        if (!fileLines.length) fileLines.push('Nenhum arquivo informado.');
         return `<tr>
-          <td>
-            <div><strong>${esc(friendlyDocumentKind(row?.doc_kind))}</strong></div>
-            ${row?.source_note ? `<div class="inline-note">${esc(row.source_note)}</div>` : ''}
-          </td>
-          <td>
-            <div>${renderPill(statusLabel, pillToneByStatus(row?.publication_status))}</div>
-            <div style="margin-top:6px">${row?.is_active ? renderPill('Texto em uso', 'ok') : renderPill('Fora de uso', 'info')}</div>
-          </td>
-          <td>
-            <div><strong>${esc(firstFilledValue(row?.version_label, '—'))}</strong></div>
-            <div class="inline-note">ID ${esc(firstFilledValue(row?.id, '—'))}</div>
-          </td>
-          <td>
-            <div>${esc(fmtDateTime(firstFilledValue(row?.updated_at, row?.created_at, '')))}</div>
-            ${row?.created_at ? `<div class="inline-note">Criado: ${esc(fmtDateTime(row.created_at))}</div>` : ''}
-          </td>
-          <td>${renderInfoLines(fileLines)}</td>
+          <td>${esc(friendlyDocumentKind(row?.doc_kind))}</td>
+          <td>${esc(friendlyDocumentStatus(row?.publication_status))}${row?.is_active ? '<div class="inline-note">Texto em uso</div>' : ''}</td>
+          <td>${esc(firstFilledValue(row?.version_label, '—'))}</td>
+          <td>${esc(fmtDateTime(firstFilledValue(row?.updated_at, row?.created_at, '')))}</td>
+          <td>${esc(link)}</td>
           <td><div class="editor-actions"><button class="btn mini soft" type="button" data-reg-doc-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini" type="button" data-reg-doc-toggle="${esc(String(row?.id || ''))}">${esc(actionLabel)}</button></div></td>
         </tr>`;
       }).join('');
@@ -1661,23 +1644,14 @@
       }
       tbody.innerHTML = normalizedRows.map((row) => {
         const validity = [firstFilledValue(row?.effective_from), firstFilledValue(row?.effective_until)].filter(Boolean).join(' → ');
-        const scopeLines = [getPolicySetOriginText(row)];
-        if (validity) scopeLines.push(`Validade: ${validity}`);
-        const resumeLines = [];
-        if (row?.scope_note) resumeLines.push(row.scope_note);
-        if (row?.activation_note) resumeLines.push(`Ativação: ${row.activation_note}`);
-        resumeLines.push(`${row?.rule_count != null ? row.rule_count : 0} regra(s)`);
+        const scopeText = [getPolicySetOriginText(row), validity].filter(Boolean).join(' · ') || '—';
+        const resumeText = `${firstFilledValue(row?.scope_note, row?.activation_note, '—')}${row?.rule_count != null ? ` · ${row.rule_count} regra(s)` : ''}`;
         return `<tr>
-          <td>
-            <div><strong>${esc(firstFilledValue(row?.label, row?.id, '—'))}</strong></div>
-            <div class="inline-note">ID ${esc(firstFilledValue(row?.id, '—'))}</div>
-          </td>
-          <td>
-            <div>${renderPill(friendlyPolicySetStatus(row?.status), pillToneByStatus(row?.status))}</div>
-          </td>
-          <td>${renderInfoLines(scopeLines)}</td>
-          <td>${row?.is_active ? renderPill('Em uso', 'ok') : renderPill('Fora de uso', 'info')}</td>
-          <td>${renderInfoLines(resumeLines)}</td>
+          <td>${esc(firstFilledValue(row?.label, row?.id, '—'))}</td>
+          <td>${esc(friendlyPolicySetStatus(row?.status))}</td>
+          <td>${esc(scopeText)}</td>
+          <td>${esc(row?.is_active ? 'Sim' : 'Não')}</td>
+          <td>${esc(resumeText)}</td>
           <td><div class="editor-actions"><button class="btn mini soft" type="button" data-policy-set-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini" type="button" data-policy-set-activate="${esc(String(row?.id || ''))}">Colocar em uso</button></div></td>
         </tr>`;
       }).join('');
@@ -1694,20 +1668,12 @@
       tbody.innerHTML = normalizedRows.map((row) => {
         const limitsLines = friendlyPolicyRuleLimits(row);
         const observationLines = friendlyRuleObservation(row);
-        const scopeLines = [friendlyPolicyRuleScope(row)];
-        if (row?.policy_label) scopeLines.push(`Conjunto: ${row.policy_label}`);
         return `<tr>
-          <td>
-            <div><strong>${esc(firstFilledValue(row?.rule_label, row?.policy_label, row?.id, '—'))}</strong></div>
-            <div style="margin-top:6px">${row?.is_active ? renderPill('Regra em uso', 'ok') : renderPill('Fora de uso', 'info')}</div>
-          </td>
-          <td>${renderInfoLines(scopeLines)}</td>
-          <td>
-            <div><strong>${esc(firstFilledValue(row?.priority, '—'))}</strong></div>
-            <div class="inline-note">Ordem de aplicação</div>
-          </td>
-          <td>${renderInfoLines(limitsLines)}</td>
-          <td>${renderInfoLines(observationLines)}</td>
+          <td>${esc(firstFilledValue(row?.rule_label, row?.policy_label, row?.id, '—'))}${row?.is_active ? '<div class="inline-note">Regra em uso</div>' : ''}</td>
+          <td>${esc(friendlyPolicyRuleScope(row))}</td>
+          <td>${esc(firstFilledValue(row?.priority, '—'))}</td>
+          <td>${limitsLines.map((line) => `<div>${esc(line)}</div>`).join('')}</td>
+          <td>${observationLines.map((line) => `<div>${esc(line)}</div>`).join('')}</td>
           <td><div class="editor-actions"><button class="btn mini soft" type="button" data-policy-rule-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini danger" type="button" data-policy-rule-delete="${esc(String(row?.id || ''))}">Excluir</button></div></td>
         </tr>`;
       }).join('');
