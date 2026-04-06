@@ -282,6 +282,7 @@
         <option value="">— selecione —</option>
         <option value="blmf">Biblioteca Libertária Maxwell Ferreira — Belém do Pará</option>
         <option value="btl">Biblioteca Terra Livre — São Paulo</option>
+        <option value="sem_biblioteca">Ainda sem biblioteca (vou solicitar entrada)</option>
       </select>
       <small>A biblioteca escolhida definirá a identidade visual do cadastro, os dados de contato e o conteúdo do e-mail de boas-vindas.</small>
     </div>
@@ -711,6 +712,8 @@
     } catch (_) {}
 
     const BIBLIOTECA_BASE_URL = CONFIG.ROUTES?.biblioteca || FALLBACK_CONFIG.ROUTES.biblioteca;
+    const REGIMENTO_PUBLIC_BUCKET = 'library-regimentos-public';
+    const REGIMENTO_PUBLIC_BASE_URL = `${String(CONFIG.SUPABASE_URL || FALLBACK_CONFIG.SUPABASE_URL || '').replace(/\/$/, '')}/storage/v1/object/public/${REGIMENTO_PUBLIC_BUCKET}`;
 
     // Detrompeurs de logos : chaque bibliothèque doit avoir un identifiant stable
     // et un fichier dédié pour éviter les confusions de nom.
@@ -856,9 +859,8 @@
 
     function getRegimentoUrlForMeta(meta) {
       if (!meta?.has_published_regimento) return "#";
-      const baseUrl = String(BIBLIOTECA_BASE_URL || "./biblioteca.html").trim() || "./biblioteca.html";
       const slug = String(meta?.payload_library_slug || meta?.slug || "").trim().toLowerCase();
-      return slug ? `${baseUrl}?library=${encodeURIComponent(slug)}#regimento` : `${baseUrl}#regimento`;
+      return slug ? `${REGIMENTO_PUBLIC_BASE_URL}/${encodeURIComponent(slug)}/regimentos/publicados/regimento-atual.pdf` : "#";
     }
 
     function applyRegimentoVisibility(meta) {
