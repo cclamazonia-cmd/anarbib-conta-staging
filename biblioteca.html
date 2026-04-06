@@ -130,8 +130,8 @@
     </div>
 
     <div class="hero">
-      <h1 id="pageHeroTitle">Biblioteca — gestão institucional</h1>
-      <p id="pageHeroSubtitle">Gestão geral, regimento, regras de circulação, comunicações, documentos e tarefas internas.</p>
+      <h1 id="pageHeroTitle">Biblioteca — organização da biblioteca</h1>
+      <p id="pageHeroSubtitle">Informações gerais, regimento, regras de circulação, comunicações, documentos e tarefas internas.</p>
       <p id="helloLine"></p>
       <div class="chips">
         <span class="chip" id="chipFuncao">Função: —</span>
@@ -154,7 +154,7 @@
         </button>
         <button class="tab-btn" type="button" data-tab="regimento" role="tab" aria-selected="false" aria-controls="tab-regimento">
           Regimento e regras de circulação
-          <span class="hint">Textos da biblioteca, conjuntos de regras e regras detalhadas</span>
+          <span class="hint">Textos da biblioteca, conjuntos de regras e regras</span>
         </button>
         <button class="tab-btn" type="button" data-tab="documentos" role="tab" aria-selected="false" aria-controls="tab-documentos">
           Documentos e relações externas
@@ -244,7 +244,7 @@
               <div class="section-head">
                 <div>
                   <h2>Regimento e regras de circulação</h2>
-                  <div class="mini">Leitura e edição básica dos textos da biblioteca, dos conjuntos de regras e das regras detalhadas.</div>
+                  <div class="mini">Leitura e edição simples dos textos da biblioteca, dos conjuntos de regras e das regras.</div>
                 </div>
                 <div class="actions"><button class="btn mini" id="btnRefreshRegimento" type="button">Atualizar</button></div>
               </div>
@@ -266,7 +266,7 @@
               </div>
               <div class="muted-box" style="margin-bottom:12px">
                 <strong style="display:block;margin-bottom:6px">Ordem mais simples para preencher</strong>
-                <div class="inline-note">1. Registrar ou revisar o texto da biblioteca. 2. Criar um conjunto de regras. 3. Criar pelo menos uma regra detalhada. 4. Colocar o conjunto em uso.</div>
+                <div class="inline-note">1. Registrar ou revisar o texto da biblioteca. 2. Criar um conjunto de regras. 3. Criar pelo menos uma regra. 4. Colocar o conjunto em uso.</div>
               </div>
               <div class="editor-shell">
                 <div class="subcard">
@@ -332,7 +332,7 @@
                 </div>
                 <div class="subcard">
                   <div class="section-head">
-                    <div><h3>Regra detalhada</h3><div class="mini">Defina aqui prazo, quantidade de itens, renovação e mensagens ao público.</div></div>
+                    <div><h3>Regra</h3><div class="mini">Defina aqui prazo, quantidade de itens, renovação e mensagens ao público.</div></div>
                     <div class="editor-actions">
                       <button class="btn mini soft" id="btnNewPolicyRule" type="button">Nova regra</button>
                       <button class="btn mini" id="btnCancelPolicyRule" type="button">Limpar</button>
@@ -395,7 +395,7 @@
               </div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Regras detalhadas</h3><div class="mini">Leitura das regras individuais de circulação.</div></div></div>
+              <div class="section-head"><div><h3>Regras</h3><div class="mini">Leitura das regras individuais de circulação.</div></div></div>
               <div class="tableWrap">
                 <table>
                   <thead><tr><th>Regra</th><th>Onde se aplica</th><th>Ordem</th><th>Prazo e limites</th><th>Observação</th><th>Ações</th></tr></thead>
@@ -783,7 +783,7 @@
       let steps = [
         'Registra primeiro o texto principal da biblioteca.',
         'Cria um conjunto de regras para empréstimo, reserva e consulta.',
-        'Adiciona pelo menos uma regra detalhada.',
+        'Adiciona pelo menos uma regra.',
         'Coloca o conjunto em uso.'
       ];
       let actions = [
@@ -801,7 +801,7 @@
         nextTitle = 'O que revisar quando houver mudança';
         steps = [
           'Se o texto público mudar, revisa o conjunto em uso.',
-          'Confere se as regras detalhadas continuam batendo com o texto.',
+          'Confere se as regras continuam batendo com o texto.',
           'Salva os ajustes antes de trocar o conjunto em uso.'
         ];
         actions = [
@@ -816,7 +816,7 @@
         steps = [
           'Registra ou revisa o texto principal da biblioteca.',
           'Liga o conjunto em uso a esse texto.',
-          'Confere se as regras detalhadas batem com o texto público.'
+          'Confere se as regras batem com o texto público.'
         ];
         actions = [
           { label: 'Novo texto', action: 'documento', variant: 'soft' },
@@ -829,7 +829,7 @@
         note = 'A biblioteca precisa colocar um conjunto em uso para que o sistema saiba quais prazos, reservas e prorrogações aplicar.';
         steps = [
           'Cria um conjunto ligado a esse texto, se ainda não existir.',
-          'Adiciona pelo menos uma regra detalhada.',
+          'Adiciona pelo menos uma regra.',
           'Coloca o conjunto em uso.'
         ];
         actions = [
@@ -844,7 +844,7 @@
         note = 'Sem um conjunto em uso, a biblioteca depende apenas das regras temporárias já preparadas pelo sistema.';
         steps = [
           'Escolhe o conjunto que deve valer agora.',
-          'Confere se ele tem pelo menos uma regra detalhada.',
+          'Confere se ele tem pelo menos uma regra.',
           'Coloca o conjunto em uso.'
         ];
         actions = [
@@ -996,7 +996,7 @@
         setChip('chipBiblioteca', 'Biblioteca: —');
         setChip('chipServiceMode', 'Modo: —');
         setChip('chipWorkspace', 'Resumo geral da biblioteca: sem sessão');
-        $('helloLine').textContent = 'Faz login com uma conta bibliotecária para abrir a gestão institucional.';
+        $('helloLine').textContent = 'Faz login com uma conta bibliotecária para abrir a área da biblioteca.';
         return false;
       }
 
@@ -1013,7 +1013,7 @@
 
       setChip('chipFuncao', 'Função: bibliotecária/o');
       setChip('chipEmail', `E-mail: ${session.user.email || '—'}`);
-      $('helloLine').textContent = `Sessão ativa para ${session.user.email || 'bibliotecária/o'} — página institucional em modo consulta.`;
+      $('helloLine').textContent = `Sessão ativa para ${session.user.email || 'bibliotecária/o'} — página aberta para consulta.`;
       return true;
     }
 
@@ -1109,8 +1109,8 @@
 
         const localRules = safeJsonObject(firstFilledValue(row?.local_rules, row?.circulation_local_rules, row?.non_member_rules, currentServiceState?.local_rules));
         renderKvGrid('localRulesGrid', Object.keys(localRules).length ? summarizeObjectEntries(localRules, 10) : [
-          ['Estado', 'Nenhum resumo local legível encontrado nesta página'],
-          ['Observação', 'Os conjuntos de regras e as regras detalhadas aparecem no separador seguinte.']
+          ['Estado', 'Nenhum resumo local claro foi encontrado nesta página'],
+          ['Observação', 'Os conjuntos de regras e as regras aparecem no separador seguinte.']
         ]);
 
         setStatus('identityStatus', 'Identidade e funcionamento carregados.', 'ok');
@@ -1183,7 +1183,7 @@
         get_library_institutional_workspace: 'resumo geral da biblioteca',
         get_library_regulation_documents_ui: 'textos da biblioteca',
         get_library_circulation_policy_sets_ui: 'conjuntos de regras',
-        get_library_circulation_policy_rules_ui: 'regras detalhadas'
+        get_library_circulation_policy_rules_ui: 'regras'
       };
       return labels[rpcName] || rpcName;
     }
@@ -1196,8 +1196,8 @@
       const label = getCanonicalSurfaceLabel(rpcName);
       if (/could not find the function|schema cache|function\s+/i.test(message)) {
         return [
-          `A parte “${label}” desta página ainda não está disponível nesta base.`,
-          'Confere se ela já foi instalada aqui e se a atualização do sistema já entrou em vigor.'
+          `A parte “${label}” desta página ainda não está disponível aqui.`,
+          'Confere se ela já foi instalada aqui e se a atualização já entrou em vigor.'
         ].join(' ');
       }
       if (!message) {
@@ -1500,7 +1500,7 @@
       const id = String($('policyRuleId').value || '').trim();
       if (id) payload.id = id;
       const policySetId = String($('policyRulePolicySetId').value || '').trim();
-      if (!policySetId) throw new Error('Selecione um conjunto de regras para a regra detalhada.');
+      if (!policySetId) throw new Error('Selecione um conjunto de regras para esta regra.');
       return { policySetId, payload };
     }
 
@@ -1554,7 +1554,7 @@
       const normalizedRows = asArray(rows).filter((row) => row && typeof row === 'object');
       if (!tbody) return;
       if (!normalizedRows.length) {
-        tbody.innerHTML = '<tr><td colspan="6">Nenhuma regra detalhada disponível.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6">Nenhuma regra disponível.</td></tr>';
         return;
       }
       tbody.innerHTML = normalizedRows.map((row) => {
@@ -1627,13 +1627,13 @@
 
     async function savePolicyRule() {
       try {
-        setStatus('policyRuleEditorStatus', 'Salvando regra detalhada…', 'info');
+        setStatus('policyRuleEditorStatus', 'Salvando regra…', 'info');
         const { policySetId, payload } = collectPolicyRulePayload();
         await supabase.rpc('upsert_library_circulation_policy_rule', { p_policy_set_id: Number(policySetId), p_rule: payload }).then(({ error }) => { if (error) throw error; });
-        setStatus('policyRuleEditorStatus', 'Regra detalhada salva.', 'ok');
+        setStatus('policyRuleEditorStatus', 'Regra salva.', 'ok');
         await loadWorkspaceAndPolicies();
       } catch (error) {
-        setStatus('policyRuleEditorStatus', 'Falha ao salvar a regra detalhada: ' + (error.message || String(error)), 'bad');
+        setStatus('policyRuleEditorStatus', 'Falha ao salvar a regra: ' + (error.message || String(error)), 'bad');
       }
     }
 
@@ -1641,14 +1641,14 @@
       try {
         const id = String(ruleId || $('policyRuleId').value || '').trim();
         if (!id) throw new Error('Nenhuma regra selecionada.');
-        if (!window.confirm('Excluir esta regra detalhada? Esta ação é irreversível.')) return;
-        setStatus('policyRuleEditorStatus', 'Excluindo regra detalhada…', 'info');
+        if (!window.confirm('Excluir esta regra? Esta ação é irreversível.')) return;
+        setStatus('policyRuleEditorStatus', 'Excluindo regra…', 'info');
         await supabase.rpc('delete_library_circulation_policy_rule', { p_rule_id: Number(id) }).then(({ error }) => { if (error) throw error; });
-        setStatus('policyRuleEditorStatus', 'Regra detalhada excluída.', 'ok');
+        setStatus('policyRuleEditorStatus', 'Regra excluída.', 'ok');
         resetPolicyRuleForm();
         await loadWorkspaceAndPolicies();
       } catch (error) {
-        setStatus('policyRuleEditorStatus', 'Falha ao excluir a regra detalhada: ' + (error.message || String(error)), 'bad');
+        setStatus('policyRuleEditorStatus', 'Falha ao excluir a regra: ' + (error.message || String(error)), 'bad');
       }
     }
 
@@ -1724,7 +1724,7 @@
         const message = explainCanonicalSurfaceError(failedRpcName, rulesError || policySetsError || docsError);
         setStatus('regimentoStatus', 'Uma parte desta aba ainda não carregou: ' + message, 'warn');
       } else {
-        setStatus('regimentoStatus', 'Textos, conjuntos de regras e regras detalhadas carregados. Veja abaixo se a biblioteca está com regras do regimento ou com regras temporárias.', 'ok');
+        setStatus('regimentoStatus', 'Textos, conjuntos de regras e regras carregados. Veja abaixo se a biblioteca está com regras do regimento ou com regras temporárias.', 'ok');
       }
     }
 
