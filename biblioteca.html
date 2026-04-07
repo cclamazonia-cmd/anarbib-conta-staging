@@ -1887,6 +1887,14 @@
       return nextTags;
     }
 
+    function renderInfoLines(lines) {
+      const normalizedLines = asArray(lines)
+        .map((line) => String(line || '').trim())
+        .filter(Boolean);
+      if (!normalizedLines.length) return '—';
+      return normalizedLines.map((line) => esc(line)).join('<br>');
+    }
+
     function renderTasksTable(rows) {
       const tbody = $('tbodyTasks');
       const normalizedRows = asArray(rows).filter((row) => row && typeof row === 'object');
