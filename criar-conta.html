@@ -291,7 +291,7 @@
       <div class="identity-strip">
         <div class="identity-logos" aria-label="Identidade visual do cadastro">
           <img id="identityAnarbibLogo" class="identity-logo" src="./assets/img/libraries/anarbib/logo-anarbib.png" alt="AnarBib" />
-          <span class="identity-plus" aria-hidden="true">+</span>
+          <span id="identityPlus" class="identity-plus" aria-hidden="true">+</span>
           <img id="identityLibraryLogo" class="identity-logo" src="./assets/img/libraries/blmf/logo-blmf.png" alt="Biblioteca escolhida" />
         </div>
       </div>
@@ -755,7 +755,7 @@
         is_test_mode: false,
         is_without_library: true,
         has_published_regimento: false,
-        payload_library_slug: "default",
+        payload_library_slug: "",
         name_aliases: ["sem biblioteca", "ainda sem biblioteca", "vou solicitar entrada"]
       },
       blmf: {
@@ -1134,7 +1134,7 @@
         country: document.getElementById("country").value,
         consent_email: true,
         accept_rules: currentLibraryMeta.has_published_regimento === true ? acceptRules.checked === true : true,
-        library_slug: currentLibraryMeta.payload_library_slug || currentLibraryMeta.slug || "",
+        library_slug: currentLibraryMeta.is_without_library === true ? "" : (currentLibraryMeta.payload_library_slug || currentLibraryMeta.slug || ""),
         library_name: currentLibraryMeta.name || "",
         signup_without_library: currentLibraryMeta.is_without_library === true,
         library_contact_email: currentLibraryMeta.contact_email || "",
@@ -1176,14 +1176,14 @@
         if (data.email_usuaria_enviado === false) {
           setMsg(
             currentLibraryMeta.is_without_library === true
-              ? "Cadastro concluído, mas houve um problema ao enviar o e-mail automaticamente. Entre em contato com a coordenação do AnarBib para receber sua senha provisória e seu ID público. Depois do primeiro acesso, altere sua senha na Conta."
+              ? "Cadastro concluído, mas houve um problema ao enviar o e-mail automaticamente. Entre em contato com a coordenação do AnarBib para receber sua senha provisória, seu ID público e um novo link para a solicitação da sua biblioteca. Depois do primeiro acesso, altere sua senha na Conta."
               : "Cadastro concluído, mas houve um problema ao enviar o e-mail automaticamente. Entre em contato com a biblioteca para receber sua senha provisória e seu ID público. Depois do primeiro acesso, altere sua senha na Conta.",
             "warn"
           );
         } else {
           setMsg(
             currentLibraryMeta.is_without_library === true
-              ? "Cadastro enviado com sucesso. Verifique seu e-mail (e Spam/Lixo eletrônico) para receber sua senha provisória e seu ID público definitivo. Depois do primeiro acesso, altere sua senha na Conta. Em seguida, você poderá solicitar a entrada institucional da sua biblioteca na rede."
+              ? "Cadastro enviado com sucesso. Verifique seu e-mail (e Spam/Lixo eletrônico) para receber sua senha provisória, seu ID público definitivo e o link direto para iniciar a solicitação institucional da sua biblioteca. Depois do primeiro acesso, altere sua senha na Conta."
               : "Cadastro enviado com sucesso. Verifique seu e-mail (e Spam/Lixo eletrônico) para receber sua senha provisória e seu ID público definitivo. Depois do primeiro acesso, altere sua senha na Conta.",
             "ok"
           );

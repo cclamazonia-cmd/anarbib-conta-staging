@@ -96,13 +96,15 @@
     </div>
 
     <div class="notice" role="note" aria-label="Como funciona">
-      <p><b>Como funciona:</b> primeiro, a pessoa cria uma conta comum no AnarBib. Depois, envia esta solicitação institucional. A coordenação da rede analisa as informações antes de liberar qualquer acesso às áreas de gestão bibliotecária.</p>
+      <p id="flowNoticeText"><b>Como funciona:</b> primeiro, a pessoa cria uma conta comum no AnarBib. Depois, envia esta solicitação institucional. A coordenação da rede analisa as informações antes de liberar qualquer acesso às áreas de gestão bibliotecária.</p>
     </div>
 
     <div class="section-card">
       <h2>Antes de enviar</h2>
-      <p>Para enviar esta solicitação, entre primeiro na sua conta em <b>Cadastro</b>. O envio registrará um pedido institucional real no sistema, em status inicial <b>pendente</b>, para análise posterior da coordenação da rede.</p>
+      <p id="beforeSendText">Para enviar esta solicitação, entre primeiro na sua conta em <b>Cadastro</b>. O envio registrará um pedido institucional real no sistema, em status inicial <b>pendente</b>, para análise posterior da coordenação da rede.</p>
     </div>
+
+    <div id="claimNotice" class="notice" role="note" aria-live="polite" style="display:none;"></div>
 
     <p class="requiredLegend"><span class="reqMark">*</span> Campo obrigatório</p>
 
@@ -242,6 +244,11 @@
     const backBtn = document.getElementById('backBtn');
     const submitBtn = document.getElementById('submitBtn');
     const contactEmailInput = document.getElementById('contactEmail');
+    const claimNotice = document.getElementById('claimNotice');
+    const flowNoticeText = document.getElementById('flowNoticeText');
+    const beforeSendText = document.getElementById('beforeSendText');
+    const claimToken = String(new URLSearchParams(window.location.search).get('claim') || '').trim();
+    let claimContext = null;
 
     function setMsg(text = '', kind = '') {
       msg.textContent = text;
@@ -283,6 +290,8 @@
       if (raw.includes('breve apresentação')) return 'Informe uma breve apresentação da biblioteca ou coletivo.';
       if (raw.includes('situação atual inválida')) return 'Selecione a situação atual da iniciativa.';
       if (raw.includes('as duas confirmações obrigatórias')) return 'Marque as duas confirmações obrigatórias para continuar.';
+      if (raw.includes('link inválido') || raw.includes('link invalido')) return 'Este link não é válido. Peça um novo acesso pelo e-mail de boas-vindas ou entre em Cadastro.';
+      if (raw.includes('não é mais válido') || raw.includes('nao e mais valido') || raw.includes('solicite um novo acesso')) return 'Este link já foi usado ou expirou. Entre em Cadastro ou peça um novo acesso à coordenação do AnarBib.';
 
       return 'Não foi possível enviar a solicitação agora. Tente novamente.';
     }
@@ -317,6 +326,57 @@
       summaryCard.style.display = 'block';
     }
 
+    function setClaimNotice(html = '', kind = '') {
+      if (!claimNotice) return;
+      claimNotice.innerHTML = html;
+      claimNotice.style.display = html ? 'block' : 'none';
+      claimNotice.className = kind ? `notice ${kind}` : 'notice';
+    }
+
+    function applyClaimModeUi(row) {
+      claimContext = row || null;
+      if (contactEmailInput && row?.email_snapshot && !contactEmailInput.value.trim()) {
+        contactEmailInput.value = row.email_snapshot;
+      }
+      if (flowNoticeText) {
+        flowNoticeText.innerHTML = '<b>Como funciona:</b> este link já está ligado à conta inicial criada no AnarBib. Você pode preencher a solicitação institucional sem passar por um novo login manual nesta etapa.';
+      }
+      if (beforeSendText) {
+        beforeSendText.innerHTML = 'Este acesso já está vinculado à conta inicial criada no AnarBib. Ao enviar, a solicitação será registrada no sistema em status inicial <b>pendente</b> e ligada a essa conta.';
+      }
+      setClaimNotice(
+        `<p><b>Link reconhecido.</b> Esta solicitação será vinculada à conta inicial criada com o e-mail <b>${escapeHtml(row?.email_snapshot || 'informado no cadastro')}</b>. Você não precisa entrar manualmente em Cadastro para começar.</p>`,
+        'ok'
+      );
+    }
+
+    function applyInvalidClaimUi() {
+      claimContext = null;
+      setClaimNotice(
+        '<p><b>Este link não está mais disponível.</b> Ele pode ter expirado ou já ter sido usado. Para continuar, entre em <b>Cadastro</b> com sua conta ou peça um novo acesso à coordenação do AnarBib.</p>',
+        'warn'
+      );
+    }
+
+    async function initClaimMode() {
+      if (!claimToken) return;
+      try {
+        const { data, error } = await supabase.rpc('fn_get_library_request_claim_context', {
+          p_claim_token: claimToken
+        });
+        if (error) throw error;
+        const row = Array.isArray(data) ? data[0] : data;
+        if (row?.is_valid) {
+          applyClaimModeUi(row);
+          return;
+        }
+        applyInvalidClaimUi();
+      } catch (error) {
+        console.error('AnarBib solicitar-biblioteca claim init error:', error);
+        applyInvalidClaimUi();
+      }
+    }
+
     async function prefillSessionHints() {
       try {
         const { data } = await supabase.auth.getSession();
@@ -331,6 +391,7 @@
       window.location.href = './criar-conta.html';
     });
 
+    await initClaimMode();
     prefillSessionHints();
 
     form.addEventListener('submit', async (e) => {
@@ -346,7 +407,8 @@
 
       const { data: sessionData } = await supabase.auth.getSession();
       const currentUser = sessionData?.session?.user || null;
-      if (!currentUser?.id) {
+      const useClaimMode = Boolean(claimToken && claimContext?.is_valid === true);
+      if (!useClaimMode && !currentUser?.id) {
         setMsg('Você precisa entrar na sua conta em Cadastro antes de enviar esta solicitação.', 'warn');
         return;
       }
@@ -377,13 +439,28 @@
       try {
         setSubmitting(true);
 
-        const { data, error } = await supabase.rpc('fn_submit_library_request', payload);
+        const rpcName = useClaimMode ? 'fn_submit_library_request_via_claim' : 'fn_submit_library_request';
+        const rpcPayload = useClaimMode
+          ? { p_claim_token: claimToken, ...payload }
+          : payload;
+
+        const { data, error } = await supabase.rpc(rpcName, rpcPayload);
         if (error) throw error;
 
         const row = Array.isArray(data) ? data[0] : data;
         buildSummary(row, payload);
         form.reset();
-        if (contactEmailInput && currentUser.email) {
+        if (useClaimMode) {
+          claimContext = null;
+          if (contactEmailInput && row?.submitted_by_email_snapshot) {
+            contactEmailInput.value = row.submitted_by_email_snapshot;
+          }
+          setClaimNotice('<p><b>Solicitação enviada.</b> Este link já foi usado e não poderá ser enviado novamente.</p>', 'ok');
+          try {
+            const cleanUrl = `${window.location.pathname}`;
+            window.history.replaceState({}, document.title, cleanUrl);
+          } catch (_) {}
+        } else if (contactEmailInput && currentUser.email) {
           contactEmailInput.value = currentUser.email;
         }
 
