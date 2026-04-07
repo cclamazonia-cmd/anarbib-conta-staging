@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="pt-BR" data-library-slug="default" data-theme-slug="default" data-library-name="AnarBib">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AnarBib – rede</title>
+  <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
+  <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
+  <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
+  <link rel="stylesheet" href="./assets/css/theme-base.css">
+  <script src="./assets/js/library-context.js" defer></script>
+  <script src="./assets/js/theme-loader.js" defer></script>
+  <style>
+    :root{
+      --panel:var(--brand-panel-bg,rgba(10,10,10,.90));
+      --text:var(--brand-text,#f4f4f4);
+      --muted:var(--brand-muted,rgba(255,255,255,.78));
+      --red:var(--brand-color-primary,#7a0b14);
+      --red2:var(--brand-color-secondary,#bb1e2c);
+      --line:var(--brand-panel-border,rgba(255,255,255,.12));
+      --shadow:var(--brand-shadow,0 16px 38px rgba(0,0,0,.42));
+      --ok:#4ade80;
+      --warn:#fbbf24;
+      --bad:#fb7185;
+      --info:#60a5fa;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;color:var(--text);font-family:var(--brand-font-body,Inter,Segoe UI,Arial,sans-serif)}
+    body{background:transparent}
+    a,a:visited{color:inherit;text-decoration:none}
+    .wrap{max-width:1760px;margin:0 auto;padding:24px;display:flex;flex-direction:column;gap:14px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .brand{display:flex;align-items:center;gap:12px;min-width:0}
+    .logo{height:64px;width:auto;max-width:170px;object-fit:contain;display:block;flex-shrink:0;filter:drop-shadow(0 8px 18px rgba(0,0,0,.35))}
+    .brand-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+    .brand-title{font-size:1.5rem;font-weight:900;line-height:1.1}
+    .brand-subtitle{color:var(--muted);font-size:.9rem;line-height:1.2}
+    .actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .btn,button{
+      border:1px solid var(--line);
+      background:rgba(12,12,12,.84);
+      color:var(--text)!important;
+      border-radius:14px;
+      padding:10px 12px;
+      cursor:pointer;
+      box-shadow:var(--shadow);
+      font-weight:900;
+      font-size:.95rem;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      min-height:46px;
+      text-decoration:none;
+      appearance:none;
+      -webkit-appearance:none;
+      line-height:1.2;
+    }
+    .btn:hover,button:hover,.btn:focus,button:focus{border-color:rgba(255,255,255,.22)!important}
+    .btn.primary,button.primary{border:none;background:linear-gradient(135deg,var(--red2),var(--red))}
+    .btn.soft{background:rgba(255,255,255,.06)}
+    .btn.mini,button.mini{min-height:38px;padding:8px 10px;border-radius:12px;font-size:.86rem}
+    .hero,.card,.notice{
+      border:1px solid rgba(255,255,255,.10);
+      background:var(--panel);
+      border-radius:22px;
+      padding:16px;
+      box-shadow:var(--shadow);
+    }
+    .hero{background:linear-gradient(135deg,color-mix(in srgb, var(--red2) 88%, black),color-mix(in srgb, var(--red) 72%, black))}
+    .hero h1{margin:0 0 6px;font-size:1.5rem}
+    .hero p{margin:0;color:color-mix(in srgb,var(--text) 92%, white);line-height:1.4}
+    .notice{background:linear-gradient(180deg,rgba(179,0,24,.18),rgba(10,10,10,.90))}
+    .layout{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(360px,.95fr);gap:14px;align-items:start}
+    .stack{display:flex;flex-direction:column;gap:14px}
+    .cards-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .metric-card{border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:14px;background:rgba(255,255,255,.04)}
+    .metric-card b{display:block;color:#ffe3e7;font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+    .metric-card span{display:block;font-size:1.35rem;font-weight:900}
+    .section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+    .section-head h2,.section-head h3{margin:0}
+    .mini{font-size:.86rem;color:var(--muted);line-height:1.35}
+    .status{min-height:1.2em;font-size:.92rem}
+    .status.ok{color:var(--ok)} .status.warn{color:var(--warn)} .status.bad{color:var(--bad)} .status.info{color:var(--info)}
+    .tableWrap{overflow:auto;max-height:58vh;border-radius:16px;border:1px solid rgba(255,255,255,.10)}
+    table{width:100%;border-collapse:separate;border-spacing:0;min-width:960px;background:rgba(10,10,10,.35)}
+    thead th{
+      position:sticky;top:0;z-index:2;text-align:left;padding:12px 14px;
+      background:linear-gradient(180deg,#26060a,#160407);color:#fff;border-bottom:1px solid rgba(255,255,255,.10);
+      font-size:.84rem;text-transform:uppercase;letter-spacing:.05em
+    }
+    tbody td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06);vertical-align:top;word-break:break-word;overflow-wrap:anywhere}
+    tbody tr:hover td{background:rgba(179,0,24,.08)}
+    .pill{
+      display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);font-size:.82rem;background:rgba(255,255,255,.04)
+    }
+    .pill.ok{color:#b7ffcf}.pill.warn{color:#ffe6a0}.pill.bad{color:#ffc0cb}.pill.info{color:#bfdbfe}
+    .muted-box{border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:12px;background:rgba(255,255,255,.03)}
+    .details-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .detail-item{border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:12px;background:rgba(255,255,255,.03)}
+    .detail-item b{display:block;margin-bottom:6px;color:#ffe3e7;font-size:.82rem;text-transform:uppercase;letter-spacing:.04em}
+    .detail-item .long{white-space:pre-wrap;line-height:1.45}
+    textarea{
+      width:100%;min-height:120px;border:1px solid rgba(255,255,255,.12);background:rgba(12,12,12,.75);color:var(--text);
+      border-radius:14px;padding:12px 12px;outline:none;font:inherit
+    }
+    .actions-wrap{display:flex;flex-wrap:wrap;gap:10px}
+    .empty{padding:14px;border:1px dashed rgba(255,255,255,.14);border-radius:14px;color:#cfcfcf}
+    .hidden{display:none!important}
+    .request-row.is-selected td{background:rgba(96,165,250,.10)}
+    @media (max-width:1200px){
+      .cards-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .layout{grid-template-columns:1fr}
+    }
+    @media (max-width:760px){
+      .wrap{padding:16px}
+      .cards-grid,.details-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="topbar">
+      <div class="brand" aria-label="AnarBib">
+        <img id="brandLogo" class="logo" src="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png" alt="AnarBib" />
+        <div class="brand-copy">
+          <div class="brand-title">AnarBib</div>
+          <div class="brand-subtitle">Painel de rede · coordenação geral e solicitações institucionais.</div>
+        </div>
+      </div>
+      <div class="actions">
+        <a class="btn" id="btnCatalogo" href="https://cclamazonia-cmd.github.io/anarbib-staging/index.html">Voltar ao catálogo</a>
+        <a class="btn" id="btnPainel" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html">Voltar ao painel</a>
+        <a class="btn" id="btnManual" href="https://cclamazonia-cmd.github.io/anarbib-staging/Manual_do_AnarBib.pdf" target="_blank" rel="noopener noreferrer">Manual do AnarBib</a>
+        <button class="btn primary" id="btnSair" type="button">Logout</button>
+      </div>
+    </div>
+
+    <section class="hero">
+      <h1>Painel de rede</h1>
+      <p>Esta página é reservada à coordenação do AnarBib. Ela centraliza o panorama geral da rede, as solicitações institucionais et la première couche de traitement des demandes.</p>
+    </section>
+
+    <section class="notice">
+      <p><b>Nota importante:</b> esta première version traite déjà la lecture globale et le changement de statut des solicitações. Le bouton “Pedir complemento” garde pour l’instant le statut <b>em análise</b> et sert surtout à préparer une note de retour en attendant la chaîne e-mail dédiée.</p>
+    </section>
+
+    <div id="accessNotice" class="notice hidden">
+      <p><b>Acesso restrito:</b> esta conta não tem habilitação ativa para abrir o painel de rede.</p>
+    </div>
+
+    <div id="dashboardShell" class="stack hidden">
+      <section class="card">
+        <div class="section-head">
+          <div>
+            <h2>Resumo geral da rede</h2>
+            <div class="mini">Indicadores globais para bibliotecas, leitorado, circulação e solicitações.</div>
+          </div>
+          <div class="actions-wrap">
+            <button class="btn mini" id="btnRefreshSummary" type="button">Atualizar resumo</button>
+          </div>
+        </div>
+        <div id="summaryStatus" class="status"></div>
+        <div id="summaryCards" class="cards-grid"></div>
+      </section>
+
+      <div class="layout">
+        <div class="stack">
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <h2>Solicitações institucionais</h2>
+                <div class="mini">Leitura de todas as solicitações enviadas à coordenação da rede.</div>
+              </div>
+              <div class="actions-wrap">
+                <button class="btn mini" id="btnRefreshRequests" type="button">Atualizar solicitações</button>
+              </div>
+            </div>
+            <div id="requestsStatus" class="status"></div>
+            <div class="tableWrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Biblioteca</th>
+                    <th>Local</th>
+                    <th>Contato</th>
+                    <th>Status</th>
+                    <th>Etapa</th>
+                  </tr>
+                </thead>
+                <tbody id="requestsTableBody">
+                  <tr><td colspan="6">Carregando…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <h2>Bibliotecas da rede</h2>
+                <div class="mini">Primeiro panorama por biblioteca : leitorado, equipe locale et circulation.</div>
+              </div>
+              <div class="actions-wrap">
+                <button class="btn mini" id="btnRefreshLibraries" type="button">Atualizar bibliotecas</button>
+              </div>
+            </div>
+            <div id="librariesStatus" class="status"></div>
+            <div class="tableWrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Biblioteca</th>
+                    <th>Leitores</th>
+                    <th>Bibliotecários</th>
+                    <th>Empréstimos</th>
+                    <th>Reservas</th>
+                    <th>Consultas</th>
+                    <th>Solicitações em aberto</th>
+                  </tr>
+                </thead>
+                <tbody id="librariesTableBody">
+                  <tr><td colspan="7">Carregando…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <aside class="stack">
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <h2>Detalhe da solicitação</h2>
+                <div class="mini">Sélectionne une ligne du tableau pour lire, annoter et traiter la demande.</div>
+              </div>
+            </div>
+            <div id="detailStatus" class="status"></div>
+            <div id="requestDetailEmpty" class="empty">Nenhuma solicitação selecionada.</div>
+            <div id="requestDetailPanel" class="stack hidden">
+              <div class="details-grid" id="requestDetailGrid"></div>
+              <div class="detail-item">
+                <b>Apresentação</b>
+                <div id="detailSummary" class="long">—</div>
+              </div>
+              <div class="detail-item">
+                <b>Observações / necessidades</b>
+                <div id="detailNeeds" class="long">—</div>
+              </div>
+              <div class="detail-item">
+                <b>Nota de resposta / análise</b>
+                <textarea id="reviewNotesInput" placeholder="Escreva aqui a nota interna ou a futura mensagem de retorno."></textarea>
+              </div>
+              <div class="muted-box">
+                <div class="mini"><b>Ações disponíveis agora</b><br>
+                  • <b>Marcar em análise</b> : muda o status para <b>em_analise</b>.<br>
+                  • <b>Pedir complemento</b> : mantém <b>em_analise</b> et pré-remplit une logique de demande complémentaire, en attendant l’envoi automatique de mail.<br>
+                  • <b>Aprovar</b>, <b>Recusar</b>, <b>Arquivar</b> : mudanças diretas de status.
+                </div>
+              </div>
+              <div class="actions-wrap">
+                <button class="btn mini soft" id="btnSetAnalysis" type="button">Marcar em análise</button>
+                <button class="btn mini soft" id="btnRequestMore" type="button">Pedir complemento</button>
+                <button class="btn mini" id="btnApprove" type="button">Aprovar</button>
+                <button class="btn mini" id="btnRefuse" type="button">Recusar</button>
+                <button class="btn mini" id="btnArchive" type="button">Arquivar</button>
+              </div>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { supabase } from "./js/blmf-supabase.js";
+
+    const $ = (id) => document.getElementById(id);
+
+    let selectedRequest = null;
+    let requestsRows = [];
+
+    function setStatus(id, text = '', kind = '') {
+      const el = $(id);
+      if (!el) return;
+      el.textContent = text;
+      el.className = kind ? `status ${kind}` : 'status';
+    }
+
+    function esc(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function fmtDateTime(value) {
+      if (!value) return '—';
+      const d = new Date(value);
+      return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleString('pt-BR');
+    }
+
+    function statusPill(status) {
+      const s = String(status || '').trim();
+      const cls = s === 'aprovada' ? 'ok' : s === 'recusada' ? 'bad' : s === 'arquivada' ? 'info' : 'warn';
+      return `<span class="pill ${cls}">${esc(s || '—')}</span>`;
+    }
+
+    function metricCard(label, value) {
+      return `<div class="metric-card"><b>${esc(label)}</b><span>${esc(value ?? '0')}</span></div>`;
+    }
+
+    async function ensureAccess() {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const user = sessionData?.session?.user || null;
+        if (!user?.id) {
+          $('accessNotice').classList.remove('hidden');
+          $('dashboardShell').classList.add('hidden');
+          $('accessNotice').innerHTML = '<p><b>Acesso restrito:</b> faz login com uma conta habilitada para a coordenação da rede.</p>';
+          return false;
+        }
+
+        const { data, error } = await supabase.rpc('fn_current_user_can_access_network_dashboard');
+        if (error) throw error;
+        const allowed = Array.isArray(data) ? data[0] : data;
+        if (allowed !== true) {
+          $('accessNotice').classList.remove('hidden');
+          $('dashboardShell').classList.add('hidden');
+          return false;
+        }
+
+        $('accessNotice').classList.add('hidden');
+        $('dashboardShell').classList.remove('hidden');
+        return true;
+      } catch (error) {
+        $('accessNotice').classList.remove('hidden');
+        $('dashboardShell').classList.add('hidden');
+        $('accessNotice').innerHTML = `<p><b>Acesso restrito:</b> ${esc(error?.message || 'Não foi possível verificar o acesso.')}</p>`;
+        return false;
+      }
+    }
+
+    async function loadSummary() {
+      try {
+        setStatus('summaryStatus', 'Carregando resumo da rede…', 'info');
+        const { data, error } = await supabase.rpc('fn_network_dashboard_summary');
+        if (error) throw error;
+        const summary = Array.isArray(data) ? (data[0] || {}) : (data || {});
+        $('summaryCards').innerHTML = [
+          metricCard('Bibliotecas ativas', summary.libraries_total ?? 0),
+          metricCard('Perfis', summary.profiles_total ?? 0),
+          metricCard('Leitores ativos', summary.readers_total ?? 0),
+          metricCard('Bibliotecários ativos', summary.librarians_total ?? 0),
+          metricCard('Empréstimos abertos', summary.loans_open_total ?? 0),
+          metricCard('Reservas ativas', summary.reservations_active_total ?? 0),
+          metricCard('Consultas ativas', summary.consultations_active_total ?? 0),
+          metricCard('Solicitações pendentes', summary.requests_pending_total ?? 0),
+          metricCard('Solicitações em análise', summary.requests_in_analysis_total ?? 0),
+          metricCard('Solicitações aprovadas', summary.requests_approved_total ?? 0),
+          metricCard('Solicitações recusadas', summary.requests_refused_total ?? 0)
+        ].join('');
+        setStatus('summaryStatus', 'Resumo carregado.', 'ok');
+      } catch (error) {
+        $('summaryCards').innerHTML = '';
+        setStatus('summaryStatus', 'Não consegui carregar o resumo da rede: ' + (error?.message || String(error)), 'bad');
+      }
+    }
+
+    async function loadRequests() {
+      try {
+        setStatus('requestsStatus', 'Carregando solicitações…', 'info');
+        const { data, error } = await supabase.rpc('fn_network_list_library_requests');
+        if (error) throw error;
+        requestsRows = Array.isArray(data) ? data : [];
+        const tbody = $('requestsTableBody');
+        if (!requestsRows.length) {
+          tbody.innerHTML = '<tr><td colspan="6">Nenhuma solicitação encontrada.</td></tr>';
+          setStatus('requestsStatus', 'Nenhuma solicitação encontrada.', 'warn');
+          resetDetail();
+          return;
+        }
+
+        tbody.innerHTML = requestsRows.map((row) => `
+          <tr class="request-row ${selectedRequest?.id === row.id ? 'is-selected' : ''}" data-request-id="${esc(row.id)}">
+            <td>${esc(fmtDateTime(row.created_at))}</td>
+            <td><strong>${esc(row.library_name)}</strong>${row.library_short_name ? `<div class="mini">${esc(row.library_short_name)}</div>` : ''}</td>
+            <td>${esc([row.city, row.state_region, row.country].filter(Boolean).join(' · '))}</td>
+            <td><strong>${esc(row.contact_name)}</strong><div class="mini">${esc(row.contact_email || '—')}</div></td>
+            <td>${statusPill(row.request_status)}</td>
+            <td>${esc(row.project_stage || '—')}</td>
+          </tr>
+        `).join('');
+
+        tbody.querySelectorAll('[data-request-id]').forEach((tr) => {
+          tr.addEventListener('click', () => {
+            const id = tr.getAttribute('data-request-id');
+            const row = requestsRows.find((item) => String(item.id) === String(id));
+            if (row) selectRequest(row.id);
+          });
+        });
+
+        setStatus('requestsStatus', 'Solicitações carregadas.', 'ok');
+        if (selectedRequest?.id) {
+          await selectRequest(selectedRequest.id, { refreshOnly: true });
+        }
+      } catch (error) {
+        $('requestsTableBody').innerHTML = `<tr><td colspan="6">${esc(error?.message || 'Falha ao carregar solicitações.')}</td></tr>`;
+        setStatus('requestsStatus', 'Não consegui carregar as solicitações: ' + (error?.message || String(error)), 'bad');
+        resetDetail();
+      }
+    }
+
+    async function loadLibraries() {
+      try {
+        setStatus('librariesStatus', 'Carregando bibliotecas…', 'info');
+        const { data, error } = await supabase.rpc('fn_network_library_metrics');
+        if (error) throw error;
+        const rows = Array.isArray(data) ? data : [];
+        const tbody = $('librariesTableBody');
+        if (!rows.length) {
+          tbody.innerHTML = '<tr><td colspan="7">Nenhuma biblioteca encontrada ou métricas ainda indisponíveis.</td></tr>';
+          setStatus('librariesStatus', 'Nenhuma biblioteca encontrada ou métricas ainda indisponíveis.', 'warn');
+          return;
+        }
+        tbody.innerHTML = rows.map((row) => `
+          <tr>
+            <td><strong>${esc(row.library_name || '—')}</strong><div class="mini">${esc(row.library_slug || '—')}</div></td>
+            <td>${esc(row.readers_total ?? 0)}</td>
+            <td>${esc(row.librarians_total ?? 0)}</td>
+            <td>${esc(row.loans_open_total ?? 0)}</td>
+            <td>${esc(row.reservations_active_total ?? 0)}</td>
+            <td>${esc(row.consultations_active_total ?? 0)}</td>
+            <td>${esc(row.pending_requests_total ?? 0)}</td>
+          </tr>
+        `).join('');
+        setStatus('librariesStatus', 'Bibliotecas carregadas.', 'ok');
+      } catch (error) {
+        $('librariesTableBody').innerHTML = `<tr><td colspan="7">${esc(error?.message || 'Falha ao carregar bibliotecas.')}</td></tr>`;
+        setStatus('librariesStatus', 'Não consegui carregar as bibliotecas: ' + (error?.message || String(error)), 'bad');
+      }
+    }
+
+    function resetDetail() {
+      selectedRequest = null;
+      $('requestDetailEmpty').classList.remove('hidden');
+      $('requestDetailPanel').classList.add('hidden');
+      $('requestDetailGrid').innerHTML = '';
+      $('detailSummary').textContent = '—';
+      $('detailNeeds').textContent = '—';
+      $('reviewNotesInput').value = '';
+      setStatus('detailStatus', '', '');
+    }
+
+    async function selectRequest(requestId, opts = {}) {
+      try {
+        setStatus('detailStatus', 'Carregando detalhe da solicitação…', 'info');
+        const { data, error } = await supabase.rpc('fn_network_get_library_request', { p_request_id: requestId });
+        if (error) throw error;
+        const row = Array.isArray(data) ? data[0] : data;
+        if (!row) {
+          resetDetail();
+          setStatus('detailStatus', 'Solicitação não encontrada.', 'warn');
+          return;
+        }
+        selectedRequest = row;
+        $('requestDetailEmpty').classList.add('hidden');
+        $('requestDetailPanel').classList.remove('hidden');
+        $('requestDetailGrid').innerHTML = [
+          ['ID', row.id],
+          ['Status', row.request_status],
+          ['Biblioteca', row.library_name],
+          ['Sigla', row.library_short_name || '—'],
+          ['Cidade', row.city],
+          ['Estado / região', row.state_region || '—'],
+          ['País', row.country],
+          ['Etapa atual', row.project_stage],
+          ['Pessoa contato', row.contact_name],
+          ['Função', row.contact_role || '—'],
+          ['E-mail contato', row.contact_email],
+          ['Telefone contato', row.contact_phone || '—'],
+          ['E-mail do envio', row.submitted_by_email_snapshot],
+          ['Primeiro responsável', row.first_manager_intent],
+          ['Revisto em', fmtDateTime(row.reviewed_at)],
+          ['Revisado por', row.reviewed_by_user_id || '—']
+        ].map(([label, value]) => `
+          <div class="detail-item">
+            <b>${esc(label)}</b>
+            <div>${esc(value || '—')}</div>
+          </div>
+        `).join('');
+        $('detailSummary').textContent = row.summary || '—';
+        $('detailNeeds').textContent = [row.public_profile, row.collection_profile, row.needs].filter(Boolean).join('\n\n') || '—';
+        $('reviewNotesInput').value = row.review_notes || '';
+        document.querySelectorAll('.request-row').forEach((tr) => {
+          tr.classList.toggle('is-selected', tr.getAttribute('data-request-id') === String(row.id));
+        });
+        setStatus('detailStatus', 'Detalhe carregado.', 'ok');
+      } catch (error) {
+        if (!opts.refreshOnly) resetDetail();
+        setStatus('detailStatus', 'Não consegui carregar o detalhe: ' + (error?.message || String(error)), 'bad');
+      }
+    }
+
+    async function updateRequestStatus(newStatus, noteOverride = null) {
+      if (!selectedRequest?.id) {
+        setStatus('detailStatus', 'Selecione primeiro uma solicitação.', 'warn');
+        return;
+      }
+      try {
+        setStatus('detailStatus', 'Salvando mudança de status…', 'info');
+        const note = noteOverride !== null ? noteOverride : $('reviewNotesInput').value.trim();
+        const { data, error } = await supabase.rpc('fn_review_library_request', {
+          p_request_id: selectedRequest.id,
+          p_new_status: newStatus,
+          p_review_notes: note || null
+        });
+        if (error) throw error;
+        const row = Array.isArray(data) ? data[0] : data;
+        selectedRequest = row || selectedRequest;
+        await loadRequests();
+        await selectRequest(selectedRequest.id);
+        await loadSummary();
+        setStatus('detailStatus', 'Solicitação atualizada.', 'ok');
+      } catch (error) {
+        setStatus('detailStatus', 'Não consegui atualizar a solicitação: ' + (error?.message || String(error)), 'bad');
+      }
+    }
+
+    $('btnRefreshSummary').addEventListener('click', loadSummary);
+    $('btnRefreshRequests').addEventListener('click', loadRequests);
+    $('btnRefreshLibraries').addEventListener('click', loadLibraries);
+
+    $('btnSetAnalysis').addEventListener('click', () => updateRequestStatus('em_analise'));
+    $('btnApprove').addEventListener('click', () => updateRequestStatus('aprovada'));
+    $('btnRefuse').addEventListener('click', () => updateRequestStatus('recusada'));
+    $('btnArchive').addEventListener('click', () => updateRequestStatus('arquivada'));
+    $('btnRequestMore').addEventListener('click', () => {
+      if (!selectedRequest?.id) {
+        setStatus('detailStatus', 'Selecione primeiro uma solicitação.', 'warn');
+        return;
+      }
+      const current = $('reviewNotesInput').value.trim();
+      const template = 'Pedido de complemento: por favor, enviar informações adicionais sobre a biblioteca, o acervo e a pessoa responsável pelo primeiro acesso.';
+      $('reviewNotesInput').value = current ? `${current}\n\n${template}` : template;
+      updateRequestStatus('em_analise', $('reviewNotesInput').value.trim());
+    });
+
+    $('btnSair').addEventListener('click', async () => {
+      try { await supabase.auth.signOut(); } catch (_) {}
+      window.location.href = 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html';
+    });
+
+    async function init() {
+      const ok = await ensureAccess();
+      if (!ok) return;
+      await Promise.all([loadSummary(), loadRequests(), loadLibraries()]);
+    }
+
+    init();
+  </script>
+</body>
+</html>
