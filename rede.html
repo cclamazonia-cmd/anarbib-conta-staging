@@ -350,7 +350,7 @@
     };
 
     const uiState = {
-      requestStatusFilter: savedState?.requestStatusFilter || 'todas',
+      requestStatusFilter: savedState?.requestStatusFilter || 'abertas',
       requestSearch: savedState?.requestSearch || '',
       librarySearch: savedState?.librarySearch || ''
     };
@@ -547,7 +547,9 @@
             <td>${requestStatusCell(row)}</td>
             <td>${esc(row.project_stage || '—')}</td>
             <td>${String(row.request_status || '').trim() === 'arquivada'
-              ? `<button class="btn mini soft" type="button" data-discard-request-id="${esc(row.id)}">Descartar</button>`
+              ? (isTechnicallyActivated(row)
+                  ? '<span class="mini">Preservada</span>'
+                  : `<button class="btn mini soft" type="button" data-discard-request-id="${esc(row.id)}">Descartar</button>`)
               : '<span class="mini">—</span>'}</td>
           </tr>
         `).join('');
@@ -758,7 +760,7 @@
           ['Entrada da biblioteca na rede', isTechnicallyActivated(row) ? 'Biblioteca já criada' : 'Ainda não criada'],
           ['Acesso bibliotecário inicial', row.approved_membership_ref ? 'Liberado' : 'Ainda não liberado'],
           ['Revisto em', fmtDateTime(row.reviewed_at)],
-          ['Revisado por', row.reviewed_by_user_id || '—']
+          ['Revisado por', row.reviewed_by_user_id ? 'Coordenação da rede' : '—']
         ].map(([label, value]) => `
           <div class="detail-item">
             <b>${esc(label)}</b>
@@ -829,6 +831,10 @@
       }
       if (String(row.request_status || '').trim() !== 'arquivada') {
         setFlashStatus('requestsStatus', 'Só é possível descartar solicitações já arquivadas.', 'warn', 6000);
+        return;
+      }
+      if (isTechnicallyActivated(row)) {
+        setFlashStatus('requestsStatus', 'Solicitações já ligadas a uma biblioteca criada na rede devem ser preservadas e não podem ser descartadas aqui.', 'warn', 7000);
         return;
       }
       const confirmed = window.confirm(`Descartar definitivamente a solicitação de ${row.library_name || 'biblioteca'}? Esta ação não poderá ser desfeita.`);
