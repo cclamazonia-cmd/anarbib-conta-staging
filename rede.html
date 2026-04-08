@@ -531,12 +531,13 @@
         }
 
         renderRequestsTable();
+        updateSortableHeaders();
         setStatus('requestsStatus', 'Solicitações carregadas.', 'ok');
         if (selectedRequest?.id) {
           await selectRequest(selectedRequest.id, { refreshOnly: true });
         }
       } catch (error) {
-        $('requestsTableBody').innerHTML = `<tr><td colspan="6">${esc(error?.message || 'Falha ao carregar solicitações.')}</td></tr>`;
+        $('requestsTableBody').innerHTML = `<tr><td colspan="7">${esc(error?.message || 'Falha ao carregar solicitações.')}</td></tr>`;
         setStatus('requestsStatus', 'Não consegui carregar as solicitações: ' + (error?.message || String(error)), 'bad');
         resetDetail();
       }
@@ -554,6 +555,7 @@
           return;
         }
         renderLibrariesTable();
+        updateSortableHeaders();
         setStatus('librariesStatus', 'Bibliotecas carregadas.', 'ok');
       } catch (error) {
         $('librariesTableBody').innerHTML = `<tr><td colspan="7">${esc(error?.message || 'Falha ao carregar bibliotecas.')}</td></tr>`;
