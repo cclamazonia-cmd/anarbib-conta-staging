@@ -2840,6 +2840,7 @@
     };
 
     let CONFIG = FALLBACK_CONFIG;
+    let sharedApplyPageChrome = null;
     let applyPageChrome = function(pageKey, options = {}) {
       const routes = CONFIG?.ROUTES || {};
       const routeMap = options?.routeMap || {};
@@ -2848,10 +2849,19 @@
         const href = routes?.[routeKey];
         if (el && href) el.href = href;
       });
+      if (typeof sharedApplyPageChrome === "function") {
+        try {
+          sharedApplyPageChrome({
+            logoSelector: `#${options?.logoId || "brandLogo"}`,
+            heroTitleSelector: `#${options?.heroTitleId || "pageHeroTitle"}`,
+            heroSubtitleSelector: `#${options?.heroSubtitleId || "pageHeroSubtitle"}`
+          });
+        } catch (_) {}
+      }
     };
 
     try {
-      const mod = await import("./shared/config.js");
+      const mod = await import("./shared/config.js").catch(() => import("./config.js"));
       if (mod?.CONFIG) {
         CONFIG = {
           ...FALLBACK_CONFIG,
@@ -2859,7 +2869,7 @@
           ROUTES: { ...(FALLBACK_CONFIG.ROUTES || {}), ...((mod.CONFIG && mod.CONFIG.ROUTES) || {}) }
         };
       }
-      if (typeof mod?.applyPageChrome === "function") applyPageChrome = mod.applyPageChrome;
+      if (typeof mod?.applyPageChrome === "function") sharedApplyPageChrome = mod.applyPageChrome;
     } catch (error) {
       console.warn("config.js ausente ou com falha; usando fallback interno.", error);
     }
