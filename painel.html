@@ -1651,10 +1651,11 @@
                 <div>
                   <label for="taskInternalStatus">Situação</label>
                   <select class="select" id="taskInternalStatus">
-                    <option value="a_fazer">A fazer</option>
+                    <option value="aberta">Aberta</option>
                     <option value="em_andamento">Em andamento</option>
+                    <option value="bloqueada">Bloqueada</option>
                     <option value="concluida">Concluída</option>
-                    <option value="cancelada">Cancelada</option>
+                    <option value="arquivada">Arquivada</option>
                   </select>
                 </div>
               </div>
@@ -6335,7 +6336,7 @@ function getCurrentPainelTimeZone(){
     }
 
     function priorityRank(p){
-      return ({alta:0, media:1, baixa:2})[String(p || '')] ?? 9;
+      return ({urgente:0, alta:1, media:2, baixa:3})[String(p || '').trim()] ?? 9;
     }
 
     function openReservationTask(reservaId){
@@ -6541,14 +6542,30 @@ function getCurrentPainelTimeZone(){
       };
     }
 
+    async function resolveInternalTasksLibraryId(){
+      const directId = bootNormalizeLibraryId(currentAccessRow?.library_id || currentIdentityRow?.library_id || currentLibraryRow?.id || '');
+      if (directId) return directId;
+      try {
+        const resolved = await resolveCurrentLibraryIdentity();
+        const resolvedId = bootNormalizeLibraryId(resolved?.id || '');
+        if (resolvedId && (!currentLibraryRow || !currentLibraryRow.id)) {
+          currentLibraryRow = { ...(currentLibraryRow || {}), ...(resolved?.row || {}), id: resolvedId };
+        }
+        return resolvedId;
+      } catch (_error) {
+        return null;
+      }
+    }
+
     async function loadInternalTasks({ silent=false } = {}){
       const host = $('taskListInternas');
       if (host) host.innerHTML = '<div class="task-empty">Carregando tarefas internas…</div>';
       try {
-        const libraryId = bootNormalizeLibraryId(currentAccessRow?.library_id || currentIdentityRow?.library_id || currentLibraryRow?.id || '');
+        const libraryId = await resolveInternalTasksLibraryId();
         let query = supabase
           .from(INTERNAL_TASKS_TABLE)
-          .select('id,library_id,title,description,priority,status,owner,due_date,tags,created_at')
+          .select('id,library_id,title,description,priority,status,owner,owner_user_id,due_date,tags,created_at')
+          .order('due_date', { ascending:true, nullsFirst:false })
           .order('created_at', { ascending:false });
         if (libraryId) query = query.eq('library_id', libraryId);
         const { data, error } = await query;
@@ -6556,21 +6573,29 @@ function getCurrentPainelTimeZone(){
         manualInternalTasks = Array.isArray(data) ? data.map(normalizeInternalTaskRow) : [];
         renderInternalTasks();
         renderTrabalhoDoDia();
-        if (!silent) clearStatus('statusTarefasInternas');
+        if (!silent) {
+          clearStatus('statusTarefasInternas');
+          clearStatus('statusTrabalhoDia');
+        }
         return manualInternalTasks;
       } catch (e) {
         manualInternalTasks = [];
         renderInternalTasks();
+        renderTrabalhoDoDia();
+        const msg = 'Não consegui carregar as tarefas internas: ' + (e.message || String(e));
         if (!silent) {
-          setStatus('statusTarefasInternas', 'Não consegui carregar as tarefas internas: ' + (e.message || String(e)), 'bad', false);
+          setStatus('statusTarefasInternas', msg, 'bad', false);
+          setStatus('statusTrabalhoDia', msg, 'bad', false);
         }
         return [];
       }
     }
 
     async function insertInternalTask(task){
+      const libraryId = await resolveInternalTasksLibraryId();
       const payload = {
         id: task.id,
+        library_id: libraryId,
         title: task.title,
         description: task.description,
         priority: task.priority,
@@ -6584,7 +6609,7 @@ function getCurrentPainelTimeZone(){
       const { data, error } = await supabase
         .from(INTERNAL_TASKS_TABLE)
         .insert(payload)
-        .select('id,title,description,priority,status,owner,due_date,tags,created_at')
+        .select('id,library_id,title,description,priority,status,owner,owner_user_id,due_date,tags,created_at')
         .single();
       if (error) throw error;
       return normalizeInternalTaskRow(data || payload);
@@ -6600,7 +6625,7 @@ function getCurrentPainelTimeZone(){
         .from(INTERNAL_TASKS_TABLE)
         .update(payload)
         .eq('id', taskId)
-        .select('id,title,description,priority,status,owner,due_date,tags,created_at')
+        .select('id,library_id,title,description,priority,status,owner,owner_user_id,due_date,tags,created_at')
         .single();
       if (error) throw error;
       return normalizeInternalTaskRow(data || { id: taskId, ...patch });
@@ -6728,7 +6753,7 @@ function getCurrentPainelTimeZone(){
         title,
         description: $('taskInternalDesc')?.value.trim() || '',
         priority: $('taskInternalPriority')?.value || 'media',
-        status: $('taskInternalStatus')?.value || 'a_fazer',
+        status: $('taskInternalStatus')?.value || 'aberta',
         owner: $('taskInternalOwner')?.value.trim() || '',
         due_date: $('taskInternalDue')?.value || '',
         tags: $('taskInternalTags')?.value.trim() || '',
@@ -6748,8 +6773,8 @@ function getCurrentPainelTimeZone(){
     async function cycleInternalTaskStatus(taskId){
       const idx = manualInternalTasks.findIndex((t) => String(t.id) === String(taskId));
       if (idx < 0) return;
-      const order = ['a_fazer', 'em_andamento', 'concluida'];
-      const current = manualInternalTasks[idx].status || 'a_fazer';
+      const order = ['aberta', 'em_andamento', 'bloqueada', 'concluida'];
+      const current = manualInternalTasks[idx].status || 'aberta';
       const pos = order.indexOf(current);
       const nextStatus = order[(pos + 1) % order.length];
       clearStatus('statusTarefasInternas');
@@ -6777,6 +6802,13 @@ function getCurrentPainelTimeZone(){
 
     function isReservationPickupScheduledStage(stage){
       return ['retirada_agendada', 're-retirada_agendada'].includes(String(stage || ''));
+    }
+
+    function getOpenInternalTasksForDailyWork(){
+      return manualInternalTasks.filter((task) => {
+        if (!task?.due_date) return false;
+        return !['concluida', 'cancelada', 'arquivada'].includes(String(task.status || '').trim());
+      });
     }
 
     function buildDailyTasks(){
@@ -6826,10 +6858,8 @@ function getCurrentPainelTimeZone(){
         }
       });
 
-      manualInternalTasks.forEach((task) => {
-        if (!task?.due_date) return;
-        if (['concluida', 'cancelada', 'arquivada'].includes(String(task.status || ''))) return;
-        const dueDiff = daysDiffFromToday(task.due_date);
+      getOpenInternalTasksForDailyWork().forEach((task) => {
+        const dueDiff = daysDiffFromToday(task.due_date, taskTimeZone);
         if (dueDiff === 0){
           tasks.push({
             priority: task.priority === 'alta' ? 'alta' : 'media',
@@ -6863,16 +6893,26 @@ function getCurrentPainelTimeZone(){
     function renderTrabalhoDoDia(){
       const host = $('taskListTrabalhoDia');
       if (!host) return;
+      const taskTimeZone = getCurrentPainelTimeZone();
       const tasks = buildDailyTasks();
       const counts = {hoje:0, atencao:0, acompanhamento:0};
       tasks.forEach((t) => { if (counts[t.bucket] != null) counts[t.bucket] += 1; });
       setChip('chipTaskHoje', `Hoje: ${counts.hoje}`);
       setChip('chipTaskAtencao', `Atenção: ${counts.atencao}`);
       setChip('chipTaskAcompanhamento', `Acompanhamento: ${counts.acompanhamento}`);
-      const nowParts = zonedNowParts();
+      const nowParts = zonedNowParts(taskTimeZone);
       setChip('chipTaskAgoraBelem', `Agora na biblioteca: ${nowParts.hm} (${consultationTimeZoneLabel()})`);
+      const internalTasksForDailyWork = getOpenInternalTasksForDailyWork();
+      const internalTasksDueToday = internalTasksForDailyWork.filter((task) => daysDiffFromToday(task.due_date, taskTimeZone) === 0).length;
+      const internalTasksOverdue = internalTasksForDailyWork.filter((task) => {
+        const diff = daysDiffFromToday(task.due_date, taskTimeZone);
+        return diff != null && diff < 0;
+      }).length;
       if (!tasks.length){
         host.innerHTML = '<div class="task-empty">Sem tarefas automáticas para o momento.</div>';
+        if (internalTasksForDailyWork.length) {
+          setStatus('statusTrabalhoDia', `Nenhuma tarefa entrou na vista automática, apesar de ${internalTasksForDailyWork.length} tarefa(s) interna(s) aberta(s) com prazo. Hoje: ${internalTasksDueToday}. Em atraso: ${internalTasksOverdue}.`, 'warn', false);
+        }
         return;
       }
       host.innerHTML = tasks.map((task) => `
@@ -10014,13 +10054,23 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
       btnRecarregarConsultas.addEventListener('click', () => refreshConsultationsOnly());
     }
     $('btnRecarregarTrabalhoDia')?.addEventListener('click', async () => {
-      await Promise.allSettled([
+      clearStatus('statusTrabalhoDia');
+      await loadLibraryServiceState({silent:true});
+      const results = await Promise.allSettled([
         refreshReservationsOnly({silent:true}),
         refreshConsultationsOnly({silent:true}),
         refreshLoansOnly({silent:true}),
-        loadInternalTasks({silent:true})
+        loadInternalTasks({silent:false})
       ]);
       renderTrabalhoDoDia();
+      const failed = results.find((result) => result.status === 'rejected');
+      if (failed) {
+        setStatus('statusTrabalhoDia', failed.reason?.message || 'Falha ao recalcular prioridades.', 'bad', false);
+        return;
+      }
+      if (!buildDailyTasks().length && getOpenInternalTasksForDailyWork().length) {
+        return;
+      }
       setStatus('statusTrabalhoDia', 'Prioridades recalculadas.', 'ok');
     });
     $('btnAddInternalTask')?.addEventListener('click', async () => {
