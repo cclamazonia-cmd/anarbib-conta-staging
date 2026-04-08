@@ -6623,9 +6623,11 @@ function getCurrentPainelTimeZone(){
       return normalizeInternalTaskRow(data || { id: taskId, ...patch });
     }
 
-    async function removeInternalTask(taskId){
-      return cancelInternalTask(taskId);
-    }
+    /*
+      Reliquat neutralisé : aucune suppression physique de tâche interne
+      ne doit subsister dans le painel.
+      Le flux retenu est cancelada -> descartada.
+    */
 
     function clearInternalTaskForm(){
       if ($('taskInternalTitle')) $('taskInternalTitle').value = '';

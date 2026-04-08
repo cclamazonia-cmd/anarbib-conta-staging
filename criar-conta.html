@@ -927,7 +927,7 @@
 
       if (idNotice) {
         idNotice.innerHTML = isWithoutLibrary
-          ? `Depois da criação da conta, seus acessos regulares serão feitos com seu <b>ID público pessoal</b>, que substituirá o uso do e-mail no login do <b>AnarBib</b> até que a entrada institucional da sua biblioteca seja analisada.`
+          ? `Depois da criação da conta, seus acessos regulares serão feitos com seu <b>ID público pessoal</b>, que substituirá o uso do e-mail no login do <b>AnarBib</b> até que o pedido de entrada de uma nova biblioteca na rede seja analisado.`
           : `Depois da criação da conta, seus acessos regulares serão feitos com seu <b>ID público pessoal</b>, que substituirá o uso do e-mail no login da <b>${libName}</b>.`;
       }
 
@@ -1176,14 +1176,14 @@
         if (data.email_usuaria_enviado === false) {
           setMsg(
             currentLibraryMeta.is_without_library === true
-              ? "Cadastro concluído, mas houve um problema ao enviar o e-mail automaticamente. Entre em contato com a coordenação do AnarBib para receber sua senha provisória, seu ID público e um novo link para a solicitação da sua biblioteca. Depois do primeiro acesso, altere sua senha na Conta."
+              ? "Cadastro concluído, mas houve um problema ao enviar o e-mail automaticamente. Entre em contato com a coordenação do AnarBib para receber sua senha provisória, seu ID público e as orientações para solicitar a entrada de uma nova biblioteca na rede. Depois do primeiro acesso, altere sua senha na Conta."
               : "Cadastro concluído, mas houve um problema ao enviar o e-mail automaticamente. Entre em contato com a biblioteca para receber sua senha provisória e seu ID público. Depois do primeiro acesso, altere sua senha na Conta.",
             "warn"
           );
         } else {
           setMsg(
             currentLibraryMeta.is_without_library === true
-              ? "Cadastro enviado com sucesso. Verifique seu e-mail (e Spam/Lixo eletrônico) para receber sua senha provisória, seu ID público definitivo e o link direto para iniciar a solicitação institucional da sua biblioteca. Depois do primeiro acesso, altere sua senha na Conta."
+              ? "Cadastro enviado com sucesso. Verifique seu e-mail (e Spam/Lixo eletrônico) para receber sua senha provisória, seu ID público definitivo e as orientações para solicitar a entrada de uma nova biblioteca na rede. Depois do primeiro acesso, altere sua senha na Conta."
               : "Cadastro enviado com sucesso. Verifique seu e-mail (e Spam/Lixo eletrônico) para receber sua senha provisória e seu ID público definitivo. Depois do primeiro acesso, altere sua senha na Conta.",
             "ok"
           );
