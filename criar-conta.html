@@ -634,7 +634,7 @@
         <input type="checkbox" id="consent" required />
         <span>
           Eu aceito que meu endereço de e-mail seja usado para o envio de informações sobre minha conta: <span class="reqMark">*</span>
-          <b>reservas</b>, <b>empréstimos</b>, <b>prorrogações</b>, <b>devoluções</b>, <b>avisos de atraso</b> e <b>conselhos de leitura</b>.
+          <b>reservas</b>, <b>empréstimos</b>, <b>prorrogações</b>, <b>devoluções</b> e <b>avisos de atraso</b>.
         </span>
       </label>
 
@@ -671,7 +671,7 @@
     let CONFIG = FALLBACK_CONFIG;
     let applyPageChrome = null;
     try {
-      const mod = await import("./shared/config.js").catch(() => import("./config.js"));
+      const mod = await import("./shared/config.js");
       CONFIG = {
         ...FALLBACK_CONFIG,
         ...(mod?.CONFIG || {}),
@@ -683,14 +683,30 @@
       applyPageChrome = mod?.applyPageChrome || null;
     } catch (_) {}
 
+    CONFIG = {
+      ...CONFIG,
+      SUPABASE_URL: FALLBACK_CONFIG.SUPABASE_URL,
+      SUPABASE_ANON_KEY: FALLBACK_CONFIG.SUPABASE_ANON_KEY,
+      FUNCTIONS_BASE_URL: FALLBACK_CONFIG.FUNCTIONS_BASE_URL,
+      ROUTES: {
+        ...CONFIG.ROUTES,
+        ...FALLBACK_CONFIG.ROUTES
+      }
+    };
+
     try {
       if (typeof applyPageChrome === "function") {
-        applyPageChrome({
-          logoSelector: "#brandLogo",
-          brandTitleSelector: "#brandTitle",
-          brandSubtitleSelector: "#brandSubtitle",
-          heroTitleSelector: "#pageHeroTitle",
-          heroSubtitleSelector: "#pageHeroSubtitle"
+        applyPageChrome("criar_conta", {
+          logoId: "brandLogo",
+          brandTitleId: "brandTitle",
+          brandSubtitleId: "brandSubtitle",
+          heroTitleId: "pageHeroTitle",
+          heroSubtitleId: "pageHeroSubtitle",
+          routeMap: {
+            btnBlog: "blog",
+            btnCatalogo: "catalogo",
+            btnCadastro: "cadastro"
+          }
         });
       }
     } catch (_) {}
@@ -911,7 +927,7 @@
 
       if (idNotice) {
         idNotice.innerHTML = isWithoutLibrary
-          ? `Depois da criação da conta, seus acessos regulares serão feitos com seu <b>ID público pessoal</b>, que substituirá o uso do e-mail no login do <b>AnarBib</b> até que o pedido de entrada de uma nova biblioteca na rede seja analisado.`
+          ? `Depois da criação da conta, seus acessos regulares serão feitos com seu <b>ID público pessoal</b>, que substituirá o uso do e-mail no login do <b>AnarBib</b> até que a entrada institucional da sua biblioteca seja analisada.`
           : `Depois da criação da conta, seus acessos regulares serão feitos com seu <b>ID público pessoal</b>, que substituirá o uso do e-mail no login da <b>${libName}</b>.`;
       }
 
@@ -968,9 +984,9 @@
     if (brandSubtitle) brandSubtitle.textContent = "Rede AnarBib · Criar a sua conta de leitor@.";
 
     Object.entries({
-      btnBlog: CONFIG.ROUTES?.blog || FALLBACK_CONFIG.ROUTES.blog,
-      btnCatalogo: CONFIG.ROUTES?.catalogo || FALLBACK_CONFIG.ROUTES.catalogo,
-      btnCadastro: CONFIG.ROUTES?.cadastro || FALLBACK_CONFIG.ROUTES.cadastro
+      btnBlog: FALLBACK_CONFIG.ROUTES.blog,
+      btnCatalogo: FALLBACK_CONFIG.ROUTES.catalogo,
+      btnCadastro: FALLBACK_CONFIG.ROUTES.cadastro
     }).forEach(([id, href]) => {
       const a = document.getElementById(id);
       if (a) a.href = href;
@@ -1127,6 +1143,7 @@
         library_logo_url: currentLibraryMeta.logo_url || "",
         library_logo_file_key: currentLibraryMeta.logo_file_key || "",
         anarbib_logo_url: ANARBIB_LOGO_URL,
+        anarbib_admin_email: currentLibraryMeta.admin_email || "ccl-amazonia@riseup.net",
         library_email_delivery_mode: currentLibraryMeta.email_delivery_mode || "normal",
         library_is_test_mode: currentLibraryMeta.is_test_mode === true,
         preferred_login_identifier: "public_id"
@@ -1182,26 +1199,6 @@
         submitBtn.disabled = false;
       }
     });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   </script>
 </body>
 </html>

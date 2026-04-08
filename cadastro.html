@@ -297,40 +297,14 @@
     <script type="module">
     import { supabase } from "./js/blmf-supabase.js";
 
-    const FALLBACK_CONFIG = {
-      ROUTES: {
-        blog: "https://cclamazonia.noblogs.org",
-        catalogo: "https://cclamazonia-cmd.github.io/anarbib-staging/index.html",
-        criar: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/criar-conta.html",
-        cadastro: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html",
-        conta: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html",
-        painel: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html",
-      }
-    };
-
-    let CONFIG = FALLBACK_CONFIG;
-    try {
-      const mod = await import("./shared/config.js").catch(() => import("./config.js"));
-      if (mod?.CONFIG) {
-        CONFIG = {
-          ...FALLBACK_CONFIG,
-          ...mod.CONFIG,
-          ROUTES: {
-            ...(FALLBACK_CONFIG.ROUTES || {}),
-            ...((mod.CONFIG && mod.CONFIG.ROUTES) || {})
-          }
-        };
-      }
-    } catch (_) {}
-
     const ROUTES = {
-      BLOG: CONFIG.ROUTES?.blog || FALLBACK_CONFIG.ROUTES.blog,
-      CATALOGO: CONFIG.ROUTES?.catalogo || FALLBACK_CONFIG.ROUTES.catalogo,
-      CRIAR: CONFIG.ROUTES?.criar || CONFIG.ROUTES?.criar_conta || FALLBACK_CONFIG.ROUTES.criar,
+      BLOG: "https://cclamazonia.noblogs.org",
+      CATALOGO: "https://cclamazonia-cmd.github.io/anarbib-staging/index.html",
+      CRIAR: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/criar-conta.html",
       /* fluxo institucional separado : aucune route locale vers solicitar-biblioteca ici */
-      CADASTRO: CONFIG.ROUTES?.cadastro || FALLBACK_CONFIG.ROUTES.cadastro,
-      CONTA: CONFIG.ROUTES?.conta || FALLBACK_CONFIG.ROUTES.conta,
-      PAINEL: CONFIG.ROUTES?.painel || FALLBACK_CONFIG.ROUTES.painel,
+      CADASTRO: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html",
+      CONTA: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/conta.html",
+      PAINEL: "https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html",
     };
 
     document.getElementById("backCatalog").addEventListener("click", (e) => {

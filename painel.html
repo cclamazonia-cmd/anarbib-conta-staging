@@ -2840,7 +2840,6 @@
     };
 
     let CONFIG = FALLBACK_CONFIG;
-    let sharedApplyPageChrome = null;
     let applyPageChrome = function(pageKey, options = {}) {
       const routes = CONFIG?.ROUTES || {};
       const routeMap = options?.routeMap || {};
@@ -2849,19 +2848,10 @@
         const href = routes?.[routeKey];
         if (el && href) el.href = href;
       });
-      if (typeof sharedApplyPageChrome === "function") {
-        try {
-          sharedApplyPageChrome({
-            logoSelector: `#${options?.logoId || "brandLogo"}`,
-            heroTitleSelector: `#${options?.heroTitleId || "pageHeroTitle"}`,
-            heroSubtitleSelector: `#${options?.heroSubtitleId || "pageHeroSubtitle"}`
-          });
-        } catch (_) {}
-      }
     };
 
     try {
-      const mod = await import("./shared/config.js").catch(() => import("./config.js"));
+      const mod = await import("./shared/config.js");
       if (mod?.CONFIG) {
         CONFIG = {
           ...FALLBACK_CONFIG,
@@ -2869,7 +2859,7 @@
           ROUTES: { ...(FALLBACK_CONFIG.ROUTES || {}), ...((mod.CONFIG && mod.CONFIG.ROUTES) || {}) }
         };
       }
-      if (typeof mod?.applyPageChrome === "function") sharedApplyPageChrome = mod.applyPageChrome;
+      if (typeof mod?.applyPageChrome === "function") applyPageChrome = mod.applyPageChrome;
     } catch (error) {
       console.warn("config.js ausente ou com falha; usando fallback interno.", error);
     }
@@ -6633,11 +6623,7 @@ function getCurrentPainelTimeZone(){
       return normalizeInternalTaskRow(data || { id: taskId, ...patch });
     }
 
-    /*
-      Reliquat neutralisé : aucune suppression physique de tâche interne
-      ne doit subsister dans le painel.
-      Le flux retenu est cancelada -> descartada.
-    */
+    /* reliquat legacy retiré : aucune suppression physique de tâche interne n'est exposée ici */
 
     function clearInternalTaskForm(){
       if ($('taskInternalTitle')) $('taskInternalTitle').value = '';
