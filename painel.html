@@ -1632,60 +1632,65 @@
               <div class="section-head">
                 <div>
                   <h2>Tarefas internas</h2>
-                  <div class="mini">Lista manual para limpeza dos livros, arrumação das estantes, revisão do espaço e mutirões.</div>
+                  <div class="mini">Vista detalhada de acompanhamento das tarefas internas já existentes: avanço, aviso e cancelamento sem criação local no painel.</div>
                 </div>
               </div>
-              <div class="task-form-grid">
-                <div>
-                  <label for="taskInternalTitle">Título da tarefa</label>
-                  <input class="input" id="taskInternalTitle" type="text" placeholder="Ex.: limpeza dos livros de teoria política">
-                </div>
-                <div>
-                  <label for="taskInternalPriority">Prioridade</label>
-                  <select class="select" id="taskInternalPriority">
-                    <option value="media">Média</option>
-                    <option value="alta">Alta</option>
-                    <option value="baixa">Baixa</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="taskInternalStatus">Situação</label>
-                  <select class="select" id="taskInternalStatus">
-                    <option value="a_fazer">A fazer</option>
-                    <option value="em_andamento">Em andamento</option>
-                    <option value="concluida">Concluída</option>
-                    <option value="cancelada">Cancelada</option>
-                  </select>
-                </div>
+              <div class="muted-box" style="margin-top:12px">
+                <div class="mini">A criação de novas tarefas internas fica fora deste painel. Aqui, a equipe pode apenas acompanhar, avisar o responsável, avançar a situação ou cancelar a tarefa existente.</div>
               </div>
-              <div class="task-form-grid-2" style="margin-top:12px">
-                <div>
-                  <label for="taskInternalOwner">Responsável (opcional)</label>
-                  <div class="suggest-wrap">
-                    <input class="input" id="taskInternalOwner" type="text" placeholder="compa@exemplo.org" autocomplete="off" spellcheck="false">
-                    <div class="suggest-list hidden" id="taskInternalOwnerSuggest" role="listbox" aria-label="Sugestões de compas responsáveis"></div>
+              <div id="internalTaskCreateControls" class="hidden" aria-hidden="true">
+                <div class="task-form-grid">
+                  <div>
+                    <label for="taskInternalTitle">Título da tarefa</label>
+                    <input class="input" id="taskInternalTitle" type="text" placeholder="Ex.: limpeza dos livros de teoria política">
+                  </div>
+                  <div>
+                    <label for="taskInternalPriority">Prioridade</label>
+                    <select class="select" id="taskInternalPriority">
+                      <option value="media">Média</option>
+                      <option value="alta">Alta</option>
+                      <option value="baixa">Baixa</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="taskInternalStatus">Situação</label>
+                    <select class="select" id="taskInternalStatus">
+                      <option value="a_fazer">A fazer</option>
+                      <option value="em_andamento">Em andamento</option>
+                      <option value="concluida">Concluída</option>
+                      <option value="cancelada">Cancelada</option>
+                    </select>
                   </div>
                 </div>
-                <div>
-                  <label for="taskInternalDue">Prazo (opcional)</label>
-                  <input class="input" id="taskInternalDue" type="date">
+                <div class="task-form-grid-2" style="margin-top:12px">
+                  <div>
+                    <label for="taskInternalOwner">Responsável (opcional)</label>
+                    <div class="suggest-wrap">
+                      <input class="input" id="taskInternalOwner" type="text" placeholder="compa@exemplo.org" autocomplete="off" spellcheck="false">
+                      <div class="suggest-list hidden" id="taskInternalOwnerSuggest" role="listbox" aria-label="Sugestões de compas responsáveis"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <label for="taskInternalDue">Prazo (opcional)</label>
+                    <input class="input" id="taskInternalDue" type="date">
+                  </div>
+                  <div>
+                    <label for="taskInternalTags">Marcador curto (opcional)</label>
+                    <input class="input" id="taskInternalTags" type="text" placeholder="Ex.: estantes, etiquetas, limpeza">
+                  </div>
                 </div>
-                <div>
-                  <label for="taskInternalTags">Marcador curto (opcional)</label>
-                  <input class="input" id="taskInternalTags" type="text" placeholder="Ex.: estantes, etiquetas, limpeza">
+                <div class="task-form-grid-3" style="margin-top:12px">
+                  <div>
+                    <label for="taskInternalDesc">Descrição / observações</label>
+                    <textarea class="textarea" id="taskInternalDesc" placeholder="Detalhes úteis para a equipe da biblioteca."></textarea>
+                  </div>
                 </div>
-              </div>
-              <div class="task-form-grid-3" style="margin-top:12px">
-                <div>
-                  <label for="taskInternalDesc">Descrição / observações</label>
-                  <textarea class="textarea" id="taskInternalDesc" placeholder="Detalhes úteis para a equipe da biblioteca."></textarea>
+                <div class="actions">
+                  <button class="btn primary" id="btnAddInternalTask" type="button">Adicionar tarefa</button>
+                  <button class="btn" id="btnClearInternalTaskForm" type="button">Limpar formulário</button>
                 </div>
+                <div class="sep"></div>
               </div>
-              <div class="actions">
-                <button class="btn primary" id="btnAddInternalTask" type="button">Adicionar tarefa</button>
-                <button class="btn" id="btnClearInternalTaskForm" type="button">Limpar formulário</button>
-              </div>
-              <div class="sep"></div>
               <div class="task-list" id="taskListInternas">
                 <div class="task-empty">Nenhuma tarefa interna cadastrada por enquanto.</div>
               </div>
@@ -6534,7 +6539,7 @@ function getCurrentPainelTimeZone(){
         bloqueada: 'bloqueada',
         concluida: 'concluida',
         arquivada: 'arquivada',
-        cancelada: 'arquivada'
+        cancelada: 'cancelada'
       })[rawStatus] || rawStatus;
       return {
         id: String(row?.id || ''),
@@ -6723,8 +6728,12 @@ function getCurrentPainelTimeZone(){
           </div>
           <div class="task-item-actions">
             <button class="btn mini" type="button" data-internal-task-notify="${esc(task.id)}">Avisar responsável</button>
-            <button class="btn mini" type="button" data-internal-task-next="${esc(task.id)}">Avançar situação</button>
-            <button class="btn mini" type="button" data-internal-task-delete="${esc(task.id)}">Excluir</button>
+            ${['concluida', 'cancelada', 'arquivada'].includes(String(task.status || ''))
+              ? ''
+              : `<button class="btn mini" type="button" data-internal-task-next="${esc(task.id)}">Avançar situação</button>`}
+            ${['cancelada', 'arquivada'].includes(String(task.status || ''))
+              ? ''
+              : `<button class="btn mini" type="button" data-internal-task-delete="${esc(task.id)}">Cancelar tarefa</button>`}
           </div>
         </div>
       `).join('');
@@ -6732,28 +6741,7 @@ function getCurrentPainelTimeZone(){
 
     async function addInternalTask(){
       clearStatus('statusTarefasInternas');
-      const title = $('taskInternalTitle')?.value.trim() || '';
-      if (!title) return setStatus('statusTarefasInternas', 'Informe ao menos o título da tarefa.', 'warn');
-      const draftTask = {
-        id: generateInternalTaskId(),
-        title,
-        description: $('taskInternalDesc')?.value.trim() || '',
-        priority: $('taskInternalPriority')?.value || 'media',
-        status: $('taskInternalStatus')?.value || 'a_fazer',
-        owner: $('taskInternalOwner')?.value.trim() || '',
-        due_date: $('taskInternalDue')?.value || '',
-        tags: $('taskInternalTags')?.value.trim() || '',
-        created_at: nowISO()
-      };
-      try {
-        const savedTask = await insertInternalTask(draftTask);
-        manualInternalTasks.unshift(savedTask);
-        renderInternalTasks();
-        clearInternalTaskForm();
-        setStatus('statusTarefasInternas', 'Tarefa interna adicionada.', 'ok');
-      } catch (e) {
-        setStatus('statusTarefasInternas', 'Não consegui adicionar a tarefa: ' + (e.message || String(e)), 'bad', false);
-      }
+      setStatus('statusTarefasInternas', 'A criação de novas tarefas internas foi desativada neste painel. Aqui, a equipe só acompanha, avisa, avança ou cancela tarefas já existentes.', 'warn', false);
     }
 
     async function cycleInternalTaskStatus(taskId){
@@ -6762,27 +6750,40 @@ function getCurrentPainelTimeZone(){
       const order = ['a_fazer', 'em_andamento', 'concluida'];
       const current = manualInternalTasks[idx].status || 'a_fazer';
       const pos = order.indexOf(current);
-      const nextStatus = order[(pos + 1) % order.length];
       clearStatus('statusTarefasInternas');
+      if (pos < 0 || pos >= order.length - 1) {
+        setStatus('statusTarefasInternas', 'Esta tarefa já está numa etapa final e não pode avançar mais por este botão.', 'warn', true);
+        return;
+      }
+      const nextStatus = order[pos + 1];
       try {
         const savedTask = await updateInternalTask(taskId, { status: nextStatus });
         manualInternalTasks[idx] = savedTask;
         renderInternalTasks();
+        renderTrabalhoDoDia();
         setStatus('statusTarefasInternas', 'Situação da tarefa atualizada.', 'ok', true);
       } catch (e) {
         setStatus('statusTarefasInternas', 'Não consegui atualizar a situação da tarefa: ' + (e.message || String(e)), 'bad', false);
       }
     }
 
-    async function deleteInternalTask(taskId){
+    async function cancelInternalTask(taskId){
+      const idx = manualInternalTasks.findIndex((t) => String(t.id) === String(taskId));
+      if (idx < 0) return;
+      const current = String(manualInternalTasks[idx]?.status || '').trim();
       clearStatus('statusTarefasInternas');
+      if (['cancelada', 'arquivada'].includes(current)) {
+        setStatus('statusTarefasInternas', 'Esta tarefa já está cancelada.', 'warn', true);
+        return;
+      }
       try {
-        await removeInternalTask(taskId);
-        manualInternalTasks = manualInternalTasks.filter((t) => String(t.id) !== String(taskId));
+        const savedTask = await updateInternalTask(taskId, { status: 'cancelada' });
+        manualInternalTasks[idx] = savedTask;
         renderInternalTasks();
-        setStatus('statusTarefasInternas', 'Tarefa excluída.', 'ok', true);
+        renderTrabalhoDoDia();
+        setStatus('statusTarefasInternas', 'Tarefa cancelada.', 'ok', true);
       } catch (e) {
-        setStatus('statusTarefasInternas', 'Não consegui excluir a tarefa: ' + (e.message || String(e)), 'bad', false);
+        setStatus('statusTarefasInternas', 'Não consegui cancelar a tarefa: ' + (e.message || String(e)), 'bad', false);
       }
     }
 
@@ -9741,7 +9742,7 @@ async function fetchActiveLoans(){
           if (deleteInternalTaskBtn.disabled) return;
           deleteInternalTaskBtn.disabled = true;
           try {
-            await deleteInternalTask(deleteInternalTaskBtn.getAttribute('data-internal-task-delete'));
+            await cancelInternalTask(deleteInternalTaskBtn.getAttribute('data-internal-task-delete'));
           } finally {
             deleteInternalTaskBtn.disabled = false;
           }
