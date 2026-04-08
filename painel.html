@@ -6621,11 +6621,6 @@ function getCurrentPainelTimeZone(){
     }
 
     async function removeInternalTask(taskId){
-      /*
-        Garde-fou métier : même si un ancien chemin rappelait encore
-        removeInternalTask(), on ne supprime plus physiquement la ligne.
-        On redirige vers l’annulation métier déjà retenue pour ce panneau.
-      */
       return cancelInternalTask(taskId);
     }
 
@@ -6678,12 +6673,28 @@ function getCurrentPainelTimeZone(){
       return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
     }
 
+    function normalizeInternalTaskStatusForFlow(status){
+      const raw = String(status || '').trim() || 'aberta';
+      return raw === 'a_fazer' ? 'aberta' : raw;
+    }
+
+    function getNextInternalTaskStatus(status){
+      const order = ['aberta', 'em_andamento', 'concluida'];
+      const current = normalizeInternalTaskStatusForFlow(status);
+      const pos = order.indexOf(current);
+      return (pos >= 0 && pos < order.length - 1) ? order[pos + 1] : '';
+    }
+
     function notifyInternalTaskOwner(taskId){
       const task = manualInternalTasks.find((row) => String(row.id) === String(taskId));
       if (!task) return;
       const href = buildInternalTaskMailto(task);
       if (!href) {
-        setStatus('statusTarefasInternas', 'Preencha o campo Responsável com um e-mail válido para enviar o aviso.', 'warn');
+        const ownerLabel = String(task?.owner || '').trim();
+        const detail = ownerLabel
+          ? `Le responsable enregistré (« ${ownerLabel} ») n’a pas d’e-mail valide pour cet avis.`
+          : 'Cette tâche n’a pas de responsable avec e-mail valide enregistré pour cet avis.';
+        setStatus('statusTarefasInternas', detail, 'warn');
         return;
       }
       clearStatus('statusTarefasInternas');
@@ -6709,7 +6720,13 @@ function getCurrentPainelTimeZone(){
           : '<div class="task-empty">Nenhuma tarefa interna cadastrada por enquanto.</div>';
         return;
       }
-      host.innerHTML = rows.map((task) => `
+      host.innerHTML = rows.map((task) => {
+        const notifyEmail = internalTaskOwnerEmail(task?.owner || '');
+        const nextStatus = getNextInternalTaskStatus(task?.status || 'aberta');
+        const nextStatusLabel = nextStatus ? translateInternalTaskStatus(nextStatus) : '';
+        const isFinalTaskStage = ['concluida', 'cancelada', 'arquivada'].includes(String(task.status || ''));
+        const canCancelTask = !['cancelada', 'arquivada'].includes(String(task.status || ''));
+        return `
         <div class="task-item" data-internal-task-id="${esc(task.id)}">
           <div class="task-item-head">
             <div>
@@ -6727,17 +6744,21 @@ function getCurrentPainelTimeZone(){
             ${task.tags ? `<span class="mini subtle">Marcador: ${esc(task.tags)}</span>` : ''}
             <span class="mini subtle">Criada em: ${esc(fmtDateTime(task.created_at))}</span>
           </div>
+          <div class="task-item-meta">
+            <span class="mini subtle">${notifyEmail ? `Aviso por e-mail: ${esc(notifyEmail)}` : 'Aviso indisponível: responsável sem e-mail válido.'}</span>
+            ${nextStatusLabel ? `<span class="mini subtle">Próxima etapa: ${esc(nextStatusLabel)}</span>` : `<span class="mini subtle">Sem avanço adicional disponível nesta etapa.</span>`}
+          </div>
           <div class="task-item-actions">
-            <button class="btn mini" type="button" data-internal-task-notify="${esc(task.id)}">Avisar responsável</button>
-            ${['concluida', 'cancelada', 'arquivada'].includes(String(task.status || ''))
+            <button class="btn mini" type="button" data-internal-task-notify="${esc(task.id)}" ${notifyEmail ? '' : 'disabled'}>Avisar responsável</button>
+            ${isFinalTaskStage || !nextStatusLabel
               ? ''
-              : `<button class="btn mini" type="button" data-internal-task-next="${esc(task.id)}">Avançar situação</button>`}
-            ${['cancelada', 'arquivada'].includes(String(task.status || ''))
-              ? ''
-              : `<button class="btn mini" type="button" data-internal-task-delete="${esc(task.id)}">Cancelar tarefa</button>`}
+              : `<button class="btn mini" type="button" data-internal-task-next="${esc(task.id)}">Avançar para ${esc(nextStatusLabel)}</button>`}
+            ${canCancelTask
+              ? `<button class="btn mini" type="button" data-internal-task-delete="${esc(task.id)}">Cancelar tarefa</button>`
+              : ''}
           </div>
         </div>
-      `).join('');
+      `;}).join('');
     }
 
     async function addInternalTask(){
@@ -6748,21 +6769,19 @@ function getCurrentPainelTimeZone(){
     async function cycleInternalTaskStatus(taskId){
       const idx = manualInternalTasks.findIndex((t) => String(t.id) === String(taskId));
       if (idx < 0) return;
-      const order = ['a_fazer', 'em_andamento', 'concluida'];
-      const current = manualInternalTasks[idx].status || 'a_fazer';
-      const pos = order.indexOf(current);
+      const current = normalizeInternalTaskStatusForFlow(manualInternalTasks[idx].status || 'aberta');
+      const nextStatus = getNextInternalTaskStatus(current);
       clearStatus('statusTarefasInternas');
-      if (pos < 0 || pos >= order.length - 1) {
+      if (!nextStatus) {
         setStatus('statusTarefasInternas', 'Esta tarefa já está numa etapa final e não pode avançar mais por este botão.', 'warn', true);
         return;
       }
-      const nextStatus = order[pos + 1];
       try {
         const savedTask = await updateInternalTask(taskId, { status: nextStatus });
         manualInternalTasks[idx] = savedTask;
         renderInternalTasks();
         renderTrabalhoDoDia();
-        setStatus('statusTarefasInternas', 'Situação da tarefa atualizada.', 'ok', true);
+        setStatus('statusTarefasInternas', `Situação da tarefa atualizada para ${translateInternalTaskStatus(nextStatus)}.`, 'ok', true);
       } catch (e) {
         setStatus('statusTarefasInternas', 'Não consegui atualizar a situação da tarefa: ' + (e.message || String(e)), 'bad', false);
       }
