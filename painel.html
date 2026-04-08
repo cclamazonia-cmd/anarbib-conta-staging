@@ -6388,7 +6388,8 @@ function getCurrentPainelTimeZone(){
         bloqueada: 'Bloqueada',
         concluida: 'Concluída',
         arquivada: 'Arquivada',
-        cancelada: 'Cancelada'
+        cancelada: 'Cancelada',
+        descartada: 'Descartada'
       })[String(status || '')] || 'Aberta';
     }
 
@@ -6520,7 +6521,8 @@ function getCurrentPainelTimeZone(){
         bloqueada: 'bad',
         concluida: 'ok',
         arquivada: 'bad',
-        cancelada: 'bad'
+        cancelada: 'bad',
+        descartada: 'bad'
       })[String(status || '')] || 'warn';
     }
 
@@ -6539,7 +6541,8 @@ function getCurrentPainelTimeZone(){
         bloqueada: 'bloqueada',
         concluida: 'concluida',
         arquivada: 'arquivada',
-        cancelada: 'cancelada'
+        cancelada: 'cancelada',
+        descartada: 'descartada'
       })[rawStatus] || rawStatus;
       return {
         id: String(row?.id || ''),
@@ -6722,10 +6725,12 @@ function getCurrentPainelTimeZone(){
       }
       host.innerHTML = rows.map((task) => {
         const notifyEmail = internalTaskOwnerEmail(task?.owner || '');
-        const nextStatus = getNextInternalTaskStatus(task?.status || 'aberta');
+        const statusValue = String(task.status || '');
+        const nextStatus = getNextInternalTaskStatus(statusValue || 'aberta');
         const nextStatusLabel = nextStatus ? translateInternalTaskStatus(nextStatus) : '';
-        const isFinalTaskStage = ['concluida', 'cancelada', 'arquivada'].includes(String(task.status || ''));
-        const canCancelTask = !['cancelada', 'arquivada'].includes(String(task.status || ''));
+        const isFinalTaskStage = ['concluida', 'cancelada', 'arquivada', 'descartada'].includes(statusValue);
+        const canCancelTask = !['cancelada', 'arquivada', 'descartada'].includes(statusValue);
+        const canDiscardTask = statusValue === 'cancelada';
         return `
         <div class="task-item" data-internal-task-id="${esc(task.id)}">
           <div class="task-item-head">
@@ -6755,6 +6760,9 @@ function getCurrentPainelTimeZone(){
               : `<button class="btn mini" type="button" data-internal-task-next="${esc(task.id)}">Avançar para ${esc(nextStatusLabel)}</button>`}
             ${canCancelTask
               ? `<button class="btn mini" type="button" data-internal-task-delete="${esc(task.id)}">Cancelar tarefa</button>`
+              : ''}
+            ${canDiscardTask
+              ? `<button class="btn mini" type="button" data-internal-task-discard="${esc(task.id)}">Descartar tarefa</button>`
               : ''}
           </div>
         </div>
@@ -6792,8 +6800,8 @@ function getCurrentPainelTimeZone(){
       if (idx < 0) return;
       const current = String(manualInternalTasks[idx]?.status || '').trim();
       clearStatus('statusTarefasInternas');
-      if (['cancelada', 'arquivada'].includes(current)) {
-        setStatus('statusTarefasInternas', 'Esta tarefa já está cancelada.', 'warn', true);
+      if (['cancelada', 'arquivada', 'descartada'].includes(current)) {
+        setStatus('statusTarefasInternas', current === 'descartada' ? 'Esta tarefa já está descartada.' : 'Esta tarefa já está cancelada.', 'warn', true);
         return;
       }
       try {
@@ -6807,8 +6815,32 @@ function getCurrentPainelTimeZone(){
       }
     }
 
+    async function discardInternalTask(taskId){
+      const idx = manualInternalTasks.findIndex((t) => String(t.id) === String(taskId));
+      if (idx < 0) return;
+      const current = String(manualInternalTasks[idx]?.status || '').trim();
+      clearStatus('statusTarefasInternas');
+      if (current === 'descartada') {
+        setStatus('statusTarefasInternas', 'Esta tarefa já está descartada.', 'warn', true);
+        return;
+      }
+      if (current !== 'cancelada') {
+        setStatus('statusTarefasInternas', 'Só é possível descartar uma tarefa que já esteja cancelada.', 'warn', true);
+        return;
+      }
+      try {
+        const savedTask = await updateInternalTask(taskId, { status: 'descartada' });
+        manualInternalTasks[idx] = savedTask;
+        renderInternalTasks();
+        renderTrabalhoDoDia();
+        setStatus('statusTarefasInternas', 'Tarefa descartada.', 'ok', true);
+      } catch (e) {
+        setStatus('statusTarefasInternas', 'Não consegui descartar a tarefa: ' + (e.message || String(e)), 'bad', false);
+      }
+    }
+
     function getVisibleInternalTasks(){
-      const rows = [...manualInternalTasks];
+      const rows = [...manualInternalTasks].filter((task) => String(task?.status || '') !== 'descartada');
       if (internalTasksFocusMode !== 'today') return rows;
       const todayYmd = zonedNowParts(getCurrentPainelTimeZone()).ymd;
       const focusedTaskId = String(internalTasksFocusTaskId || '').trim();
@@ -6872,7 +6904,7 @@ function getCurrentPainelTimeZone(){
 
       manualInternalTasks.forEach((task) => {
         if (!task?.due_date) return;
-        if (['concluida', 'cancelada', 'arquivada'].includes(String(task.status || ''))) return;
+        if (['concluida', 'cancelada', 'arquivada', 'descartada'].includes(String(task.status || ''))) return;
         const dueDiff = daysDiffFromToday(task.due_date);
         if (dueDiff === 0){
           tasks.push({
@@ -9765,6 +9797,18 @@ async function fetchActiveLoans(){
             await cancelInternalTask(deleteInternalTaskBtn.getAttribute('data-internal-task-delete'));
           } finally {
             deleteInternalTaskBtn.disabled = false;
+          }
+          return;
+        }
+
+        const discardInternalTaskBtn = ev.target.closest('[data-internal-task-discard]');
+        if (discardInternalTaskBtn) {
+          if (discardInternalTaskBtn.disabled) return;
+          discardInternalTaskBtn.disabled = true;
+          try {
+            await discardInternalTask(discardInternalTaskBtn.getAttribute('data-internal-task-discard'));
+          } finally {
+            discardInternalTaskBtn.disabled = false;
           }
           return;
         }
