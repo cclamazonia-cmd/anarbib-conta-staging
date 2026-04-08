@@ -2913,6 +2913,8 @@
     let libraryServiceState = null;
     let reservationFollowUpFilter = 'all';
     let manualInternalTasks = [];
+    let internalTasksFocusMode = 'all';
+    let internalTasksFocusTaskId = '';
     const INTERNAL_TASKS_TABLE = 'painel_internal_tasks';
     let internalTaskLibrarians = [];
     let internalTaskOwnerHideTimer = null;
@@ -6359,6 +6361,9 @@ function getCurrentPainelTimeZone(){
     }
 
     function openInternalTask(taskId){
+      internalTasksFocusMode = 'today';
+      internalTasksFocusTaskId = String(taskId || '').trim();
+      renderInternalTasks();
       if (typeof activateMainTab === 'function') activateMainTab('tarefas-internas');
       requestAnimationFrame(() => {
         const row = document.querySelector(`[data-internal-task-id="${CSS.escape(String(taskId || ''))}"]`);
@@ -6687,13 +6692,15 @@ function getCurrentPainelTimeZone(){
     function renderInternalTasks(){
       const host = $('taskListInternas');
       if (!host) return;
-      const rows = [...manualInternalTasks].sort((a,b) => {
+      const rows = getVisibleInternalTasks().sort((a,b) => {
         const p = priorityRank(a.priority) - priorityRank(b.priority);
         if (p) return p;
         return String(b.created_at || '').localeCompare(String(a.created_at || ''));
       });
       if (!rows.length){
-        host.innerHTML = '<div class="task-empty">Nenhuma tarefa interna cadastrada por enquanto.</div>';
+        host.innerHTML = internalTasksFocusMode === 'today'
+          ? '<div class="task-empty">Nenhuma tarefa interna com prazo hoje para mostrar nesta abertura.</div>'
+          : '<div class="task-empty">Nenhuma tarefa interna cadastrada por enquanto.</div>';
         return;
       }
       host.innerHTML = rows.map((task) => `
@@ -6777,6 +6784,18 @@ function getCurrentPainelTimeZone(){
       } catch (e) {
         setStatus('statusTarefasInternas', 'Não consegui excluir a tarefa: ' + (e.message || String(e)), 'bad', false);
       }
+    }
+
+    function getVisibleInternalTasks(){
+      const rows = [...manualInternalTasks];
+      if (internalTasksFocusMode !== 'today') return rows;
+      const todayYmd = zonedNowParts(getCurrentPainelTimeZone()).ymd;
+      const focusedTaskId = String(internalTasksFocusTaskId || '').trim();
+      return rows.filter((task) => {
+        const dueDate = String(task?.due_date || '').slice(0,10);
+        if (dueDate === todayYmd) return true;
+        return !!focusedTaskId && String(task?.id || '') === focusedTaskId;
+      });
     }
 
     function isReservationPickupScheduledStage(stage){
@@ -6933,6 +6952,11 @@ function getCurrentPainelTimeZone(){
       const validTabs = new Set(panels.map((panel) => panel.dataset.tab).filter(Boolean));
       function activate(tab, { pushHash = true } = {}){
         const nextTab = validTabs.has(tab) ? tab : 'trabalho-do-dia';
+        if (nextTab !== 'tarefas-internas') {
+          internalTasksFocusMode = 'all';
+          internalTasksFocusTaskId = '';
+          renderInternalTasks();
+        }
         btns.forEach((btn) => {
           const active = btn.dataset.tab === nextTab;
           btn.classList.toggle('active', active);
@@ -11347,6 +11371,11 @@ function initPartnerProbeUi() {
     const valid = new Set(panels.map((panel) => panel.dataset.tab).filter(Boolean));
     const activate = (tab, { pushHash = true } = {}) => {
       const next = valid.has(tab) ? tab : 'trabalho-do-dia';
+      if (next !== 'tarefas-internas') {
+        internalTasksFocusMode = 'all';
+        internalTasksFocusTaskId = '';
+        renderInternalTasks();
+      }
       btns.forEach((btn) => {
         const active = btn.dataset.tab === next;
         btn.classList.toggle('active', active);
