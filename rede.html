@@ -139,11 +139,11 @@
 
     <section class="hero">
       <h1>Painel de rede</h1>
-      <p>Esta página é reservada à coordenação do AnarBib. Ela centraliza o panorama geral da rede, as solicitações institucionais et la première couche de traitement des demandes.</p>
+      <p>Esta página é reservada à coordenação do AnarBib. Ela reúne o panorama geral da rede, as solicitações institucionais e o primeiro tratamento administrativo dessas entradas.</p>
     </section>
 
     <section class="notice">
-      <p><b>Nota importante:</b> esta première version traite déjà la lecture globale et le changement de statut des solicitações. Le bouton “Pedir complemento” garde pour l’instant le statut <b>em análise</b> et sert surtout à préparer une note de retour en attendant la chaîne e-mail dédiée.</p>
+      <p><b>Nota importante:</b> esta versão já permite ler as solicitações, mudar o status e ativar tecnicamente uma biblioteca já aprovada. O botão <b>Pedir complemento</b> mantém o status <b>em análise</b> e envia a solicitação de informações adicionais com base na nota registrada.</p>
     </section>
 
     <div id="accessNotice" class="notice hidden">
@@ -201,7 +201,7 @@
             <div class="section-head">
               <div>
                 <h2>Bibliotecas da rede</h2>
-                <div class="mini">Primeiro panorama por biblioteca : leitorado, equipe locale et circulation.</div>
+                <div class="mini">Primeiro panorama por biblioteca: leitorado, equipe local e circulação.</div>
               </div>
               <div class="actions-wrap">
                 <button class="btn mini" id="btnRefreshLibraries" type="button">Atualizar bibliotecas</button>
@@ -234,7 +234,7 @@
             <div class="section-head">
               <div>
                 <h2>Detalhe da solicitação</h2>
-                <div class="mini">Sélectionne une ligne du tableau pour lire, annoter et traiter la demande.</div>
+                <div class="mini">Selecione uma linha da tabela para ler, anotar e tratar a solicitação.</div>
               </div>
             </div>
             <div id="detailStatus" class="status"></div>
@@ -250,20 +250,26 @@
                 <div id="detailNeeds" class="long">—</div>
               </div>
               <div class="detail-item">
+                <b>Ativação técnica</b>
+                <div id="detailActivation" class="long">Ainda não ativada.</div>
+              </div>
+              <div class="detail-item">
                 <b>Nota de resposta / análise</b>
                 <textarea id="reviewNotesInput" placeholder="Escreva aqui a nota interna ou a futura mensagem de retorno."></textarea>
               </div>
               <div class="muted-box">
                 <div class="mini"><b>Ações disponíveis agora</b><br>
-                  • <b>Marcar em análise</b> : muda o status para <b>em_analise</b>.<br>
-                  • <b>Pedir complemento</b> : mantém <b>em_analise</b> et pré-remplit une logique de demande complémentaire, en attendant l’envoi automatique de mail.<br>
-                  • <b>Aprovar</b>, <b>Recusar</b>, <b>Arquivar</b> : mudanças diretas de status.
+                  • <b>Marcar em análise</b> : muda o status para <b>em análise</b>.<br>
+                  • <b>Pedir complemento</b>: mantém <b>em análise</b> e usa a nota registrada como base para pedir informações adicionais.<br>
+                  • <b>Aprovar</b>, <b>Recusar</b>, <b>Arquivar</b>: mudanças diretas de status.<br>
+                  • <b>Ativar biblioteca</b>: depois da aprovação, cria a biblioteca na rede e libera o acesso bibliotecário inicial.
                 </div>
               </div>
               <div class="actions-wrap">
                 <button class="btn mini soft" id="btnSetAnalysis" type="button">Marcar em análise</button>
                 <button class="btn mini soft" id="btnRequestMore" type="button">Pedir complemento</button>
                 <button class="btn mini" id="btnApprove" type="button">Aprovar</button>
+                <button class="btn mini" id="btnActivate" type="button">Ativar biblioteca</button>
                 <button class="btn mini" id="btnRefuse" type="button">Recusar</button>
                 <button class="btn mini" id="btnArchive" type="button">Arquivar</button>
               </div>
@@ -312,6 +318,23 @@
 
     function metricCard(label, value) {
       return `<div class="metric-card"><b>${esc(label)}</b><span>${esc(value ?? '0')}</span></div>`;
+    }
+
+    function isTechnicallyActivated(row) {
+      return !!String(row?.approved_library_ref || '').trim();
+    }
+
+    function updateActionButtons() {
+      const hasSelection = !!selectedRequest?.id;
+      const isApproved = selectedRequest?.request_status === 'aprovada';
+      const isActivated = isTechnicallyActivated(selectedRequest);
+
+      $('btnSetAnalysis').disabled = !hasSelection;
+      $('btnRequestMore').disabled = !hasSelection;
+      $('btnApprove').disabled = !hasSelection || isActivated;
+      $('btnRefuse').disabled = !hasSelection || isActivated;
+      $('btnArchive').disabled = !hasSelection;
+      $('btnActivate').disabled = !hasSelection || !isApproved || isActivated;
     }
 
     async function ensureAccess() {
@@ -453,6 +476,8 @@
       $('detailSummary').textContent = '—';
       $('detailNeeds').textContent = '—';
       $('reviewNotesInput').value = '';
+      $('detailActivation').textContent = 'Ainda não ativada.';
+      updateActionButtons();
       setStatus('detailStatus', '', '');
     }
 
@@ -485,6 +510,8 @@
           ['Telefone contato', row.contact_phone || '—'],
           ['E-mail do envio', row.submitted_by_email_snapshot],
           ['Primeiro responsável', row.first_manager_intent],
+          ['Biblioteca ativada', row.approved_library_ref || 'Ainda não'],
+          ['Vínculo bibliotecário', row.approved_membership_ref || 'Ainda não'],
           ['Revisto em', fmtDateTime(row.reviewed_at)],
           ['Revisado por', row.reviewed_by_user_id || '—']
         ].map(([label, value]) => `
@@ -495,14 +522,51 @@
         `).join('');
         $('detailSummary').textContent = row.summary || '—';
         $('detailNeeds').textContent = [row.public_profile, row.collection_profile, row.needs].filter(Boolean).join('\n\n') || '—';
+        $('detailActivation').textContent = isTechnicallyActivated(row)
+          ? `Biblioteca criada: ${row.approved_library_ref}\nVínculo inicial liberado: ${row.approved_membership_ref || 'sem vínculo automático'}`
+          : 'Ainda não ativada tecnicamente.';
         $('reviewNotesInput').value = row.review_notes || '';
         document.querySelectorAll('.request-row').forEach((tr) => {
           tr.classList.toggle('is-selected', tr.getAttribute('data-request-id') === String(row.id));
         });
+        updateActionButtons();
         setStatus('detailStatus', 'Detalhe carregado.', 'ok');
       } catch (error) {
         if (!opts.refreshOnly) resetDetail();
         setStatus('detailStatus', 'Não consegui carregar o detalhe: ' + (error?.message || String(error)), 'bad');
+      }
+    }
+
+    async function activateSelectedRequest() {
+      if (!selectedRequest?.id) {
+        setStatus('detailStatus', 'Selecione primeiro uma solicitação.', 'warn');
+        return;
+      }
+      if (selectedRequest.request_status !== 'aprovada') {
+        setStatus('detailStatus', 'A ativação técnica só pode ser feita depois da aprovação.', 'warn');
+        return;
+      }
+      if (isTechnicallyActivated(selectedRequest)) {
+        setStatus('detailStatus', 'Esta solicitação já foi ativada tecnicamente.', 'info');
+        return;
+      }
+
+      try {
+        setStatus('detailStatus', 'Ativando biblioteca e liberando acesso inicial…', 'info');
+        const { data, error } = await supabase.rpc('fn_activate_approved_library_request', {
+          p_request_id: selectedRequest.id
+        });
+        if (error) throw error;
+
+        const activationRow = Array.isArray(data) ? data[0] : data;
+        await loadRequests();
+        await selectRequest(selectedRequest.id);
+        await Promise.all([loadSummary(), loadLibraries()]);
+
+        const slugInfo = activationRow?.library_slug ? ` Biblioteca criada: ${activationRow.library_slug}.` : '';
+        setStatus('detailStatus', 'Biblioteca ativada com sucesso.' + slugInfo, 'ok');
+      } catch (error) {
+        setStatus('detailStatus', 'Não consegui ativar a biblioteca: ' + (error?.message || String(error)), 'bad');
       }
     }
 
@@ -537,6 +601,7 @@
 
     $('btnSetAnalysis').addEventListener('click', () => updateRequestStatus('em_analise'));
     $('btnApprove').addEventListener('click', () => updateRequestStatus('aprovada'));
+    $('btnActivate').addEventListener('click', activateSelectedRequest);
     $('btnRefuse').addEventListener('click', () => updateRequestStatus('recusada'));
     $('btnArchive').addEventListener('click', () => updateRequestStatus('arquivada'));
     $('btnRequestMore').addEventListener('click', () => {
@@ -554,6 +619,8 @@
       try { await supabase.auth.signOut(); } catch (_) {}
       window.location.href = 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html';
     });
+
+    updateActionButtons();
 
     async function init() {
       const ok = await ensureAccess();
