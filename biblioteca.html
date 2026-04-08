@@ -561,7 +561,7 @@
     };
 
     try {
-      const mod = await import("./shared/config.js");
+      const mod = await import("./shared/config.js").catch(() => import("./config.js"));
       if (mod?.CONFIG) {
         CONFIG = {
           ...FALLBACK_CONFIG,
