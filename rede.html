@@ -89,6 +89,9 @@
       background:linear-gradient(180deg,#26060a,#160407);color:#fff;border-bottom:1px solid rgba(255,255,255,.10);
       font-size:.84rem;text-transform:uppercase;letter-spacing:.05em
     }
+    thead th.sortable{cursor:pointer;user-select:none}
+    thead th.sortable:hover{background:linear-gradient(180deg,#32080d,#1d0508)}
+    thead th.sortable.is-active{color:#ffe3e7}
     tbody td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06);vertical-align:top;word-break:break-word;overflow-wrap:anywhere}
     tbody tr:hover td{background:rgba(179,0,24,.08)}
     .pill{
@@ -182,16 +185,17 @@
               <table>
                 <thead>
                   <tr>
-                    <th>Data</th>
-                    <th>Biblioteca</th>
-                    <th>Local</th>
-                    <th>Contato</th>
-                    <th>Status</th>
-                    <th>Etapa</th>
+                    <th class="sortable" data-table="requests" data-sort-key="created_at" data-sort-type="date" data-label="Data">Data</th>
+                    <th class="sortable" data-table="requests" data-sort-key="library_name" data-sort-type="text" data-label="Biblioteca">Biblioteca</th>
+                    <th class="sortable" data-table="requests" data-sort-key="location" data-sort-type="text" data-label="Local">Local</th>
+                    <th class="sortable" data-table="requests" data-sort-key="contact_name" data-sort-type="text" data-label="Contato">Contato</th>
+                    <th class="sortable" data-table="requests" data-sort-key="request_status" data-sort-type="text" data-label="Status">Status</th>
+                    <th class="sortable" data-table="requests" data-sort-key="project_stage" data-sort-type="text" data-label="Etapa">Etapa</th>
+                    <th>Ações</th>
                   </tr>
                 </thead>
                 <tbody id="requestsTableBody">
-                  <tr><td colspan="6">Carregando…</td></tr>
+                  <tr><td colspan="7">Carregando…</td></tr>
                 </tbody>
               </table>
             </div>
@@ -212,13 +216,13 @@
               <table>
                 <thead>
                   <tr>
-                    <th>Biblioteca</th>
-                    <th>Leitores</th>
-                    <th>Bibliotecários</th>
-                    <th>Empréstimos</th>
-                    <th>Reservas</th>
-                    <th>Consultas</th>
-                    <th>Solicitações em aberto</th>
+                    <th class="sortable" data-table="libraries" data-sort-key="library_name" data-sort-type="text" data-label="Biblioteca">Biblioteca</th>
+                    <th class="sortable" data-table="libraries" data-sort-key="readers_total" data-sort-type="number" data-label="Leitores">Leitores</th>
+                    <th class="sortable" data-table="libraries" data-sort-key="librarians_total" data-sort-type="number" data-label="Bibliotecários">Bibliotecários</th>
+                    <th class="sortable" data-table="libraries" data-sort-key="loans_open_total" data-sort-type="number" data-label="Empréstimos">Empréstimos</th>
+                    <th class="sortable" data-table="libraries" data-sort-key="reservations_active_total" data-sort-type="number" data-label="Reservas">Reservas</th>
+                    <th class="sortable" data-table="libraries" data-sort-key="consultations_active_total" data-sort-type="number" data-label="Consultas">Consultas</th>
+                    <th class="sortable" data-table="libraries" data-sort-key="pending_requests_total" data-sort-type="number" data-label="Solicitações em aberto">Solicitações em aberto</th>
                   </tr>
                 </thead>
                 <tbody id="librariesTableBody">
@@ -287,6 +291,11 @@
 
     let selectedRequest = null;
     let requestsRows = [];
+    let librariesRows = [];
+    const sortState = {
+      requests: { key: 'created_at', dir: 'desc' },
+      libraries: { key: 'library_name', dir: 'asc' }
+    };
 
     function setStatus(id, text = '', kind = '') {
       const el = $(id);
@@ -318,6 +327,120 @@
 
     function metricCard(label, value) {
       return `<div class="metric-card"><b>${esc(label)}</b><span>${esc(value ?? '0')}</span></div>`;
+    }
+
+    function getSortValue(row, key) {
+      if (!row) return '';
+      if (key === 'location') return [row.city, row.state_region, row.country].filter(Boolean).join(' · ');
+      return row[key];
+    }
+
+    function compareSortValues(a, b, type = 'text') {
+      if (type === 'number') {
+        return (Number(a) || 0) - (Number(b) || 0);
+      }
+      if (type === 'date') {
+        return new Date(a || 0).getTime() - new Date(b || 0).getTime();
+      }
+      return String(a ?? '').localeCompare(String(b ?? ''), 'pt-BR', { sensitivity: 'base', numeric: true });
+    }
+
+    function getSortedRows(rows, tableName) {
+      const state = sortState[tableName] || {};
+      const header = document.querySelector(`th.sortable[data-table="${tableName}"][data-sort-key="${state.key}"]`);
+      const type = header?.dataset?.sortType || 'text';
+      const dir = state.dir === 'asc' ? 1 : -1;
+      return [...rows].sort((left, right) => dir * compareSortValues(getSortValue(left, state.key), getSortValue(right, state.key), type));
+    }
+
+    function updateSortableHeaders() {
+      document.querySelectorAll('th.sortable').forEach((th) => {
+        const tableName = th.dataset.table;
+        const sortKey = th.dataset.sortKey;
+        const label = th.dataset.label || th.textContent.trim();
+        const isActive = sortState[tableName]?.key === sortKey;
+        const dir = sortState[tableName]?.dir === 'asc' ? '↑' : '↓';
+        th.classList.toggle('is-active', isActive);
+        th.textContent = isActive ? `${label} ${dir}` : label;
+      });
+    }
+
+    function toggleSort(tableName, sortKey) {
+      if (!sortState[tableName]) return;
+      if (sortState[tableName].key === sortKey) {
+        sortState[tableName].dir = sortState[tableName].dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortState[tableName].key = sortKey;
+        sortState[tableName].dir = 'asc';
+      }
+      if (tableName === 'requests') {
+        renderRequestsTable();
+      } else if (tableName === 'libraries') {
+        renderLibrariesTable();
+      }
+      updateSortableHeaders();
+    }
+
+    function renderRequestsTable() {
+      const tbody = $('requestsTableBody');
+      if (!tbody) return;
+      if (!requestsRows.length) {
+        tbody.innerHTML = '<tr><td colspan="7">Nenhuma solicitação encontrada.</td></tr>';
+        return;
+      }
+
+      const rows = getSortedRows(requestsRows, 'requests');
+      tbody.innerHTML = rows.map((row) => `
+          <tr class="request-row ${selectedRequest?.id === row.id ? 'is-selected' : ''}" data-request-id="${esc(row.id)}">
+            <td>${esc(fmtDateTime(row.created_at))}</td>
+            <td><strong>${esc(row.library_name)}</strong>${row.library_short_name ? `<div class="mini">${esc(row.library_short_name)}</div>` : ''}</td>
+            <td>${esc([row.city, row.state_region, row.country].filter(Boolean).join(' · '))}</td>
+            <td><strong>${esc(row.contact_name)}</strong><div class="mini">${esc(row.contact_email || '—')}</div></td>
+            <td>${statusPill(row.request_status)}</td>
+            <td>${esc(row.project_stage || '—')}</td>
+            <td>${String(row.request_status || '').trim() === 'arquivada'
+              ? `<button class="btn mini soft" type="button" data-discard-request-id="${esc(row.id)}">Descartar</button>`
+              : '<span class="mini">—</span>'}</td>
+          </tr>
+        `).join('');
+
+      tbody.querySelectorAll('[data-request-id]').forEach((tr) => {
+        tr.addEventListener('click', () => {
+          const id = tr.getAttribute('data-request-id');
+          const row = requestsRows.find((item) => String(item.id) === String(id));
+          if (row) selectRequest(row.id);
+        });
+      });
+
+      tbody.querySelectorAll('[data-discard-request-id]').forEach((btn) => {
+        btn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          const id = btn.getAttribute('data-discard-request-id');
+          if (id) discardArchivedRequest(id);
+        });
+      });
+    }
+
+    function renderLibrariesTable() {
+      const tbody = $('librariesTableBody');
+      if (!tbody) return;
+      if (!librariesRows.length) {
+        tbody.innerHTML = '<tr><td colspan="7">Nenhuma biblioteca encontrada ou métricas ainda indisponíveis.</td></tr>';
+        return;
+      }
+
+      const rows = getSortedRows(librariesRows, 'libraries');
+      tbody.innerHTML = rows.map((row) => `
+          <tr>
+            <td><strong>${esc(row.library_name || '—')}</strong><div class="mini">${esc(row.library_slug || '—')}</div></td>
+            <td>${esc(row.readers_total ?? 0)}</td>
+            <td>${esc(row.librarians_total ?? 0)}</td>
+            <td>${esc(row.loans_open_total ?? 0)}</td>
+            <td>${esc(row.reservations_active_total ?? 0)}</td>
+            <td>${esc(row.consultations_active_total ?? 0)}</td>
+            <td>${esc(row.pending_requests_total ?? 0)}</td>
+          </tr>
+        `).join('');
     }
 
     function isTechnicallyActivated(row) {
@@ -400,33 +523,14 @@
         const { data, error } = await supabase.rpc('fn_network_list_library_requests');
         if (error) throw error;
         requestsRows = Array.isArray(data) ? data : [];
-        const tbody = $('requestsTableBody');
         if (!requestsRows.length) {
-          tbody.innerHTML = '<tr><td colspan="6">Nenhuma solicitação encontrada.</td></tr>';
+          $('requestsTableBody').innerHTML = '<tr><td colspan="7">Nenhuma solicitação encontrada.</td></tr>';
           setStatus('requestsStatus', 'Nenhuma solicitação encontrada.', 'warn');
           resetDetail();
           return;
         }
 
-        tbody.innerHTML = requestsRows.map((row) => `
-          <tr class="request-row ${selectedRequest?.id === row.id ? 'is-selected' : ''}" data-request-id="${esc(row.id)}">
-            <td>${esc(fmtDateTime(row.created_at))}</td>
-            <td><strong>${esc(row.library_name)}</strong>${row.library_short_name ? `<div class="mini">${esc(row.library_short_name)}</div>` : ''}</td>
-            <td>${esc([row.city, row.state_region, row.country].filter(Boolean).join(' · '))}</td>
-            <td><strong>${esc(row.contact_name)}</strong><div class="mini">${esc(row.contact_email || '—')}</div></td>
-            <td>${statusPill(row.request_status)}</td>
-            <td>${esc(row.project_stage || '—')}</td>
-          </tr>
-        `).join('');
-
-        tbody.querySelectorAll('[data-request-id]').forEach((tr) => {
-          tr.addEventListener('click', () => {
-            const id = tr.getAttribute('data-request-id');
-            const row = requestsRows.find((item) => String(item.id) === String(id));
-            if (row) selectRequest(row.id);
-          });
-        });
-
+        renderRequestsTable();
         setStatus('requestsStatus', 'Solicitações carregadas.', 'ok');
         if (selectedRequest?.id) {
           await selectRequest(selectedRequest.id, { refreshOnly: true });
@@ -443,24 +547,13 @@
         setStatus('librariesStatus', 'Carregando bibliotecas…', 'info');
         const { data, error } = await supabase.rpc('fn_network_library_metrics');
         if (error) throw error;
-        const rows = Array.isArray(data) ? data : [];
-        const tbody = $('librariesTableBody');
-        if (!rows.length) {
-          tbody.innerHTML = '<tr><td colspan="7">Nenhuma biblioteca encontrada ou métricas ainda indisponíveis.</td></tr>';
+        librariesRows = Array.isArray(data) ? data : [];
+        if (!librariesRows.length) {
+          $('librariesTableBody').innerHTML = '<tr><td colspan="7">Nenhuma biblioteca encontrada ou métricas ainda indisponíveis.</td></tr>';
           setStatus('librariesStatus', 'Nenhuma biblioteca encontrada ou métricas ainda indisponíveis.', 'warn');
           return;
         }
-        tbody.innerHTML = rows.map((row) => `
-          <tr>
-            <td><strong>${esc(row.library_name || '—')}</strong><div class="mini">${esc(row.library_slug || '—')}</div></td>
-            <td>${esc(row.readers_total ?? 0)}</td>
-            <td>${esc(row.librarians_total ?? 0)}</td>
-            <td>${esc(row.loans_open_total ?? 0)}</td>
-            <td>${esc(row.reservations_active_total ?? 0)}</td>
-            <td>${esc(row.consultations_active_total ?? 0)}</td>
-            <td>${esc(row.pending_requests_total ?? 0)}</td>
-          </tr>
-        `).join('');
+        renderLibrariesTable();
         setStatus('librariesStatus', 'Bibliotecas carregadas.', 'ok');
       } catch (error) {
         $('librariesTableBody').innerHTML = `<tr><td colspan="7">${esc(error?.message || 'Falha ao carregar bibliotecas.')}</td></tr>`;
@@ -478,6 +571,7 @@
       $('reviewNotesInput').value = '';
       $('detailActivation').textContent = 'Ainda não ativada.';
       updateActionButtons();
+    updateSortableHeaders();
       setStatus('detailStatus', '', '');
     }
 
@@ -570,6 +664,36 @@
       }
     }
 
+
+    async function discardArchivedRequest(requestId) {
+      const row = requestsRows.find((item) => String(item.id) === String(requestId));
+      if (!row) {
+        setStatus('requestsStatus', 'Solicitação não encontrada para descarte.', 'warn');
+        return;
+      }
+      if (String(row.request_status || '').trim() !== 'arquivada') {
+        setStatus('requestsStatus', 'Só é possível descartar solicitações já arquivadas.', 'warn');
+        return;
+      }
+      const confirmed = window.confirm(`Descartar definitivamente a solicitação de ${row.library_name || 'biblioteca'}? Esta ação não poderá ser desfeita.`);
+      if (!confirmed) return;
+
+      try {
+        setStatus('requestsStatus', 'Descartando solicitação arquivada…', 'info');
+        const { error } = await supabase.rpc('fn_network_discard_library_request', {
+          p_request_id: requestId
+        });
+        if (error) throw error;
+        if (selectedRequest?.id === requestId) {
+          resetDetail();
+        }
+        await Promise.all([loadRequests(), loadSummary(), loadLibraries()]);
+        setStatus('requestsStatus', 'Solicitação arquivada descartada com sucesso.', 'ok');
+      } catch (error) {
+        setStatus('requestsStatus', 'Não consegui descartar a solicitação arquivada: ' + (error?.message || String(error)), 'bad');
+      }
+    }
+
     async function updateRequestStatus(newStatus, noteOverride = null) {
       if (!selectedRequest?.id) {
         setStatus('detailStatus', 'Selecione primeiro uma solicitação.', 'warn');
@@ -594,6 +718,12 @@
         setStatus('detailStatus', 'Não consegui atualizar a solicitação: ' + (error?.message || String(error)), 'bad');
       }
     }
+
+    document.querySelectorAll('th.sortable').forEach((th) => {
+      th.addEventListener('click', () => {
+        toggleSort(th.dataset.table, th.dataset.sortKey);
+      });
+    });
 
     $('btnRefreshSummary').addEventListener('click', loadSummary);
     $('btnRefreshRequests').addEventListener('click', loadRequests);
