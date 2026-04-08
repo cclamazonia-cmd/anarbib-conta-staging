@@ -73,6 +73,17 @@
     .tableWrap{overflow:auto;max-height:58vh;border-radius:16px;border:1px solid rgba(255,255,255,.10)}
     table{width:100%;border-collapse:separate;border-spacing:0;min-width:860px;background:rgba(10,10,10,.35)}
     thead th{position:sticky;top:0;z-index:2;text-align:left;padding:12px 14px;background:linear-gradient(180deg,#26060a,#160407);color:#fff;border-bottom:1px solid rgba(255,255,255,.10);font-size:.86rem;text-transform:uppercase;letter-spacing:.05em}
+    thead th.sortable{padding:0}
+    .sort-btn{all:unset;display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:12px 14px;cursor:pointer;color:inherit;font:inherit;text-transform:inherit;letter-spacing:inherit}
+    .sort-btn:focus-visible{outline:2px solid rgba(255,255,255,.55);outline-offset:-2px}
+    .sort-label{min-width:0}
+    .sort-indicator{font-size:.95rem;opacity:.72;flex:0 0 auto}
+    thead th[aria-sort="ascending"] .sort-indicator{opacity:1}
+    thead th[aria-sort="ascending"] .sort-indicator::before{content:"↑"}
+    thead th[aria-sort="ascending"] .sort-indicator{font-size:0}
+    thead th[aria-sort="descending"] .sort-indicator{opacity:1}
+    thead th[aria-sort="descending"] .sort-indicator::before{content:"↓"}
+    thead th[aria-sort="descending"] .sort-indicator{font-size:0}
     tbody td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06);vertical-align:top;word-break:break-word;overflow-wrap:anywhere}
     tbody tr:hover td{background:rgba(179,0,24,.08)}
     pre.json-box{margin:0;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.84rem;line-height:1.45}
@@ -1323,18 +1334,134 @@
       throw lastError || new Error(`RPC indisponível: ${rpcName}`);
     }
 
+    const tableSortState = new Map();
+    const tableSortCollator = new Intl.Collator('pt-BR', { numeric: true, sensitivity: 'base' });
+
+    function getTableSortKey(table){
+      if (!table) return '';
+      if (!table.dataset.sortKey) {
+        const tbody = table.querySelector('tbody[id]');
+        table.dataset.sortKey = tbody?.id || `table-${$$('table').indexOf(table)}`;
+      }
+      return table.dataset.sortKey || '';
+    }
+
+    function parseSortableValue(value){
+      const raw = String(value || '').replace(/\s+/g, ' ').trim();
+      if (!raw || raw === '—') return { type: 'empty', value: '' };
+
+      const dateMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,\s*(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+      if (dateMatch) {
+        const [, dd, mm, yyyy, hh='0', min='0', ss='0'] = dateMatch;
+        const time = new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(min), Number(ss)).getTime();
+        if (!Number.isNaN(time)) return { type: 'date', value: time };
+      }
+
+      const numericCandidate = raw.replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.');
+      if (/^-?\d+(?:\.\d+)?$/.test(numericCandidate)) {
+        const numericValue = Number(numericCandidate);
+        if (!Number.isNaN(numericValue)) return { type: 'number', value: numericValue };
+      }
+
+      return { type: 'string', value: raw.toLocaleLowerCase('pt-BR') };
+    }
+
+    function compareSortableValues(left, right){
+      if (left.type === 'empty' && right.type === 'empty') return 0;
+      if (left.type === 'empty') return 1;
+      if (right.type === 'empty') return -1;
+      if (left.type === right.type && (left.type === 'number' || left.type === 'date')) {
+        return left.value - right.value;
+      }
+      return tableSortCollator.compare(String(left.value), String(right.value));
+    }
+
+    function sortTableByColumn(table, columnIndex, direction='asc'){
+      const tbody = table?.tBodies?.[0];
+      if (!table || !tbody) return;
+      const rows = Array.from(tbody.rows || []);
+      rows.sort((rowA, rowB) => {
+        const valueA = parseSortableValue(rowA.cells?.[columnIndex]?.innerText || rowA.cells?.[columnIndex]?.textContent || '');
+        const valueB = parseSortableValue(rowB.cells?.[columnIndex]?.innerText || rowB.cells?.[columnIndex]?.textContent || '');
+        const base = compareSortableValues(valueA, valueB);
+        return direction === 'desc' ? -base : base;
+      });
+      rows.forEach((row) => tbody.appendChild(row));
+
+      Array.from(table.querySelectorAll('thead th')).forEach((th, index) => {
+        th.setAttribute('aria-sort', index === columnIndex ? (direction === 'desc' ? 'descending' : 'ascending') : 'none');
+      });
+
+      tableSortState.set(getTableSortKey(table), { columnIndex, direction });
+    }
+
+    function applyStoredSortForTbody(tbodyId){
+      const tbody = $(tbodyId);
+      const table = tbody?.closest('table');
+      if (!table) return;
+      const state = tableSortState.get(getTableSortKey(table));
+      if (state) sortTableByColumn(table, state.columnIndex, state.direction);
+    }
+
+    function initSortableTables(){
+      $$('table').forEach((table, tableIndex) => {
+        if (table.dataset.sortReady === '1') return;
+        table.dataset.sortReady = '1';
+        if (!table.dataset.sortKey) {
+          const tbody = table.querySelector('tbody[id]');
+          table.dataset.sortKey = tbody?.id || `table-${tableIndex}`;
+        }
+        Array.from(table.querySelectorAll('thead th')).forEach((th, columnIndex) => {
+          if (th.dataset.sortReady === '1') return;
+          th.dataset.sortReady = '1';
+          th.classList.add('sortable');
+          th.setAttribute('aria-sort', 'none');
+          const label = String(th.textContent || '').trim() || `Coluna ${columnIndex + 1}`;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'sort-btn';
+          btn.dataset.sortCol = String(columnIndex);
+          btn.setAttribute('aria-label', `Ordenar por ${label}`);
+          const labelSpan = document.createElement('span');
+          labelSpan.className = 'sort-label';
+          labelSpan.textContent = label;
+          const indicator = document.createElement('span');
+          indicator.className = 'sort-indicator';
+          indicator.setAttribute('aria-hidden', 'true');
+          indicator.textContent = '↕';
+          btn.append(labelSpan, indicator);
+          th.textContent = '';
+          th.appendChild(btn);
+        });
+      });
+    }
+
+    document.addEventListener('click', (event) => {
+      const sortBtn = event.target.closest('.sort-btn');
+      if (!sortBtn) return;
+      const table = sortBtn.closest('table');
+      const th = sortBtn.closest('th');
+      if (!table || !th) return;
+      const columnIndex = Number(sortBtn.dataset.sortCol || 0);
+      const currentDirection = th.getAttribute('aria-sort') === 'ascending' ? 'asc' : (th.getAttribute('aria-sort') === 'descending' ? 'desc' : '');
+      const nextDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+      sortTableByColumn(table, columnIndex, nextDirection);
+    });
+
     function renderRowsTable(tbodyId, rows, columns, emptyMessage='Nenhum dado disponível.') {
       const tbody = $(tbodyId);
       if (!tbody) return;
       const normalizedRows = asArray(rows).filter((row) => row && typeof row === 'object');
       if (!normalizedRows.length) {
         tbody.innerHTML = `<tr><td colspan="${columns.length}">${esc(emptyMessage)}</td></tr>`;
+        applyStoredSortForTbody(tbodyId);
         return;
       }
       tbody.innerHTML = normalizedRows.map((row) => `<tr>${columns.map((column) => {
         const raw = typeof column.value === 'function' ? column.value(row) : row?.[column.value];
         return `<td>${esc(displayValue(raw))}</td>`;
       }).join('')}</tr>`).join('');
+      applyStoredSortForTbody(tbodyId);
     }
     function parseJsonTextareaValue(value) {
       const raw = String(value || '').trim();
@@ -1573,6 +1700,7 @@
       if (!tbody) return;
       if (!normalizedRows.length) {
         tbody.innerHTML = '<tr><td colspan="6">Nenhum documento de regimento disponível.</td></tr>';
+        applyStoredSortForTbody('tbodyRegulationDocs');
         return;
       }
       tbody.innerHTML = normalizedRows.map((row) => {
@@ -1587,6 +1715,7 @@
           <td><div class="editor-actions"><button class="btn mini soft" type="button" data-reg-doc-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini" type="button" data-reg-doc-toggle="${esc(String(row?.id || ''))}">${esc(actionLabel)}</button></div></td>
         </tr>`;
       }).join('');
+      applyStoredSortForTbody('tbodyRegulationDocs');
     }
 
     function renderPolicySetsTable(rows) {
@@ -1595,6 +1724,7 @@
       if (!tbody) return;
       if (!normalizedRows.length) {
         tbody.innerHTML = '<tr><td colspan="6">Nenhum conjunto de regras disponível.</td></tr>';
+        applyStoredSortForTbody('tbodyPolicySets');
         return;
       }
       tbody.innerHTML = normalizedRows.map((row) => {
@@ -1610,6 +1740,7 @@
           <td><div class="editor-actions"><button class="btn mini soft" type="button" data-policy-set-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini" type="button" data-policy-set-activate="${esc(String(row?.id || ''))}">Colocar em uso</button></div></td>
         </tr>`;
       }).join('');
+      applyStoredSortForTbody('tbodyPolicySets');
     }
 
     function renderPolicyRulesTable(rows) {
@@ -1618,6 +1749,7 @@
       if (!tbody) return;
       if (!normalizedRows.length) {
         tbody.innerHTML = '<tr><td colspan="6">Nenhuma regra disponível.</td></tr>';
+        applyStoredSortForTbody('tbodyPolicyRules');
         return;
       }
       tbody.innerHTML = normalizedRows.map((row) => {
@@ -1632,6 +1764,7 @@
           <td><div class="editor-actions"><button class="btn mini soft" type="button" data-policy-rule-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini danger" type="button" data-policy-rule-delete="${esc(String(row?.id || ''))}">Excluir</button></div></td>
         </tr>`;
       }).join('');
+      applyStoredSortForTbody('tbodyPolicyRules');
     }
 
     async function saveRegulationDoc() {
@@ -1901,6 +2034,7 @@
       if (!tbody) return;
       if (!normalizedRows.length) {
         tbody.innerHTML = '<tr><td colspan="7">Nenhuma tarefa interna disponível.</td></tr>';
+        applyStoredSortForTbody('tbodyTasks');
         return;
       }
       tbody.innerHTML = normalizedRows.map((row) => {
@@ -1924,6 +2058,7 @@
           <td><div class="editor-actions"><button class="btn mini soft" type="button" data-task-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini danger" type="button" data-task-delete="${esc(String(row?.id || ''))}">Excluir</button></div></td>
         </tr>`;
       }).join('');
+      applyStoredSortForTbody('tbodyTasks');
     }
 
     function resetTaskForm() {
@@ -2154,6 +2289,7 @@
     });
 
     setupTabs();
+    initSortableTables();
     resetTaskForm();
     resetRegulationDocForm();
     resetPolicySetForm();
