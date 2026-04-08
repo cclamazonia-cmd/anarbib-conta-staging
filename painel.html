@@ -6362,7 +6362,11 @@ function getCurrentPainelTimeZone(){
       if (typeof activateMainTab === 'function') activateMainTab('tarefas-internas');
       requestAnimationFrame(() => {
         const row = document.querySelector(`[data-internal-task-id="${CSS.escape(String(taskId || ''))}"]`);
-        if (row) row.scrollIntoView({behavior:'smooth', block:'center'});
+        document.querySelectorAll('[data-internal-task-id].is-selected').forEach((el) => el.classList.remove('is-selected'));
+        if (row) {
+          row.classList.add('is-selected');
+          row.scrollIntoView({behavior:'smooth', block:'center'});
+        }
       });
     }
 
@@ -6926,7 +6930,7 @@ function getCurrentPainelTimeZone(){
     function setupMainTabs(){
       const btns = $$('.tab-btn[data-tab]');
       const panels = $$('.tab-panel[data-tab]');
-      const validTabs = new Set(btns.map((btn) => btn.dataset.tab).filter(Boolean));
+      const validTabs = new Set(panels.map((panel) => panel.dataset.tab).filter(Boolean));
       function activate(tab, { pushHash = true } = {}){
         const nextTab = validTabs.has(tab) ? tab : 'trabalho-do-dia';
         btns.forEach((btn) => {
@@ -6934,7 +6938,16 @@ function getCurrentPainelTimeZone(){
           btn.classList.toggle('active', active);
           btn.setAttribute('aria-selected', active ? 'true' : 'false');
         });
-        panels.forEach((panel) => panel.classList.toggle('active', panel.dataset.tab === nextTab));
+        panels.forEach((panel) => {
+          const active = panel.dataset.tab === nextTab;
+          const isParkedInternalTaskPanel = panel.dataset.tab === 'tarefas-internas';
+          panel.classList.toggle('active', active);
+          panel.setAttribute('aria-hidden', active ? 'false' : 'true');
+          if (isParkedInternalTaskPanel) {
+            panel.classList.toggle('hidden', !active);
+            panel.classList.toggle('institucional-parked', !active);
+          }
+        });
         try { sessionStorage.setItem(PAINEL_ACTIVE_TAB_STORAGE_KEY, nextTab); } catch (_e) {}
         if (pushHash) location.hash = `#${nextTab}`;
       }
@@ -11331,7 +11344,7 @@ function initPartnerProbeUi() {
     const btns = $$r('.tab-btn[data-tab]');
     const panels = $$r('.tab-panel[data-tab]');
     if (!btns.length || !panels.length) return;
-    const valid = new Set(btns.map((b) => b.dataset.tab).filter(Boolean));
+    const valid = new Set(panels.map((panel) => panel.dataset.tab).filter(Boolean));
     const activate = (tab, { pushHash = true } = {}) => {
       const next = valid.has(tab) ? tab : 'trabalho-do-dia';
       btns.forEach((btn) => {
@@ -11339,7 +11352,16 @@ function initPartnerProbeUi() {
         btn.classList.toggle('active', active);
         btn.setAttribute('aria-selected', active ? 'true' : 'false');
       });
-      panels.forEach((panel) => panel.classList.toggle('active', panel.dataset.tab === next));
+      panels.forEach((panel) => {
+        const active = panel.dataset.tab === next;
+        const isParkedInternalTaskPanel = panel.dataset.tab === 'tarefas-internas';
+        panel.classList.toggle('active', active);
+        panel.setAttribute('aria-hidden', active ? 'false' : 'true');
+        if (isParkedInternalTaskPanel) {
+          panel.classList.toggle('hidden', !active);
+          panel.classList.toggle('institucional-parked', !active);
+        }
+      });
       try { sessionStorage.setItem('anarbib_painel_active_tab', next); } catch (_e) {}
       if (pushHash) location.hash = `#${next}`;
     };
