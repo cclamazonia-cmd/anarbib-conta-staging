@@ -6621,11 +6621,12 @@ function getCurrentPainelTimeZone(){
     }
 
     async function removeInternalTask(taskId){
-      const { error } = await supabase
-        .from(INTERNAL_TASKS_TABLE)
-        .delete()
-        .eq('id', taskId);
-      if (error) throw error;
+      /*
+        Garde-fou métier : même si un ancien chemin rappelait encore
+        removeInternalTask(), on ne supprime plus physiquement la ligne.
+        On redirige vers l’annulation métier déjà retenue pour ce panneau.
+      */
+      return cancelInternalTask(taskId);
     }
 
     function clearInternalTaskForm(){
