@@ -834,7 +834,7 @@
         return;
       }
       if (isTechnicallyActivated(row)) {
-        setFlashStatus('requestsStatus', 'Solicitações já ligadas a uma biblioteca criada na rede devem ser preservadas e não podem ser descartadas aqui.', 'warn', 7000);
+        setFlashStatus('requestsStatus', 'Solicitações já usadas para criar uma biblioteca na rede devem ser preservadas.', 'warn', 7000);
         return;
       }
       const confirmed = window.confirm(`Descartar definitivamente a solicitação de ${row.library_name || 'biblioteca'}? Esta ação não poderá ser desfeita.`);
