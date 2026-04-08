@@ -81,7 +81,11 @@
     .section-head h2,.section-head h3{margin:0}
     .mini{font-size:.86rem;color:var(--muted);line-height:1.35}
     .status{min-height:1.2em;font-size:.92rem}
-    .status.ok{color:var(--ok)} .status.warn{color:var(--warn)} .status.bad{color:var(--bad)} .status.info{color:var(--info)}
+    .status:not(:empty){display:block;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04)}
+    .status.ok{color:var(--ok);background:rgba(74,222,128,.10);border-color:rgba(74,222,128,.22)}
+    .status.warn{color:var(--warn);background:rgba(251,191,36,.10);border-color:rgba(251,191,36,.22)}
+    .status.bad{color:var(--bad);background:rgba(251,113,133,.10);border-color:rgba(251,113,133,.22)}
+    .status.info{color:var(--info);background:rgba(96,165,250,.10);border-color:rgba(96,165,250,.22)}
     .tableWrap{overflow:auto;max-height:58vh;border-radius:16px;border:1px solid rgba(255,255,255,.10)}
     table{width:100%;border-collapse:separate;border-spacing:0;min-width:960px;background:rgba(10,10,10,.35)}
     thead th{
@@ -109,6 +113,12 @@
       border-radius:14px;padding:12px 12px;outline:none;font:inherit
     }
     .actions-wrap{display:flex;flex-wrap:wrap;gap:10px}
+    .controls-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:10px}
+    .control-group{display:flex;flex-direction:column;gap:4px;min-width:180px}
+    .control-group.grow{flex:1 1 260px}
+    .control-group label{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+    .control-group input,.control-group select{width:100%;border:1px solid rgba(255,255,255,.12);background:rgba(12,12,12,.75);color:var(--text);border-radius:12px;padding:10px 12px;outline:none;font:inherit;min-height:42px}
+    .control-group input:focus,.control-group select:focus{border-color:rgba(225,29,47,.85)!important;box-shadow:0 0 0 3px rgba(225,29,47,.18)!important}
     .empty{padding:14px;border:1px dashed rgba(255,255,255,.14);border-radius:14px;color:#cfcfcf}
     .hidden{display:none!important}
     .request-row.is-selected td{background:rgba(96,165,250,.10)}
@@ -146,7 +156,7 @@
     </section>
 
     <section class="notice">
-      <p><b>Nota importante:</b> esta versão já permite ler as solicitações, mudar o status e ativar tecnicamente uma biblioteca já aprovada. O botão <b>Pedir complemento</b> mantém o status <b>em análise</b> e envia a solicitação de informações adicionais com base na nota registrada.</p>
+      <p><b>Nota importante:</b> esta página já permite ler as solicitações, mudar o status, pedir informações adicionais e concluir a entrada de uma biblioteca já aprovada na rede. O botão <b>Pedir complemento</b> mantém o status <b>em análise</b> e usa a nota registrada como base para a mensagem enviada.</p>
     </section>
 
     <div id="accessNotice" class="notice hidden">
@@ -174,10 +184,29 @@
             <div class="section-head">
               <div>
                 <h2>Solicitações institucionais</h2>
-                <div class="mini">Leitura de todas as solicitações enviadas à coordenação da rede.</div>
+                <div class="mini">Acompanhe, filtre e organize as solicitações enviadas à coordenação da rede.</div>
               </div>
               <div class="actions-wrap">
                 <button class="btn mini" id="btnRefreshRequests" type="button">Atualizar solicitações</button>
+              </div>
+            </div>
+            <div class="controls-row">
+              <div class="control-group">
+                <label for="requestStatusFilter">Mostrar</label>
+                <select id="requestStatusFilter">
+                  <option value="todas">Todas</option>
+                  <option value="abertas">Abertas</option>
+                  <option value="pendente">Pendentes</option>
+                  <option value="em_analise">Em análise</option>
+                  <option value="aprovada">Aprovadas</option>
+                  <option value="ativadas">Ativadas</option>
+                  <option value="recusada">Recusadas</option>
+                  <option value="arquivada">Arquivadas</option>
+                </select>
+              </div>
+              <div class="control-group grow">
+                <label for="requestSearchInput">Buscar</label>
+                <input type="search" id="requestSearchInput" placeholder="Buscar por biblioteca, contato ou e-mail" />
               </div>
             </div>
             <div id="requestsStatus" class="status"></div>
@@ -205,10 +234,16 @@
             <div class="section-head">
               <div>
                 <h2>Bibliotecas da rede</h2>
-                <div class="mini">Primeiro panorama por biblioteca: leitorado, equipe local e circulação.</div>
+                <div class="mini">Panorama por biblioteca: leitorado, equipe local e circulação.</div>
               </div>
               <div class="actions-wrap">
                 <button class="btn mini" id="btnRefreshLibraries" type="button">Atualizar bibliotecas</button>
+              </div>
+            </div>
+            <div class="controls-row">
+              <div class="control-group grow">
+                <label for="librarySearchInput">Buscar biblioteca</label>
+                <input type="search" id="librarySearchInput" placeholder="Buscar por nome ou slug" />
               </div>
             </div>
             <div id="librariesStatus" class="status"></div>
@@ -238,7 +273,7 @@
             <div class="section-head">
               <div>
                 <h2>Detalhe da solicitação</h2>
-                <div class="mini">Selecione uma linha da tabela para ler, anotar e tratar a solicitação.</div>
+                <div class="mini">Selecione uma linha da tabela para ler, responder e tratar a solicitação.</div>
               </div>
             </div>
             <div id="detailStatus" class="status"></div>
@@ -254,19 +289,19 @@
                 <div id="detailNeeds" class="long">—</div>
               </div>
               <div class="detail-item">
-                <b>Ativação técnica</b>
+                <b>Entrada da biblioteca na rede</b>
                 <div id="detailActivation" class="long">Ainda não ativada.</div>
               </div>
               <div class="detail-item">
-                <b>Nota de resposta / análise</b>
-                <textarea id="reviewNotesInput" placeholder="Escreva aqui a nota interna ou a futura mensagem de retorno."></textarea>
+                <b>Mensagem interna / retorno</b>
+                <textarea id="reviewNotesInput" placeholder="Escreva aqui a nota interna ou a mensagem que servirá de base para o retorno."></textarea>
               </div>
               <div class="muted-box">
                 <div class="mini"><b>Ações disponíveis agora</b><br>
-                  • <b>Marcar em análise</b> : muda o status para <b>em análise</b>.<br>
-                  • <b>Pedir complemento</b>: mantém <b>em análise</b> e usa a nota registrada como base para pedir informações adicionais.<br>
-                  • <b>Aprovar</b>, <b>Recusar</b>, <b>Arquivar</b>: mudanças diretas de status.<br>
-                  • <b>Ativar biblioteca</b>: depois da aprovação, cria a biblioteca na rede e libera o acesso bibliotecário inicial.
+                  • <b>Marcar em análise</b>: muda o status para <b>em análise</b>.<br>
+                  • <b>Pedir complemento</b>: mantém <b>em análise</b> e usa a mensagem registrada como base para pedir informações adicionais.<br>
+                  • <b>Aprovar</b>, <b>Recusar</b>, <b>Arquivar</b>: mudam diretamente o andamento da solicitação.<br>
+                  • <b>Ativar biblioteca</b>: depois da aprovação, cria a biblioteca na rede e libera o primeiro acesso bibliotecário.
                 </div>
               </div>
               <div class="actions-wrap">
@@ -288,20 +323,74 @@
     import { supabase } from "./js/blmf-supabase.js";
 
     const $ = (id) => document.getElementById(id);
+    const STORAGE_KEY = 'anarbib_rede_ui_v1';
 
     let selectedRequest = null;
     let requestsRows = [];
     let librariesRows = [];
+    const statusTimers = {};
+
+    const savedState = (() => {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      } catch (_) {
+        return {};
+      }
+    })();
+
     const sortState = {
-      requests: { key: 'created_at', dir: 'desc' },
-      libraries: { key: 'library_name', dir: 'asc' }
+      requests: {
+        key: savedState?.sortState?.requests?.key || 'created_at',
+        dir: savedState?.sortState?.requests?.dir || 'desc'
+      },
+      libraries: {
+        key: savedState?.sortState?.libraries?.key || 'library_name',
+        dir: savedState?.sortState?.libraries?.dir || 'asc'
+      }
     };
+
+    const uiState = {
+      requestStatusFilter: savedState?.requestStatusFilter || 'todas',
+      requestSearch: savedState?.requestSearch || '',
+      librarySearch: savedState?.librarySearch || ''
+    };
+
+    function persistUiState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          sortState,
+          requestStatusFilter: uiState.requestStatusFilter,
+          requestSearch: uiState.requestSearch,
+          librarySearch: uiState.librarySearch
+        }));
+      } catch (_) {}
+    }
+
+    function clearStatusTimer(id) {
+      if (statusTimers[id]) {
+        clearTimeout(statusTimers[id]);
+        delete statusTimers[id];
+      }
+    }
 
     function setStatus(id, text = '', kind = '') {
       const el = $(id);
       if (!el) return;
+      clearStatusTimer(id);
       el.textContent = text;
       el.className = kind ? `status ${kind}` : 'status';
+    }
+
+    function setFlashStatus(id, text = '', kind = 'ok', duration = 5000) {
+      setStatus(id, text, kind);
+      if (!text || kind === 'bad') return;
+      statusTimers[id] = setTimeout(() => {
+        const el = $(id);
+        if (!el) return;
+        el.textContent = '';
+        el.className = 'status';
+        delete statusTimers[id];
+      }, duration);
     }
 
     function esc(value) {
@@ -313,10 +402,23 @@
         .replace(/'/g, '&#39;');
     }
 
+    function normalizeText(value) {
+      return String(value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+    }
+
     function fmtDateTime(value) {
       if (!value) return '—';
       const d = new Date(value);
       return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleString('pt-BR');
+    }
+
+    function firstManagerLabel(value) {
+      const map = { sim: 'Sim', nao: 'Não', a_definir: 'A definir' };
+      return map[String(value || '').trim()] || '—';
     }
 
     function statusPill(status) {
@@ -325,8 +427,20 @@
       return `<span class="pill ${cls}">${esc(s || '—')}</span>`;
     }
 
+    function requestStatusCell(row) {
+      const base = statusPill(row.request_status);
+      const activated = isTechnicallyActivated(row)
+        ? '<span class="pill info">ativada</span>'
+        : '';
+      return activated ? `${base} ${activated}` : base;
+    }
+
     function metricCard(label, value) {
       return `<div class="metric-card"><b>${esc(label)}</b><span>${esc(value ?? '0')}</span></div>`;
+    }
+
+    function isTechnicallyActivated(row) {
+      return !!String(row?.approved_library_ref || '').trim();
     }
 
     function getSortValue(row, key) {
@@ -336,12 +450,8 @@
     }
 
     function compareSortValues(a, b, type = 'text') {
-      if (type === 'number') {
-        return (Number(a) || 0) - (Number(b) || 0);
-      }
-      if (type === 'date') {
-        return new Date(a || 0).getTime() - new Date(b || 0).getTime();
-      }
+      if (type === 'number') return (Number(a) || 0) - (Number(b) || 0);
+      if (type === 'date') return new Date(a || 0).getTime() - new Date(b || 0).getTime();
       return String(a ?? '').localeCompare(String(b ?? ''), 'pt-BR', { sensitivity: 'base', numeric: true });
     }
 
@@ -373,6 +483,7 @@
         sortState[tableName].key = sortKey;
         sortState[tableName].dir = 'asc';
       }
+      persistUiState();
       if (tableName === 'requests') {
         renderRequestsTable();
       } else if (tableName === 'libraries') {
@@ -381,22 +492,59 @@
       updateSortableHeaders();
     }
 
+    function getFilteredRequestRows() {
+      const statusFilter = uiState.requestStatusFilter;
+      const search = normalizeText(uiState.requestSearch);
+
+      return requestsRows.filter((row) => {
+        const status = String(row?.request_status || '').trim();
+        if (statusFilter === 'abertas' && status === 'arquivada') return false;
+        if (statusFilter === 'ativadas' && !isTechnicallyActivated(row)) return false;
+        if (!['todas', 'abertas', 'ativadas'].includes(statusFilter) && status !== statusFilter) return false;
+
+        if (!search) return true;
+
+        const haystack = normalizeText([
+          row.library_name,
+          row.library_short_name,
+          row.contact_name,
+          row.contact_email,
+          row.submitted_by_email_snapshot,
+          row.city,
+          row.state_region,
+          row.country
+        ].filter(Boolean).join(' | '));
+
+        return haystack.includes(search);
+      });
+    }
+
+    function getFilteredLibraryRows() {
+      const search = normalizeText(uiState.librarySearch);
+      if (!search) return librariesRows;
+      return librariesRows.filter((row) => {
+        const haystack = normalizeText([row.library_name, row.library_slug].filter(Boolean).join(' | '));
+        return haystack.includes(search);
+      });
+    }
+
     function renderRequestsTable() {
       const tbody = $('requestsTableBody');
       if (!tbody) return;
-      if (!requestsRows.length) {
-        tbody.innerHTML = '<tr><td colspan="7">Nenhuma solicitação encontrada.</td></tr>';
+
+      const rows = getSortedRows(getFilteredRequestRows(), 'requests');
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="7">Nenhuma solicitação encontrada para os filtros atuais.</td></tr>';
         return;
       }
 
-      const rows = getSortedRows(requestsRows, 'requests');
       tbody.innerHTML = rows.map((row) => `
           <tr class="request-row ${selectedRequest?.id === row.id ? 'is-selected' : ''}" data-request-id="${esc(row.id)}">
             <td>${esc(fmtDateTime(row.created_at))}</td>
             <td><strong>${esc(row.library_name)}</strong>${row.library_short_name ? `<div class="mini">${esc(row.library_short_name)}</div>` : ''}</td>
             <td>${esc([row.city, row.state_region, row.country].filter(Boolean).join(' · '))}</td>
             <td><strong>${esc(row.contact_name)}</strong><div class="mini">${esc(row.contact_email || '—')}</div></td>
-            <td>${statusPill(row.request_status)}</td>
+            <td>${requestStatusCell(row)}</td>
             <td>${esc(row.project_stage || '—')}</td>
             <td>${String(row.request_status || '').trim() === 'arquivada'
               ? `<button class="btn mini soft" type="button" data-discard-request-id="${esc(row.id)}">Descartar</button>`
@@ -424,12 +572,13 @@
     function renderLibrariesTable() {
       const tbody = $('librariesTableBody');
       if (!tbody) return;
-      if (!librariesRows.length) {
-        tbody.innerHTML = '<tr><td colspan="7">Nenhuma biblioteca encontrada ou métricas ainda indisponíveis.</td></tr>';
+
+      const rows = getSortedRows(getFilteredLibraryRows(), 'libraries');
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="7">Nenhuma biblioteca encontrada para a busca atual.</td></tr>';
         return;
       }
 
-      const rows = getSortedRows(librariesRows, 'libraries');
       tbody.innerHTML = rows.map((row) => `
           <tr>
             <td><strong>${esc(row.library_name || '—')}</strong><div class="mini">${esc(row.library_slug || '—')}</div></td>
@@ -443,21 +592,19 @@
         `).join('');
     }
 
-    function isTechnicallyActivated(row) {
-      return !!String(row?.approved_library_ref || '').trim();
-    }
-
     function updateActionButtons() {
       const hasSelection = !!selectedRequest?.id;
-      const isApproved = selectedRequest?.request_status === 'aprovada';
+      const status = String(selectedRequest?.request_status || '').trim();
+      const isApproved = status === 'aprovada';
       const isActivated = isTechnicallyActivated(selectedRequest);
+      const isArchived = status === 'arquivada';
 
-      $('btnSetAnalysis').disabled = !hasSelection;
-      $('btnRequestMore').disabled = !hasSelection;
-      $('btnApprove').disabled = !hasSelection || isActivated;
-      $('btnRefuse').disabled = !hasSelection || isActivated;
-      $('btnArchive').disabled = !hasSelection;
-      $('btnActivate').disabled = !hasSelection || !isApproved || isActivated;
+      $('btnSetAnalysis').disabled = !hasSelection || isArchived;
+      $('btnRequestMore').disabled = !hasSelection || isArchived;
+      $('btnApprove').disabled = !hasSelection || isActivated || isArchived;
+      $('btnRefuse').disabled = !hasSelection || isActivated || isArchived;
+      $('btnArchive').disabled = !hasSelection || isArchived;
+      $('btnActivate').disabled = !hasSelection || !isApproved || isActivated || isArchived;
     }
 
     async function ensureAccess() {
@@ -467,7 +614,7 @@
         if (!user?.id) {
           $('accessNotice').classList.remove('hidden');
           $('dashboardShell').classList.add('hidden');
-          $('accessNotice').innerHTML = '<p><b>Acesso restrito:</b> faz login com uma conta habilitada para a coordenação da rede.</p>';
+          $('accessNotice').innerHTML = '<p><b>Acesso restrito:</b> faça login com uma conta habilitada para a coordenação da rede.</p>';
           return false;
         }
 
@@ -523,19 +670,22 @@
         const { data, error } = await supabase.rpc('fn_network_list_library_requests');
         if (error) throw error;
         requestsRows = Array.isArray(data) ? data : [];
+        renderRequestsTable();
+        updateSortableHeaders();
+
+        const visibleIds = new Set(getFilteredRequestRows().map((row) => String(row.id)));
         if (!requestsRows.length) {
-          $('requestsTableBody').innerHTML = '<tr><td colspan="7">Nenhuma solicitação encontrada.</td></tr>';
           setStatus('requestsStatus', 'Nenhuma solicitação encontrada.', 'warn');
           resetDetail();
           return;
         }
-
-        renderRequestsTable();
-        updateSortableHeaders();
-        setStatus('requestsStatus', 'Solicitações carregadas.', 'ok');
-        if (selectedRequest?.id) {
+        if (selectedRequest?.id && !visibleIds.has(String(selectedRequest.id))) {
+          resetDetail();
+        } else if (selectedRequest?.id) {
           await selectRequest(selectedRequest.id, { refreshOnly: true });
         }
+
+        setStatus('requestsStatus', 'Solicitações carregadas.', 'ok');
       } catch (error) {
         $('requestsTableBody').innerHTML = `<tr><td colspan="7">${esc(error?.message || 'Falha ao carregar solicitações.')}</td></tr>`;
         setStatus('requestsStatus', 'Não consegui carregar as solicitações: ' + (error?.message || String(error)), 'bad');
@@ -549,13 +699,12 @@
         const { data, error } = await supabase.rpc('fn_network_library_metrics');
         if (error) throw error;
         librariesRows = Array.isArray(data) ? data : [];
+        renderLibrariesTable();
+        updateSortableHeaders();
         if (!librariesRows.length) {
-          $('librariesTableBody').innerHTML = '<tr><td colspan="7">Nenhuma biblioteca encontrada ou métricas ainda indisponíveis.</td></tr>';
           setStatus('librariesStatus', 'Nenhuma biblioteca encontrada ou métricas ainda indisponíveis.', 'warn');
           return;
         }
-        renderLibrariesTable();
-        updateSortableHeaders();
         setStatus('librariesStatus', 'Bibliotecas carregadas.', 'ok');
       } catch (error) {
         $('librariesTableBody').innerHTML = `<tr><td colspan="7">${esc(error?.message || 'Falha ao carregar bibliotecas.')}</td></tr>`;
@@ -571,9 +720,9 @@
       $('detailSummary').textContent = '—';
       $('detailNeeds').textContent = '—';
       $('reviewNotesInput').value = '';
-      $('detailActivation').textContent = 'Ainda não ativada.';
+      $('detailActivation').textContent = 'A entrada da biblioteca na rede ainda não foi concluída.';
       updateActionButtons();
-    updateSortableHeaders();
+      updateSortableHeaders();
       setStatus('detailStatus', '', '');
     }
 
@@ -585,29 +734,29 @@
         const row = Array.isArray(data) ? data[0] : data;
         if (!row) {
           resetDetail();
-          setStatus('detailStatus', 'Solicitação não encontrada.', 'warn');
+          setFlashStatus('detailStatus', 'Solicitação não encontrada.', 'warn');
           return;
         }
+
         selectedRequest = row;
         $('requestDetailEmpty').classList.add('hidden');
         $('requestDetailPanel').classList.remove('hidden');
         $('requestDetailGrid').innerHTML = [
-          ['ID', row.id],
-          ['Status', row.request_status],
+          ['Situação da análise', row.request_status],
           ['Biblioteca', row.library_name],
           ['Sigla', row.library_short_name || '—'],
           ['Cidade', row.city],
           ['Estado / região', row.state_region || '—'],
           ['País', row.country],
           ['Etapa atual', row.project_stage],
-          ['Pessoa contato', row.contact_name],
-          ['Função', row.contact_role || '—'],
-          ['E-mail contato', row.contact_email],
-          ['Telefone contato', row.contact_phone || '—'],
-          ['E-mail do envio', row.submitted_by_email_snapshot],
-          ['Primeiro responsável', row.first_manager_intent],
-          ['Biblioteca ativada', row.approved_library_ref || 'Ainda não'],
-          ['Vínculo bibliotecário', row.approved_membership_ref || 'Ainda não'],
+          ['Pessoa de contato', row.contact_name],
+          ['Função no coletivo', row.contact_role || '—'],
+          ['E-mail de contato', row.contact_email],
+          ['Telefone de contato', row.contact_phone || '—'],
+          ['E-mail de quem enviou', row.submitted_by_email_snapshot],
+          ['Pessoa que receberá o primeiro acesso', firstManagerLabel(row.first_manager_intent)],
+          ['Entrada da biblioteca na rede', isTechnicallyActivated(row) ? 'Biblioteca já criada' : 'Ainda não criada'],
+          ['Acesso bibliotecário inicial', row.approved_membership_ref ? 'Liberado' : 'Ainda não liberado'],
           ['Revisto em', fmtDateTime(row.reviewed_at)],
           ['Revisado por', row.reviewed_by_user_id || '—']
         ].map(([label, value]) => `
@@ -616,17 +765,22 @@
             <div>${esc(value || '—')}</div>
           </div>
         `).join('');
+
         $('detailSummary').textContent = row.summary || '—';
         $('detailNeeds').textContent = [row.public_profile, row.collection_profile, row.needs].filter(Boolean).join('\n\n') || '—';
         $('detailActivation').textContent = isTechnicallyActivated(row)
-          ? `Biblioteca criada: ${row.approved_library_ref}\nVínculo inicial liberado: ${row.approved_membership_ref || 'sem vínculo automático'}`
-          : 'Ainda não ativada tecnicamente.';
+          ? (row.approved_membership_ref
+              ? 'Biblioteca já criada na rede e primeiro acesso bibliotecário liberado.'
+              : 'Biblioteca já criada na rede. O primeiro acesso bibliotecário ainda não foi liberado.')
+          : 'A entrada da biblioteca na rede ainda não foi concluída.';
         $('reviewNotesInput').value = row.review_notes || '';
+
         document.querySelectorAll('.request-row').forEach((tr) => {
           tr.classList.toggle('is-selected', tr.getAttribute('data-request-id') === String(row.id));
         });
+
         updateActionButtons();
-        setStatus('detailStatus', 'Detalhe carregado.', 'ok');
+        if (!opts.refreshOnly) setFlashStatus('detailStatus', 'Detalhe carregado.', 'ok', 2500);
       } catch (error) {
         if (!opts.refreshOnly) resetDetail();
         setStatus('detailStatus', 'Não consegui carregar o detalhe: ' + (error?.message || String(error)), 'bad');
@@ -635,20 +789,21 @@
 
     async function activateSelectedRequest() {
       if (!selectedRequest?.id) {
-        setStatus('detailStatus', 'Selecione primeiro uma solicitação.', 'warn');
+        setFlashStatus('detailStatus', 'Selecione primeiro uma solicitação.', 'warn');
         return;
       }
       if (selectedRequest.request_status !== 'aprovada') {
-        setStatus('detailStatus', 'A ativação técnica só pode ser feita depois da aprovação.', 'warn');
+        setFlashStatus('detailStatus', 'A entrada da biblioteca na rede só pode ser concluída depois da aprovação.', 'warn', 6000);
         return;
       }
       if (isTechnicallyActivated(selectedRequest)) {
-        setStatus('detailStatus', 'Esta solicitação já foi ativada tecnicamente.', 'info');
+        setFlashStatus('detailStatus', 'Esta biblioteca já foi criada na rede.', 'info');
         return;
       }
+      if (!window.confirm('Confirmar a criação desta biblioteca na rede e a liberação do primeiro acesso bibliotecário?')) return;
 
       try {
-        setStatus('detailStatus', 'Ativando biblioteca e liberando acesso inicial…', 'info');
+        setStatus('detailStatus', 'Concluindo a entrada da biblioteca na rede…', 'info');
         const { data, error } = await supabase.rpc('fn_activate_approved_library_request', {
           p_request_id: selectedRequest.id
         });
@@ -656,25 +811,24 @@
 
         const activationRow = Array.isArray(data) ? data[0] : data;
         await loadRequests();
-        await selectRequest(selectedRequest.id);
+        await selectRequest(selectedRequest.id, { refreshOnly: true });
         await Promise.all([loadSummary(), loadLibraries()]);
 
         const slugInfo = activationRow?.library_slug ? ` Biblioteca criada: ${activationRow.library_slug}.` : '';
-        setStatus('detailStatus', 'Biblioteca ativada com sucesso.' + slugInfo, 'ok');
+        setFlashStatus('detailStatus', 'Biblioteca criada na rede com sucesso.' + slugInfo, 'ok', 7000);
       } catch (error) {
-        setStatus('detailStatus', 'Não consegui ativar a biblioteca: ' + (error?.message || String(error)), 'bad');
+        setStatus('detailStatus', 'Não consegui criar a biblioteca na rede: ' + (error?.message || String(error)), 'bad');
       }
     }
-
 
     async function discardArchivedRequest(requestId) {
       const row = requestsRows.find((item) => String(item.id) === String(requestId));
       if (!row) {
-        setStatus('requestsStatus', 'Solicitação não encontrada para descarte.', 'warn');
+        setFlashStatus('requestsStatus', 'Solicitação não encontrada para descarte.', 'warn');
         return;
       }
       if (String(row.request_status || '').trim() !== 'arquivada') {
-        setStatus('requestsStatus', 'Só é possível descartar solicitações já arquivadas.', 'warn');
+        setFlashStatus('requestsStatus', 'Só é possível descartar solicitações já arquivadas.', 'warn', 6000);
         return;
       }
       const confirmed = window.confirm(`Descartar definitivamente a solicitação de ${row.library_name || 'biblioteca'}? Esta ação não poderá ser desfeita.`);
@@ -690,19 +844,21 @@
           resetDetail();
         }
         await Promise.all([loadRequests(), loadSummary(), loadLibraries()]);
-        setStatus('requestsStatus', 'Solicitação arquivada descartada com sucesso.', 'ok');
+        setFlashStatus('requestsStatus', 'Solicitação arquivada descartada com sucesso.', 'ok', 7000);
       } catch (error) {
         setStatus('requestsStatus', 'Não consegui descartar a solicitação arquivada: ' + (error?.message || String(error)), 'bad');
       }
     }
 
-    async function updateRequestStatus(newStatus, noteOverride = null) {
+    async function updateRequestStatus(newStatus, noteOverride = null, options = {}) {
       if (!selectedRequest?.id) {
-        setStatus('detailStatus', 'Selecione primeiro uma solicitação.', 'warn');
+        setFlashStatus('detailStatus', 'Selecione primeiro uma solicitação.', 'warn');
         return;
       }
+      if (options.confirmMessage && !window.confirm(options.confirmMessage)) return;
+
       try {
-        setStatus('detailStatus', 'Salvando mudança de status…', 'info');
+        setStatus('detailStatus', 'Salvando mudança de andamento…', 'info');
         const note = noteOverride !== null ? noteOverride : $('reviewNotesInput').value.trim();
         const { data, error } = await supabase.rpc('fn_review_library_request', {
           p_request_id: selectedRequest.id,
@@ -713,9 +869,11 @@
         const row = Array.isArray(data) ? data[0] : data;
         selectedRequest = row || selectedRequest;
         await loadRequests();
-        await selectRequest(selectedRequest.id);
+        await selectRequest(selectedRequest.id, { refreshOnly: true });
         await loadSummary();
-        setStatus('detailStatus', 'Solicitação atualizada.', 'ok');
+
+        const successText = options.successMessage || 'Solicitação atualizada com sucesso.';
+        setFlashStatus('detailStatus', successText, 'ok', 6500);
       } catch (error) {
         setStatus('detailStatus', 'Não consegui atualizar a solicitação: ' + (error?.message || String(error)), 'bad');
       }
@@ -727,24 +885,68 @@
       });
     });
 
+    $('requestStatusFilter').value = uiState.requestStatusFilter;
+    $('requestSearchInput').value = uiState.requestSearch;
+    $('librarySearchInput').value = uiState.librarySearch;
+
+    $('requestStatusFilter').addEventListener('change', () => {
+      uiState.requestStatusFilter = $('requestStatusFilter').value;
+      persistUiState();
+      renderRequestsTable();
+      updateSortableHeaders();
+      if (selectedRequest?.id && !getFilteredRequestRows().some((row) => String(row.id) === String(selectedRequest.id))) {
+        resetDetail();
+      }
+    });
+
+    $('requestSearchInput').addEventListener('input', () => {
+      uiState.requestSearch = $('requestSearchInput').value;
+      persistUiState();
+      renderRequestsTable();
+      updateSortableHeaders();
+      if (selectedRequest?.id && !getFilteredRequestRows().some((row) => String(row.id) === String(selectedRequest.id))) {
+        resetDetail();
+      }
+    });
+
+    $('librarySearchInput').addEventListener('input', () => {
+      uiState.librarySearch = $('librarySearchInput').value;
+      persistUiState();
+      renderLibrariesTable();
+      updateSortableHeaders();
+    });
+
     $('btnRefreshSummary').addEventListener('click', loadSummary);
     $('btnRefreshRequests').addEventListener('click', loadRequests);
     $('btnRefreshLibraries').addEventListener('click', loadLibraries);
 
-    $('btnSetAnalysis').addEventListener('click', () => updateRequestStatus('em_analise'));
-    $('btnApprove').addEventListener('click', () => updateRequestStatus('aprovada'));
+    $('btnSetAnalysis').addEventListener('click', () => updateRequestStatus('em_analise', null, {
+      successMessage: 'Solicitação marcada em análise.'
+    }));
+    $('btnApprove').addEventListener('click', () => updateRequestStatus('aprovada', null, {
+      confirmMessage: 'Confirmar a aprovação desta solicitação?',
+      successMessage: 'Solicitação aprovada com sucesso.'
+    }));
     $('btnActivate').addEventListener('click', activateSelectedRequest);
-    $('btnRefuse').addEventListener('click', () => updateRequestStatus('recusada'));
-    $('btnArchive').addEventListener('click', () => updateRequestStatus('arquivada'));
+    $('btnRefuse').addEventListener('click', () => updateRequestStatus('recusada', null, {
+      confirmMessage: 'Confirmar a recusa desta solicitação?',
+      successMessage: 'Solicitação recusada com sucesso.'
+    }));
+    $('btnArchive').addEventListener('click', () => updateRequestStatus('arquivada', null, {
+      confirmMessage: 'Confirmar o arquivamento desta solicitação?',
+      successMessage: 'Solicitação arquivada com sucesso.'
+    }));
     $('btnRequestMore').addEventListener('click', () => {
       if (!selectedRequest?.id) {
-        setStatus('detailStatus', 'Selecione primeiro uma solicitação.', 'warn');
+        setFlashStatus('detailStatus', 'Selecione primeiro uma solicitação.', 'warn');
         return;
       }
       const current = $('reviewNotesInput').value.trim();
       const template = 'Pedido de complemento: por favor, enviar informações adicionais sobre a biblioteca, o acervo e a pessoa responsável pelo primeiro acesso.';
       $('reviewNotesInput').value = current ? `${current}\n\n${template}` : template;
-      updateRequestStatus('em_analise', $('reviewNotesInput').value.trim());
+      updateRequestStatus('em_analise', $('reviewNotesInput').value.trim(), {
+        successMessage: 'Pedido de complemento registrado com sucesso.'
+      });
     });
 
     $('btnSair').addEventListener('click', async () => {
@@ -753,6 +955,7 @@
     });
 
     updateActionButtons();
+    updateSortableHeaders();
 
     async function init() {
       const ok = await ensureAccess();
