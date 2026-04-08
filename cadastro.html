@@ -205,14 +205,22 @@
       <p>Entrar · Esqueci minha senha · Redefinir senha</p>
     </div>
 
-    <section class="notice" id="networkEntryBox" aria-label="Entrada de biblioteca na rede">
-      <b>Sua biblioteca ou coletivo quer entrar na rede AnarBib?</b>
-      <div class="small">Se você representa uma biblioteca, um arquivo, um centro de documentação ou outra iniciativa semelhante, use um caminho separado do cadastro de leitor/a/e.</div>
-      <div class="small">Essa solicitação não libera acesso imediato às áreas internas de gestão. Primeiro, ela será analisada pela coordenação da rede.</div>
-      <div class="rowbtn" style="margin-top:10px;">
-        <button id="goSolicitarBiblioteca" class="btn" type="button">Solicitar entrada de biblioteca</button>
-      </div>
-    </section>
+    <!--
+      Accès retiré sur demande.
+      Cette page cadastro ne doit plus exposer
+      de passage vers solicitar-biblioteca.
+      Le parcours bibliothèque reste traité
+      ailleurs que dans ce flux lecteur/a/e.
+
+      Bloc volontairement remplacé sur place,
+      sans toucher aux formulaires de login,
+      de récupération,
+      ni de redéfinition de mot de passe.
+
+      Aucune redirection auth n'est modifiée.
+      Aucune logique de session n'est modifiée.
+      Aucun contrôle de rôle n'est modifié.
+    -->
 
     <!-- LOGIN -->
     <section id="loginBox">
@@ -308,9 +316,11 @@
       window.location.href = ROUTES.CRIAR;
     });
 
-    document.getElementById("goSolicitarBiblioteca").addEventListener("click", () => {
-      window.location.href = ROUTES.SOLICITAR_BIBLIOTECA;
-    });
+    /*
+      Accès retiré sur demande : cadastro
+      ne renvoie plus vers solicitar-biblioteca.
+      Le reste du parcours reste inchangé.
+    */
 
     const loginBox = document.getElementById("loginBox");
     const recoveryBox = document.getElementById("recoveryBox");
