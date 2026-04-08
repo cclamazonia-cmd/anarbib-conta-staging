@@ -1606,7 +1606,7 @@
               <div class="section-head">
                 <div>
                   <h2>Trabalho do dia</h2>
-                  <div class="mini">Vista automática das prioridades da BLMF, sempre calculada no horário de Belém.</div>
+                  <div class="mini">Vista automática das prioridades da biblioteca ativa, sempre calculada no horário local da biblioteca.</div>
                 </div>
                 <div class="actions" style="margin-top:0">
                   <button class="btn" id="btnRecarregarTrabalhoDia" type="button">Recalcular</button>
@@ -1616,7 +1616,7 @@
                 <span class="chip" id="chipTaskHoje">Hoje: —</span>
                 <span class="chip" id="chipTaskAtencao">Atenção: —</span>
                 <span class="chip" id="chipTaskAcompanhamento">Acompanhamento: —</span>
-                <span class="chip" id="chipTaskAgoraBelem">Agora em Belém: —</span>
+                <span class="chip" id="chipTaskAgoraBelem">Agora na biblioteca: —</span>
               </div>
               <div class="task-list" id="taskListTrabalhoDia">
                 <div class="task-empty">Carregando prioridades…</div>
@@ -3009,7 +3009,7 @@
     function consultationTimeZoneLabel(){
       return getCurrentConsultationTimeZone();
     }
-    const todayISO = () => belemNowParts().ymd;
+    const todayISO = () => zonedNowParts().ymd;
     const nowISO = () => new Date().toISOString();
     function addDays(dateLike, days){
       const base = new Date(dateLike || Date.now());
@@ -6288,10 +6288,14 @@ function getPendingIncomingInterlibraryRequests(items=currentInterlibraryRequest
     }
 
 
-function belemNowParts(){
+function getCurrentPainelTimeZone(){
+      return getCurrentConsultationTimeZone() || 'America/Belem';
+    }
+
+    function zonedNowParts(timeZone = getCurrentPainelTimeZone()){
       const d = new Date();
       const parts = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'America/Belem',
+        timeZone,
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -6303,12 +6307,17 @@ function belemNowParts(){
       return { ymd: `${get('year')}-${get('month')}-${get('day')}`, hm: `${get('hour')}:${get('minute')}` };
     }
 
-    function belemDateYmd(dateLike){
+    function belemNowParts(){
+      return zonedNowParts();
+    }
+
+
+    function zonedDateYmd(dateLike, timeZone = getCurrentPainelTimeZone()){
       if (!dateLike) return '';
       const d = new Date(dateLike);
       if (Number.isNaN(d.getTime())) return '';
       const parts = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'America/Belem',
+        timeZone,
         year: 'numeric',
         month: '2-digit',
         day: '2-digit'
@@ -6317,10 +6326,10 @@ function belemNowParts(){
       return `${get('year')}-${get('month')}-${get('day')}`;
     }
 
-    function daysDiffFromToday(dateLike){
+    function daysDiffFromToday(dateLike, timeZone = getCurrentPainelTimeZone()){
       const s = String(dateLike || '').slice(0,10);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
-      const today = new Date(todayISO() + 'T00:00:00');
+      const today = new Date(zonedNowParts(timeZone).ymd + 'T00:00:00');
       const target = new Date(s + 'T00:00:00');
       return Math.floor((target - today) / 86400000);
     }
@@ -6360,10 +6369,13 @@ function belemNowParts(){
     function translateInternalTaskStatus(status){
       return ({
         a_fazer: 'A fazer',
+        aberta: 'Aberta',
         em_andamento: 'Em andamento',
+        bloqueada: 'Bloqueada',
         concluida: 'Concluída',
+        arquivada: 'Arquivada',
         cancelada: 'Cancelada'
-      })[String(status || '')] || 'A fazer';
+      })[String(status || '')] || 'Aberta';
     }
 
     function normalizeSearchText(value){
@@ -6489,8 +6501,11 @@ function belemNowParts(){
     function internalTaskStatusClass(status){
       return ({
         a_fazer: 'warn',
+        aberta: 'warn',
         em_andamento: 'ok',
+        bloqueada: 'bad',
         concluida: 'ok',
+        arquivada: 'bad',
         cancelada: 'bad'
       })[String(status || '')] || 'warn';
     }
@@ -6502,15 +6517,26 @@ function belemNowParts(){
     }
 
     function normalizeInternalTaskRow(row){
+      const rawStatus = String(row?.status || 'aberta').trim() || 'aberta';
+      const normalizedStatus = ({
+        aberta: 'aberta',
+        a_fazer: 'aberta',
+        em_andamento: 'em_andamento',
+        bloqueada: 'bloqueada',
+        concluida: 'concluida',
+        arquivada: 'arquivada',
+        cancelada: 'arquivada'
+      })[rawStatus] || rawStatus;
       return {
         id: String(row?.id || ''),
+        library_id: String(row?.library_id || ''),
         title: String(row?.title || ''),
         description: String(row?.description || ''),
         priority: String(row?.priority || 'media'),
-        status: String(row?.status || 'a_fazer'),
+        status: normalizedStatus,
         owner: String(row?.owner || ''),
         due_date: row?.due_date ? String(row.due_date).slice(0,10) : '',
-        tags: String(row?.tags || ''),
+        tags: Array.isArray(row?.tags) ? row.tags.map((tag) => String(tag || '').trim()).filter(Boolean) : String(row?.tags || ''),
         created_at: String(row?.created_at || nowISO())
       };
     }
@@ -6519,13 +6545,17 @@ function belemNowParts(){
       const host = $('taskListInternas');
       if (host) host.innerHTML = '<div class="task-empty">Carregando tarefas internas…</div>';
       try {
-        const { data, error } = await supabase
+        const libraryId = bootNormalizeLibraryId(currentAccessRow?.library_id || currentIdentityRow?.library_id || currentLibraryRow?.id || '');
+        let query = supabase
           .from(INTERNAL_TASKS_TABLE)
-          .select('id,title,description,priority,status,owner,due_date,tags,created_at')
+          .select('id,library_id,title,description,priority,status,owner,due_date,tags,created_at')
           .order('created_at', { ascending:false });
+        if (libraryId) query = query.eq('library_id', libraryId);
+        const { data, error } = await query;
         if (error) throw error;
         manualInternalTasks = Array.isArray(data) ? data.map(normalizeInternalTaskRow) : [];
         renderInternalTasks();
+        renderTrabalhoDoDia();
         if (!silent) clearStatus('statusTarefasInternas');
         return manualInternalTasks;
       } catch (e) {
@@ -6751,26 +6781,27 @@ function belemNowParts(){
 
     function buildDailyTasks(){
       const tasks = [];
-      const belemNow = belemNowParts();
+      const taskTimeZone = getCurrentPainelTimeZone();
+      const painelNow = zonedNowParts(taskTimeZone);
 
       activeReservations.forEach((r) => {
         const stage = String(r.workflow_stage || '');
-        const pickupDayBelem = belemDateYmd(r.pickup_scheduled_for);
+        const pickupDayBelem = zonedDateYmd(r.pickup_scheduled_for, taskTimeZone);
         const validadeDiff = reservationDateDiff(r.validade);
 
-        if (isReservationPickupScheduledStage(stage) && pickupDayBelem && pickupDayBelem === belemNow.ymd){
+        if (isReservationPickupScheduledStage(stage) && pickupDayBelem && pickupDayBelem === painelNow.ymd){
           tasks.push({
             priority:'alta',
             bucket:'hoje',
             kind: stage === 're-retirada_agendada' ? 'Retirada reagendada para hoje' : 'Retirada agendada para hoje',
             label:`${r.user_name} · ${r.titulo}`,
-            detail:`Retirada: ${fmtDateTimeBelem(r.pickup_scheduled_for)} (Belém)`,
+            detail:`Retirada: ${fmtDateTimeInZone(r.pickup_scheduled_for, taskTimeZone)} (${consultationTimeZoneLabel()})`,
             actionType:'reserva',
             reserva_id:r.reserva_id
           });
         }
         if (stage === 'pronta_para_retirada'){
-          tasks.push({ priority: validadeDiff != null && validadeDiff <= 1 ? 'alta' : 'media', bucket: validadeDiff != null && validadeDiff <= 1 ? 'hoje' : 'atencao', kind:'Reserva pronta para retirada', label:`${r.user_name} · ${r.titulo}`, detail:`Validade: ${fmtDateTimeBelem(r.validade)} (Belém)${r.workflow_note ? ' · ' + r.workflow_note : ''}`, actionType:'reserva', reserva_id:r.reserva_id });
+          tasks.push({ priority: validadeDiff != null && validadeDiff <= 1 ? 'alta' : 'media', bucket: validadeDiff != null && validadeDiff <= 1 ? 'hoje' : 'atencao', kind:'Reserva pronta para retirada', label:`${r.user_name} · ${r.titulo}`, detail:`Validade: ${fmtDateTimeInZone(r.validade, taskTimeZone)} (${consultationTimeZoneLabel()})${r.workflow_note ? ' · ' + r.workflow_note : ''}`, actionType:'reserva', reserva_id:r.reserva_id });
         }
         if (String(r.pickup_reply_status || '') === 'recusado_leitor'){
           tasks.push({ priority:'alta', bucket:'atencao', kind:'Leitor recusou o horário', label:`${r.user_name} · ${r.titulo}`, detail:r.pickup_reply_note || 'Reagendar retirada.', actionType:'reserva', reserva_id:r.reserva_id });
@@ -6782,7 +6813,7 @@ function belemNowParts(){
           tasks.push({ priority:'media', bucket:'acompanhamento', kind:'Exemplar liberado para circulação', label:`${r.user_name} · ${r.titulo}`, detail:r.workflow_note || 'Reserva ainda ativa, mas sem exemplar separado.', actionType:'reserva', reserva_id:r.reserva_id });
         }
         if (validadeDiff != null && validadeDiff < 0){
-          tasks.push({ priority:'alta', bucket:'atencao', kind:'Reserva com prazo vencido', label:`${r.user_name} · ${r.titulo}`, detail:`Validade: ${fmtDateTimeBelem(r.validade)} (Belém)`, actionType:'reserva', reserva_id:r.reserva_id });
+          tasks.push({ priority:'alta', bucket:'atencao', kind:'Reserva com prazo vencido', label:`${r.user_name} · ${r.titulo}`, detail:`Validade: ${fmtDateTimeInZone(r.validade, taskTimeZone)} (${consultationTimeZoneLabel()})`, actionType:'reserva', reserva_id:r.reserva_id });
         }
       });
 
@@ -6797,7 +6828,7 @@ function belemNowParts(){
 
       manualInternalTasks.forEach((task) => {
         if (!task?.due_date) return;
-        if (['concluida', 'cancelada'].includes(String(task.status || ''))) return;
+        if (['concluida', 'cancelada', 'arquivada'].includes(String(task.status || ''))) return;
         const dueDiff = daysDiffFromToday(task.due_date);
         if (dueDiff === 0){
           tasks.push({
@@ -6838,8 +6869,8 @@ function belemNowParts(){
       setChip('chipTaskHoje', `Hoje: ${counts.hoje}`);
       setChip('chipTaskAtencao', `Atenção: ${counts.atencao}`);
       setChip('chipTaskAcompanhamento', `Acompanhamento: ${counts.acompanhamento}`);
-      const nowParts = belemNowParts();
-      setChip('chipTaskAgoraBelem', `Agora em Belém: ${nowParts.hm}`);
+      const nowParts = zonedNowParts();
+      setChip('chipTaskAgoraBelem', `Agora na biblioteca: ${nowParts.hm} (${consultationTimeZoneLabel()})`);
       if (!tasks.length){
         host.innerHTML = '<div class="task-empty">Sem tarefas automáticas para o momento.</div>';
         return;
@@ -9982,7 +10013,16 @@ const confirmProfile = ev.target.closest('[data-profile-confirm-reserva]');
       btnRecarregarConsultas.dataset.mainReloadBound = 'true';
       btnRecarregarConsultas.addEventListener('click', () => refreshConsultationsOnly());
     }
-    $('btnRecarregarTrabalhoDia')?.addEventListener('click', () => { renderTrabalhoDoDia(); setStatus('statusTrabalhoDia', 'Prioridades recalculadas.', 'ok'); });
+    $('btnRecarregarTrabalhoDia')?.addEventListener('click', async () => {
+      await Promise.allSettled([
+        refreshReservationsOnly({silent:true}),
+        refreshConsultationsOnly({silent:true}),
+        refreshLoansOnly({silent:true}),
+        loadInternalTasks({silent:true})
+      ]);
+      renderTrabalhoDoDia();
+      setStatus('statusTrabalhoDia', 'Prioridades recalculadas.', 'ok');
+    });
     $('btnAddInternalTask')?.addEventListener('click', async () => {
       const btn = $('btnAddInternalTask');
       if (!btn || btn.disabled) return;
@@ -11038,6 +11078,12 @@ function initPartnerProbeUi() {
               return;
 
             case 'btnRecarregarTrabalhoDia':
+              await Promise.allSettled([
+                refreshReservationsOnly({silent:true}),
+                refreshConsultationsOnly({silent:true}),
+                refreshLoansOnly({silent:true}),
+                loadInternalTasks({silent:true})
+              ]);
               renderTrabalhoDoDia();
               setStatus('statusTrabalhoDia', 'Prioridades recalculadas.', 'ok');
               return;
