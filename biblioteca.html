@@ -143,7 +143,7 @@
 
     <div class="hero">
       <h1 id="pageHeroTitle">Biblioteca - Organização da biblioteca</h1>
-      <p id="pageHeroSubtitle">Informações gerais, regimento, regras de circulação, comunicações, documentos, trocas e empréstimos interbibliotecas, relatórios e tarefas internas.</p>
+      <p id="pageHeroSubtitle">Informações gerais, regimento, regras de circulação, comunicações, documentos, trocas e empréstimos interbibliotecas, relatórios e tarefas internas</p>
       <p id="helloLine"></p>
       <div class="chips">
         <span class="chip" id="chipFuncao">Função: —</span>
@@ -175,6 +175,10 @@
         <button class="tab-btn" type="button" data-tab="interbib" role="tab" aria-selected="false" aria-controls="tab-interbib">
           Trocas interbibliotecas
           <span class="hint">Propostas de troca entre bibliotecas do AnarBib, com mensagem e acompanhamento</span>
+        </button>
+        <button class="tab-btn" type="button" data-tab="relatorios" role="tab" aria-selected="false" aria-controls="tab-relatorios">
+          Relatórios e resumos
+          <span class="hint">Contas-rendidas por fluxo, catálogo completo e envio semanal opcional da biblioteca</span>
         </button>
         <button class="tab-btn" type="button" data-tab="tarefas" role="tab" aria-selected="false" aria-controls="tab-tarefas">
           Tarefas internas
@@ -616,6 +620,88 @@
           </div>
         </section>
 
+        <section id="tab-relatorios" class="tab-panel" data-tab="relatorios" role="tabpanel">
+          <div class="stack">
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h2>Relatórios e resumos</h2>
+                  <div class="mini">Contas-rendidas por fluxo da biblioteca, com filtros cruzados, catálogo completo e controle do resumo semanal automatizado.</div>
+                </div>
+                <div class="actions"><button class="btn mini" id="btnRefreshReports" type="button">Atualizar</button></div>
+              </div>
+              <div class="status" id="reportsStatus"></div>
+            </div>
+            <div class="row">
+              <div class="card">
+                <div class="section-head">
+                  <div>
+                    <h3>Resumo semanal automatizado da biblioteca</h3>
+                    <div class="mini">O envio semanal da biblioteca só deve acontecer quando esta caixa estiver marcada. O resumo geral da rede continua separado.</div>
+                  </div>
+                  <div class="editor-actions">
+                    <button class="btn mini primary" id="btnSaveReportsConfig" type="button">Salvar opção semanal</button>
+                  </div>
+                </div>
+                <div class="check-row" style="margin-top:12px">
+                  <label class="check-item"><input id="reportsWeeklyEnabled" type="checkbox"> Enviar o resumo semanal da biblioteca somente quando esta caixa estiver marcada</label>
+                </div>
+                <div class="editor-grid" style="margin-top:12px">
+                  <div class="field"><label for="reportsWeeklyTargetEmail">E-mail de destino atual</label><input id="reportsWeeklyTargetEmail" class="input" type="text" readonly placeholder="Carregando…"></div>
+                  <div class="field"><label for="reportsWeeklyNote">Observação interna</label><textarea id="reportsWeeklyNote" class="textarea" placeholder="Ex.: enviar somente quando houver fluxo suficiente ou quando a biblioteca estiver em funcionamento normal."></textarea></div>
+                </div>
+                <div class="status" id="reportsConfigStatus"></div>
+              </div>
+              <div class="card">
+                <div class="section-head"><div><h3>Fluxos disponíveis nesta aba</h3><div class="mini">Escolha um fluxo, cruze filtros, mude a ordenação e gere um quadro simples de acompanhamento.</div></div></div>
+                <div id="reportsQuickGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h3>Montar um relatório</h3>
+                  <div class="mini" id="reportsPresetHint">Selecione um fluxo, ajuste período, agrupamento, filtros e ordenação.</div>
+                </div>
+                <div class="editor-actions">
+                  <button class="btn mini soft" id="btnResetReportsFilters" type="button">Limpar filtros</button>
+                  <button class="btn mini primary" id="btnLoadReports" type="button">Atualizar relatório</button>
+                </div>
+              </div>
+              <div class="editor-shell">
+                <div class="editor-grid-3">
+                  <div class="field"><label for="reportsPresetSelect">Fluxo / relatório</label><select id="reportsPresetSelect" class="select"><option value="reservas">Reservas</option><option value="emprestimos">Empréstimos e retornos</option><option value="consultas">Consultas no local</option><option value="inscricoes">Inscrições</option><option value="catalogacao">Catalogação</option><option value="catalogo_completo">Catálogo completo</option></select></div>
+                  <div class="field"><label for="reportsGroupingSelect">Agrupar por</label><select id="reportsGroupingSelect" class="select"><option value="none">Sem agrupamento</option></select></div>
+                  <div class="field"><label for="reportsStatusFilter">Estado / situação</label><select id="reportsStatusFilter" class="select"><option value="">Todos</option></select></div>
+                </div>
+                <div class="editor-grid-3">
+                  <div class="field"><label for="reportsDateFrom">Período — de</label><input id="reportsDateFrom" class="input" type="date"></div>
+                  <div class="field"><label for="reportsDateTo">Período — até</label><input id="reportsDateTo" class="input" type="date"></div>
+                  <div class="field"><label for="reportsSearchInput">Busca livre</label><input id="reportsSearchInput" class="input" type="text" placeholder="Leitor(a/e), documento, tombo, autoria, Dewey, observação…"></div>
+                </div>
+                <div class="editor-grid-3">
+                  <div class="field"><label for="reportsSortSelect">Ordenar por</label><select id="reportsSortSelect" class="select"><option value="date_desc">Data mais recente</option></select></div>
+                  <div class="field"><label for="reportsLimitSelect">Máximo de linhas</label><select id="reportsLimitSelect" class="select"><option value="50">50</option><option value="100" selected>100</option><option value="250">250</option><option value="500">500</option><option value="1000">1000</option></select></div>
+                  <div class="field"><label for="reportsSourceNote">Fonte usada</label><input id="reportsSourceNote" class="input" type="text" readonly placeholder="Será preenchido ao carregar um relatório."></div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Resumo do relatório carregado</h3><div class="mini">Este quadro muda conforme o fluxo escolhido, o período, o agrupamento e os filtros.</div></div></div>
+              <div id="reportsSummaryGrid" class="kv-grid"><div class="empty">Escolha um fluxo e clique em “Atualizar relatório”.</div></div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Resultados</h3><div class="mini">Tabela simples para leitura, tri local e conferência rápida.</div></div></div>
+              <div class="tableWrap">
+                <table id="reportsTable">
+                  <thead id="reportsTableHead"><tr><th>Resultado</th><th>Detalhe</th><th>Observação</th></tr></thead>
+                  <tbody id="tbodyReports"><tr><td colspan="3">Escolha um fluxo e clique em “Atualizar relatório”.</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section id="tab-tarefas" class="tab-panel" data-tab="tarefas" role="tabpanel">
           <div class="stack">
             <div class="card">
@@ -757,11 +843,11 @@
     });
 
     const $ = (id) => document.getElementById(id);
+    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
     const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
     const HERO_SUBTITLE_TEXT = 'Informações gerais, regimento, regras de circulação, comunicações, documentos, trocas e empréstimos interbibliotecas, relatórios e tarefas internas';
-    if (document.getElementById('pageHeroTitle')) document.getElementById('pageHeroTitle').textContent = HERO_TITLE_TEXT;
-    if (document.getElementById('pageHeroSubtitle')) document.getElementById('pageHeroSubtitle').textContent = HERO_SUBTITLE_TEXT;
-    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+    if ($('pageHeroTitle')) $('pageHeroTitle').textContent = HERO_TITLE_TEXT;
+    if ($('pageHeroSubtitle')) $('pageHeroSubtitle').textContent = HERO_SUBTITLE_TEXT;
     const TAB_STORAGE_KEY = 'anarbib_biblioteca_active_tab';
     const AUTH_RETURN_STORAGE_KEY = 'anarbib_biblioteca_auth_return';
 
@@ -789,6 +875,8 @@
     let currentPolicySets = [];
     let currentPolicyRules = [];
     let currentTasks = [];
+    let currentReportsRows = [];
+    let currentReportsMeta = { preset: 'reservas', source: '', loaded: false };
     let refreshPanelsPromise = null;
 
 
@@ -804,6 +892,13 @@
       if (!value) return '—';
       const d = new Date(String(value).length <= 10 ? `${value}T00:00:00` : value);
       return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString('pt-BR');
+    }
+    function setButtonBusy(buttonId, busy, busyLabel='Atualizando…'){
+      const btn = $(buttonId);
+      if (!btn) return;
+      if (!btn.dataset.defaultLabel) btn.dataset.defaultLabel = btn.textContent || '';
+      btn.disabled = !!busy;
+      btn.textContent = busy ? busyLabel : btn.dataset.defaultLabel;
     }
     function normalizeLibraryId(value){
       const v = String(value || '').trim();
@@ -2982,6 +3077,7 @@
         setStatus('governanceEditorStatus', 'Política local salva.', 'ok');
         await loadGovernancePanel();
         await loadExchangePanel();
+        await loadReportsPanel();
       } catch (error) {
         setStatus('governanceEditorStatus', 'Não consegui salvar a política local: ' + (error.message || String(error)), 'bad');
       }
@@ -3708,6 +3804,791 @@
       applyStoredSortForTbody('tbodyTasks');
     }
 
+
+    const REPORT_PRESET_DEFINITIONS = {
+      reservas: {
+        label: 'Reservas',
+        hint: 'Leia reservas por período, por leitor(a/e), por situação ou por documento.',
+        groupings: [
+          { value: 'none', label: 'Sem agrupamento' },
+          { value: 'day', label: 'Período / dia' },
+          { value: 'reader', label: 'Leitor(a/e)' },
+          { value: 'status', label: 'Situação' },
+          { value: 'title', label: 'Documento' }
+        ],
+        statuses: [
+          { value: '', label: 'Todos' },
+          { value: 'pending', label: 'Pendentes' },
+          { value: 'accepted', label: 'Aceitas' },
+          { value: 'cancelled', label: 'Canceladas' },
+          { value: 'expired', label: 'Expiradas' }
+        ]
+      },
+      emprestimos: {
+        label: 'Empréstimos e retornos',
+        hint: 'Cruze saídas, devoluções e estados do fluxo de circulação.',
+        groupings: [
+          { value: 'none', label: 'Sem agrupamento' },
+          { value: 'day', label: 'Período / dia' },
+          { value: 'reader', label: 'Leitor(a/e)' },
+          { value: 'status', label: 'Situação' },
+          { value: 'title', label: 'Documento' }
+        ],
+        statuses: [
+          { value: '', label: 'Todos' },
+          { value: 'active', label: 'Em aberto' },
+          { value: 'returned', label: 'Retornados' },
+          { value: 'overdue', label: 'Em atraso' },
+          { value: 'cancelled', label: 'Cancelados' }
+        ]
+      },
+      consultas: {
+        label: 'Consultas no local',
+        hint: 'Acompanhe pedidos, confirmações e uso local do acervo.',
+        groupings: [
+          { value: 'none', label: 'Sem agrupamento' },
+          { value: 'day', label: 'Período / dia' },
+          { value: 'reader', label: 'Pessoa' },
+          { value: 'status', label: 'Situação' },
+          { value: 'title', label: 'Documento / tema' }
+        ],
+        statuses: [
+          { value: '', label: 'Todos' },
+          { value: 'pending', label: 'Pendentes' },
+          { value: 'confirmed', label: 'Confirmadas' },
+          { value: 'completed', label: 'Concluídas' },
+          { value: 'cancelled', label: 'Canceladas' }
+        ]
+      },
+      inscricoes: {
+        label: 'Inscrições',
+        hint: 'Veja entradas de leitoras/es e vínculos com a biblioteca.',
+        groupings: [
+          { value: 'none', label: 'Sem agrupamento' },
+          { value: 'day', label: 'Período / dia' },
+          { value: 'status', label: 'Situação' },
+          { value: 'reader', label: 'Pessoa' }
+        ],
+        statuses: [
+          { value: '', label: 'Todos' },
+          { value: 'active', label: 'Ativas' },
+          { value: 'pending', label: 'Pendentes' },
+          { value: 'inactive', label: 'Inativas' }
+        ]
+      },
+      catalogacao: {
+        label: 'Catalogação',
+        hint: 'Relatório de exemplares e registros com tombos, autoria, Dewey / CDD e localização.',
+        groupings: [
+          { value: 'none', label: 'Sem agrupamento' },
+          { value: 'day', label: 'Período / dia' },
+          { value: 'title', label: 'Documento' },
+          { value: 'author', label: 'Autoria' },
+          { value: 'cdd', label: 'CDD / Dewey' }
+        ],
+        statuses: [
+          { value: '', label: 'Todos' }
+        ]
+      },
+      catalogo_completo: {
+        label: 'Catálogo completo',
+        hint: 'Quadro agregado do catálogo da biblioteca, com autoria, subtítulo, CDD, exemplares e tombos.',
+        groupings: [
+          { value: 'none', label: 'Sem agrupamento' },
+          { value: 'title', label: 'Documento' },
+          { value: 'author', label: 'Autoria' },
+          { value: 'cdd', label: 'CDD / Dewey' }
+        ],
+        statuses: [
+          { value: '', label: 'Todos' }
+        ]
+      }
+    };
+
+    const REPORT_SORT_OPTIONS = [
+      { value: 'date_desc', label: 'Data mais recente' },
+      { value: 'date_asc', label: 'Data mais antiga' },
+      { value: 'title_asc', label: 'Documento (A → Z)' },
+      { value: 'reader_asc', label: 'Pessoa (A → Z)' },
+      { value: 'status_asc', label: 'Situação (A → Z)' },
+      { value: 'count_desc', label: 'Maior quantidade' },
+      { value: 'count_asc', label: 'Menor quantidade' }
+    ];
+
+    function fillSimpleSelect(selectId, options, fallbackLabel='Selecione') {
+      const select = $(selectId);
+      if (!select) return;
+      select.innerHTML = (Array.isArray(options) && options.length
+        ? options.map((option) => `<option value="${esc(String(option.value || ''))}">${esc(String(option.label || option.value || ''))}</option>`).join('')
+        : `<option value="">${esc(fallbackLabel)}</option>`);
+    }
+
+    function getReportsPresetDefinition() {
+      const preset = String($('reportsPresetSelect')?.value || 'reservas').trim() || 'reservas';
+      return REPORT_PRESET_DEFINITIONS[preset] || REPORT_PRESET_DEFINITIONS.reservas;
+    }
+
+    function updateReportsPresetUi() {
+      const preset = String($('reportsPresetSelect')?.value || 'reservas').trim() || 'reservas';
+      const definition = REPORT_PRESET_DEFINITIONS[preset] || REPORT_PRESET_DEFINITIONS.reservas;
+      const currentGrouping = String($('reportsGroupingSelect')?.value || '').trim();
+      const currentStatus = String($('reportsStatusFilter')?.value || '').trim();
+      const currentSort = String($('reportsSortSelect')?.value || '').trim();
+      fillSimpleSelect('reportsGroupingSelect', definition.groupings, 'Sem agrupamento');
+      fillSimpleSelect('reportsStatusFilter', definition.statuses, 'Todos');
+      fillSimpleSelect('reportsSortSelect', REPORT_SORT_OPTIONS, 'Data mais recente');
+      if (definition.groupings.some((option) => option.value === currentGrouping)) $('reportsGroupingSelect').value = currentGrouping;
+      if (definition.statuses.some((option) => option.value === currentStatus)) $('reportsStatusFilter').value = currentStatus;
+      if (REPORT_SORT_OPTIONS.some((option) => option.value === currentSort)) $('reportsSortSelect').value = currentSort;
+      const hint = $('reportsPresetHint');
+      if (hint) hint.textContent = definition.hint;
+    }
+
+    function getCurrentReportsConfig() {
+      return safeJsonObject(currentGovernance?.reports);
+    }
+
+    function getReportsWeeklyTargetEmail() {
+      return firstFilledValue(
+        currentCommunicationsContext?.weekly_report_email,
+        currentCommunicationsContext?.admin_notification_email,
+        currentContactProfile?.contact_email,
+        currentIdentityRow?.email,
+        session?.user?.email,
+        '—'
+      );
+    }
+
+    function loadReportsConfigForm() {
+      const cfg = getCurrentReportsConfig();
+      if ($('reportsWeeklyEnabled')) $('reportsWeeklyEnabled').checked = cfg.weekly_library_summary_enabled === true;
+      if ($('reportsWeeklyNote')) $('reportsWeeklyNote').value = firstFilledValue(cfg.weekly_library_summary_note);
+      if ($('reportsWeeklyTargetEmail')) $('reportsWeeklyTargetEmail').value = getReportsWeeklyTargetEmail();
+      setStatus('reportsConfigStatus', '');
+    }
+
+    function buildReportsQuickEntries() {
+      const weeklyEnabled = getCurrentReportsConfig().weekly_library_summary_enabled === true;
+      return [
+        ['Resumo semanal automático', weeklyEnabled ? 'Ligado para esta biblioteca' : 'Desligado para esta biblioteca'],
+        ['Fluxos previstos', 'Reservas, empréstimos / retornos, consultas, inscrições, catalogação e catálogo completo'],
+        ['Filtros cruzados', 'Período, situação, agrupamento, ordenação e busca livre'],
+        ['Exemplos diretos', 'Empréstimos por leitor(a/e), reservas por período, catálogo completo e catalogação por tombo / CDD']
+      ];
+    }
+
+    async function saveReportsConfig() {
+      try {
+        setStatus('reportsConfigStatus', 'Salvando opção do resumo semanal…', 'info');
+        const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const base = currentGovernance && typeof currentGovernance === 'object' ? JSON.parse(JSON.stringify(currentGovernance)) : {};
+        base.reports = {
+          ...safeJsonObject(base.reports),
+          weekly_library_summary_enabled: boolValue('reportsWeeklyEnabled'),
+          weekly_library_summary_note: String($('reportsWeeklyNote')?.value || '').trim() || null,
+          weekly_library_summary_target_email: getReportsWeeklyTargetEmail()
+        };
+        const { error } = await supabase
+          .from('library_document_governance')
+          .upsert({
+            library_id: row.id,
+            config: base,
+            updated_at: new Date().toISOString(),
+            updated_by: session?.user?.id || null
+          }, { onConflict: 'library_id' });
+        if (error) throw error;
+        currentGovernance = base;
+        loadReportsConfigForm();
+        renderKvGrid('reportsQuickGrid', buildReportsQuickEntries());
+        setStatus('reportsConfigStatus', 'Opção do resumo semanal salva.', 'ok');
+      } catch (error) {
+        setStatus('reportsConfigStatus', 'Não consegui salvar a opção semanal: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    function normalizeReportDay(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+      const normalized = raw.length <= 10 ? `${raw}T00:00:00` : raw;
+      const d = new Date(normalized);
+      if (Number.isNaN(d.getTime())) return raw.slice(0, 10);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function matchesLibraryScope(row, libraryId, librarySlug='') {
+      const idKeys = ['library_id','pickup_library_id','owner_library_id','loan_library_id','request_library_id','home_library_id','local_library_id','requester_library_id','target_library_id','reader_library_id'];
+      const slugKeys = ['library_slug','pickup_library_slug','owner_library_slug','loan_library_slug','default_library_slug'];
+      for (const key of idKeys) {
+        if (String(firstFilledValue(row?.[key], '') || '') === String(libraryId || '')) return true;
+      }
+      if (librarySlug) {
+        for (const key of slugKeys) {
+          if (String(firstFilledValue(row?.[key], '') || '') === String(librarySlug || '')) return true;
+        }
+      }
+      return false;
+    }
+
+    async function fetchRowsFromCandidates(candidates, limit=2000) {
+      let lastError = null;
+      for (const candidate of asArray(candidates)) {
+        try {
+          const { data, error } = await supabase.from(candidate).select('*').limit(limit);
+          if (error) throw error;
+          return { rows: asArray(data), source: candidate };
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      throw lastError || new Error('Nenhuma fonte de dados disponível para este relatório.');
+    }
+
+    async function fetchProfilesMap(userIds) {
+      const ids = Array.from(new Set(asArray(userIds).map((value) => String(value || '').trim()).filter(Boolean)));
+      const map = new Map();
+      for (let i = 0; i < ids.length; i += 100) {
+        const slice = ids.slice(i, i + 100);
+        if (!slice.length) continue;
+        try {
+          const { data, error } = await supabase.from('profiles').select('*').in('id', slice);
+          if (error) throw error;
+          for (const row of asArray(data)) {
+            const key = String(row?.id || '').trim();
+            if (key) map.set(key, row);
+          }
+        } catch (_error) {
+        }
+      }
+      return map;
+    }
+
+    function profileDisplayLabel(profile) {
+      const joinedName = [firstFilledValue(profile?.first_name), firstFilledValue(profile?.last_name)].filter(Boolean).join(' ');
+      return firstFilledValue(profile?.full_name, joinedName, profile?.email, profile?.id);
+    }
+
+    function collectReportsFilters() {
+      return {
+        preset: String($('reportsPresetSelect')?.value || 'reservas').trim() || 'reservas',
+        grouping: String($('reportsGroupingSelect')?.value || 'none').trim() || 'none',
+        status: String($('reportsStatusFilter')?.value || '').trim().toLowerCase(),
+        dateFrom: String($('reportsDateFrom')?.value || '').trim(),
+        dateTo: String($('reportsDateTo')?.value || '').trim(),
+        search: String($('reportsSearchInput')?.value || '').trim().toLowerCase(),
+        sort: String($('reportsSortSelect')?.value || 'date_desc').trim() || 'date_desc',
+        limit: Math.max(Number($('reportsLimitSelect')?.value || 100) || 100, 1)
+      };
+    }
+
+    function rowMatchesReportsFilters(row, filters) {
+      const day = normalizeReportDay(firstFilledValue(row?.occurred_at, row?.created_at, row?.updated_at, row?.start_date, row?.return_date));
+      if (filters.dateFrom && (!day || day < filters.dateFrom)) return false;
+      if (filters.dateTo && (!day || day > filters.dateTo)) return false;
+      if (filters.status && String(firstFilledValue(row?.status, '')).trim().toLowerCase() !== filters.status) return false;
+      if (filters.search) {
+        const haystack = [
+          row?.reader,
+          row?.reader_email,
+          row?.title,
+          row?.subtitle,
+          row?.author,
+          row?.cdd,
+          row?.status,
+          row?.bib_ref,
+          row?.tombo,
+          row?.location,
+          row?.note,
+          row?.membership_status,
+          row?.emails,
+          row?.tombos
+        ].flat().filter(Boolean).join(' ').toLowerCase();
+        if (!haystack.includes(filters.search)) return false;
+      }
+      return true;
+    }
+
+    function getGroupedReportValue(row, grouping) {
+      if (grouping === 'day') return normalizeReportDay(firstFilledValue(row?.occurred_at, row?.created_at, row?.updated_at)) || 'Sem data';
+      if (grouping === 'reader') return firstFilledValue(row?.reader, row?.reader_email, 'Sem pessoa identificada');
+      if (grouping === 'status') return firstFilledValue(row?.status, 'Sem situação');
+      if (grouping === 'title') return firstFilledValue(row?.title, row?.bib_ref, 'Sem documento');
+      if (grouping === 'author') return firstFilledValue(row?.author, 'Sem autoria');
+      if (grouping === 'cdd') return firstFilledValue(row?.cdd, 'Sem CDD');
+      return 'Sem agrupamento';
+    }
+
+    function aggregateReportRows(rows, grouping) {
+      if (!grouping || grouping === 'none') return { grouped: false, rows: asArray(rows) };
+      const buckets = new Map();
+      for (const row of asArray(rows)) {
+        const key = getGroupedReportValue(row, grouping);
+        if (!buckets.has(key)) {
+          buckets.set(key, {
+            group: key,
+            count: 0,
+            first_at: '',
+            last_at: '',
+            readers: new Set(),
+            titles: new Set(),
+            statuses: new Set(),
+            tombos: new Set(),
+            notes: new Set()
+          });
+        }
+        const bucket = buckets.get(key);
+        bucket.count += Number(row?.count || 1) || 1;
+        const occurred = normalizeReportDay(firstFilledValue(row?.occurred_at, row?.created_at, row?.updated_at));
+        if (occurred && (!bucket.first_at || occurred < bucket.first_at)) bucket.first_at = occurred;
+        if (occurred && (!bucket.last_at || occurred > bucket.last_at)) bucket.last_at = occurred;
+        if (row?.reader) bucket.readers.add(row.reader);
+        if (row?.title) bucket.titles.add(row.title);
+        if (Array.isArray(row?.tombos)) row.tombos.forEach((value) => value && bucket.tombos.add(String(value)));
+        if (row?.tombo) bucket.tombos.add(String(row.tombo));
+        if (row?.status) bucket.statuses.add(String(row.status));
+        if (row?.note) bucket.notes.add(String(row.note));
+      }
+      return {
+        grouped: true,
+        rows: Array.from(buckets.values()).map((bucket) => ({
+          group: bucket.group,
+          count: bucket.count,
+          first_at: bucket.first_at,
+          last_at: bucket.last_at,
+          readers: Array.from(bucket.readers).slice(0, 6).join(' · '),
+          titles: Array.from(bucket.titles).slice(0, 6).join(' · '),
+          tombos: Array.from(bucket.tombos).slice(0, 10).join(', '),
+          statuses: Array.from(bucket.statuses).slice(0, 6).join(' · '),
+          note: Array.from(bucket.notes).slice(0, 4).join(' · ')
+        }))
+      };
+    }
+
+    function sortReportRows(rows, sortKey) {
+      const normalizedRows = [...asArray(rows)];
+      const compareText = (left, right) => tableSortCollator.compare(String(left || ''), String(right || ''));
+      const compareDate = (left, right) => compareText(normalizeReportDay(left), normalizeReportDay(right));
+      normalizedRows.sort((a, b) => {
+        if (sortKey === 'date_asc') return compareDate(firstFilledValue(a?.occurred_at, a?.first_at), firstFilledValue(b?.occurred_at, b?.first_at));
+        if (sortKey === 'title_asc') return compareText(firstFilledValue(a?.title, a?.group), firstFilledValue(b?.title, b?.group));
+        if (sortKey === 'reader_asc') return compareText(firstFilledValue(a?.reader, a?.group), firstFilledValue(b?.reader, b?.group));
+        if (sortKey === 'status_asc') return compareText(firstFilledValue(a?.status, a?.statuses, a?.group), firstFilledValue(b?.status, b?.statuses, b?.group));
+        if (sortKey === 'count_asc') return Number(a?.count || 0) - Number(b?.count || 0);
+        if (sortKey === 'count_desc') return Number(b?.count || 0) - Number(a?.count || 0);
+        return compareDate(firstFilledValue(b?.occurred_at, b?.last_at), firstFilledValue(a?.occurred_at, a?.last_at));
+      });
+      return normalizedRows;
+    }
+
+    function renderReportsTable(columns, rows, emptyMessage='Nenhum resultado para os filtros atuais.') {
+      const thead = $('reportsTableHead');
+      const tbody = $('tbodyReports');
+      if (!thead || !tbody) return;
+      const normalizedColumns = Array.isArray(columns) && columns.length ? columns : [{ label: 'Resultado', value: (row) => row?.group || '—' }];
+      thead.innerHTML = `<tr>${normalizedColumns.map((column) => `<th>${esc(column.label)}</th>`).join('')}</tr>`;
+      const renderCell = (value) => {
+        if (Array.isArray(value)) return value.length ? value.map((item) => esc(displayValue(item))).join('<br>') : '—';
+        if (value == null || value === '') return '—';
+        return esc(displayValue(value));
+      };
+      const normalizedRows = asArray(rows);
+      if (!normalizedRows.length) {
+        tbody.innerHTML = `<tr><td colspan="${normalizedColumns.length}">${esc(emptyMessage)}</td></tr>`;
+        initSortableTables();
+        applyStoredSortForTbody('tbodyReports');
+        return;
+      }
+      tbody.innerHTML = normalizedRows.map((row) => `<tr>${normalizedColumns.map((column) => `<td>${renderCell(typeof column.value === 'function' ? column.value(row) : row?.[column.value])}</td>`).join('')}</tr>`).join('');
+      initSortableTables();
+      applyStoredSortForTbody('tbodyReports');
+    }
+
+    function buildGroupedReportColumns() {
+      return [
+        { label: 'Grupo', value: (row) => row?.group },
+        { label: 'Quantidade', value: (row) => row?.count },
+        { label: 'Primeiro registro', value: (row) => fmtDate(row?.first_at) },
+        { label: 'Último registro', value: (row) => fmtDate(row?.last_at) },
+        { label: 'Pessoas / documentos', value: (row) => [row?.readers, row?.titles].filter(Boolean).join(' · ') || '—' },
+        { label: 'Situações / tombos / observações', value: (row) => [row?.statuses, row?.tombos, row?.note].filter(Boolean).join(' · ') || '—' }
+      ];
+    }
+
+    async function fetchReservationsReportRows(libraryId) {
+      const { rows, source } = await fetchRowsFromCandidates([
+        'api.reserva_itens_followup_ui',
+        'api.reserva_itens_ui',
+        'v_reserva_itens_v2_ui_fix',
+        'reserva_linhas_v2',
+        'reservas_v2'
+      ], 3000);
+      const scopedRows = asArray(rows).filter((row) => matchesLibraryScope(row, libraryId, currentLibraryRow?.slug || ''));
+      const profiles = await fetchProfilesMap(scopedRows.map((row) => firstFilledValue(row?.user_id, row?.reader_user_id, row?.profile_id, row?.reader_id)));
+      return {
+        source,
+        rows: scopedRows.map((row) => {
+          const profile = profiles.get(String(firstFilledValue(row?.user_id, row?.reader_user_id, row?.profile_id, row?.reader_id) || '')) || null;
+          return {
+            id: firstFilledValue(row?.id, row?.line_id, row?.item_id, row?.request_id),
+            occurred_at: firstFilledValue(row?.created_at, row?.requested_at, row?.inserted_at, row?.updated_at),
+            reader: firstFilledValue(row?.reader_name, row?.profile_name, row?.full_name, profileDisplayLabel(profile), row?.reader_email, row?.user_id),
+            reader_email: firstFilledValue(row?.reader_email, row?.email, profile?.email),
+            title: firstFilledValue(row?.book_title, row?.titulo, row?.title, row?.display_title, row?.bib_ref, row?.book_bib_ref),
+            status: String(firstFilledValue(row?.workflow_stage, row?.status_global, row?.status, row?.pickup_reply, 'pending')).trim().toLowerCase(),
+            bib_ref: firstFilledValue(row?.bib_ref, row?.book_bib_ref, row?.local_bib_ref),
+            note: firstFilledValue(row?.response_note, row?.public_note, row?.notes)
+          };
+        })
+      };
+    }
+
+    async function fetchLoansReportRows(libraryId) {
+      const { rows, source } = await fetchRowsFromCandidates([
+        'api.emprestimo_itens_ui',
+        'api.loans_detalhes',
+        'emprestimo_itens_v2',
+        'emprestimos_v2',
+        'loans'
+      ], 3000);
+      const scopedRows = asArray(rows).filter((row) => matchesLibraryScope(row, libraryId, currentLibraryRow?.slug || ''));
+      const profiles = await fetchProfilesMap(scopedRows.map((row) => firstFilledValue(row?.user_id, row?.reader_user_id, row?.profile_id, row?.reader_id)));
+      return {
+        source,
+        rows: scopedRows.map((row) => {
+          const profile = profiles.get(String(firstFilledValue(row?.user_id, row?.reader_user_id, row?.profile_id, row?.reader_id) || '')) || null;
+          const returnedAt = firstFilledValue(row?.returned_at, row?.return_date_actual, row?.devolvido_em);
+          let status = String(firstFilledValue(row?.status, row?.loan_status, row?.workflow_stage, returnedAt ? 'returned' : 'active')).trim().toLowerCase();
+          const dueDay = normalizeReportDay(firstFilledValue(row?.due_date, row?.return_due_at, row?.devolucao_prevista));
+          const today = normalizeReportDay(new Date().toISOString());
+          if (!returnedAt && dueDay && dueDay < today && !['returned','cancelled'].includes(status)) status = 'overdue';
+          return {
+            id: firstFilledValue(row?.id, row?.loan_id, row?.item_id),
+            occurred_at: firstFilledValue(row?.loaned_at, row?.checkout_at, row?.created_at, row?.start_date, row?.updated_at),
+            reader: firstFilledValue(row?.reader_name, row?.profile_name, row?.full_name, profileDisplayLabel(profile), row?.reader_email, row?.user_id),
+            reader_email: firstFilledValue(row?.reader_email, row?.email, profile?.email),
+            title: firstFilledValue(row?.book_title, row?.titulo, row?.title, row?.display_title, row?.bib_ref, row?.book_bib_ref),
+            status,
+            bib_ref: firstFilledValue(row?.bib_ref, row?.book_bib_ref, row?.local_bib_ref),
+            start_date: firstFilledValue(row?.loaned_at, row?.checkout_at, row?.start_date),
+            return_date: firstFilledValue(row?.due_date, row?.return_due_at, row?.devolucao_prevista),
+            returned_at: returnedAt,
+            note: firstFilledValue(row?.notes, row?.public_note)
+          };
+        })
+      };
+    }
+
+    async function fetchConsultationsReportRows(libraryId) {
+      const { rows, source } = await fetchRowsFromCandidates([
+        'consultation_requests',
+        'local_consultations',
+        'consultation_logs',
+        'consultation_attendances'
+      ], 3000);
+      const scopedRows = asArray(rows).filter((row) => matchesLibraryScope(row, libraryId, currentLibraryRow?.slug || ''));
+      const profiles = await fetchProfilesMap(scopedRows.map((row) => firstFilledValue(row?.user_id, row?.reader_user_id, row?.profile_id, row?.reader_id)));
+      return {
+        source,
+        rows: scopedRows.map((row) => {
+          const profile = profiles.get(String(firstFilledValue(row?.user_id, row?.reader_user_id, row?.profile_id, row?.reader_id) || '')) || null;
+          return {
+            id: firstFilledValue(row?.id, row?.request_id),
+            occurred_at: firstFilledValue(row?.consultation_date, row?.scheduled_for, row?.created_at, row?.updated_at),
+            reader: firstFilledValue(row?.reader_name, row?.profile_name, row?.full_name, profileDisplayLabel(profile), row?.reader_email, row?.user_id),
+            reader_email: firstFilledValue(row?.reader_email, row?.email, profile?.email),
+            title: firstFilledValue(row?.book_title, row?.titulo, row?.title, row?.subject, row?.bib_ref),
+            status: String(firstFilledValue(row?.status, row?.workflow_stage, row?.attendance_status, 'pending')).trim().toLowerCase(),
+            bib_ref: firstFilledValue(row?.bib_ref),
+            note: firstFilledValue(row?.notes, row?.public_note, row?.observation)
+          };
+        })
+      };
+    }
+
+    async function fetchMembershipReportRows(libraryId) {
+      let source = 'user_library_memberships';
+      let rows = [];
+      try {
+        const { data, error } = await supabase.from('user_library_memberships').select('*').eq('library_id', libraryId).limit(3000);
+        if (error) throw error;
+        rows = asArray(data);
+      } catch (_error) {
+        source = 'profiles';
+        const { data, error } = await supabase.from('profiles').select('*').or(`library_id.eq.${libraryId},default_library_id.eq.${libraryId}`).limit(3000);
+        if (error) throw error;
+        rows = asArray(data);
+      }
+      const profiles = source === 'user_library_memberships'
+        ? await fetchProfilesMap(rows.map((row) => firstFilledValue(row?.user_id, row?.reader_user_id)))
+        : new Map(rows.map((row) => [String(row?.id || ''), row]));
+      return {
+        source,
+        rows: rows.map((row) => {
+          const profile = profiles.get(String(firstFilledValue(row?.user_id, row?.reader_user_id, row?.id) || '')) || (source === 'profiles' ? row : null);
+          return {
+            id: firstFilledValue(row?.id, row?.user_id),
+            occurred_at: firstFilledValue(row?.created_at, row?.inserted_at, row?.joined_at, row?.updated_at),
+            reader: firstFilledValue(profileDisplayLabel(profile), row?.name, row?.email, row?.user_id),
+            reader_email: firstFilledValue(profile?.email, row?.email),
+            status: String(firstFilledValue(row?.status, row?.membership_status, row?.role, profile?.status, 'active')).trim().toLowerCase(),
+            membership_status: firstFilledValue(row?.membership_status, row?.role, profile?.status),
+            note: firstFilledValue(row?.notes, row?.observation)
+          };
+        })
+      };
+    }
+
+    async function fetchCatalogingReportRows(libraryId) {
+      const { data, error } = await supabase.from('exemplares').select('*').eq('library_id', libraryId).limit(5000).order('bib_ref', { ascending: true });
+      if (error) throw error;
+      const exemplars = asArray(data).filter((row) => row && typeof row === 'object');
+      const booksByRef = await fetchBooksByBibRefs(exemplars.map((row) => row?.bib_ref));
+      return {
+        source: 'exemplares + books',
+        rows: exemplars.map((row) => {
+          const book = booksByRef.get(String(row?.bib_ref || '').trim()) || {};
+          return {
+            id: firstFilledValue(row?.id),
+            occurred_at: firstFilledValue(row?.updated_at, row?.created_at),
+            title: firstFilledValue(book?.titulo, row?.bib_ref),
+            subtitle: firstFilledValue(book?.subtitulo),
+            author: firstFilledValue(book?.autor),
+            cdd: firstFilledValue(book?.cdd),
+            bib_ref: firstFilledValue(row?.bib_ref),
+            tombo: firstFilledValue(row?.tombo),
+            tombos: firstFilledValue(row?.tombo) ? [String(row.tombo)] : [],
+            location: firstFilledValue(row?.shelf_location),
+            status: 'catalogado',
+            note: firstFilledValue(row?.notes, book?.assuntos)
+          };
+        })
+      };
+    }
+
+    async function fetchCatalogFullReportRows(libraryId) {
+      const { data, error } = await supabase.from('exemplares').select('*').eq('library_id', libraryId).limit(5000).order('bib_ref', { ascending: true });
+      if (error) throw error;
+      const exemplars = asArray(data).filter((row) => row && typeof row === 'object');
+      const groups = new Map();
+      for (const row of exemplars) {
+        const bibRef = String(firstFilledValue(row?.bib_ref, '') || '').trim();
+        if (!bibRef) continue;
+        if (!groups.has(bibRef)) {
+          groups.set(bibRef, { bib_ref: bibRef, tombos: [], notes: [], updated_at: '', locations: new Set(), count: 0 });
+        }
+        const bucket = groups.get(bibRef);
+        bucket.count += 1;
+        if (row?.tombo) bucket.tombos.push(String(row.tombo));
+        if (row?.notes) bucket.notes.push(String(row.notes));
+        if (row?.shelf_location) bucket.locations.add(String(row.shelf_location));
+        const updated = firstFilledValue(row?.updated_at, row?.created_at);
+        if (updated && (!bucket.updated_at || normalizeReportDay(updated) > normalizeReportDay(bucket.updated_at))) bucket.updated_at = updated;
+      }
+      const booksByRef = await fetchBooksByBibRefs(Array.from(groups.keys()));
+      let holdingsMap = new Map();
+      try {
+        const { data: holdingRows, error: holdingError } = await supabase.from('book_holdings').select('*').eq('library_id', libraryId).limit(5000);
+        if (holdingError) throw holdingError;
+        holdingsMap = new Map(asArray(holdingRows).map((row) => [String(firstFilledValue(row?.local_bib_ref, row?.bib_ref, row?.book_bib_ref) || '').trim(), row]));
+      } catch (_error) {
+      }
+      return {
+        source: holdingsMap.size ? 'exemplares + books + book_holdings' : 'exemplares + books',
+        rows: Array.from(groups.values()).map((bucket) => {
+          const book = booksByRef.get(bucket.bib_ref) || {};
+          const holding = holdingsMap.get(bucket.bib_ref) || {};
+          return {
+            id: bucket.bib_ref,
+            occurred_at: bucket.updated_at,
+            title: firstFilledValue(book?.titulo, bucket.bib_ref),
+            subtitle: firstFilledValue(book?.subtitulo),
+            author: firstFilledValue(book?.autor),
+            cdd: firstFilledValue(book?.cdd),
+            bib_ref: bucket.bib_ref,
+            count: Number(firstFilledValue(holding?.exemplares_total, bucket.count) || 0),
+            available_count: Number(firstFilledValue(holding?.available_count, bucket.count) || 0),
+            tombos: bucket.tombos,
+            location: Array.from(bucket.locations).slice(0, 4).join(' · '),
+            status: bucket.count ? 'com exemplares' : 'sem exemplares',
+            note: [firstFilledValue(book?.ano), firstFilledValue(book?.colecao), bucket.notes.slice(0, 3).join(' · ')].filter(Boolean).join(' · ')
+          };
+        })
+      };
+    }
+
+    function getDetailedReportColumns(preset) {
+      if (preset === 'reservas') {
+        return [
+          { label: 'Data', value: (row) => fmtDate(row?.occurred_at) },
+          { label: 'Leitor(a/e)', value: (row) => row?.reader || row?.reader_email },
+          { label: 'Documento', value: (row) => [row?.title, row?.bib_ref].filter(Boolean).join(' · ') || '—' },
+          { label: 'Situação', value: (row) => row?.status },
+          { label: 'Referência', value: (row) => row?.id || row?.bib_ref },
+          { label: 'Observação', value: (row) => row?.note }
+        ];
+      }
+      if (preset === 'emprestimos') {
+        return [
+          { label: 'Saída', value: (row) => fmtDate(row?.start_date || row?.occurred_at) },
+          { label: 'Retorno previsto', value: (row) => fmtDate(row?.return_date) },
+          { label: 'Retorno real', value: (row) => fmtDate(row?.returned_at) },
+          { label: 'Leitor(a/e)', value: (row) => row?.reader || row?.reader_email },
+          { label: 'Documento', value: (row) => [row?.title, row?.bib_ref].filter(Boolean).join(' · ') || '—' },
+          { label: 'Situação', value: (row) => row?.status }
+        ];
+      }
+      if (preset === 'consultas') {
+        return [
+          { label: 'Data', value: (row) => fmtDate(row?.occurred_at) },
+          { label: 'Pessoa', value: (row) => row?.reader || row?.reader_email },
+          { label: 'Documento / tema', value: (row) => [row?.title, row?.bib_ref].filter(Boolean).join(' · ') || '—' },
+          { label: 'Situação', value: (row) => row?.status },
+          { label: 'Referência', value: (row) => row?.id || row?.bib_ref },
+          { label: 'Observação', value: (row) => row?.note }
+        ];
+      }
+      if (preset === 'inscricoes') {
+        return [
+          { label: 'Data', value: (row) => fmtDate(row?.occurred_at) },
+          { label: 'Pessoa', value: (row) => row?.reader },
+          { label: 'E-mail', value: (row) => row?.reader_email },
+          { label: 'Vínculo', value: (row) => row?.membership_status },
+          { label: 'Situação', value: (row) => row?.status },
+          { label: 'Observação', value: (row) => row?.note }
+        ];
+      }
+      if (preset === 'catalogacao') {
+        return [
+          { label: 'Atualizado', value: (row) => fmtDate(row?.occurred_at) },
+          { label: 'Tombo', value: (row) => row?.tombo },
+          { label: 'Documento', value: (row) => [row?.title, row?.subtitle, row?.bib_ref].filter(Boolean).join(' · ') || '—' },
+          { label: 'Autoria', value: (row) => row?.author },
+          { label: 'CDD / Dewey', value: (row) => row?.cdd },
+          { label: 'Localização', value: (row) => [row?.location, row?.note].filter(Boolean).join(' · ') || '—' }
+        ];
+      }
+      return [
+        { label: 'Documento', value: (row) => [row?.title, row?.subtitle, row?.bib_ref].filter(Boolean).join(' · ') || '—' },
+        { label: 'Autoria', value: (row) => row?.author },
+        { label: 'CDD / Dewey', value: (row) => row?.cdd },
+        { label: 'Exemplares', value: (row) => `${row?.count || 0} total / ${row?.available_count ?? row?.count ?? 0} disponível(is)` },
+        { label: 'Tombos', value: (row) => Array.isArray(row?.tombos) ? row.tombos.slice(0, 10).join(', ') : '—' },
+        { label: 'Ano / coleção / observação', value: (row) => [row?.location, row?.note].filter(Boolean).join(' · ') || '—' }
+      ];
+    }
+
+    async function buildReportDataset(filters) {
+      const libraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
+      if (!libraryId) throw new Error('Biblioteca ativa não identificada.');
+      if (filters.preset === 'reservas') return await fetchReservationsReportRows(libraryId);
+      if (filters.preset === 'emprestimos') return await fetchLoansReportRows(libraryId);
+      if (filters.preset === 'consultas') return await fetchConsultationsReportRows(libraryId);
+      if (filters.preset === 'inscricoes') return await fetchMembershipReportRows(libraryId);
+      if (filters.preset === 'catalogacao') return await fetchCatalogingReportRows(libraryId);
+      return await fetchCatalogFullReportRows(libraryId);
+    }
+
+    function renderReportsSummary(rows, filters, meta, grouped) {
+      const definition = REPORT_PRESET_DEFINITIONS[filters.preset] || REPORT_PRESET_DEFINITIONS.reservas;
+      const firstDay = grouped ? firstFilledValue(rows[0]?.first_at) : firstFilledValue(rows[0]?.occurred_at);
+      const lastDay = grouped ? firstFilledValue(rows[0]?.last_at) : firstFilledValue(rows[rows.length - 1]?.occurred_at);
+      renderKvGrid('reportsSummaryGrid', [
+        ['Relatório escolhido', definition.label],
+        ['Fonte usada', firstFilledValue(meta?.source, '—')],
+        ['Agrupamento', grouped ? firstFilledValue($('reportsGroupingSelect')?.selectedOptions?.[0]?.textContent, 'Agrupado') : 'Sem agrupamento'],
+        ['Linhas após filtros', rows.length],
+        ['Situação filtrada', firstFilledValue($('reportsStatusFilter')?.selectedOptions?.[0]?.textContent, 'Todos')],
+        ['Período aplicado', [filters.dateFrom ? fmtDate(filters.dateFrom) : 'início livre', filters.dateTo ? fmtDate(filters.dateTo) : 'fim livre'].join(' → ')],
+        ['Busca livre', filters.search || '—'],
+        ['Primeiro / último registro visível', [fmtDate(firstDay), fmtDate(lastDay)].join(' → ')]
+      ]);
+    }
+
+    async function runSelectedReport() {
+      const filters = collectReportsFilters();
+      const definition = REPORT_PRESET_DEFINITIONS[filters.preset] || REPORT_PRESET_DEFINITIONS.reservas;
+      setButtonBusy('btnLoadReports', true, 'Carregando…');
+      setStatus('reportsStatus', `Carregando relatório de ${definition.label.toLowerCase()}…`, 'info');
+      try {
+        const dataset = await buildReportDataset(filters);
+        let rows = asArray(dataset.rows).filter((row) => rowMatchesReportsFilters(row, filters));
+        const aggregated = aggregateReportRows(rows, filters.grouping);
+        rows = sortReportRows(aggregated.rows, filters.sort).slice(0, filters.limit);
+        currentReportsRows = rows;
+        currentReportsMeta = { preset: filters.preset, source: dataset.source, loaded: true };
+        const columns = aggregated.grouped ? buildGroupedReportColumns() : getDetailedReportColumns(filters.preset);
+        renderReportsTable(columns, rows, 'Nenhum resultado para os filtros atuais.');
+        renderReportsSummary(rows, filters, dataset, aggregated.grouped);
+        if ($('reportsSourceNote')) $('reportsSourceNote').value = firstFilledValue(dataset.source, '—');
+        setStatus('reportsStatus', rows.length ? `Relatório de ${definition.label.toLowerCase()} carregado com ${rows.length} linha(s).` : `Relatório de ${definition.label.toLowerCase()} carregado, sem linhas para os filtros atuais.`, rows.length ? 'ok' : 'warn');
+      } catch (error) {
+        currentReportsRows = [];
+        currentReportsMeta = { preset: filters.preset, source: '', loaded: false };
+        renderReportsTable([{ label: 'Resultado', value: () => '—' }, { label: 'Detalhe', value: () => '—' }, { label: 'Observação', value: () => '—' }], [], 'Não consegui carregar este relatório: ' + (error.message || String(error)));
+        renderKvGrid('reportsSummaryGrid', [
+          ['Relatório escolhido', definition.label],
+          ['Estado', 'Falha no carregamento'],
+          ['Detalhe', error.message || String(error)]
+        ]);
+        if ($('reportsSourceNote')) $('reportsSourceNote').value = '—';
+        setStatus('reportsStatus', 'Não consegui carregar este relatório: ' + (error.message || String(error)), 'bad');
+      } finally {
+        setButtonBusy('btnLoadReports', false);
+      }
+    }
+
+    function resetReportsFilters() {
+      if ($('reportsPresetSelect')) $('reportsPresetSelect').value = currentReportsMeta?.preset || 'reservas';
+      updateReportsPresetUi();
+      if ($('reportsGroupingSelect')) $('reportsGroupingSelect').value = 'none';
+      if ($('reportsStatusFilter')) $('reportsStatusFilter').value = '';
+      if ($('reportsDateFrom')) $('reportsDateFrom').value = '';
+      if ($('reportsDateTo')) $('reportsDateTo').value = '';
+      if ($('reportsSearchInput')) $('reportsSearchInput').value = '';
+      if ($('reportsSortSelect')) $('reportsSortSelect').value = 'date_desc';
+      if ($('reportsLimitSelect')) $('reportsLimitSelect').value = '100';
+      if ($('reportsSourceNote')) $('reportsSourceNote').value = currentReportsMeta?.source || '';
+      setStatus('reportsStatus', 'Filtros do relatório limpos.', 'info');
+    }
+
+    async function loadReportsPanel() {
+      updateReportsPresetUi();
+      loadReportsConfigForm();
+      renderKvGrid('reportsQuickGrid', buildReportsQuickEntries());
+      if (!currentReportsMeta?.loaded) {
+        renderKvGrid('reportsSummaryGrid', [
+          ['Estado', 'Escolha um fluxo e clique em “Atualizar relatório”.'],
+          ['Resumo semanal automático', getCurrentReportsConfig().weekly_library_summary_enabled === true ? 'Ligado' : 'Desligado'],
+          ['Destino atual', getReportsWeeklyTargetEmail()],
+          ['Catálogo completo', 'Disponível nesta aba, com autoria, subtítulo, CDD, exemplares e tombos']
+        ]);
+        renderReportsTable([
+          { label: 'Resultado', value: () => 'Escolha um fluxo' },
+          { label: 'Detalhe', value: () => 'Ajuste filtros e clique em “Atualizar relatório”.' },
+          { label: 'Observação', value: () => 'Os dados são carregados sob demanda para evitar peso lateral na página.' }
+        ], [], 'Escolha um fluxo e clique em “Atualizar relatório”.');
+        if ($('reportsSourceNote')) $('reportsSourceNote').value = '';
+      }
+      setStatus('reportsStatus', 'Módulo de relatórios pronto.', 'ok');
+    }
+
+    async function refreshReportsPanelInteractive() {
+      setButtonBusy('btnRefreshReports', true, 'Atualizando…');
+      setStatus('reportsStatus', 'Atualizando configuração e fontes dos relatórios…', 'info');
+      try {
+        await Promise.allSettled([loadCommunicationsPanel(), loadGovernancePanel()]);
+        await loadReportsPanel();
+        if (currentReportsMeta?.loaded) await runSelectedReport();
+        setStatus('reportsStatus', currentReportsMeta?.loaded ? 'Relatórios atualizados.' : 'Configuração dos relatórios atualizada.', 'ok');
+      } catch (error) {
+        setStatus('reportsStatus', 'Não consegui atualizar os relatórios: ' + (error.message || String(error)), 'bad');
+      } finally {
+        setButtonBusy('btnRefreshReports', false);
+      }
+    }
+
     function resetTaskForm() {
       $('taskId').value = '';
       $('taskTitle').value = '';
@@ -3836,6 +4717,7 @@
         loadTasksPanel()
       ]);
       await loadExchangePanel();
+      await loadReportsPanel();
     }
 
     async function refreshAllInstitutionalPanelsSafely(force = false) {
@@ -3876,6 +4758,11 @@
     $('exchangePartnerDocSelect')?.addEventListener('change', () => { syncExchangeObjectRefField(); ensureExchangeMessage(); });
     $('exchangeCustomNote')?.addEventListener('input', () => { if ($('exchangeMessage').value.trim()) ensureExchangeMessage(); });
     $('btnRefreshTasks')?.addEventListener('click', loadTasksPanel);
+    $('btnRefreshReports')?.addEventListener('click', refreshReportsPanelInteractive);
+    $('btnLoadReports')?.addEventListener('click', runSelectedReport);
+    $('btnResetReportsFilters')?.addEventListener('click', resetReportsFilters);
+    $('btnSaveReportsConfig')?.addEventListener('click', saveReportsConfig);
+    $('reportsPresetSelect')?.addEventListener('change', updateReportsPresetUi);
     $('btnNewTask')?.addEventListener('click', resetTaskForm);
     $('btnCancelTask')?.addEventListener('click', resetTaskForm);
     $('btnSaveTask')?.addEventListener('click', saveTask);
@@ -3953,6 +4840,12 @@
       }
     });
 
+    $('tab-relatorios')?.addEventListener('click', async () => {
+      if (!currentReportsMeta?.loaded) {
+        await loadReportsPanel();
+      }
+    });
+
     $('tab-tarefas')?.addEventListener('click', async (event) => {
       const editBtn = event.target.closest('[data-task-edit]');
       if (editBtn) {
@@ -3990,9 +4883,13 @@
     resetRegulationDocForm();
     resetPolicySetForm();
     resetPolicyRuleForm();
+    updateReportsPresetUi();
+    loadReportsConfigForm();
+    renderKvGrid('reportsQuickGrid', buildReportsQuickEntries());
     populateExchangePartnerSelect();
     populateExchangeDocumentSelect('exchangeLocalSelect', [], 'Selecione');
     populateExchangeDocumentSelect('exchangePartnerDocSelect', [], 'Selecione');
+    resetReportsFilters();
     resetExchangeFollowupForm();
     await refreshAllInstitutionalPanelsSafely(true);
 
