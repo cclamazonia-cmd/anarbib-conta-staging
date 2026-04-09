@@ -458,10 +458,16 @@
                   <label class="check-item"><input id="govAllowDigitalLinkRequests" type="checkbox"> Aceitar pedidos de vínculo de recurso digital</label>
                   <label class="check-item"><input id="govAllowExchangeProposals" type="checkbox"> Aceitar propostas de troca interbibliotecas</label>
                   <label class="check-item"><input id="govMutualizationOnly" type="checkbox"> Priorizar apenas parceiras com mutualização autorizada</label>
+                  <label class="check-item"><input id="govRequireAvailableNow" type="checkbox"> Exigir excedente disponível agora antes de sugerir troca</label>
+                </div>
+                <div class="editor-grid-3">
+                  <div class="field"><label for="govExchangeMinTotalCopies">Mínimo total de exemplares</label><input id="govExchangeMinTotalCopies" class="input" type="number" min="2" step="1" value="2"></div>
+                  <div class="field"><label for="govExchangeMinAvailableCopies">Mínimo disponível agora</label><input id="govExchangeMinAvailableCopies" class="input" type="number" min="1" step="1" value="2"></div>
+                  <div class="field"><label for="govExchangePolicyNote">Observação para trocas</label><textarea id="govExchangePolicyNote" class="textarea" placeholder="Ex.: só considerar trocas com excedente claro de exemplares e bom estado físico."></textarea></div>
                 </div>
                 <div class="editor-grid">
-                  <div class="field"><label for="govExchangePolicyNote">Observação para trocas</label><textarea id="govExchangePolicyNote" class="textarea" placeholder="Ex.: só considerar trocas com excedente claro de exemplares e bom estado físico."></textarea></div>
                   <div class="field"><label for="govNetworkNote">Observação geral para relações externas</label><textarea id="govNetworkNote" class="textarea" placeholder="Ex.: pedidos documentais devem sempre registrar bib_ref e motivo."></textarea></div>
+                  <div class="field"><label for="govExchangeGuardrailNote">Observação sobre os filtros</label><textarea id="govExchangeGuardrailNote" class="textarea" placeholder="Ex.: manter sempre pelo menos um exemplar livre após a troca e evitar itens com circulação em aberto."></textarea></div>
                 </div>
               </div>
               <div class="status" id="governanceEditorStatus"></div>
@@ -497,7 +503,7 @@
               <div class="section-head">
                 <div>
                   <h2>Trocas interbibliotecas</h2>
-                  <div class="mini">Escolha excedentes locais e parceiros do AnarBib, gere a proposta, abra o e-mail e acompanhe a resposta.</div>
+                  <div class="mini">Escolha documentos realmente trocáveis segundo os filtros locais, gere a proposta, abra o e-mail e acompanhe a resposta.</div>
                 </div>
                 <div class="actions"><button class="btn mini" id="btnRefreshExchange" type="button">Atualizar</button></div>
               </div>
@@ -505,16 +511,16 @@
             </div>
             <div class="row">
               <div class="card">
-                <div class="section-head"><div><h3>Excedentes locais para troca</h3><div class="mini">Documentos da própria biblioteca com dois exemplares ou mais.</div></div></div>
+                <div class="section-head"><div><h3>Excedentes locais para troca</h3><div class="mini">Documentos da própria biblioteca que passam pelos filtros locais de troca.</div></div></div>
                 <div id="exchangeLocalSummary" class="kv-grid"><div class="empty">Carregando…</div></div>
               </div>
               <div class="card">
-                <div class="section-head"><div><h3>Biblioteca parceira selecionada</h3><div class="mini">Contato, estado da relação e excedentes disponíveis do outro lado.</div></div></div>
+                <div class="section-head"><div><h3>Biblioteca parceira selecionada</h3><div class="mini">Contato, estado da relação e documentos da parceira que passam pelos filtros atuais.</div></div></div>
                 <div id="exchangePartnerSummary" class="kv-grid"><div class="empty">Escolhe primeiro uma biblioteca parceira.</div></div>
               </div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Preparar uma proposta de troca</h3><div class="mini">A proposta fica registrada no sistema e também pode abrir um e-mail pronto para envio ao contato responsável.</div></div></div>
+              <div class="section-head"><div><h3>Preparar uma proposta de troca</h3><div class="mini">A proposta fica registrada no sistema, respeita os filtros locais e também pode abrir um e-mail pronto para envio ao contato responsável.</div></div></div>
               <div class="editor-shell">
                 <div class="editor-grid-3">
                   <div class="field"><label for="exchangePartnerSelect">Biblioteca parceira</label><select id="exchangePartnerSelect" class="select"><option value="">Selecione</option></select></div>
@@ -917,6 +923,81 @@
       if (status === 'em_discussao' || status === 'contactada') return 'Relação em construção';
       return 'Troca ainda não autorizada';
     }
+    function friendlyDocumentRequestAction(value){
+      const raw = String(value || '').trim().toLowerCase();
+      const labels = {
+        proposta_troca_exemplares: 'Proposta de troca de exemplares',
+        correcao_documental: 'Pedido de correção documental',
+        copia_local: 'Pedido de cópia local',
+        recurso_digital: 'Pedido sobre recurso digital'
+      };
+      return labels[raw] || (String(value || '').trim() || '—');
+    }
+    function friendlyDocumentRequestStatus(value, direction=''){
+      const raw = String(value || '').trim().toLowerCase();
+      if (raw === 'pending') return direction === 'Recebido' ? 'Aguardando sua resposta' : 'Aguardando resposta';
+      if (raw === 'accepted') return 'Aceita';
+      if (raw === 'refused') return 'Recusada';
+      if (raw === 'cancelled') return 'Cancelada';
+      if (raw === 'expired') return 'Expirada';
+      return String(value || '').trim() || '—';
+    }
+    function exchangeStatusTone(value){
+      const raw = String(value || '').trim().toLowerCase();
+      if (raw === 'accepted') return 'ok';
+      if (raw === 'pending') return 'warn';
+      if (raw === 'refused' || raw === 'cancelled' || raw === 'expired') return 'bad';
+      return 'info';
+    }
+    function exchangeStatusNote(value, direction=''){
+      const raw = String(value || '').trim().toLowerCase();
+      if (raw === 'pending') return direction === 'Recebido' ? 'Responder aqui e também por e-mail, se necessário.' : 'Aguardar retorno da biblioteca parceira.';
+      if (raw === 'accepted') return 'Combinar quantidade exata, retirada, envio ou entrega.';
+      if (raw === 'refused') return 'Proposta recusada nesta rodada; a relação entre bibliotecas continua aberta.';
+      if (raw === 'cancelled') return 'Proposta encerrada antes de decisão final.';
+      if (raw === 'expired') return 'Proposta sem resposta dentro do prazo útil previsto.';
+      return '—';
+    }
+    function getNormalizedExchangeEligibilityRules(){
+      const cfg = getCurrentGovernanceExchangeConfig();
+      const minTotalCopies = Math.max(2, Number(cfg?.interlibrary_exchange?.min_total_copies || 2) || 2);
+      const minAvailableCopies = Math.max(1, Number(cfg?.interlibrary_exchange?.min_available_copies || 2) || 2);
+      return {
+        min_total_copies: minTotalCopies,
+        min_available_copies: minAvailableCopies,
+        require_available_now: cfg?.interlibrary_exchange?.require_available_now !== false,
+        mutualization_only: cfg?.interlibrary_exchange?.mutualization_only === true,
+        enabled: cfg?.interlibrary_exchange?.enabled !== false,
+        policy_note: firstFilledValue(cfg?.interlibrary_exchange?.policy_note),
+        guardrail_note: firstFilledValue(cfg?.interlibrary_exchange?.guardrail_note)
+      };
+    }
+    function buildExchangeEligibility(row, rules){
+      const totalCopies = Math.max(Number(row?.count || 0) || 0, 0);
+      const hasHoldingAvailability = row?.availability_source === 'holdings';
+      const availableCount = Math.max(Number(row?.available_count ?? totalCopies) || 0, 0);
+      const reasons = [];
+      if (totalCopies < rules.min_total_copies) reasons.push(`menos de ${rules.min_total_copies} exemplares no total`);
+      if (rules.require_available_now && availableCount < rules.min_available_copies) reasons.push(`menos de ${rules.min_available_copies} exemplar(es) disponível(is) agora`);
+      const ready = reasons.length === 0;
+      const caution = !hasHoldingAvailability ? 'Disponibilidade calculada por contagem simples de exemplares; conferir holdings se necessário.' : '';
+      return {
+        ready,
+        total_copies: totalCopies,
+        available_count: availableCount,
+        keep_after_exchange: Math.max(availableCount - 1, 0),
+        reasons,
+        caution,
+        summary: ready
+          ? `Pode entrar em proposta agora (${totalCopies} total / ${availableCount} disponível(is) agora).`
+          : `Não entra na proposta agora: ${reasons.join('; ')}.`
+      };
+    }
+    function exchangeEligibilityText(row){
+      const e = row?.eligibility || null;
+      if (!e) return 'Sem avaliação';
+      return e.ready ? `apto agora · ${e.available_count} disponível(is)` : `bloqueado · ${e.reasons.join('; ')}`;
+    }
     function dedupePartnerSources(rows){
       const byLibrary = new Map();
       for (const row of asArray(rows)) {
@@ -964,9 +1045,10 @@
     async function fetchSurplusDocumentsByLibrary(libraryId){
       const scopedLibraryId = normalizeLibraryId(libraryId);
       if (!scopedLibraryId) return [];
+      const rules = getNormalizedExchangeEligibilityRules();
       const { data, error } = await supabase
         .from('exemplares')
-        .select('id,bib_ref,tombo,shelf_location,library_id')
+        .select('id,bib_ref,tombo,shelf_location,library_id,holding_id,notes')
         .eq('library_id', scopedLibraryId)
         .order('bib_ref', { ascending: true });
       if (error) throw error;
@@ -975,20 +1057,51 @@
         const bibRef = String(row?.bib_ref || '').trim();
         if (!bibRef) continue;
         if (!grouped.has(bibRef)) {
-          grouped.set(bibRef, { bib_ref: bibRef, exemplar_ids: [], tombos: [], shelf_locations: [] });
+          grouped.set(bibRef, { bib_ref: bibRef, exemplar_ids: [], tombos: [], shelf_locations: [], holding_ids: [], exemplar_notes: [] });
         }
         const bucket = grouped.get(bibRef);
         bucket.exemplar_ids.push(row.id);
         if (row.tombo) bucket.tombos.push(row.tombo);
         if (row.shelf_location) bucket.shelf_locations.push(row.shelf_location);
+        if (row.holding_id != null) bucket.holding_ids.push(row.holding_id);
+        if (row.notes) bucket.exemplar_notes.push(row.notes);
       }
-      const candidates = Array.from(grouped.values()).filter((row) => row.exemplar_ids.length >= 2);
-      const booksByRef = await fetchBooksByBibRefs(candidates.map((row) => row.bib_ref));
-      return candidates.map((row) => {
+      const allGroupedDocs = Array.from(grouped.values()).filter((row) => row.exemplar_ids.length >= 1);
+      const holdingIds = Array.from(new Set(allGroupedDocs.flatMap((row) => asArray(row.holding_ids)).filter((value) => value != null)));
+      const holdingsById = new Map();
+      for (let i = 0; i < holdingIds.length; i += 100) {
+        const slice = holdingIds.slice(i, i + 100);
+        if (!slice.length) continue;
+        const { data: holdingRows, error: holdingError } = await supabase
+          .from('book_holdings')
+          .select('id,book_id,library_id,local_bib_ref,loanable,exemplares_total,available_count,notes')
+          .in('id', slice);
+        if (holdingError) throw holdingError;
+        for (const holdingRow of asArray(holdingRows)) {
+          holdingsById.set(Number(holdingRow.id), holdingRow);
+        }
+      }
+      const booksByRef = await fetchBooksByBibRefs(allGroupedDocs.map((row) => row.bib_ref));
+      const enriched = allGroupedDocs.map((row) => {
+        const relatedHoldings = Array.from(new Set(asArray(row.holding_ids).map((value) => Number(value)).filter((value) => !Number.isNaN(value)))).map((holdingId) => holdingsById.get(holdingId)).filter(Boolean);
+        const availabilitySource = relatedHoldings.length ? 'holdings' : 'exemplares_fallback';
+        const availableCount = relatedHoldings.length
+          ? relatedHoldings.reduce((sum, holdingRow) => sum + Math.max(Number(holdingRow?.available_count || 0) || 0, 0), 0)
+          : row.exemplar_ids.length;
+        const exemplaresTotal = relatedHoldings.length
+          ? relatedHoldings.reduce((sum, holdingRow) => sum + Math.max(Number(holdingRow?.exemplares_total || 0) || 0, 0), 0)
+          : row.exemplar_ids.length;
+        const loanableFlags = Array.from(new Set(relatedHoldings.map((holdingRow) => holdingRow?.loanable).filter((value) => value !== null && value !== undefined)));
         const book = booksByRef.get(row.bib_ref) || {};
-        return {
+        const nextRow = {
           ...row,
           count: row.exemplar_ids.length,
+          exemplares_total: exemplaresTotal,
+          available_count: availableCount,
+          availability_source: availabilitySource,
+          has_holding_data: relatedHoldings.length > 0,
+          loanable_flags: loanableFlags,
+          holding_notes: relatedHoldings.map((holdingRow) => holdingRow?.notes).filter(Boolean),
           titulo: firstFilledValue(book.titulo, row.bib_ref),
           subtitulo: firstFilledValue(book.subtitulo),
           autor: firstFilledValue(book.autor),
@@ -998,11 +1111,19 @@
           mutualization_status: firstFilledValue(book.mutualization_status),
           partner_source: firstFilledValue(book.partner_source)
         };
-      }).sort((a, b) => {
-        const byCount = Number(b.count || 0) - Number(a.count || 0);
-        if (byCount) return byCount;
-        return tableSortCollator.compare(String(a.titulo || a.bib_ref || ''), String(b.titulo || b.bib_ref || ''));
+        nextRow.eligibility = buildExchangeEligibility(nextRow, rules);
+        nextRow.exchange_ready = nextRow.eligibility.ready;
+        return nextRow;
       });
+      return enriched
+        .filter((row) => row.exchange_ready)
+        .sort((a, b) => {
+          const byAvailability = Number(b.available_count || 0) - Number(a.available_count || 0);
+          if (byAvailability) return byAvailability;
+          const byCount = Number(b.count || 0) - Number(a.count || 0);
+          if (byCount) return byCount;
+          return tableSortCollator.compare(String(a.titulo || a.bib_ref || ''), String(b.titulo || b.bib_ref || ''));
+        });
     }
     function formatExchangeDocLabel(row){
       if (!row) return '—';
@@ -1010,7 +1131,8 @@
       if (row.subtitulo) bits.push(row.subtitulo);
       const suffix = [];
       if (row.autor) suffix.push(row.autor);
-      suffix.push(`${row.count || 0} exemplar(es)`);
+      suffix.push(`${row.count || 0} exemplar(es) no total`);
+      if (row?.eligibility?.available_count != null) suffix.push(`${row.eligibility.available_count} disponível(is) agora`);
       suffix.push(`bib_ref ${row.bib_ref}`);
       return `${bits.join(' — ')} · ${suffix.join(' · ')}`;
     }
@@ -1026,6 +1148,8 @@
           titulo: firstFilledValue(localDoc.titulo),
           autor: firstFilledValue(localDoc.autor),
           exemplar_count: localDoc.count,
+          available_count: localDoc?.eligibility?.available_count ?? localDoc?.available_count ?? null,
+          exchange_ready: localDoc?.exchange_ready === true,
           exemplar_ids: asArray(localDoc.exemplar_ids)
         } : null,
         partner_document: partnerDoc ? {
@@ -1033,8 +1157,11 @@
           titulo: firstFilledValue(partnerDoc.titulo),
           autor: firstFilledValue(partnerDoc.autor),
           exemplar_count: partnerDoc.count,
+          available_count: partnerDoc?.eligibility?.available_count ?? partnerDoc?.available_count ?? null,
+          exchange_ready: partnerDoc?.exchange_ready === true,
           exemplar_ids: asArray(partnerDoc.exemplar_ids)
-        } : null
+        } : null,
+        guardrails: getNormalizedExchangeEligibilityRules()
       };
       return JSON.stringify(payload);
     }
@@ -2274,12 +2401,17 @@
 
     function loadGovernanceForm() {
       const cfg = getCurrentGovernanceExchangeConfig();
+      const rules = getNormalizedExchangeEligibilityRules();
       $('govAllowCorrectionRequests').checked = cfg.document_requests.allow_correction_requests !== false;
       $('govAllowLocalCopyRequests').checked = cfg.document_requests.allow_local_copy_requests !== false;
       $('govAllowDigitalLinkRequests').checked = cfg.document_requests.allow_digital_link_requests !== false;
       $('govAllowExchangeProposals').checked = cfg.interlibrary_exchange.enabled !== false;
       $('govMutualizationOnly').checked = cfg.interlibrary_exchange.mutualization_only === true;
+      $('govRequireAvailableNow').checked = rules.require_available_now !== false;
+      $('govExchangeMinTotalCopies').value = String(rules.min_total_copies);
+      $('govExchangeMinAvailableCopies').value = String(rules.min_available_copies);
       $('govExchangePolicyNote').value = firstFilledValue(cfg.interlibrary_exchange.policy_note);
+      $('govExchangeGuardrailNote').value = firstFilledValue(cfg.interlibrary_exchange.guardrail_note);
       $('govNetworkNote').value = firstFilledValue(cfg.document_requests.notes, cfg.interlibrary_exchange.notes);
       setStatus('governanceEditorStatus', '');
     }
@@ -2298,7 +2430,11 @@
         ...safeJsonObject(next.interlibrary_exchange),
         enabled: boolValue('govAllowExchangeProposals'),
         mutualization_only: boolValue('govMutualizationOnly'),
+        require_available_now: boolValue('govRequireAvailableNow'),
+        min_total_copies: Math.max(2, Number($('govExchangeMinTotalCopies').value || 2) || 2),
+        min_available_copies: Math.max(1, Number($('govExchangeMinAvailableCopies').value || 2) || 2),
         policy_note: String($('govExchangePolicyNote').value || '').trim() || null,
+        guardrail_note: String($('govExchangeGuardrailNote').value || '').trim() || null,
         notes: String($('govNetworkNote').value || '').trim() || null
       };
       return next;
@@ -2342,12 +2478,15 @@
         const partnerRow = currentPartnerSources.find((item) => String(item?.library_id || '') === String(partnerId || '')) || {};
         const objectRef = parseRequestObjectRef(row?.object_ref);
         const objectText = objectRef?.local_document?.titulo || objectRef?.partner_document?.titulo || firstFilledValue(row?.object_type, row?.object_ref, '—');
+        const statusLabel = friendlyDocumentRequestStatus(row?.status, direction);
+        const statusTone = exchangeStatusTone(row?.status);
+        const statusNote = exchangeStatusNote(row?.status, direction);
         return `<tr>
           <td>${esc(direction)}</td>
           <td>${esc(getPartnerDisplayName(partnerRow))}</td>
-          <td>${esc(firstFilledValue(row?.requested_action, '—'))}</td>
+          <td>${esc(friendlyDocumentRequestAction(row?.requested_action))}</td>
           <td>${esc(objectText)}</td>
-          <td>${esc(firstFilledValue(row?.status, '—'))}</td>
+          <td><span class="pill ${esc(statusTone)}">${esc(statusLabel)}</span><div class="inline-note">${esc(statusNote)}</div></td>
           <td>${esc(fmtDateTime(firstFilledValue(row?.updated_at, row?.created_at)))}</td>
         </tr>`;
       }).join('');
@@ -2355,20 +2494,27 @@
     }
 
     function renderExchangeLocalSummary(rows) {
+      const rules = getNormalizedExchangeEligibilityRules();
       const totalDocs = asArray(rows).length;
       const totalCopies = asArray(rows).reduce((sum, row) => sum + Number(row?.count || 0), 0);
+      const totalAvailable = asArray(rows).reduce((sum, row) => sum + Number(row?.eligibility?.available_count ?? row?.available_count ?? 0), 0);
+      const fallbackDocs = asArray(rows).filter((row) => row?.availability_source !== 'holdings').length;
       renderKvGrid('exchangeLocalSummary', [
-        ['Documentos com excedente local', totalDocs],
+        ['Documentos aptos para troca agora', totalDocs],
         ['Exemplares nesses documentos', totalCopies],
-        ['Regra local de troca', boolValue('govAllowExchangeProposals') ? 'Trocas permitidas localmente' : 'Trocas não marcadas como permitidas'],
-        ['Filtro político local', boolValue('govMutualizationOnly') ? 'Somente mutualização autorizada' : 'Pode abrir conversa com outras parceiras']
+        ['Disponíveis agora nesses documentos', totalAvailable],
+        ['Regra local de troca', rules.enabled ? 'Trocas permitidas localmente' : 'Trocas não marcadas como permitidas'],
+        ['Filtro político local', rules.mutualization_only ? 'Somente mutualização autorizada' : 'Pode abrir conversa com outras parceiras'],
+        ['Critério mínimo total', `${rules.min_total_copies} exemplar(es)`],
+        ['Critério mínimo disponível agora', rules.require_available_now ? `${rules.min_available_copies} exemplar(es)` : 'Filtro desativado'],
+        ['Fonte da disponibilidade', fallbackDocs ? `${fallbackDocs} documento(s) ainda em fallback por exemplares` : 'Holdings alinhados para os documentos listados']
       ]);
     }
 
     function populateExchangeDocumentSelect(selectId, rows, placeholder) {
       const select = $(selectId);
       if (!select) return;
-      const options = [`<option value="">${esc(placeholder)}</option>`].concat(asArray(rows).map((row) => `<option value="${esc(String(row.bib_ref || ''))}">${esc(formatExchangeDocLabel(row))}</option>`));
+      const options = [`<option value="">${esc(placeholder)}</option>`].concat(asArray(rows).map((row) => `<option value="${esc(String(row.bib_ref || ''))}">${esc(formatExchangeDocLabel(row))} · ${esc(exchangeEligibilityText(row))}</option>`));
       select.innerHTML = options.join('');
     }
 
@@ -2414,18 +2560,23 @@
 
     function renderExchangePartnerSummary() {
       const partnerRow = getSelectedExchangePartnerRow();
+      const rules = getNormalizedExchangeEligibilityRules();
       if (!partnerRow) {
         renderKvGrid('exchangePartnerSummary', [['Estado', 'Escolhe primeiro uma biblioteca parceira.']]);
         return;
       }
       const contact = currentPartnerContacts.get(String(partnerRow?.library_id || '')) || {};
+      const availableDocs = currentExchangePartnerSurplus.length;
+      const availableCopies = currentExchangePartnerSurplus.reduce((sum, row) => sum + Number(row?.eligibility?.available_count ?? row?.available_count ?? 0), 0);
       renderKvGrid('exchangePartnerSummary', [
         ['Biblioteca parceira', getPartnerDisplayName(partnerRow)],
         ['Estado da relação', friendlyPartnerRelationStatus(partnerRow?.relation_status)],
         ['Troca nesta fase', relationStatusNote(partnerRow)],
         ['E-mail responsável', firstFilledValue(contact?.contact_email, '—')],
         ['Contato', firstFilledValue(contact?.contact_name, contact?.contact_role, '—')],
-        ['Documentos com excedente desta parceira', currentExchangePartnerSurplus.length]
+        ['Documentos aptos desta parceira', availableDocs],
+        ['Disponíveis agora nesses documentos', availableCopies],
+        ['Critério aplicado aqui', rules.require_available_now ? `${rules.min_total_copies} total / ${rules.min_available_copies} disponível(is)` : `${rules.min_total_copies} total`]
       ]);
     }
 
@@ -2448,16 +2599,19 @@
         const partnerId = direction === 'Enviado' ? row?.target_library_id : row?.requester_library_id;
         const partnerRow = currentPartnerSources.find((item) => String(item?.library_id || '') === String(partnerId || '')) || {};
         const ref = parseRequestObjectRef(row?.object_ref);
-        const localText = ref?.local_document?.titulo ? `${ref.local_document.titulo} (${ref.local_document.exemplar_count || 0})` : '—';
-        const partnerText = ref?.partner_document?.titulo ? `${ref.partner_document.titulo} (${ref.partner_document.exemplar_count || 0})` : '—';
+        const localText = ref?.local_document?.titulo ? `${ref.local_document.titulo} (${ref.local_document.exemplar_count || 0} total / ${ref.local_document.available_count ?? '—'} disponível(is))` : '—';
+        const partnerText = ref?.partner_document?.titulo ? `${ref.partner_document.titulo} (${ref.partner_document.exemplar_count || 0} total / ${ref.partner_document.available_count ?? '—'} disponível(is))` : '—';
+        const statusLabel = friendlyDocumentRequestStatus(row?.status, direction);
+        const statusTone = exchangeStatusTone(row?.status);
+        const statusNote = exchangeStatusNote(row?.status, direction);
         const actionButtons = direction === 'Recebido' && String(row?.status || '') === 'pending'
           ? `<div class="editor-actions"><button class="btn mini" type="button" data-exchange-decision="accepted" data-request-id="${esc(String(row?.id || ''))}">Aceitar</button><button class="btn mini danger" type="button" data-exchange-decision="refused" data-request-id="${esc(String(row?.id || ''))}">Recusar</button></div>`
-          : esc(firstFilledValue(row?.response_note, fmtDateTime(firstFilledValue(row?.decided_at, row?.updated_at)), '—'));
+          : `<div>${esc(firstFilledValue(row?.response_note, '—'))}</div><div class="inline-note">${esc(statusNote)}</div>`;
         return `<tr>
           <td>${esc(direction)}</td>
           <td>${esc(getPartnerDisplayName(partnerRow))}</td>
           <td><div><strong>Nosso excedente:</strong> ${esc(localText)}</div><div><strong>Excedente da parceira:</strong> ${esc(partnerText)}</div></td>
-          <td>${esc(firstFilledValue(row?.status, '—'))}<div class="inline-note">${esc(fmtDateTime(firstFilledValue(row?.updated_at, row?.created_at)))}</div></td>
+          <td><span class="pill ${esc(statusTone)}">${esc(statusLabel)}</span><div class="inline-note">${esc(statusNote)}</div><div class="inline-note">${esc(fmtDateTime(firstFilledValue(row?.updated_at, row?.created_at)))}</div></td>
           <td>${esc(firstFilledValue(row?.message, '—'))}</td>
           <td>${actionButtons}</td>
         </tr>`;
@@ -2475,6 +2629,7 @@
         setStatus('governanceEditorStatus', 'Política local salva.', 'ok');
         await loadGovernancePanel();
         renderExchangeLocalSummary(currentExchangeLocalSurplus);
+        renderExchangePartnerSummary();
       } catch (error) {
         setStatus('governanceEditorStatus', 'Não consegui salvar a política local: ' + (error.message || String(error)), 'bad');
       }
@@ -2493,7 +2648,7 @@
         currentExchangePartnerSurplus = await fetchSurplusDocumentsByLibrary(partnerRow.library_id);
         populateExchangeDocumentSelect('exchangePartnerDocSelect', currentExchangePartnerSurplus, 'Selecione');
         renderExchangePartnerSummary();
-        setStatus('exchangeEditorStatus', currentExchangePartnerSurplus.length ? 'Excedentes da biblioteca parceira carregados.' : 'A biblioteca parceira não mostrou excedentes claros para troca.', currentExchangePartnerSurplus.length ? 'ok' : 'warn');
+        setStatus('exchangeEditorStatus', currentExchangePartnerSurplus.length ? 'Documentos aptos da biblioteca parceira carregados segundo os filtros atuais.' : 'A biblioteca parceira não mostrou documentos que passem pelos filtros atuais de troca.', currentExchangePartnerSurplus.length ? 'ok' : 'warn');
       } catch (error) {
         currentExchangePartnerSurplus = [];
         populateExchangeDocumentSelect('exchangePartnerDocSelect', [], 'Selecione');
@@ -2510,7 +2665,8 @@
         renderExchangeLocalSummary(currentExchangeLocalSurplus);
         renderExchangePartnerSummary();
         renderExchangeRequestsTable(currentExchangeRequests);
-        setStatus('exchangeStatus', currentExchangeLocalSurplus.length ? 'Módulo de trocas pronto para uso.' : 'A biblioteca ainda não mostra documentos com excedente local suficiente para sugerir troca.', currentExchangeLocalSurplus.length ? 'ok' : 'warn');
+        const rules = getNormalizedExchangeEligibilityRules();
+        setStatus('exchangeStatus', currentExchangeLocalSurplus.length ? `Módulo de trocas pronto para uso. Critério atual: ${rules.min_total_copies} total / ${rules.require_available_now ? `${rules.min_available_copies} disponível(is) agora` : 'sem filtro de disponibilidade imediata'}.` : 'A biblioteca ainda não mostra documentos locais que passem pelos filtros atuais de troca.', currentExchangeLocalSurplus.length ? 'ok' : 'warn');
       } catch (error) {
         currentExchangeLocalSurplus = [];
         currentExchangePartnerSurplus = [];
@@ -2527,6 +2683,10 @@
         const partnerRow = getSelectedExchangePartnerRow();
         const email = firstFilledValue(getPartnerContactEmail(partnerRow?.library_id));
         if (!email) throw new Error('Esta biblioteca parceira ainda não tem e-mail responsável cadastrado.');
+        const localDoc = getSelectedLocalExchangeDoc();
+        const partnerDoc = getSelectedPartnerExchangeDoc();
+        if (localDoc && localDoc.exchange_ready !== true) throw new Error(localDoc?.eligibility?.summary || 'O documento local já não passa pelos filtros atuais.');
+        if (partnerDoc && partnerDoc.exchange_ready !== true) throw new Error(partnerDoc?.eligibility?.summary || 'O documento da parceira já não passa pelos filtros atuais.');
         const subject = String($('exchangeMailSubject').value || '').trim();
         const message = String($('exchangeMessage').value || '').trim();
         if (!subject || !message) throw new Error('Gera ou escreve antes o assunto e a mensagem.');
@@ -2574,6 +2734,8 @@
         if (cfg.interlibrary_exchange.mutualization_only === true && !partnerAllowsExchange(partnerRow)) {
           throw new Error('A política local exige mutualização autorizada para abrir proposta de troca com esta parceira.');
         }
+        if (localDoc?.exchange_ready !== true) throw new Error(localDoc?.eligibility?.summary || 'O documento local não passa pelos filtros atuais de troca.');
+        if (partnerDoc?.exchange_ready !== true) throw new Error(partnerDoc?.eligibility?.summary || 'O documento da parceira não passa pelos filtros atuais de troca.');
         const message = String($('exchangeMessage').value || '').trim();
         if (!message) throw new Error('Escreve ou gera a mensagem da proposta.');
         syncExchangeObjectRefField();
