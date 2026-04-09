@@ -1061,20 +1061,25 @@
       const lines = [
         `Olá, compas da ${partnerName}.`,
         '',
-        `Escrevemos em nome da ${ourName} para propor uma troca interbibliotecas entre materiais que hoje aparecem com excedente de exemplares nos dois catálogos.`,
+        `Escrevemos em nome da ${ourName} para abrir uma consulta de troca interbibliotecas no âmbito da rede AnarBib.`,
         '',
-        `Da nossa parte: ${formatExchangeDocLabel(localDoc)}.`,
-        `Da parte de vocês: ${formatExchangeDocLabel(partnerDoc)}.`,
+        'A proposta é exploratória: ela serve primeiro para verificar interesse mútuo, pertinência bibliográfica e condições materiais, antes de qualquer compromisso definitivo.',
         '',
-        'A ideia é verificar se essa troca faz sentido politicamente e materialmente para as duas bibliotecas, considerando estado físico, utilidade local e circulação.',
+        `Material que podemos disponibilizar: ${formatExchangeDocLabel(localDoc)}.`,
+        `Material que gostaríamos de receber de vocês: ${formatExchangeDocLabel(partnerDoc)}.`,
+        '',
+        'Na nossa leitura, trata-se de uma possibilidade razoável porque os dois lados aparecem com mais de um exemplar disponível no catálogo.',
+        'Claro que a decisão final depende também da utilidade local de cada obra, do estado físico dos exemplares, da prioridade política do acervo e da viabilidade concreta da circulação entre as bibliotecas.',
+        '',
+        'Se a proposta parecer pertinente, podemos então combinar a conferência fina dos exemplares, definir se a troca envolve um exemplar de cada lado ou outro arranjo, e acertar retirada, envio ou entrega militante entre as bibliotecas.',
       ];
       if (customNote) {
-        lines.push('', `Observação adicional: ${customNote}`);
+        lines.push('', `Observação adicional da nossa biblioteca: ${customNote}`);
       }
       if (policyNote) {
         lines.push('', `Referência interna da nossa política de trocas: ${policyNote}`);
       }
-      lines.push('', 'Se fizer sentido para vocês, podemos combinar os detalhes de conferência, retirada ou envio entre as bibliotecas.', '', 'Abraços,', ourName);
+      lines.push('', 'Preferimos deixar a resposta registrada também no módulo interbibliotecas do AnarBib, para que o acompanhamento fique claro para as duas bibliotecas.', '', 'Abraços fraternos,', ourName);
       return lines.join('\n');
     }
     function copyTextToClipboard(value){
