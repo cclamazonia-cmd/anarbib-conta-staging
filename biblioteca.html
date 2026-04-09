@@ -858,9 +858,23 @@
     function pickLibraryLogoUrl(...sources){
       for (const source of sources){
         if (!source || typeof source !== 'object') continue;
-        const direct = normalizeUrlMaybe(firstFilledValue(source.logo_url, source.library_logo_url, source.brand_logo_url, source.theme_logo_url));
+        const direct = normalizeUrlMaybe(firstFilledValue(
+          source.logo_url,
+          source.library_logo_url,
+          source.brand_logo_url,
+          source.theme_logo_url,
+          source.header_logo_url,
+          source.public_logo_url
+        ));
         if (direct) return direct;
-        const assetUrl = buildLibraryAssetUrl(firstFilledValue(source.logo_file_key, source.library_logo_file_key, source.brand_logo_file_key));
+        const assetUrl = buildLibraryAssetUrl(firstFilledValue(
+          source.logo_file_key,
+          source.library_logo_file_key,
+          source.brand_logo_file_key,
+          source.theme_logo_file_key,
+          source.header_logo_file_key,
+          source.public_logo_file_key
+        ));
         if (assetUrl) return assetUrl;
       }
       return '';
@@ -1975,6 +1989,70 @@
       return data || { library_id: libraryId };
     }
 
+    async function loadActiveLibraryBrandingContext() {
+      const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+      const libraryId = normalizeLibraryId(row?.id);
+      if (!libraryId) {
+        applyActiveLibraryBranding();
+        return null;
+      }
+
+      let brandRow = null;
+      try {
+        if (typeof supabase.schema === 'function') {
+          const res = await supabase
+            .schema('api')
+            .from('library_email_identity')
+            .select('library_id,library_slug,library_name,short_name,display_name,contact_email,reply_to_email,postal_address,logo_url,logo_file_key,library_logo_url,library_logo_file_key,brand_logo_url,brand_logo_file_key,theme_logo_url,theme_logo_file_key,header_logo_url,header_logo_file_key,public_logo_url,public_logo_file_key,is_active')
+            .eq('library_id', libraryId)
+            .maybeSingle();
+          if (!res?.error && res?.data) brandRow = res.data;
+        }
+      } catch (_e) {}
+
+      if (!brandRow) {
+        try {
+          const { data } = await supabase
+            .from('v_library_notification_context')
+            .select('library_id,slug,library_name,library_short_name,reply_to_email,logo_url,logo_file_key,library_logo_url,library_logo_file_key,brand_logo_url,brand_logo_file_key,theme_logo_url,theme_logo_file_key,header_logo_url,header_logo_file_key,public_logo_url,public_logo_file_key')
+            .eq('library_id', libraryId)
+            .maybeSingle();
+          if (data) {
+            brandRow = {
+              library_id: data.library_id,
+              library_slug: data.slug,
+              library_name: data.library_name,
+              short_name: data.library_short_name,
+              display_name: data.library_name,
+              contact_email: data.reply_to_email,
+              reply_to_email: data.reply_to_email,
+              logo_url: data.logo_url,
+              logo_file_key: data.logo_file_key,
+              library_logo_url: data.library_logo_url,
+              library_logo_file_key: data.library_logo_file_key,
+              brand_logo_url: data.brand_logo_url,
+              brand_logo_file_key: data.brand_logo_file_key,
+              theme_logo_url: data.theme_logo_url,
+              theme_logo_file_key: data.theme_logo_file_key,
+              header_logo_url: data.header_logo_url,
+              header_logo_file_key: data.header_logo_file_key,
+              public_logo_url: data.public_logo_url,
+              public_logo_file_key: data.public_logo_file_key,
+              is_active: true
+            };
+          }
+        } catch (_e) {}
+      }
+
+      if (brandRow && typeof brandRow === 'object') {
+        currentLibraryBrandIdentity = { ...(currentLibraryBrandIdentity || {}), ...brandRow };
+      } else if (!currentLibraryBrandIdentity && row) {
+        currentLibraryBrandIdentity = row;
+      }
+      applyActiveLibraryBranding();
+      return currentLibraryBrandIdentity || null;
+    }
+
     async function loadIdentityPanel() {
       try {
         const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
@@ -2774,35 +2852,12 @@
             .select('*')
             .or(`requester_library_id.eq.${libraryId},target_library_id.eq.${libraryId}`)
             .order('updated_at', { ascending: false }),
-          (async () => {
-            try {
-              if (typeof supabase.schema === 'function') {
-                const res = await supabase.schema('api').from('library_email_identity').select('library_id,library_slug,library_name,short_name,display_name,contact_email,reply_to_email,postal_address,logo_url,logo_file_key,is_active').eq('library_id', libraryId).maybeSingle();
-                if (!res?.error) return res.data || null;
-              }
-            } catch (_e) {}
-            try {
-              const { data } = await supabase.from('v_library_notification_context').select('library_id,slug,library_name,library_short_name,reply_to_email,logo_url,logo_file_key').eq('library_id', libraryId).maybeSingle();
-              return data ? {
-                library_id: data.library_id,
-                library_slug: data.slug,
-                library_name: data.library_name,
-                short_name: data.library_short_name,
-                display_name: data.library_name,
-                contact_email: data.reply_to_email,
-                reply_to_email: data.reply_to_email,
-                logo_url: data.logo_url,
-                logo_file_key: data.logo_file_key,
-                is_active: true
-              } : null;
-            } catch (_e) {}
-            return null;
-          })()
+          loadActiveLibraryBrandingContext().catch(() => currentLibraryBrandIdentity || null)
         ]);
         if (error) throw error;
         currentGovernanceRow = data || null;
         currentGovernance = safeJsonObject(data?.config || {});
-        currentLibraryBrandIdentity = brandRowsResult || null;
+        currentLibraryBrandIdentity = brandRowsResult || currentLibraryBrandIdentity || currentLibraryRow || null;
         applyActiveLibraryBranding();
         currentPartnerSources = dedupePartnerSources(asArray(partnerRowsResult).filter((partnerRow) => String(partnerRow?.library_id || '') !== String(libraryId || '')));
         currentExchangeRequests = asArray(requestRowsResult?.data).filter((requestRow) => requestRow && typeof requestRow === 'object');
@@ -2849,7 +2904,6 @@
       } catch (error) {
         currentGovernance = {};
         currentGovernanceRow = null;
-        currentLibraryBrandIdentity = null;
         currentPartnerSources = [];
         currentPartnerContacts = new Map();
         currentExchangeRequests = [];
@@ -3769,6 +3823,7 @@
       const hasAccess = await adoptSessionState();
       if (!hasAccess) return;
       await fetchCurrentLibraryRow();
+      await loadActiveLibraryBrandingContext();
       await Promise.all([
         loadIdentityPanel(),
         loadCommunicationsPanel(),
