@@ -759,6 +759,8 @@
     const $ = (id) => document.getElementById(id);
     const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
     const TAB_STORAGE_KEY = 'anarbib_biblioteca_active_tab';
+    const AUTH_RETURN_STORAGE_KEY = 'anarbib_biblioteca_auth_return';
+
 
     let session = null;
     let currentIdentityRow = null;
@@ -783,6 +785,8 @@
     let currentPolicySets = [];
     let currentPolicyRules = [];
     let currentTasks = [];
+    let refreshPanelsPromise = null;
+
 
     function esc(value){
       return String(value ?? '').replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
@@ -1827,6 +1831,49 @@
       return { rows, profileRow };
     }
 
+    function getCurrentPageUrl() {
+      try {
+        return window.location.href;
+      } catch (_e) {
+        return String(CONFIG?.ROUTES?.biblioteca || window.location.pathname || '');
+      }
+    }
+
+    function rememberAuthReturn() {
+      const target = getCurrentPageUrl();
+      try { sessionStorage.setItem(AUTH_RETURN_STORAGE_KEY, target); } catch (_e) {}
+      return target;
+    }
+
+    function readAuthReturn() {
+      try {
+        return String(sessionStorage.getItem(AUTH_RETURN_STORAGE_KEY) || '').trim();
+      } catch (_e) {
+        return '';
+      }
+    }
+
+    function clearAuthReturn() {
+      try { sessionStorage.removeItem(AUTH_RETURN_STORAGE_KEY); } catch (_e) {}
+    }
+
+    function buildAuthEntryUrl() {
+      const base = String($('btnSair')?.dataset?.authHref || CONFIG?.ROUTES?.cadastro || FALLBACK_CONFIG.ROUTES.cadastro || '').trim();
+      const returnTarget = rememberAuthReturn();
+      if (!base) return returnTarget || '';
+      try {
+        const url = new URL(base, window.location.href);
+        if (returnTarget) {
+          url.searchParams.set('next', returnTarget);
+          url.searchParams.set('return_to', returnTarget);
+          url.searchParams.set('redirect_to', returnTarget);
+        }
+        return url.toString();
+      } catch (_e) {
+        return base;
+      }
+    }
+
     function updateTopbarAuthButton(isLoggedIn) {
       const btn = $('btnSair');
       if (!btn) return;
@@ -1844,6 +1891,9 @@
         currentAccessRow = null;
         currentLibraryRow = null;
         currentLibraryBrandIdentity = null;
+        currentServiceState = null;
+        currentContactProfile = null;
+        currentCommunicationsContext = null;
         applyActiveLibraryBranding();
         setChip('chipFuncao', 'Função: —');
         setChip('chipEmail', 'E-mail: —');
@@ -1854,6 +1904,7 @@
         return false;
       }
 
+      clearAuthReturn();
       const accessState = await fetchAccessRows(session.user.id);
       currentIdentityRow = accessState.profileRow || null;
       currentAccessRow = pickCurrentLibrarianAccess(accessState.rows);
@@ -3704,6 +3755,18 @@
       await loadExchangePanel();
     }
 
+    async function refreshAllInstitutionalPanelsSafely(force = false) {
+      if (refreshPanelsPromise && !force) return refreshPanelsPromise;
+      refreshPanelsPromise = (async () => {
+        try {
+          await refreshAllInstitutionalPanels();
+        } finally {
+          refreshPanelsPromise = null;
+        }
+      })();
+      return refreshPanelsPromise;
+    }
+
     $('btnRefreshIdentity')?.addEventListener('click', loadIdentityPanel);
     $('btnRefreshComms')?.addEventListener('click', loadCommunicationsPanel);
     $('btnRefreshRegimento')?.addEventListener('click', loadWorkspaceAndPolicies);
@@ -3824,10 +3887,12 @@
       const btn = $('btnSair');
       const authMode = String(btn?.dataset?.authMode || 'login').trim().toLowerCase();
       if (authMode !== 'logout') {
-        window.location.href = String(btn?.dataset?.authHref || CONFIG?.ROUTES?.cadastro || FALLBACK_CONFIG.ROUTES.cadastro);
+        const target = buildAuthEntryUrl();
+        if (target) window.location.href = target;
         return;
       }
       btn.disabled = true;
+      clearAuthReturn();
       try {
         await supabase.auth.signOut();
       } catch (_e) {
@@ -3846,11 +3911,29 @@
     populateExchangeDocumentSelect('exchangeLocalSelect', [], 'Selecione');
     populateExchangeDocumentSelect('exchangePartnerDocSelect', [], 'Selecione');
     resetExchangeFollowupForm();
-    await refreshAllInstitutionalPanels();
+    await refreshAllInstitutionalPanelsSafely(true);
 
-    supabase.auth.onAuthStateChange((_event, newSession) => {
+    window.addEventListener('pageshow', () => {
+      void refreshAllInstitutionalPanelsSafely();
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        void refreshAllInstitutionalPanelsSafely();
+      }
+    });
+
+    supabase.auth.onAuthStateChange((event, newSession) => {
       session = newSession || null;
       updateTopbarAuthButton(!!session?.user?.id);
+      if (event === 'SIGNED_OUT') {
+        clearAuthReturn();
+      }
+      if (['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED', 'PASSWORD_RECOVERY'].includes(String(event || '').trim())) {
+        setTimeout(() => {
+          void refreshAllInstitutionalPanelsSafely(true);
+        }, 0);
+      }
     });
   </script>
 </body>
