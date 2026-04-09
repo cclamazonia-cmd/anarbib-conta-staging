@@ -171,6 +171,10 @@
           Documentos e relações externas
           <span class="hint">Documentos, acordos e relações com outras bibliotecas</span>
         </button>
+        <button class="tab-btn" type="button" data-tab="interbib" role="tab" aria-selected="false" aria-controls="tab-interbib">
+          Trocas interbibliotecas
+          <span class="hint">Propostas de troca entre bibliotecas do AnarBib, com mensagem e acompanhamento</span>
+        </button>
         <button class="tab-btn" type="button" data-tab="tarefas" role="tab" aria-selected="false" aria-controls="tab-tarefas">
           Tarefas internas
           <span class="hint">Acompanhamento das tarefas internas</span>
@@ -423,7 +427,7 @@
               <div class="section-head">
                 <div>
                   <h2>Documentos e relações externas</h2>
-                  <div class="mini">Leitura dos documentos internos e das relações com outras bibliotecas.</div>
+                  <div class="mini">Governança documental local, parceiros do AnarBib, pedidos interbibliotecas e base operacional para trocas.</div>
                 </div>
                 <div class="actions"><button class="btn mini" id="btnRefreshDocuments" type="button">Atualizar</button></div>
               </div>
@@ -431,17 +435,117 @@
             </div>
             <div class="row">
               <div class="card">
-                <div class="section-head"><div><h3>Organização dos documentos</h3><div class="mini">Veja aqui os combinados e registros internos sobre os documentos da biblioteca.</div></div></div>
+                <div class="section-head"><div><h3>Organização dos documentos</h3><div class="mini">Resumo da política local já salva para correções, cópias, vínculos digitais e trocas.</div></div></div>
                 <div id="governanceGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
               </div>
               <div class="card">
-                <div class="section-head"><div><h3>Resumo geral — documentos e relações</h3><div class="mini">Resumo lateral dos dados gerais da biblioteca.</div></div></div>
+                <div class="section-head"><div><h3>Resumo geral — documentos e relações</h3><div class="mini">Parceiros conhecidos, pedidos em curso e estado geral desta frente.</div></div></div>
                 <div id="documentsWorkspaceGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
               </div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Detalhes dos documentos</h3><div class="mini">Área de apoio para conferência.</div></div></div>
+              <div class="section-head">
+                <div><h3>Política local de governança documental</h3><div class="mini">Edição simples para registrar como a biblioteca quer tratar pedidos documentais e trocas interbibliotecas.</div></div>
+                <div class="editor-actions">
+                  <button class="btn mini soft" id="btnResetGovernance" type="button">Recarregar</button>
+                  <button class="btn mini primary" id="btnSaveGovernance" type="button">Salvar política</button>
+                </div>
+              </div>
+              <div class="editor-shell">
+                <div class="editor-grid">
+                  <label class="check-item"><input id="govAllowCorrectionRequests" type="checkbox"> Aceitar pedidos de correção documental</label>
+                  <label class="check-item"><input id="govAllowLocalCopyRequests" type="checkbox"> Aceitar pedidos de cópia local / duplicação controlada</label>
+                  <label class="check-item"><input id="govAllowDigitalLinkRequests" type="checkbox"> Aceitar pedidos de vínculo de recurso digital</label>
+                  <label class="check-item"><input id="govAllowExchangeProposals" type="checkbox"> Aceitar propostas de troca interbibliotecas</label>
+                  <label class="check-item"><input id="govMutualizationOnly" type="checkbox"> Priorizar apenas parceiras com mutualização autorizada</label>
+                </div>
+                <div class="editor-grid">
+                  <div class="field"><label for="govExchangePolicyNote">Observação para trocas</label><textarea id="govExchangePolicyNote" class="textarea" placeholder="Ex.: só considerar trocas com excedente claro de exemplares e bom estado físico."></textarea></div>
+                  <div class="field"><label for="govNetworkNote">Observação geral para relações externas</label><textarea id="govNetworkNote" class="textarea" placeholder="Ex.: pedidos documentais devem sempre registrar bib_ref e motivo."></textarea></div>
+                </div>
+              </div>
+              <div class="status" id="governanceEditorStatus"></div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Bibliotecas parceiras visíveis nesta frente</h3><div class="mini">Relação entre status da parceria, possibilidade de troca e e-mail de contato responsável.</div></div></div>
+              <div class="tableWrap">
+                <table>
+                  <thead><tr><th>Biblioteca parceira</th><th>Estado da relação</th><th>Troca</th><th>Contato</th><th>Observações</th></tr></thead>
+                  <tbody id="tbodyPartnerLibraries"><tr><td colspan="5">Carregando…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Pedidos e acordos já registrados</h3><div class="mini">Acompanhamento das solicitações interbibliotecas que envolvem esta biblioteca.</div></div></div>
+              <div class="tableWrap">
+                <table>
+                  <thead><tr><th>Sentido</th><th>Biblioteca parceira</th><th>Ação</th><th>Objeto</th><th>Status</th><th>Atualizado</th></tr></thead>
+                  <tbody id="tbodyDocumentRequests"><tr><td colspan="6">Carregando…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Detalhes dos documentos e relações</h3><div class="mini">Área de conferência avançada da configuração bruta salva.</div></div></div>
               <pre id="governanceJson" class="json-box">{}</pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-interbib" class="tab-panel" data-tab="interbib" role="tabpanel">
+          <div class="stack">
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h2>Trocas interbibliotecas</h2>
+                  <div class="mini">Escolha excedentes locais e parceiros do AnarBib, gere a proposta, abra o e-mail e acompanhe a resposta.</div>
+                </div>
+                <div class="actions"><button class="btn mini" id="btnRefreshExchange" type="button">Atualizar</button></div>
+              </div>
+              <div class="status" id="exchangeStatus"></div>
+            </div>
+            <div class="row">
+              <div class="card">
+                <div class="section-head"><div><h3>Excedentes locais para troca</h3><div class="mini">Documentos da própria biblioteca com dois exemplares ou mais.</div></div></div>
+                <div id="exchangeLocalSummary" class="kv-grid"><div class="empty">Carregando…</div></div>
+              </div>
+              <div class="card">
+                <div class="section-head"><div><h3>Biblioteca parceira selecionada</h3><div class="mini">Contato, estado da relação e excedentes disponíveis do outro lado.</div></div></div>
+                <div id="exchangePartnerSummary" class="kv-grid"><div class="empty">Escolhe primeiro uma biblioteca parceira.</div></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Preparar uma proposta de troca</h3><div class="mini">A proposta fica registrada no sistema e também pode abrir um e-mail pronto para envio ao contato responsável.</div></div></div>
+              <div class="editor-shell">
+                <div class="editor-grid-3">
+                  <div class="field"><label for="exchangePartnerSelect">Biblioteca parceira</label><select id="exchangePartnerSelect" class="select"><option value="">Selecione</option></select></div>
+                  <div class="field"><label for="exchangeLocalSelect">Documento local com excedente</label><select id="exchangeLocalSelect" class="select"><option value="">Selecione</option></select></div>
+                  <div class="field"><label for="exchangePartnerDocSelect">Documento da parceira com excedente</label><select id="exchangePartnerDocSelect" class="select"><option value="">Selecione</option></select></div>
+                </div>
+                <div class="editor-grid">
+                  <div class="field"><label for="exchangeMailSubject">Assunto sugerido</label><input id="exchangeMailSubject" class="input" type="text" placeholder="Proposta de troca entre bibliotecas"></div>
+                  <div class="field"><label for="exchangeObjectRef">Referência interna da proposta</label><input id="exchangeObjectRef" class="input" type="text" placeholder="Será gerada automaticamente a partir dos documentos escolhidos."></div>
+                </div>
+                <div class="editor-grid">
+                  <div class="field"><label for="exchangeCustomNote">Observação adicional</label><textarea id="exchangeCustomNote" class="textarea" placeholder="Ex.: exemplares em bom estado, troca preferencial no próximo plantão, etc."></textarea></div>
+                  <div class="field"><label for="exchangeMessage">Mensagem para a biblioteca parceira</label><textarea id="exchangeMessage" class="textarea" placeholder="A mensagem sugerida pode ser ajustada livremente antes do envio."></textarea></div>
+                </div>
+                <div class="editor-actions">
+                  <button class="btn mini soft" id="btnGenerateExchangeMessage" type="button">Gerar mensagem sugerida</button>
+                  <button class="btn mini soft" id="btnCopyExchangeMessage" type="button">Copiar mensagem</button>
+                  <button class="btn mini" id="btnOpenExchangeEmail" type="button">Abrir e-mail</button>
+                  <button class="btn mini primary" id="btnSaveExchangeRequest" type="button">Registrar proposta</button>
+                </div>
+                <div class="status" id="exchangeEditorStatus"></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Propostas de troca acompanhadas aqui</h3><div class="mini">Inclui as propostas enviadas por esta biblioteca e as recebidas dela.</div></div></div>
+              <div class="tableWrap">
+                <table>
+                  <thead><tr><th>Sentido</th><th>Parceira</th><th>Documentos</th><th>Status</th><th>Mensagem</th><th>Resposta / ações</th></tr></thead>
+                  <tbody id="tbodyExchangeRequests"><tr><td colspan="6">Carregando…</td></tr></tbody>
+                </table>
+              </div>
             </div>
           </div>
         </section>
@@ -599,6 +703,12 @@
     let currentCommunicationsContext = null;
     let currentWorkspace = null;
     let currentGovernance = null;
+    let currentGovernanceRow = null;
+    let currentPartnerSources = [];
+    let currentPartnerContacts = new Map();
+    let currentExchangeRequests = [];
+    let currentExchangeLocalSurplus = [];
+    let currentExchangePartnerSurplus = [];
     let currentRegulationDocs = [];
     let currentPolicySets = [];
     let currentPolicyRules = [];
@@ -772,6 +882,214 @@
       if (mapped[raw]) return mapped[raw];
       return raw.replace(/_/g, ' ').replace(/\w/g, (m) => m.toUpperCase());
     }
+    function friendlyPartnerRelationStatus(value){
+      const raw = String(value || '').trim().toLowerCase();
+      const labels = {
+        identificada: 'Identificada',
+        contactada: 'Contactada',
+        em_discussao: 'Em discussão',
+        acordo_parcial: 'Acordo parcial',
+        acordo_tecnico: 'Acordo técnico',
+        importacao_autorizada: 'Importação autorizada',
+        mutualizacao_autorizada: 'Mutualização autorizada'
+      };
+      return labels[raw] || (String(value || '').trim() || '—');
+    }
+    function partnerAllowsExchange(row){
+      const status = String(row?.relation_status || '').trim().toLowerCase();
+      return status === 'mutualizacao_autorizada';
+    }
+    function parseRequestObjectRef(value){
+      const raw = String(value || '').trim();
+      if (!raw) return {};
+      try {
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch {
+        return { raw };
+      }
+    }
+    function relationStatusNote(row){
+      if (partnerAllowsExchange(row)) return 'Troca já autorizada';
+      const status = String(row?.relation_status || '').trim().toLowerCase();
+      if (status === 'importacao_autorizada') return 'Importação autorizada, troca ainda a combinar';
+      if (status === 'acordo_tecnico') return 'Há acordo técnico, mas falta autorizar troca';
+      if (status === 'em_discussao' || status === 'contactada') return 'Relação em construção';
+      return 'Troca ainda não autorizada';
+    }
+    function dedupePartnerSources(rows){
+      const byLibrary = new Map();
+      for (const row of asArray(rows)) {
+        if (!row || typeof row !== 'object') continue;
+        const key = String(row.library_id || row.id || row.slug || row.partner_name || '').trim();
+        if (!key) continue;
+        const existing = byLibrary.get(key);
+        if (!existing) {
+          byLibrary.set(key, row);
+          continue;
+        }
+        const existingScore = Number(existing.import_enabled === true) + Number(partnerAllowsExchange(existing));
+        const rowScore = Number(row.import_enabled === true) + Number(partnerAllowsExchange(row));
+        if (rowScore > existingScore) byLibrary.set(key, row);
+      }
+      return Array.from(byLibrary.values()).sort((a, b) => tableSortCollator.compare(String(a.display_name || a.library_name || ''), String(b.display_name || b.library_name || '')));
+    }
+    async function selectApiViewRows(viewName, columns='*') {
+      if (typeof supabase.schema === 'function') {
+        const res = await supabase.schema('api').from(viewName).select(columns);
+        if (!res?.error) return asArray(res.data);
+      }
+      const fallback = await supabase.from(`api.${viewName}`).select(columns);
+      if (fallback?.error) throw fallback.error;
+      return asArray(fallback.data);
+    }
+    async function fetchBooksByBibRefs(bibRefs){
+      const refs = Array.from(new Set(asArray(bibRefs).map((value) => String(value || '').trim()).filter(Boolean)));
+      const out = new Map();
+      for (let i = 0; i < refs.length; i += 100) {
+        const slice = refs.slice(i, i + 100);
+        if (!slice.length) continue;
+        const { data, error } = await supabase
+          .from('books')
+          .select('id,bib_ref,titulo,subtitulo,autor,ano,cdd,colecao,assuntos,mutualization_status,partner_source')
+          .in('bib_ref', slice);
+        if (error) throw error;
+        for (const row of asArray(data)) {
+          const key = String(row?.bib_ref || '').trim();
+          if (key && !out.has(key)) out.set(key, row);
+        }
+      }
+      return out;
+    }
+    async function fetchSurplusDocumentsByLibrary(libraryId){
+      const scopedLibraryId = normalizeLibraryId(libraryId);
+      if (!scopedLibraryId) return [];
+      const { data, error } = await supabase
+        .from('exemplares')
+        .select('id,bib_ref,tombo,shelf_location,library_id')
+        .eq('library_id', scopedLibraryId)
+        .order('bib_ref', { ascending: true });
+      if (error) throw error;
+      const grouped = new Map();
+      for (const row of asArray(data)) {
+        const bibRef = String(row?.bib_ref || '').trim();
+        if (!bibRef) continue;
+        if (!grouped.has(bibRef)) {
+          grouped.set(bibRef, { bib_ref: bibRef, exemplar_ids: [], tombos: [], shelf_locations: [] });
+        }
+        const bucket = grouped.get(bibRef);
+        bucket.exemplar_ids.push(row.id);
+        if (row.tombo) bucket.tombos.push(row.tombo);
+        if (row.shelf_location) bucket.shelf_locations.push(row.shelf_location);
+      }
+      const candidates = Array.from(grouped.values()).filter((row) => row.exemplar_ids.length >= 2);
+      const booksByRef = await fetchBooksByBibRefs(candidates.map((row) => row.bib_ref));
+      return candidates.map((row) => {
+        const book = booksByRef.get(row.bib_ref) || {};
+        return {
+          ...row,
+          count: row.exemplar_ids.length,
+          titulo: firstFilledValue(book.titulo, row.bib_ref),
+          subtitulo: firstFilledValue(book.subtitulo),
+          autor: firstFilledValue(book.autor),
+          ano: firstFilledValue(book.ano),
+          cdd: firstFilledValue(book.cdd),
+          colecao: firstFilledValue(book.colecao),
+          mutualization_status: firstFilledValue(book.mutualization_status),
+          partner_source: firstFilledValue(book.partner_source)
+        };
+      }).sort((a, b) => {
+        const byCount = Number(b.count || 0) - Number(a.count || 0);
+        if (byCount) return byCount;
+        return tableSortCollator.compare(String(a.titulo || a.bib_ref || ''), String(b.titulo || b.bib_ref || ''));
+      });
+    }
+    function formatExchangeDocLabel(row){
+      if (!row) return '—';
+      const bits = [firstFilledValue(row.titulo, row.bib_ref, 'Documento sem título')];
+      if (row.subtitulo) bits.push(row.subtitulo);
+      const suffix = [];
+      if (row.autor) suffix.push(row.autor);
+      suffix.push(`${row.count || 0} exemplar(es)`);
+      suffix.push(`bib_ref ${row.bib_ref}`);
+      return `${bits.join(' — ')} · ${suffix.join(' · ')}`;
+    }
+    function buildExchangeObjectRef(localDoc, partnerDoc, partnerRow){
+      const payload = {
+        type: 'interlibrary_exchange',
+        local_library_id: normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || ''),
+        local_library_name: firstFilledValue(currentLibraryRow?.short_name, currentLibraryRow?.name),
+        partner_library_id: normalizeLibraryId(partnerRow?.library_id || ''),
+        partner_library_name: firstFilledValue(partnerRow?.display_name, partnerRow?.library_name, partnerRow?.partner_name),
+        local_document: localDoc ? {
+          bib_ref: localDoc.bib_ref,
+          titulo: firstFilledValue(localDoc.titulo),
+          autor: firstFilledValue(localDoc.autor),
+          exemplar_count: localDoc.count,
+          exemplar_ids: asArray(localDoc.exemplar_ids)
+        } : null,
+        partner_document: partnerDoc ? {
+          bib_ref: partnerDoc.bib_ref,
+          titulo: firstFilledValue(partnerDoc.titulo),
+          autor: firstFilledValue(partnerDoc.autor),
+          exemplar_count: partnerDoc.count,
+          exemplar_ids: asArray(partnerDoc.exemplar_ids)
+        } : null
+      };
+      return JSON.stringify(payload);
+    }
+    function getPartnerContactEmail(libraryId){
+      const row = currentPartnerContacts.get(String(libraryId || ''));
+      return firstFilledValue(row?.contact_email);
+    }
+    function getPartnerDisplayName(row){
+      return firstFilledValue(row?.display_name, row?.library_name, row?.partner_name, row?.slug, 'Biblioteca parceira');
+    }
+    function getCurrentGovernanceExchangeConfig(){
+      const cfg = currentGovernance && typeof currentGovernance === 'object' ? currentGovernance : {};
+      return {
+        document_requests: safeJsonObject(cfg.document_requests),
+        interlibrary_exchange: safeJsonObject(cfg.interlibrary_exchange)
+      };
+    }
+    function buildExchangeSuggestedMessage(localDoc, partnerDoc, partnerRow){
+      const partnerName = getPartnerDisplayName(partnerRow);
+      const ourName = firstFilledValue(currentLibraryRow?.short_name, currentLibraryRow?.name, 'nossa biblioteca');
+      const gov = getCurrentGovernanceExchangeConfig();
+      const policyNote = firstFilledValue(gov.interlibrary_exchange?.policy_note);
+      const customNote = String($('exchangeCustomNote')?.value || '').trim();
+      const lines = [
+        `Olá, compas da ${partnerName}.`,
+        '',
+        `Escrevemos em nome da ${ourName} para propor uma troca interbibliotecas entre materiais que hoje aparecem com excedente de exemplares nos dois catálogos.`,
+        '',
+        `Da nossa parte: ${formatExchangeDocLabel(localDoc)}.`,
+        `Da parte de vocês: ${formatExchangeDocLabel(partnerDoc)}.`,
+        '',
+        'A ideia é verificar se essa troca faz sentido politicamente e materialmente para as duas bibliotecas, considerando estado físico, utilidade local e circulação.',
+      ];
+      if (customNote) {
+        lines.push('', `Observação adicional: ${customNote}`);
+      }
+      if (policyNote) {
+        lines.push('', `Referência interna da nossa política de trocas: ${policyNote}`);
+      }
+      lines.push('', 'Se fizer sentido para vocês, podemos combinar os detalhes de conferência, retirada ou envio entre as bibliotecas.', '', 'Abraços,', ourName);
+      return lines.join('\n');
+    }
+    function copyTextToClipboard(value){
+      const text = String(value || '');
+      if (!text) throw new Error('Nada para copiar.');
+      if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
+      const tmp = document.createElement('textarea');
+      tmp.value = text;
+      document.body.appendChild(tmp);
+      tmp.select();
+      document.execCommand('copy');
+      document.body.removeChild(tmp);
+      return Promise.resolve();
+    }
+
     function renderKvGrid(hostId, entries){
       const host = $(hostId);
       if (!host) return;
@@ -1949,6 +2267,358 @@
 
 
 
+    function loadGovernanceForm() {
+      const cfg = getCurrentGovernanceExchangeConfig();
+      $('govAllowCorrectionRequests').checked = cfg.document_requests.allow_correction_requests !== false;
+      $('govAllowLocalCopyRequests').checked = cfg.document_requests.allow_local_copy_requests !== false;
+      $('govAllowDigitalLinkRequests').checked = cfg.document_requests.allow_digital_link_requests !== false;
+      $('govAllowExchangeProposals').checked = cfg.interlibrary_exchange.enabled !== false;
+      $('govMutualizationOnly').checked = cfg.interlibrary_exchange.mutualization_only === true;
+      $('govExchangePolicyNote').value = firstFilledValue(cfg.interlibrary_exchange.policy_note);
+      $('govNetworkNote').value = firstFilledValue(cfg.document_requests.notes, cfg.interlibrary_exchange.notes);
+      setStatus('governanceEditorStatus', '');
+    }
+
+    function collectGovernancePayload() {
+      const base = currentGovernance && typeof currentGovernance === 'object' ? JSON.parse(JSON.stringify(currentGovernance)) : {};
+      const next = base && typeof base === 'object' ? base : {};
+      next.document_requests = {
+        ...safeJsonObject(next.document_requests),
+        allow_correction_requests: boolValue('govAllowCorrectionRequests'),
+        allow_local_copy_requests: boolValue('govAllowLocalCopyRequests'),
+        allow_digital_link_requests: boolValue('govAllowDigitalLinkRequests'),
+        notes: String($('govNetworkNote').value || '').trim() || null
+      };
+      next.interlibrary_exchange = {
+        ...safeJsonObject(next.interlibrary_exchange),
+        enabled: boolValue('govAllowExchangeProposals'),
+        mutualization_only: boolValue('govMutualizationOnly'),
+        policy_note: String($('govExchangePolicyNote').value || '').trim() || null,
+        notes: String($('govNetworkNote').value || '').trim() || null
+      };
+      return next;
+    }
+
+    function renderPartnerLibrariesTable(rows) {
+      const tbody = $('tbodyPartnerLibraries');
+      const normalizedRows = dedupePartnerSources(rows);
+      if (!tbody) return;
+      if (!normalizedRows.length) {
+        tbody.innerHTML = '<tr><td colspan="5">Nenhuma biblioteca parceira conhecida nesta frente.</td></tr>';
+        applyStoredSortForTbody('tbodyPartnerLibraries');
+        return;
+      }
+      tbody.innerHTML = normalizedRows.map((row) => {
+        const contact = currentPartnerContacts.get(String(row?.library_id || '')) || {};
+        return `<tr>
+          <td><strong>${esc(getPartnerDisplayName(row))}</strong><div class="inline-note">${esc(firstFilledValue(row?.city, row?.region, row?.country, '—'))}</div></td>
+          <td>${esc(friendlyPartnerRelationStatus(row?.relation_status))}</td>
+          <td>${esc(relationStatusNote(row))}</td>
+          <td>${esc(firstFilledValue(contact?.contact_email, contact?.contact_name, '—'))}</td>
+          <td>${esc(firstFilledValue(row?.notes, row?.source_kind, '—'))}</td>
+        </tr>`;
+      }).join('');
+      applyStoredSortForTbody('tbodyPartnerLibraries');
+    }
+
+    function renderDocumentRequestsTable(rows) {
+      const tbody = $('tbodyDocumentRequests');
+      const normalizedRows = asArray(rows).filter((row) => row && typeof row === 'object');
+      const currentLibraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || '');
+      if (!tbody) return;
+      if (!normalizedRows.length) {
+        tbody.innerHTML = '<tr><td colspan="6">Nenhum pedido interbibliotecas registrado por enquanto.</td></tr>';
+        applyStoredSortForTbody('tbodyDocumentRequests');
+        return;
+      }
+      tbody.innerHTML = normalizedRows.map((row) => {
+        const direction = String(row?.requester_library_id || '') === String(currentLibraryId || '') ? 'Enviado' : 'Recebido';
+        const partnerId = direction === 'Enviado' ? row?.target_library_id : row?.requester_library_id;
+        const partnerRow = currentPartnerSources.find((item) => String(item?.library_id || '') === String(partnerId || '')) || {};
+        const objectRef = parseRequestObjectRef(row?.object_ref);
+        const objectText = objectRef?.local_document?.titulo || objectRef?.partner_document?.titulo || firstFilledValue(row?.object_type, row?.object_ref, '—');
+        return `<tr>
+          <td>${esc(direction)}</td>
+          <td>${esc(getPartnerDisplayName(partnerRow))}</td>
+          <td>${esc(firstFilledValue(row?.requested_action, '—'))}</td>
+          <td>${esc(objectText)}</td>
+          <td>${esc(firstFilledValue(row?.status, '—'))}</td>
+          <td>${esc(fmtDateTime(firstFilledValue(row?.updated_at, row?.created_at)))}</td>
+        </tr>`;
+      }).join('');
+      applyStoredSortForTbody('tbodyDocumentRequests');
+    }
+
+    function renderExchangeLocalSummary(rows) {
+      const totalDocs = asArray(rows).length;
+      const totalCopies = asArray(rows).reduce((sum, row) => sum + Number(row?.count || 0), 0);
+      renderKvGrid('exchangeLocalSummary', [
+        ['Documentos com excedente local', totalDocs],
+        ['Exemplares nesses documentos', totalCopies],
+        ['Regra local de troca', boolValue('govAllowExchangeProposals') ? 'Trocas permitidas localmente' : 'Trocas não marcadas como permitidas'],
+        ['Filtro político local', boolValue('govMutualizationOnly') ? 'Somente mutualização autorizada' : 'Pode abrir conversa com outras parceiras']
+      ]);
+    }
+
+    function populateExchangeDocumentSelect(selectId, rows, placeholder) {
+      const select = $(selectId);
+      if (!select) return;
+      const options = [`<option value="">${esc(placeholder)}</option>`].concat(asArray(rows).map((row) => `<option value="${esc(String(row.bib_ref || ''))}">${esc(formatExchangeDocLabel(row))}</option>`));
+      select.innerHTML = options.join('');
+    }
+
+    function populateExchangePartnerSelect() {
+      const select = $('exchangePartnerSelect');
+      if (!select) return;
+      const rows = dedupePartnerSources(currentPartnerSources).filter((row) => normalizeLibraryId(row?.library_id));
+      const options = ['<option value="">Selecione</option>'].concat(rows.map((row) => `<option value="${esc(String(row.library_id || ''))}">${esc(getPartnerDisplayName(row))} · ${esc(friendlyPartnerRelationStatus(row?.relation_status))}</option>`));
+      select.innerHTML = options.join('');
+    }
+
+    function getSelectedExchangePartnerRow() {
+      const libraryId = normalizeLibraryId($('exchangePartnerSelect')?.value || '');
+      return currentPartnerSources.find((row) => String(row?.library_id || '') === String(libraryId || '')) || null;
+    }
+
+    function getSelectedLocalExchangeDoc() {
+      const bibRef = String($('exchangeLocalSelect')?.value || '').trim();
+      return currentExchangeLocalSurplus.find((row) => String(row?.bib_ref || '') === bibRef) || null;
+    }
+
+    function getSelectedPartnerExchangeDoc() {
+      const bibRef = String($('exchangePartnerDocSelect')?.value || '').trim();
+      return currentExchangePartnerSurplus.find((row) => String(row?.bib_ref || '') === bibRef) || null;
+    }
+
+    function syncExchangeObjectRefField() {
+      const partnerRow = getSelectedExchangePartnerRow();
+      const localDoc = getSelectedLocalExchangeDoc();
+      const partnerDoc = getSelectedPartnerExchangeDoc();
+      $('exchangeObjectRef').value = (partnerRow && localDoc && partnerDoc) ? buildExchangeObjectRef(localDoc, partnerDoc, partnerRow) : '';
+    }
+
+    function ensureExchangeMessage() {
+      const partnerRow = getSelectedExchangePartnerRow();
+      const localDoc = getSelectedLocalExchangeDoc();
+      const partnerDoc = getSelectedPartnerExchangeDoc();
+      if (!partnerRow || !localDoc || !partnerDoc) return;
+      $('exchangeMailSubject').value = `Proposta de troca interbibliotecas — ${firstFilledValue(currentLibraryRow?.short_name, currentLibraryRow?.name, 'Biblioteca')} ↔ ${getPartnerDisplayName(partnerRow)}`;
+      $('exchangeMessage').value = buildExchangeSuggestedMessage(localDoc, partnerDoc, partnerRow);
+      syncExchangeObjectRefField();
+    }
+
+    function renderExchangePartnerSummary() {
+      const partnerRow = getSelectedExchangePartnerRow();
+      if (!partnerRow) {
+        renderKvGrid('exchangePartnerSummary', [['Estado', 'Escolhe primeiro uma biblioteca parceira.']]);
+        return;
+      }
+      const contact = currentPartnerContacts.get(String(partnerRow?.library_id || '')) || {};
+      renderKvGrid('exchangePartnerSummary', [
+        ['Biblioteca parceira', getPartnerDisplayName(partnerRow)],
+        ['Estado da relação', friendlyPartnerRelationStatus(partnerRow?.relation_status)],
+        ['Troca nesta fase', relationStatusNote(partnerRow)],
+        ['E-mail responsável', firstFilledValue(contact?.contact_email, '—')],
+        ['Contato', firstFilledValue(contact?.contact_name, contact?.contact_role, '—')],
+        ['Documentos com excedente desta parceira', currentExchangePartnerSurplus.length]
+      ]);
+    }
+
+    function renderExchangeRequestsTable(rows) {
+      const tbody = $('tbodyExchangeRequests');
+      const currentLibraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || '');
+      const exchangeRows = asArray(rows).filter((row) => {
+        const action = String(row?.requested_action || '').trim().toLowerCase();
+        const objectType = String(row?.object_type || '').trim().toLowerCase();
+        return action === 'proposta_troca_exemplares' || objectType === 'interlibrary_exchange';
+      });
+      if (!tbody) return;
+      if (!exchangeRows.length) {
+        tbody.innerHTML = '<tr><td colspan="6">Nenhuma proposta de troca registrada por enquanto.</td></tr>';
+        applyStoredSortForTbody('tbodyExchangeRequests');
+        return;
+      }
+      tbody.innerHTML = exchangeRows.map((row) => {
+        const direction = String(row?.requester_library_id || '') === String(currentLibraryId || '') ? 'Enviado' : 'Recebido';
+        const partnerId = direction === 'Enviado' ? row?.target_library_id : row?.requester_library_id;
+        const partnerRow = currentPartnerSources.find((item) => String(item?.library_id || '') === String(partnerId || '')) || {};
+        const ref = parseRequestObjectRef(row?.object_ref);
+        const localText = ref?.local_document?.titulo ? `${ref.local_document.titulo} (${ref.local_document.exemplar_count || 0})` : '—';
+        const partnerText = ref?.partner_document?.titulo ? `${ref.partner_document.titulo} (${ref.partner_document.exemplar_count || 0})` : '—';
+        const actionButtons = direction === 'Recebido' && String(row?.status || '') === 'pending'
+          ? `<div class="editor-actions"><button class="btn mini" type="button" data-exchange-decision="accepted" data-request-id="${esc(String(row?.id || ''))}">Aceitar</button><button class="btn mini danger" type="button" data-exchange-decision="refused" data-request-id="${esc(String(row?.id || ''))}">Recusar</button></div>`
+          : esc(firstFilledValue(row?.response_note, fmtDateTime(firstFilledValue(row?.decided_at, row?.updated_at)), '—'));
+        return `<tr>
+          <td>${esc(direction)}</td>
+          <td>${esc(getPartnerDisplayName(partnerRow))}</td>
+          <td><div><strong>Nosso excedente:</strong> ${esc(localText)}</div><div><strong>Excedente da parceira:</strong> ${esc(partnerText)}</div></td>
+          <td>${esc(firstFilledValue(row?.status, '—'))}<div class="inline-note">${esc(fmtDateTime(firstFilledValue(row?.updated_at, row?.created_at)))}</div></td>
+          <td>${esc(firstFilledValue(row?.message, '—'))}</td>
+          <td>${actionButtons}</td>
+        </tr>`;
+      }).join('');
+      applyStoredSortForTbody('tbodyExchangeRequests');
+    }
+
+    async function saveGovernanceConfig() {
+      try {
+        const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const payload = collectGovernancePayload();
+        setStatus('governanceEditorStatus', 'Salvando política local…', 'info');
+        const { error } = await supabase.rpc('upsert_library_document_governance', { p_library_id: row.id, p_config: payload });
+        if (error) throw error;
+        setStatus('governanceEditorStatus', 'Política local salva.', 'ok');
+        await loadGovernancePanel();
+        renderExchangeLocalSummary(currentExchangeLocalSurplus);
+      } catch (error) {
+        setStatus('governanceEditorStatus', 'Não consegui salvar a política local: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function loadPartnerExchangeDocuments() {
+      try {
+        const partnerRow = getSelectedExchangePartnerRow();
+        if (!partnerRow?.library_id) {
+          currentExchangePartnerSurplus = [];
+          populateExchangeDocumentSelect('exchangePartnerDocSelect', [], 'Selecione');
+          renderExchangePartnerSummary();
+          return;
+        }
+        setStatus('exchangeEditorStatus', 'Carregando excedentes da biblioteca parceira…', 'info');
+        currentExchangePartnerSurplus = await fetchSurplusDocumentsByLibrary(partnerRow.library_id);
+        populateExchangeDocumentSelect('exchangePartnerDocSelect', currentExchangePartnerSurplus, 'Selecione');
+        renderExchangePartnerSummary();
+        setStatus('exchangeEditorStatus', currentExchangePartnerSurplus.length ? 'Excedentes da biblioteca parceira carregados.' : 'A biblioteca parceira não mostrou excedentes claros para troca.', currentExchangePartnerSurplus.length ? 'ok' : 'warn');
+      } catch (error) {
+        currentExchangePartnerSurplus = [];
+        populateExchangeDocumentSelect('exchangePartnerDocSelect', [], 'Selecione');
+        renderExchangePartnerSummary();
+        setStatus('exchangeEditorStatus', 'Não consegui carregar os excedentes da biblioteca parceira: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function loadExchangePanel() {
+      try {
+        const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        currentExchangeLocalSurplus = await fetchSurplusDocumentsByLibrary(row.id);
+        populateExchangeDocumentSelect('exchangeLocalSelect', currentExchangeLocalSurplus, 'Selecione');
+        renderExchangeLocalSummary(currentExchangeLocalSurplus);
+        renderExchangePartnerSummary();
+        renderExchangeRequestsTable(currentExchangeRequests);
+        setStatus('exchangeStatus', currentExchangeLocalSurplus.length ? 'Módulo de trocas pronto para uso.' : 'A biblioteca ainda não mostra documentos com excedente local suficiente para sugerir troca.', currentExchangeLocalSurplus.length ? 'ok' : 'warn');
+      } catch (error) {
+        currentExchangeLocalSurplus = [];
+        currentExchangePartnerSurplus = [];
+        populateExchangeDocumentSelect('exchangeLocalSelect', [], 'Selecione');
+        populateExchangeDocumentSelect('exchangePartnerDocSelect', [], 'Selecione');
+        renderKvGrid('exchangeLocalSummary', []);
+        renderExchangePartnerSummary();
+        setStatus('exchangeStatus', 'Não consegui preparar o módulo de trocas: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function openExchangeEmail() {
+      try {
+        const partnerRow = getSelectedExchangePartnerRow();
+        const email = firstFilledValue(getPartnerContactEmail(partnerRow?.library_id));
+        if (!email) throw new Error('Esta biblioteca parceira ainda não tem e-mail responsável cadastrado.');
+        const subject = String($('exchangeMailSubject').value || '').trim();
+        const message = String($('exchangeMessage').value || '').trim();
+        if (!subject || !message) throw new Error('Gera ou escreve antes o assunto e a mensagem.');
+        const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+        window.location.href = mailto;
+        setStatus('exchangeEditorStatus', 'Cliente de e-mail aberto com a proposta pronta.', 'ok');
+      } catch (error) {
+        setStatus('exchangeEditorStatus', 'Não consegui abrir o e-mail: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+
+    async function tryNotifyDocumentPermissionRequest(requestId, eventType) {
+      const requestRef = String(requestId || '').trim();
+      const eventRef = String(eventType || '').trim();
+      if (!requestRef || !eventRef) return { ok: false, skipped: true, reason: 'missing_args' };
+      try {
+        await callRpcWithSchemaFallback('fn_notify_document_permission_request_now', {
+          p_request_id: requestRef,
+          p_event_type: eventRef,
+          p_event_key: eventRef
+        });
+        return { ok: true, via: 'rpc' };
+      } catch (error) {
+        const message = String(error?.message || error || '').trim();
+        if (/could not find the function|schema cache|function\s+/i.test(message)) {
+          return { ok: false, skipped: true, reason: 'rpc_missing' };
+        }
+        console.warn('Falha ao disparar a notificação automática da proposta interbibliotecas.', error);
+        return { ok: false, skipped: true, reason: message || 'notify_failed' };
+      }
+    }
+
+    async function saveExchangeRequest() {
+      try {
+        const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const partnerRow = getSelectedExchangePartnerRow();
+        const localDoc = getSelectedLocalExchangeDoc();
+        const partnerDoc = getSelectedPartnerExchangeDoc();
+        if (!partnerRow?.library_id) throw new Error('Escolhe uma biblioteca parceira.');
+        if (!localDoc) throw new Error('Escolhe um documento local com excedente.');
+        if (!partnerDoc) throw new Error('Escolhe um documento da biblioteca parceira.');
+        const cfg = getCurrentGovernanceExchangeConfig();
+        if (cfg.interlibrary_exchange.enabled === false) throw new Error('A política local marca que trocas ainda não estão habilitadas nesta biblioteca.');
+        if (cfg.interlibrary_exchange.mutualization_only === true && !partnerAllowsExchange(partnerRow)) {
+          throw new Error('A política local exige mutualização autorizada para abrir proposta de troca com esta parceira.');
+        }
+        const message = String($('exchangeMessage').value || '').trim();
+        if (!message) throw new Error('Escreve ou gera a mensagem da proposta.');
+        syncExchangeObjectRefField();
+        const objectRef = String($('exchangeObjectRef').value || '').trim();
+        setStatus('exchangeEditorStatus', 'Registrando proposta de troca…', 'info');
+        const { data, error } = await supabase.rpc('create_document_permission_request', {
+          p_requester_library_id: row.id,
+          p_target_library_id: partnerRow.library_id,
+          p_request: {
+            requested_action: 'proposta_troca_exemplares',
+            object_type: 'interlibrary_exchange',
+            object_ref: objectRef,
+            message
+          }
+        });
+        if (error) throw error;
+        const notifyResult = await tryNotifyDocumentPermissionRequest(data?.id, 'document_permission_request_created');
+        if (notifyResult.ok) {
+          setStatus('exchangeEditorStatus', 'Proposta registrada e e-mail automático disparado.', 'ok');
+        } else {
+          setStatus('exchangeEditorStatus', 'Proposta registrada no sistema. O envio automático ainda não está ligado neste ambiente; usa também o botão de e-mail.', 'warn');
+        }
+        await loadGovernancePanel();
+        await loadExchangePanel();
+      } catch (error) {
+        setStatus('exchangeEditorStatus', 'Não consegui registrar a proposta: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function decideExchangeRequest(requestId, decision) {
+      try {
+        const notePrompt = decision === 'accepted' ? 'Observação opcional para a aceitação:' : 'Observação opcional para a recusa:';
+        const note = window.prompt(notePrompt, '') ?? '';
+        setStatus('exchangeEditorStatus', decision === 'accepted' ? 'Registrando aceitação…' : 'Registrando recusa…', 'info');
+        const { data, error } = await supabase.rpc('decide_document_permission_request', { p_request_id: requestId, p_decision: decision, p_response_note: String(note || '').trim() || null });
+        if (error) throw error;
+        const eventType = decision === 'accepted' ? 'document_permission_request_accepted' : 'document_permission_request_refused';
+        const notifyResult = await tryNotifyDocumentPermissionRequest(data?.id || requestId, eventType);
+        if (notifyResult.ok) {
+          setStatus('exchangeEditorStatus', decision === 'accepted' ? 'Proposta aceita e e-mail automático disparado.' : 'Proposta recusada e e-mail automático disparado.', 'ok');
+        } else {
+          setStatus('exchangeEditorStatus', decision === 'accepted' ? 'Proposta aceita. O envio automático ainda não está ligado neste ambiente.' : 'Proposta recusada. O envio automático ainda não está ligado neste ambiente.', 'warn');
+        }
+        await loadGovernancePanel();
+        await loadExchangePanel();
+      } catch (error) {
+        setStatus('exchangeEditorStatus', 'Não consegui registrar a decisão: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
     const TASK_TYPE_LABELS = {
       limpeza_livros: 'Limpeza dos livros',
       arrumacao: 'Arrumação',
@@ -2187,12 +2857,24 @@
         loadGovernancePanel(),
         loadTasksPanel()
       ]);
+      await loadExchangePanel();
     }
 
     $('btnRefreshIdentity')?.addEventListener('click', loadIdentityPanel);
     $('btnRefreshComms')?.addEventListener('click', loadCommunicationsPanel);
     $('btnRefreshRegimento')?.addEventListener('click', loadWorkspaceAndPolicies);
-    $('btnRefreshDocuments')?.addEventListener('click', loadGovernancePanel);
+    $('btnRefreshDocuments')?.addEventListener('click', async () => { await loadGovernancePanel(); await loadExchangePanel(); });
+    $('btnRefreshExchange')?.addEventListener('click', async () => { await loadGovernancePanel(); await loadExchangePanel(); });
+    $('btnSaveGovernance')?.addEventListener('click', saveGovernanceConfig);
+    $('btnResetGovernance')?.addEventListener('click', loadGovernanceForm);
+    $('btnGenerateExchangeMessage')?.addEventListener('click', () => { ensureExchangeMessage(); setStatus('exchangeEditorStatus', 'Mensagem sugerida atualizada.', 'ok'); });
+    $('btnCopyExchangeMessage')?.addEventListener('click', async () => { try { await copyTextToClipboard($('exchangeMessage').value); setStatus('exchangeEditorStatus', 'Mensagem copiada.', 'ok'); } catch (error) { setStatus('exchangeEditorStatus', 'Não consegui copiar a mensagem: ' + (error.message || String(error)), 'bad'); } });
+    $('btnOpenExchangeEmail')?.addEventListener('click', openExchangeEmail);
+    $('btnSaveExchangeRequest')?.addEventListener('click', saveExchangeRequest);
+    $('exchangePartnerSelect')?.addEventListener('change', async () => { await loadPartnerExchangeDocuments(); syncExchangeObjectRefField(); });
+    $('exchangeLocalSelect')?.addEventListener('change', () => { syncExchangeObjectRefField(); ensureExchangeMessage(); });
+    $('exchangePartnerDocSelect')?.addEventListener('change', () => { syncExchangeObjectRefField(); ensureExchangeMessage(); });
+    $('exchangeCustomNote')?.addEventListener('input', () => { if ($('exchangeMessage').value.trim()) ensureExchangeMessage(); });
     $('btnRefreshTasks')?.addEventListener('click', loadTasksPanel);
     $('btnNewTask')?.addEventListener('click', resetTaskForm);
     $('btnCancelTask')?.addEventListener('click', resetTaskForm);
@@ -2259,6 +2941,13 @@
       }
     });
 
+    $('tab-interbib')?.addEventListener('click', async (event) => {
+      const decisionBtn = event.target.closest('[data-exchange-decision]');
+      if (decisionBtn) {
+        await decideExchangeRequest(String(decisionBtn.dataset.requestId || ''), String(decisionBtn.dataset.exchangeDecision || ''));
+      }
+    });
+
     $('tab-tarefas')?.addEventListener('click', async (event) => {
       const editBtn = event.target.closest('[data-task-edit]');
       if (editBtn) {
@@ -2294,6 +2983,9 @@
     resetRegulationDocForm();
     resetPolicySetForm();
     resetPolicyRuleForm();
+    populateExchangePartnerSelect();
+    populateExchangeDocumentSelect('exchangeLocalSelect', [], 'Selecione');
+    populateExchangeDocumentSelect('exchangePartnerDocSelect', [], 'Selecione');
     await refreshAllInstitutionalPanels();
 
     supabase.auth.onAuthStateChange((_event, newSession) => {
