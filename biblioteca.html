@@ -2906,6 +2906,30 @@
       return next;
     }
 
+    async function saveGovernanceConfig() {
+      try {
+        setStatus('governanceEditorStatus', 'Salvando política local…', 'info');
+        const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const payload = collectGovernancePayload();
+        const { error } = await supabase
+          .from('library_document_governance')
+          .upsert({
+            library_id: row.id,
+            config: payload,
+            updated_at: new Date().toISOString(),
+            updated_by: session?.user?.id || null
+          }, { onConflict: 'library_id' });
+        if (error) throw error;
+        currentGovernance = payload;
+        setStatus('governanceEditorStatus', 'Política local salva.', 'ok');
+        await loadGovernancePanel();
+        await loadExchangePanel();
+      } catch (error) {
+        setStatus('governanceEditorStatus', 'Não consegui salvar a política local: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+
     function renderPartnerLibrariesTable(rows) {
       const tbody = $('tbodyPartnerLibraries');
       const normalizedRows = dedupePartnerSources(rows);
