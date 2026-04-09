@@ -177,7 +177,7 @@
           <span class="hint">Propostas de troca entre bibliotecas do AnarBib, com mensagem e acompanhamento</span>
         </button>
         <button class="tab-btn" type="button" data-tab="prestimos-interbib" role="tab" aria-selected="false" aria-controls="tab-prestimos-interbib">
-          Empréstimos inter-bibs
+          Empréstimos interbibliotecas
           <span class="hint">Empréstimos temporários entre bibliotecas, distintos das trocas definitivas</span>
         </button>
         <button class="tab-btn" type="button" data-tab="tarefas" role="tab" aria-selected="false" aria-controls="tab-tarefas">
@@ -625,7 +625,7 @@
             <div class="card">
               <div class="section-head">
                 <div>
-                  <h2>Empréstimos inter-bibs</h2>
+                  <h2>Empréstimos interbibliotecas</h2>
                   <div class="mini">Empréstimos temporários entre bibliotecas, separados das trocas definitivas. Aqui a lógica é: uma biblioteca empresta por um tempo e o material volta depois.</div>
                 </div>
                 <div class="actions"><button class="btn mini" id="btnRefreshInterbibLoans" type="button">Atualizar</button></div>
@@ -633,7 +633,7 @@
               <div class="status" id="interbibLoanStatus"></div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Resumo dos empréstimos inter-bibs</h3><div class="mini">Pedidos, empréstimos aceitos, saídas previstas, retornos previstos e situação geral desta frente.</div></div></div>
+              <div class="section-head"><div><h3>Resumo dos empréstimos interbibliotecas</h3><div class="mini">Pedidos, empréstimos aceitos, saídas previstas, retornos previstos e situação geral desta frente.</div></div></div>
               <div id="interbibLoanSummary" class="kv-grid"><div class="empty">Carregando…</div></div>
             </div>
             <div class="card">
@@ -690,7 +690,7 @@
               </div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Pedidos e empréstimos inter-bibs já registrados</h3><div class="mini">Aqui ficam visíveis os pedidos, as aceitações, as saídas confirmadas, os retornos previstos e o fechamento do empréstimo temporário.</div></div></div>
+              <div class="section-head"><div><h3>Pedidos e empréstimos interbibliotecas já registrados</h3><div class="mini">Aqui ficam visíveis os pedidos, as aceitações, as saídas confirmadas, os retornos previstos e o fechamento do empréstimo temporário.</div></div></div>
               <div class="tableWrap">
                 <table>
                   <thead><tr><th>Sentido</th><th>Parceira</th><th>Documento / exemplares</th><th>Situação</th><th>Datas</th><th>Logística / ações</th></tr></thead>
@@ -1253,7 +1253,7 @@
       const raw = String(value || '').trim().toLowerCase();
       const labels = {
         proposta_troca_exemplares: 'Proposta de troca de exemplares',
-        proposta_emprestimo_interbibliotecas: 'Pedido de empréstimo inter-bibs',
+        proposta_emprestimo_interbibliotecas: 'Pedido de empréstimo interbibliotecas',
         correcao_documental: 'Pedido de correção documental',
         copia_local: 'Pedido de cópia local',
         recurso_digital: 'Pedido sobre recurso digital'
@@ -4034,11 +4034,11 @@
         startDate ? `Saída / retirada pretendida: ${fmtDate(startDate)}.` : 'Saída / retirada pretendida: a combinar.',
         returnDate ? `Retorno previsto: ${fmtDate(returnDate)}.` : 'Retorno previsto: a combinar.',
         '',
-        'A ideia aqui não é uma troca definitiva, mas um empréstimo temporário entre bibliotecas, com retorno combinado e acompanhamento claro no módulo inter-bibs do AnarBib.'
+        'A ideia aqui não é uma troca definitiva, mas um empréstimo temporário entre bibliotecas, com retorno combinado e acompanhamento claro no módulo interbibliotecas do AnarBib.'
       ];
       if (logisticsNote) lines.push('', `Observação logística: ${logisticsNote}`);
       lines.push('', 'Abraços fraternos,', ourName);
-      $('interbibLoanMailSubject').value = `${direction === 'lend_to_partner' ? 'Proposta' : 'Pedido'} de empréstimo inter-bibs — ${ourName} ↔ ${partnerName}`;
+      $('interbibLoanMailSubject').value = `${direction === 'lend_to_partner' ? 'Proposta' : 'Pedido'} de empréstimo interbibliotecas — ${ourName} ↔ ${partnerName}`;
       $('interbibLoanMessage').value = lines.join('\n');
       syncInterbibLoanObjectRefField();
     }
@@ -4142,7 +4142,7 @@
       const activeRows = loanRows.filter((row) => ['departure_confirmed','on_loan','return_scheduled'].includes(String(getInterbibLoanState(row).phase || '').trim().toLowerCase()));
       const returnedRows = loanRows.filter((row) => String(getInterbibLoanState(row).phase || '').trim().toLowerCase() === 'returned');
       renderKvGrid('interbibLoanSummary', [
-        ['Pedidos / empréstimos inter-bibs visíveis', loanRows.length],
+        ['Pedidos / empréstimos interbibliotecas visíveis', loanRows.length],
         ['Pedidos ainda pendentes', loanRows.filter((row) => String(row?.status || '').trim().toLowerCase() === 'pending').length],
         ['Pedidos aceitos', acceptedRows.length],
         ['Em empréstimo ou com retorno agendado', activeRows.length],
@@ -4191,11 +4191,11 @@
       renderInterbibLoanSummary(currentExchangeRequests);
       renderInterbibLoanTable(currentExchangeRequests);
       syncInterbibLoanModeUi();
-      setStatus('interbibLoanStatus', currentInterbibLoanRows.length ? `Módulo de empréstimos inter-bibs pronto. ${currentInterbibLoanRows.length} registro(s) visível(is).` : 'Módulo pronto. Ainda não há empréstimos inter-bibs registrados.', currentInterbibLoanRows.length ? 'ok' : 'info');
+      setStatus('interbibLoanStatus', currentInterbibLoanRows.length ? `Módulo de empréstimos interbibliotecas pronto. ${currentInterbibLoanRows.length} registro(s) visível(is).` : 'Módulo pronto. Ainda não há empréstimos interbibliotecas registrados.', currentInterbibLoanRows.length ? 'ok' : 'info');
     }
     async function refreshInterbibLoanPanelInteractive() {
       setButtonBusy('btnRefreshInterbibLoans', true, 'Atualizando…');
-      setStatus('interbibLoanStatus', 'Atualizando empréstimos inter-bibs…', 'info');
+      setStatus('interbibLoanStatus', 'Atualizando empréstimos interbibliotecas…', 'info');
       const selectedPartnerId = normalizeLibraryId($('interbibLoanPartnerSelect')?.value || '');
       const selectedRequestId = String($('interbibLoanRequestId')?.value || '').trim();
       const governanceResult = await (async () => {
@@ -4224,9 +4224,9 @@
       }
       const failed = [governanceResult, exchangeResult, loanResult].filter((result) => result.status === 'rejected');
       if (!failed.length) {
-        setStatus('interbibLoanStatus', `Empréstimos inter-bibs atualizados às ${fmtClock()}.`, 'ok');
+        setStatus('interbibLoanStatus', `Empréstimos interbibliotecas atualizados às ${fmtClock()}.`, 'ok');
       } else {
-        setStatus('interbibLoanStatus', `Atualização parcial dos empréstimos inter-bibs às ${fmtClock()}.`, 'warn');
+        setStatus('interbibLoanStatus', `Atualização parcial dos empréstimos interbibliotecas às ${fmtClock()}.`, 'warn');
       }
     }
     async function openInterbibLoanEmail() {
