@@ -143,7 +143,7 @@
 
     <div class="hero">
       <h1 id="pageHeroTitle">Biblioteca — organização da biblioteca</h1>
-      <p id="pageHeroSubtitle">Informações gerais, regimento, regras de circulação, comunicações, documentos, trocas e empréstimos interbibliotecas, tarefas internas.</p>
+      <p id="pageHeroSubtitle">Informações gerais, regimento, regras de circulação, comunicações, documentos e tarefas internas.</p>
       <p id="helloLine"></p>
       <div class="chips">
         <span class="chip" id="chipFuncao">Função: —</span>
@@ -176,9 +176,9 @@
           Trocas interbibliotecas
           <span class="hint">Propostas de troca entre bibliotecas do AnarBib, com mensagem e acompanhamento</span>
         </button>
-        <button class="tab-btn" type="button" data-tab="prestimos-interbib" role="tab" aria-selected="false" aria-controls="tab-prestimos-interbib">
-          Empréstimos interbibliotecas
-          <span class="hint">Empréstimos temporários entre bibliotecas, distintos das trocas definitivas</span>
+        <button class="tab-btn" type="button" data-tab="relatorios" role="tab" aria-selected="false" aria-controls="tab-relatorios">
+          Relatórios e resumos
+          <span class="hint">Contas-rendidas por fluxo, catálogo completo e envio semanal opcional da biblioteca</span>
         </button>
         <button class="tab-btn" type="button" data-tab="tarefas" role="tab" aria-selected="false" aria-controls="tab-tarefas">
           Tarefas internas
@@ -620,81 +620,82 @@
           </div>
         </section>
 
-        <section id="tab-prestimos-interbib" class="tab-panel" data-tab="prestimos-interbib" role="tabpanel">
+        <section id="tab-relatorios" class="tab-panel" data-tab="relatorios" role="tabpanel">
           <div class="stack">
             <div class="card">
               <div class="section-head">
                 <div>
-                  <h2>Empréstimos interbibliotecas</h2>
-                  <div class="mini">Empréstimos temporários entre bibliotecas, separados das trocas definitivas. Aqui a lógica é: uma biblioteca empresta por um tempo e o material volta depois.</div>
+                  <h2>Relatórios e resumos</h2>
+                  <div class="mini">Contas-rendidas por fluxo da biblioteca, com filtros cruzados, catálogo completo e controle do resumo semanal automatizado.</div>
                 </div>
-                <div class="actions"><button class="btn mini" id="btnRefreshInterbibLoans" type="button">Atualizar</button></div>
+                <div class="actions"><button class="btn mini" id="btnRefreshReports" type="button">Atualizar</button></div>
               </div>
-              <div class="status" id="interbibLoanStatus"></div>
+              <div class="status" id="reportsStatus"></div>
+            </div>
+            <div class="row">
+              <div class="card">
+                <div class="section-head">
+                  <div>
+                    <h3>Resumo semanal automatizado da biblioteca</h3>
+                    <div class="mini">O envio semanal da biblioteca só deve acontecer quando esta caixa estiver marcada. O resumo geral da rede continua separado.</div>
+                  </div>
+                  <div class="editor-actions">
+                    <button class="btn mini primary" id="btnSaveReportsConfig" type="button">Salvar opção semanal</button>
+                  </div>
+                </div>
+                <div class="check-row" style="margin-top:12px">
+                  <label class="check-item"><input id="reportsWeeklyEnabled" type="checkbox"> Enviar o resumo semanal da biblioteca somente quando esta caixa estiver marcada</label>
+                </div>
+                <div class="editor-grid" style="margin-top:12px">
+                  <div class="field"><label for="reportsWeeklyTargetEmail">E-mail de destino atual</label><input id="reportsWeeklyTargetEmail" class="input" type="text" readonly placeholder="Carregando…"></div>
+                  <div class="field"><label for="reportsWeeklyNote">Observação interna</label><textarea id="reportsWeeklyNote" class="textarea" placeholder="Ex.: enviar somente quando houver fluxo suficiente ou quando a biblioteca estiver em funcionamento normal."></textarea></div>
+                </div>
+                <div class="status" id="reportsConfigStatus"></div>
+              </div>
+              <div class="card">
+                <div class="section-head"><div><h3>Fluxos disponíveis nesta aba</h3><div class="mini">Escolha um fluxo, cruze filtros, mude a ordenação e gere um quadro simples de acompanhamento.</div></div></div>
+                <div id="reportsQuickGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
+              </div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Resumo dos empréstimos interbibliotecas</h3><div class="mini">Pedidos, empréstimos aceitos, saídas previstas, retornos previstos e situação geral desta frente.</div></div></div>
-              <div id="interbibLoanSummary" class="kv-grid"><div class="empty">Carregando…</div></div>
-            </div>
-            <div class="card">
-              <div class="section-head"><div><h3>Preparar ou acompanhar um empréstimo temporário</h3><div class="mini">Use este bloco para abrir um pedido, registrar datas, marcar exemplares quando já estiverem definidos e acompanhar o retorno previsto.</div></div></div>
-              <div class="editor-shell">
-                <input id="interbibLoanRequestId" type="hidden">
-                <div class="editor-grid-3">
-                  <div class="field"><label for="interbibLoanDirection">Papel desta biblioteca</label><select id="interbibLoanDirection" class="select"><option value="borrow_from_partner">Nossa biblioteca recebe um empréstimo temporário</option><option value="lend_to_partner">Nossa biblioteca empresta temporariamente</option></select></div>
-                  <div class="field"><label for="interbibLoanPartnerSelect">Biblioteca parceira</label><select id="interbibLoanPartnerSelect" class="select"><option value="">Selecione</option></select></div>
-                  <div class="field"><label for="interbibLoanPhase">Situação do empréstimo</label><select id="interbibLoanPhase" class="select">
-                    <option value="pending">Pedido enviado / pendente</option>
-                    <option value="accepted_pending_departure">Aceito — saída ainda pendente</option>
-                    <option value="departure_confirmed">Saída confirmada</option>
-                    <option value="on_loan">Em empréstimo interbiblioteca</option>
-                    <option value="return_scheduled">Retorno agendado</option>
-                    <option value="returned">Retornado</option>
-                    <option value="not_completed">Não concluído</option>
-                  </select></div>
-                </div>
-                <div class="editor-grid" id="interbibLoanLocalDocFieldWrap">
-                  <div class="field"><label for="interbibLoanLocalSelect">Documento da nossa biblioteca</label><select id="interbibLoanLocalSelect" class="select"><option value="">Selecione</option></select><div class="inline-note" id="interbibLoanLocalSelectNote">Use este campo quando a nossa biblioteca for a biblioteca que empresta.</div></div>
-                  <div class="field"><label for="interbibLoanPartnerDocSelect">Documento da biblioteca parceira</label><select id="interbibLoanPartnerDocSelect" class="select"><option value="">Selecione</option></select><div class="inline-note" id="interbibLoanPartnerDocSelectNote">Use este campo quando a nossa biblioteca pedir um empréstimo temporário à parceira.</div></div>
-                </div>
-                <div class="editor-grid">
-                  <div class="field"><label for="interbibLoanLocalExemplars">Exemplares da nossa biblioteca</label><select id="interbibLoanLocalExemplars" class="select" multiple size="5"></select><div class="inline-note" id="interbibLoanLocalExemplarsNote">Marque os exemplares locais se a nossa biblioteca for a biblioteca que empresta.</div></div>
-                  <div class="field"><label for="interbibLoanPartnerExemplars">Exemplares da biblioteca parceira</label><select id="interbibLoanPartnerExemplars" class="select" multiple size="5"></select><div class="inline-note" id="interbibLoanPartnerExemplarsNote">Marque os exemplares da parceira se a nossa biblioteca receber um empréstimo temporário.</div></div>
-                </div>
-                <div class="editor-grid-3">
-                  <div class="field"><label for="interbibLoanStartDate">Data de saída / retirada</label><input id="interbibLoanStartDate" class="input" type="date"></div>
-                  <div class="field"><label for="interbibLoanReturnDate">Data prevista de retorno</label><input id="interbibLoanReturnDate" class="input" type="date"></div>
-                  <div class="field"><label for="interbibLoanMeetingPoint">Logística / ponto de entrega</label><input id="interbibLoanMeetingPoint" class="input" type="text" placeholder="Ex.: plantão, evento, envio combinado"></div>
-                </div>
-                <div class="editor-grid-3">
-                  <div class="field"><label for="interbibLoanContactName">Contato de coordenação</label><input id="interbibLoanContactName" class="input" type="text" placeholder="Nome da pessoa de referência"></div>
-                  <div class="field"><label for="interbibLoanContactEmail">E-mail do contato</label><input id="interbibLoanContactEmail" class="input" type="email" placeholder="contato@biblioteca.org"></div>
-                  <div class="field"><label for="interbibLoanContactPhone">Telefone / WhatsApp</label><input id="interbibLoanContactPhone" class="input" type="text" placeholder="Número útil para combinar"></div>
-                </div>
-                <div class="editor-grid">
-                  <div class="field"><label for="interbibLoanMailSubject">Assunto sugerido</label><input id="interbibLoanMailSubject" class="input" type="text" placeholder="Empréstimo interbibliotecas"></div>
-                  <div class="field"><label for="interbibLoanObjectRef">Referência interna</label><input id="interbibLoanObjectRef" class="input" type="text" placeholder="Será gerada a partir dos elementos escolhidos."></div>
-                </div>
-                <div class="editor-grid">
-                  <div class="field"><label for="interbibLoanLogisticsNote">Observação logística</label><textarea id="interbibLoanLogisticsNote" class="textarea" placeholder="Ex.: cuidado com o estado do exemplar, combinar devolução no próximo plantão, etc."></textarea></div>
-                  <div class="field"><label for="interbibLoanMessage">Mensagem para a biblioteca parceira</label><textarea id="interbibLoanMessage" class="textarea" placeholder="A mensagem sugerida pode ser ajustada antes do envio."></textarea></div>
+              <div class="section-head">
+                <div>
+                  <h3>Montar um relatório</h3>
+                  <div class="mini" id="reportsPresetHint">Selecione um fluxo, ajuste período, agrupamento, filtros e ordenação.</div>
                 </div>
                 <div class="editor-actions">
-                  <button class="btn mini soft" id="btnGenerateInterbibLoanMessage" type="button">Gerar mensagem sugerida</button>
-                  <button class="btn mini soft" id="btnCopyInterbibLoanMessage" type="button">Copiar mensagem</button>
-                  <button class="btn mini" id="btnOpenInterbibLoanEmail" type="button">Abrir e-mail</button>
-                  <button class="btn mini primary" id="btnSaveInterbibLoanRequest" type="button">Salvar pedido / acompanhamento</button>
-                  <button class="btn mini" id="btnResetInterbibLoanRequest" type="button">Limpar</button>
+                  <button class="btn mini soft" id="btnResetReportsFilters" type="button">Limpar filtros</button>
+                  <button class="btn mini primary" id="btnLoadReports" type="button">Atualizar relatório</button>
                 </div>
-                <div class="status" id="interbibLoanEditorStatus"></div>
+              </div>
+              <div class="editor-shell">
+                <div class="editor-grid-3">
+                  <div class="field"><label for="reportsPresetSelect">Fluxo / relatório</label><select id="reportsPresetSelect" class="select"><option value="reservas">Reservas</option><option value="emprestimos">Empréstimos e retornos</option><option value="consultas">Consultas no local</option><option value="inscricoes">Inscrições</option><option value="catalogacao">Catalogação</option><option value="catalogo_completo">Catálogo completo</option></select></div>
+                  <div class="field"><label for="reportsGroupingSelect">Agrupar por</label><select id="reportsGroupingSelect" class="select"><option value="none">Sem agrupamento</option></select></div>
+                  <div class="field"><label for="reportsStatusFilter">Estado / situação</label><select id="reportsStatusFilter" class="select"><option value="">Todos</option></select></div>
+                </div>
+                <div class="editor-grid-3">
+                  <div class="field"><label for="reportsDateFrom">Período — de</label><input id="reportsDateFrom" class="input" type="date"></div>
+                  <div class="field"><label for="reportsDateTo">Período — até</label><input id="reportsDateTo" class="input" type="date"></div>
+                  <div class="field"><label for="reportsSearchInput">Busca livre</label><input id="reportsSearchInput" class="input" type="text" placeholder="Leitor(a/e), documento, tombo, autoria, Dewey, observação…"></div>
+                </div>
+                <div class="editor-grid-3">
+                  <div class="field"><label for="reportsSortSelect">Ordenar por</label><select id="reportsSortSelect" class="select"><option value="date_desc">Data mais recente</option></select></div>
+                  <div class="field"><label for="reportsLimitSelect">Máximo de linhas</label><select id="reportsLimitSelect" class="select"><option value="50">50</option><option value="100" selected>100</option><option value="250">250</option><option value="500">500</option><option value="1000">1000</option></select></div>
+                  <div class="field"><label for="reportsSourceNote">Fonte usada</label><input id="reportsSourceNote" class="input" type="text" readonly placeholder="Será preenchido ao carregar um relatório."></div>
+                </div>
               </div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Pedidos e empréstimos interbibliotecas já registrados</h3><div class="mini">Aqui ficam visíveis os pedidos, as aceitações, as saídas confirmadas, os retornos previstos e o fechamento do empréstimo temporário.</div></div></div>
+              <div class="section-head"><div><h3>Resumo do relatório carregado</h3><div class="mini">Este quadro muda conforme o fluxo escolhido, o período, o agrupamento e os filtros.</div></div></div>
+              <div id="reportsSummaryGrid" class="kv-grid"><div class="empty">Escolha um fluxo e clique em “Atualizar relatório”.</div></div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Resultados</h3><div class="mini">Tabela simples para leitura, tri local e conferência rápida.</div></div></div>
               <div class="tableWrap">
-                <table>
-                  <thead><tr><th>Sentido</th><th>Parceira</th><th>Documento / exemplares</th><th>Situação</th><th>Datas</th><th>Logística / ações</th></tr></thead>
-                  <tbody id="tbodyInterbibLoans"><tr><td colspan="6">Carregando…</td></tr></tbody>
+                <table id="reportsTable">
+                  <thead id="reportsTableHead"><tr><th>Resultado</th><th>Detalhe</th><th>Observação</th></tr></thead>
+                  <tbody id="tbodyReports"><tr><td colspan="3">Escolha um fluxo e clique em “Atualizar relatório”.</td></tr></tbody>
                 </table>
               </div>
             </div>
@@ -842,10 +843,6 @@
     });
 
     const $ = (id) => document.getElementById(id);
-    const HERO_TITLE_TEXT = 'Biblioteca — organização da biblioteca';
-    const HERO_SUBTITLE_TEXT = 'Informações gerais, regimento, regras de circulação, comunicações, documentos, trocas e empréstimos interbibliotecas, tarefas internas.';
-    if (document.getElementById('pageHeroTitle')) document.getElementById('pageHeroTitle').textContent = HERO_TITLE_TEXT;
-    if (document.getElementById('pageHeroSubtitle')) document.getElementById('pageHeroSubtitle').textContent = HERO_SUBTITLE_TEXT;
     const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
     const TAB_STORAGE_KEY = 'anarbib_biblioteca_active_tab';
     const AUTH_RETURN_STORAGE_KEY = 'anarbib_biblioteca_auth_return';
@@ -870,15 +867,12 @@
     let currentExchangeFollowupRows = [];
     let currentExchangeLocalExecutionOptions = [];
     let currentExchangePartnerExecutionOptions = [];
-    let currentLibraryLogoCandidates = [];
-    let currentInterbibLoanRows = [];
-    let currentInterbibLoanPartnerDocs = [];
-    let currentInterbibLoanLocalExecutionOptions = [];
-    let currentInterbibLoanPartnerExecutionOptions = [];
     let currentRegulationDocs = [];
     let currentPolicySets = [];
     let currentPolicyRules = [];
     let currentTasks = [];
+    let currentReportsRows = [];
+    let currentReportsMeta = { preset: 'reservas', source: '', loaded: false };
     let refreshPanelsPromise = null;
 
 
@@ -894,10 +888,6 @@
       if (!value) return '—';
       const d = new Date(String(value).length <= 10 ? `${value}T00:00:00` : value);
       return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString('pt-BR');
-    }
-    function fmtClock(value = new Date()){
-      const d = value instanceof Date ? value : new Date(value);
-      return Number.isNaN(d.getTime()) ? '—' : d.toLocaleTimeString('pt-BR');
     }
     function setButtonBusy(buttonId, busy, busyLabel='Atualizando…'){
       const btn = $(buttonId);
@@ -960,130 +950,42 @@
       if (!base) return '';
       return `${base}/storage/v1/object/public/library-ui-assets/${key}`;
     }
-    function collectLibraryBrandingObjects(...sources){
-      const out = [];
-      const seen = new Set();
-      const visit = (value, depth = 0) => {
-        if (!value || typeof value !== 'object' || depth > 3) return;
-        if (seen.has(value)) return;
-        seen.add(value);
-        out.push(value);
-        const nestedKeys = [
-          'branding','brand','brand_identity','library_branding','library_identity','email_identity','notification_context',
-          'theme','theme_config','theme_context','config','metadata','library','context','data','workspace','identity'
-        ];
-        for (const key of nestedKeys){
-          const nested = value?.[key];
-          if (nested && typeof nested === 'object') visit(nested, depth + 1);
-        }
-      };
-      sources.forEach((source) => visit(source, 0));
-      return out;
-    }
-    function pickLibraryLogoCandidates(...sources){
-      const seen = new Set();
-      const out = [];
-      const pushUrl = (value) => {
-        const url = normalizeUrlMaybe(value);
-        if (!url) return;
-        if (seen.has(url)) return;
-        seen.add(url);
-        out.push(url);
-      };
-      const pushAsset = (value) => {
-        const url = buildLibraryAssetUrl(value);
-        if (!url) return;
-        if (seen.has(url)) return;
-        seen.add(url);
-        out.push(url);
-      };
-      for (const source of collectLibraryBrandingObjects(...sources)){
-        pushUrl(firstFilledValue(
+    function pickLibraryLogoUrl(...sources){
+      for (const source of sources){
+        if (!source || typeof source !== 'object') continue;
+        const direct = normalizeUrlMaybe(firstFilledValue(
           source.logo_url,
           source.library_logo_url,
           source.brand_logo_url,
           source.theme_logo_url,
           source.header_logo_url,
-          source.public_logo_url,
-          source.logo,
-          source.brand_logo,
-          source.library_logo,
-          source.public_logo
+          source.public_logo_url
         ));
-        pushAsset(firstFilledValue(
+        if (direct) return direct;
+        const assetUrl = buildLibraryAssetUrl(firstFilledValue(
           source.logo_file_key,
           source.library_logo_file_key,
           source.brand_logo_file_key,
           source.theme_logo_file_key,
           source.header_logo_file_key,
-          source.public_logo_file_key,
-          source.logo_path,
-          source.logo_key,
-          source.brand_logo_key,
-          source.library_logo_key
+          source.public_logo_file_key
         ));
+        if (assetUrl) return assetUrl;
       }
-      return out;
+      return '';
     }
-    function pickLibraryLogoUrl(...sources){
-      return pickLibraryLogoCandidates(...sources)[0] || '';
-    }
-    function getActiveLibraryBrandingSources(){
-      return [
-        currentLibraryBrandIdentity,
-        currentLibraryRow,
-        currentCommunicationsContext,
-        currentWorkspace,
-        currentAccessRow,
-        currentIdentityRow,
-        currentContactProfile
-      ];
-    }
-    function applyActiveLibraryBranding(force = false){
+    function applyActiveLibraryBranding(){
       const img = $('libraryBrandLogo');
       if (!img) return;
-      const candidates = pickLibraryLogoCandidates(...getActiveLibraryBrandingSources());
-      if (candidates.length) currentLibraryLogoCandidates = candidates.slice();
-      const logoCandidates = currentLibraryLogoCandidates.slice();
-      const displayName = firstFilledValue(
-        currentLibraryBrandIdentity?.short_name,
-        currentLibraryBrandIdentity?.library_short_name,
-        currentLibraryBrandIdentity?.display_name,
-        currentLibraryRow?.short_name,
-        currentLibraryRow?.name,
-        'biblioteca ativa'
-      );
-      const tryIndex = (index) => {
-        if (index >= logoCandidates.length) {
-          if (force || !img.dataset.logoLocked) {
-            img.src = '';
-            img.classList.add('hidden');
-            img.dataset.logoLocked = '';
-          }
-          return;
-        }
-        const nextUrl = logoCandidates[index];
-        if (!nextUrl) return tryIndex(index + 1);
-        img.dataset.logoLocked = '1';
-        img.dataset.logoIndex = String(index);
-        img.alt = `Logo da ${displayName}`;
-        img.onerror = () => tryIndex(index + 1);
-        img.onload = () => {
-          img.classList.remove('hidden');
-          img.dataset.logoLocked = '1';
-        };
-        if (img.src !== nextUrl) img.src = nextUrl;
-        else img.classList.remove('hidden');
-      };
-      if (!logoCandidates.length) {
-        if (force || !img.dataset.logoLocked) {
-          img.src = '';
-          img.classList.add('hidden');
-          img.dataset.logoLocked = '';
-        }
-        return;
+      const logoUrl = pickLibraryLogoUrl(currentLibraryBrandIdentity, currentLibraryRow);
+      if (logoUrl) {
+        img.src = logoUrl;
+        img.alt = `Logo da ${firstFilledValue(currentLibraryRow?.short_name, currentLibraryRow?.name, 'biblioteca ativa')}`;
+        img.classList.remove('hidden');
+      } else {
+        img.src = '';
+        img.classList.add('hidden');
       }
-      tryIndex(0);
     }
     function isLibraryActiveRow(row){
       if (!row || typeof row !== 'object') return false;
@@ -1257,7 +1159,6 @@
       const raw = String(value || '').trim().toLowerCase();
       const labels = {
         proposta_troca_exemplares: 'Proposta de troca de exemplares',
-        proposta_emprestimo_interbibliotecas: 'Pedido de empréstimo interbibliotecas',
         correcao_documental: 'Pedido de correção documental',
         copia_local: 'Pedido de cópia local',
         recurso_digital: 'Pedido sobre recurso digital'
@@ -1301,15 +1202,9 @@
     }
     function getExchangePartnerRow(row){
       const partnerId = getExchangePartnerId(row);
-      const ref = parseRequestObjectRef(row?.object_ref);
       return currentPartnerSources.find((item) => String(item?.library_id || '') === String(partnerId || ''))
-        || safeJsonObject(ref?.partner_library_ref || {})
-        || {
-          library_id: partnerId || ref?.partner_library_id || null,
-          display_name: firstFilledValue(ref?.partner_library_name),
-          library_name: firstFilledValue(ref?.partner_library_name),
-          short_name: firstFilledValue(ref?.partner_library_short_name)
-        };
+        || safeJsonObject(parseRequestObjectRef(row?.object_ref)?.partner_library_ref || {})
+        || {};
     }
     function getExchangeExecutionState(row){
       const ref = parseRequestObjectRef(row?.object_ref);
@@ -1367,9 +1262,6 @@
     }
     function buildExchangeRequestShortLabel(row){
       const ref = parseRequestObjectRef(row?.object_ref);
-      if (ref?.source_document) {
-        return firstFilledValue(ref?.source_document?.titulo, ref?.source_document?.bib_ref, 'documento');
-      }
       const localTitle = firstFilledValue(ref?.local_document?.titulo, ref?.local_document?.bib_ref, 'nosso documento');
       const partnerTitle = firstFilledValue(ref?.partner_document?.titulo, ref?.partner_document?.bib_ref, 'documento da parceira');
       return `${localTitle} ↔ ${partnerTitle}`;
@@ -1719,7 +1611,7 @@
       return firstFilledValue(row?.contact_email);
     }
     function getPartnerDisplayName(row){
-      return firstFilledValue(row?.display_name, row?.library_name, row?.partner_name, row?.partner_library_name, row?.short_name, row?.slug, 'Biblioteca parceira');
+      return firstFilledValue(row?.display_name, row?.library_name, row?.partner_name, row?.slug, 'Biblioteca parceira');
     }
     function getCurrentGovernanceExchangeConfig(){
       const cfg = currentGovernance && typeof currentGovernance === 'object' ? currentGovernance : {};
@@ -2111,7 +2003,7 @@
         currentServiceState = null;
         currentContactProfile = null;
         currentCommunicationsContext = null;
-        applyActiveLibraryBranding(true);
+        applyActiveLibraryBranding();
         setChip('chipFuncao', 'Função: —');
         setChip('chipEmail', 'E-mail: —');
         setChip('chipBiblioteca', 'Biblioteca: —');
@@ -2130,14 +2022,14 @@
         setChip('chipEmail', `E-mail: ${session.user.email || '—'}`);
         setChip('chipBiblioteca', 'Biblioteca: —');
         currentLibraryBrandIdentity = null;
-        applyActiveLibraryBranding(true);
+        applyActiveLibraryBranding();
         $('helloLine').textContent = 'A sessão existe, mas não encontrei um acesso bibliotecário ativo para esta conta.';
         return false;
       }
 
       setChip('chipFuncao', 'Função: bibliotecária/o');
       setChip('chipEmail', `E-mail: ${session.user.email || '—'}`);
-      $('helloLine').textContent = `Sessão ativa para ${session.user.email || 'bibliotecária/o'}`;
+      $('helloLine').textContent = `Sessão ativa para ${session.user.email || 'bibliotecária/o'} — página aberta para consulta.`;
       return true;
     }
 
@@ -2177,7 +2069,6 @@
       const { data, error } = await supabase.from('libraries').select('*').eq('id', libraryId).maybeSingle();
       if (error) throw error;
       currentLibraryRow = { ...(resolved?.row || {}), ...(data || {}), id: libraryId };
-      currentLibraryBrandIdentity = { ...(currentLibraryBrandIdentity || {}), ...currentLibraryRow };
       setChip('chipBiblioteca', `Biblioteca: ${currentLibraryRow?.short_name || currentLibraryRow?.name || currentLibraryRow?.slug || libraryId}`);
       applyActiveLibraryBranding();
       return currentLibraryRow;
@@ -2319,7 +2210,6 @@
         const { data, error } = await supabase.rpc('get_library_notification_context', { p_library_id: libraryId });
         if (error) throw error;
         currentCommunicationsContext = data || { library_id: libraryId };
-        applyActiveLibraryBranding();
         renderKvGrid('communicationsIdentityGrid', [
           ['Nome que aparece nos avisos', data?.sender_display_name || '—'],
           ['Nome para responder', data?.reply_to_name || '—'],
@@ -3183,7 +3073,7 @@
         setStatus('governanceEditorStatus', 'Política local salva.', 'ok');
         await loadGovernancePanel();
         await loadExchangePanel();
-        await loadInterbibLoanPanel();
+        await loadReportsPanel();
       } catch (error) {
         setStatus('governanceEditorStatus', 'Não consegui salvar a política local: ' + (error.message || String(error)), 'bad');
       }
@@ -3227,7 +3117,7 @@
         const partnerId = direction === 'Enviado' ? row?.target_library_id : row?.requester_library_id;
         const partnerRow = getExchangePartnerRow(row);
         const objectRef = parseRequestObjectRef(row?.object_ref);
-        const objectText = objectRef?.local_document?.titulo || objectRef?.partner_document?.titulo || objectRef?.source_document?.titulo || firstFilledValue(row?.object_type, row?.object_ref, '—');
+        const objectText = objectRef?.local_document?.titulo || objectRef?.partner_document?.titulo || firstFilledValue(row?.object_type, row?.object_ref, '—');
         const statusLabel = friendlyDocumentRequestStatus(row?.status, direction);
         const statusTone = exchangeStatusTone(row?.status);
         const statusNote = exchangeStatusNote(row?.status, direction);
@@ -3271,14 +3161,10 @@
     function populateExchangePartnerSelect() {
       const select = $('exchangePartnerSelect');
       if (!select) return;
-      const previousValue = normalizeLibraryId(select.value || '');
       const currentLibraryId = getCurrentExchangeLibraryId();
       const rows = dedupePartnerSources(currentPartnerSources).filter((row) => normalizeLibraryId(row?.library_id) && String(normalizeLibraryId(row?.library_id) || '') !== String(currentLibraryId || ''));
       const options = ['<option value="">Selecione</option>'].concat(rows.map((row) => `<option value="${esc(String(row.library_id || ''))}">${esc(getPartnerDisplayName(row))} · ${esc(friendlyPartnerRelationStatus(row?.relation_status))}${row?.catalog_document_count ? ` · ${esc(String(row.catalog_document_count))} doc.` : ''}</option>`));
       select.innerHTML = options.join('');
-      if (previousValue && rows.some((row) => String(normalizeLibraryId(row?.library_id) || '') === String(previousValue || ''))) {
-        select.value = previousValue;
-      }
     }
 
     function getSelectedExchangePartnerRow() {
@@ -3646,25 +3532,14 @@
     async function loadExchangePanel() {
       try {
         const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
-        const previousLocalBibRef = String($('exchangeLocalSelect')?.value || '').trim();
-        const previousPartnerBibRef = String($('exchangePartnerDocSelect')?.value || '').trim();
-        const selectedPartnerId = normalizeLibraryId($('exchangePartnerSelect')?.value || '');
         currentExchangeLocalSurplus = await fetchSurplusDocumentsByLibrary(row.id);
         currentExchangeFollowupRows = getExchangeFollowupRows(currentExchangeRequests);
         populateExchangeDocumentSelect('exchangeLocalSelect', currentExchangeLocalSurplus, 'Selecione');
-        if (previousLocalBibRef && currentExchangeLocalSurplus.some((item) => String(item?.bib_ref || '') === previousLocalBibRef)) {
-          $('exchangeLocalSelect').value = previousLocalBibRef;
-        }
-        if (selectedPartnerId && currentPartnerSources.find((item) => String(normalizeLibraryId(item?.library_id) || '') === String(selectedPartnerId || ''))) {
-          await loadPartnerExchangeDocuments();
-          if (previousPartnerBibRef && currentExchangePartnerSurplus.some((item) => String(item?.bib_ref || '') === previousPartnerBibRef)) {
-            $('exchangePartnerDocSelect').value = previousPartnerBibRef;
-          }
-        } else {
+        const selectedPartnerId = normalizeLibraryId($('exchangePartnerSelect')?.value || '');
+        if (selectedPartnerId && !currentPartnerSources.find((item) => String(normalizeLibraryId(item?.library_id) || '') === String(selectedPartnerId || ''))) {
           if ($('exchangePartnerSelect')) $('exchangePartnerSelect').value = '';
           currentExchangePartnerSurplus = [];
           populateExchangeDocumentSelect('exchangePartnerDocSelect', [], 'Selecione');
-          renderExchangePartnerSummary();
         }
         populateExchangeFollowupSelect();
         renderExchangeLocalSummary(currentExchangeLocalSurplus);
@@ -3672,7 +3547,6 @@
         renderExchangeRequestsTable(currentExchangeRequests);
         renderExchangeFollowupSummary(currentExchangeRequests);
         renderExchangeFollowupTable(currentExchangeRequests);
-        syncExchangeObjectRefField();
         const rules = getNormalizedExchangeEligibilityRules();
         setStatus('exchangeStatus', currentExchangeLocalSurplus.length ? `Módulo de trocas pronto para uso. Critério atual: ${rules.min_total_copies} total / ${rules.require_available_now ? `${rules.min_available_copies} disponível(is) agora` : 'sem filtro de disponibilidade imediata'}.` : 'A biblioteca ainda não mostra documentos locais que passem pelos filtros atuais de troca.', currentExchangeLocalSurplus.length ? 'ok' : 'warn');
       } catch (error) {
@@ -3688,51 +3562,6 @@
         renderExchangeFollowupTable([]);
         setStatus('exchangeStatus', 'Não consegui preparar o módulo de trocas: ' + (error.message || String(error)), 'bad');
       }
-    }
-
-    async function refreshExchangePanelInteractive() {
-      const selectedPartnerId = normalizeLibraryId($('exchangePartnerSelect')?.value || '');
-      const selectedLocalBibRef = String($('exchangeLocalSelect')?.value || '').trim();
-      const selectedPartnerBibRef = String($('exchangePartnerDocSelect')?.value || '').trim();
-      const selectedFollowupId = String($('exchangeFollowupRequestSelect')?.value || $('exchangeFollowupRequestId')?.value || '').trim();
-      setButtonBusy('btnRefreshExchange', true, 'Atualizando…');
-      setStatus('exchangeStatus', 'Atualizando trocas interbibliotecas…', 'info');
-      setStatus('exchangeEditorStatus', 'Recarregando parceiras, documentos, propostas e acompanhamento…', 'info');
-      const governanceResult = await (async () => {
-        try { await loadGovernancePanel(); return { status: 'fulfilled' }; }
-        catch (reason) { return { status: 'rejected', reason }; }
-      })();
-      const exchangeResult = await (async () => {
-        try { await loadExchangePanel(); return { status: 'fulfilled' }; }
-        catch (reason) { return { status: 'rejected', reason }; }
-      })();
-      try {
-        if (selectedPartnerId && $('exchangePartnerSelect') && currentPartnerSources.some((item) => String(normalizeLibraryId(item?.library_id) || '') === String(selectedPartnerId || ''))) {
-          $('exchangePartnerSelect').value = selectedPartnerId;
-          await loadPartnerExchangeDocuments();
-        }
-        if (selectedLocalBibRef && currentExchangeLocalSurplus.some((item) => String(item?.bib_ref || '') === selectedLocalBibRef)) {
-          $('exchangeLocalSelect').value = selectedLocalBibRef;
-        }
-        if (selectedPartnerBibRef && currentExchangePartnerSurplus.some((item) => String(item?.bib_ref || '') === selectedPartnerBibRef)) {
-          $('exchangePartnerDocSelect').value = selectedPartnerBibRef;
-        }
-        if (selectedFollowupId && $('exchangeFollowupRequestSelect') && currentExchangeFollowupRows.some((item) => String(item?.id || '') === selectedFollowupId)) {
-          $('exchangeFollowupRequestSelect').value = selectedFollowupId;
-        }
-        syncExchangeObjectRefField();
-      } finally {
-        setButtonBusy('btnRefreshExchange', false);
-      }
-      const failed = [governanceResult, exchangeResult].filter((result) => result.status === 'rejected');
-      if (!failed.length) {
-        setStatus('exchangeStatus', `Trocas interbibliotecas atualizadas às ${fmtClock()}.`, 'ok');
-        setStatus('exchangeEditorStatus', 'Listas e acompanhamentos recarregados sem trocar de aba.', 'ok');
-        return;
-      }
-      const message = failed.map((result) => result.reason?.message || String(result.reason || '')).filter(Boolean).join(' | ');
-      setStatus('exchangeStatus', `Atualização parcial das trocas às ${fmtClock()}. ${message}`, 'warn');
-      setStatus('exchangeEditorStatus', 'Parte do refresh falhou; veja o aviso acima.', 'warn');
     }
 
     async function openExchangeEmail() {
@@ -3859,469 +3688,6 @@
       $('exchangeFollowupRequestSelect')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    function getInterbibLoanRows(rows) {
-      return asArray(rows).filter((row) => {
-        const action = String(row?.requested_action || '').trim().toLowerCase();
-        const objectType = String(row?.object_type || '').trim().toLowerCase();
-        const refType = String(parseRequestObjectRef(row?.object_ref)?.type || '').trim().toLowerCase();
-        return action === 'proposta_emprestimo_interbibliotecas' || objectType === 'interlibrary_loan' || refType === 'interlibrary_loan';
-      });
-    }
-    function friendlyInterbibLoanDirection(value) {
-      const raw = String(value || '').trim().toLowerCase();
-      if (raw === 'borrow_from_partner') return 'Nossa biblioteca recebe um empréstimo';
-      if (raw === 'lend_to_partner') return 'Nossa biblioteca empresta temporariamente';
-      return 'Empréstimo interbiblioteca';
-    }
-    function friendlyInterbibLoanPhase(value) {
-      const raw = String(value || '').trim().toLowerCase();
-      if (raw === 'pending') return 'Pedido pendente';
-      if (raw === 'accepted_pending_departure') return 'Aceito — saída pendente';
-      if (raw === 'departure_confirmed') return 'Saída confirmada';
-      if (raw === 'on_loan') return 'Em empréstimo interbiblioteca';
-      if (raw === 'return_scheduled') return 'Retorno agendado';
-      if (raw === 'returned') return 'Retornado';
-      if (raw === 'not_completed') return 'Não concluído';
-      return '—';
-    }
-    function interbibLoanPhaseTone(value) {
-      const raw = String(value || '').trim().toLowerCase();
-      if (raw === 'returned') return 'ok';
-      if (raw === 'not_completed') return 'bad';
-      if (raw === 'pending' || raw === 'accepted_pending_departure') return 'warn';
-      return 'info';
-    }
-    function getInterbibLoanState(row) {
-      const ref = parseRequestObjectRef(row?.object_ref);
-      const currentLibraryId = getCurrentExchangeLibraryId();
-      const direction = firstFilledValue(ref?.loan_direction, String(row?.requester_library_id || '') === String(currentLibraryId || '') ? 'borrow_from_partner' : 'lend_to_partner');
-      const phase = String(row?.status || '').trim().toLowerCase() === 'accepted'
-        ? firstFilledValue(ref?.execution_followup?.phase, 'accepted_pending_departure')
-        : firstFilledValue(ref?.execution_followup?.phase, String(row?.status || '').trim().toLowerCase(), 'pending');
-      return {
-        direction,
-        partner_library_id: normalizeLibraryId(firstFilledValue(ref?.partner_library_id, getExchangePartnerId(row))),
-        source_library_id: normalizeLibraryId(firstFilledValue(ref?.source_library_id, direction === 'lend_to_partner' ? currentLibraryId : getExchangePartnerId(row))),
-        source_document: safeJsonObject(firstFilledValue(ref?.source_document, {})),
-        start_date: firstFilledValue(ref?.execution_followup?.start_date, ref?.start_date),
-        return_date: firstFilledValue(ref?.execution_followup?.return_date, ref?.return_date),
-        meeting_point: firstFilledValue(ref?.execution_followup?.meeting_point, ref?.meeting_point),
-        contact_name: firstFilledValue(ref?.execution_followup?.contact_name, ref?.contact_name),
-        contact_email: firstFilledValue(ref?.execution_followup?.contact_email, ref?.contact_email, currentPartnerContacts.get(String(firstFilledValue(ref?.partner_library_id, getExchangePartnerId(row)) || ''))?.contact_email),
-        contact_phone: firstFilledValue(ref?.execution_followup?.contact_phone, ref?.contact_phone, currentPartnerContacts.get(String(firstFilledValue(ref?.partner_library_id, getExchangePartnerId(row)) || ''))?.contact_phone),
-        logistics_note: firstFilledValue(ref?.execution_followup?.logistics_note, ref?.logistics_note),
-        phase,
-        exemplar_ids: Array.isArray(ref?.execution_followup?.exemplar_ids) ? ref.execution_followup.exemplar_ids.map((value) => String(value)) : [],
-        tombos: Array.isArray(ref?.execution_followup?.tombos) ? ref.execution_followup.tombos : []
-      };
-    }
-    function buildInterbibLoanObjectRef(payload) {
-      return JSON.stringify({
-        type: 'interlibrary_loan',
-        loan_direction: payload.direction,
-        partner_library_id: payload.partner_library_id,
-        partner_library_name: payload.partner_library_name,
-        source_library_id: payload.source_library_id,
-        source_library_name: payload.source_library_name,
-        source_document: payload.source_document,
-        start_date: payload.start_date || null,
-        return_date: payload.return_date || null,
-        meeting_point: payload.meeting_point || null,
-        contact_name: payload.contact_name || null,
-        contact_email: payload.contact_email || null,
-        contact_phone: payload.contact_phone || null,
-        logistics_note: payload.logistics_note || null,
-        execution_followup: {
-          phase: payload.phase || 'pending',
-          start_date: payload.start_date || null,
-          return_date: payload.return_date || null,
-          meeting_point: payload.meeting_point || null,
-          contact_name: payload.contact_name || null,
-          contact_email: payload.contact_email || null,
-          contact_phone: payload.contact_phone || null,
-          logistics_note: payload.logistics_note || null,
-          exemplar_ids: payload.exemplar_ids || [],
-          tombos: payload.tombos || []
-        }
-      });
-    }
-    function populateInterbibLoanPartnerSelect() {
-      const select = $('interbibLoanPartnerSelect');
-      if (!select) return;
-      const previousValue = normalizeLibraryId(select.value || '');
-      const currentLibraryId = getCurrentExchangeLibraryId();
-      const rows = dedupePartnerSources(currentPartnerSources).filter((row) => normalizeLibraryId(row?.library_id) && String(normalizeLibraryId(row?.library_id) || '') !== String(currentLibraryId || ''));
-      const options = ['<option value="">Selecione</option>'].concat(rows.map((row) => `<option value="${esc(String(row.library_id || ''))}">${esc(getPartnerDisplayName(row))} · ${esc(friendlyPartnerRelationStatus(row?.relation_status))}</option>`));
-      select.innerHTML = options.join('');
-      if (previousValue && rows.some((row) => String(normalizeLibraryId(row?.library_id) || '') === String(previousValue || ''))) {
-        select.value = previousValue;
-      }
-    }
-    function getSelectedInterbibLoanPartnerRow() {
-      const libraryId = normalizeLibraryId($('interbibLoanPartnerSelect')?.value || '');
-      return currentPartnerSources.find((row) => String(normalizeLibraryId(row?.library_id) || '') === String(libraryId || '')) || null;
-    }
-    function getSelectedInterbibLoanDirection() {
-      return String($('interbibLoanDirection')?.value || 'borrow_from_partner').trim() || 'borrow_from_partner';
-    }
-    function getSelectedInterbibLoanSourceDoc() {
-      const direction = getSelectedInterbibLoanDirection();
-      const localBibRef = String($('interbibLoanLocalSelect')?.value || '').trim();
-      const partnerBibRef = String($('interbibLoanPartnerDocSelect')?.value || '').trim();
-      return direction === 'lend_to_partner'
-        ? currentExchangeLocalSurplus.find((row) => String(row?.bib_ref || '') === localBibRef) || null
-        : currentInterbibLoanPartnerDocs.find((row) => String(row?.bib_ref || '') === partnerBibRef) || null;
-    }
-    function syncInterbibLoanModeUi() {
-      const direction = getSelectedInterbibLoanDirection();
-      const localDisabled = direction !== 'lend_to_partner';
-      const partnerDisabled = direction !== 'borrow_from_partner';
-      if ($('interbibLoanLocalSelect')) $('interbibLoanLocalSelect').disabled = localDisabled;
-      if ($('interbibLoanLocalExemplars')) $('interbibLoanLocalExemplars').disabled = localDisabled;
-      if ($('interbibLoanPartnerDocSelect')) $('interbibLoanPartnerDocSelect').disabled = partnerDisabled;
-      if ($('interbibLoanPartnerExemplars')) $('interbibLoanPartnerExemplars').disabled = partnerDisabled;
-      if ($('interbibLoanLocalSelectNote')) $('interbibLoanLocalSelectNote').textContent = localDisabled ? 'Este campo fica apenas para os casos em que a nossa biblioteca empresta temporariamente.' : 'Escolha aqui o documento da nossa biblioteca que sairá temporariamente.';
-      if ($('interbibLoanPartnerDocSelectNote')) $('interbibLoanPartnerDocSelectNote').textContent = partnerDisabled ? 'Este campo fica apenas para os casos em que a nossa biblioteca recebe um empréstimo temporário.' : 'Escolha aqui o documento da parceira que virá temporariamente.';
-      if ($('interbibLoanLocalExemplarsNote')) $('interbibLoanLocalExemplarsNote').textContent = localDisabled ? 'Estes exemplares locais só se aplicam quando a nossa biblioteca empresta.' : 'Marque os exemplares locais já separados para sair temporariamente.';
-      if ($('interbibLoanPartnerExemplarsNote')) $('interbibLoanPartnerExemplarsNote').textContent = partnerDisabled ? 'Estes exemplares da parceira só se aplicam quando a nossa biblioteca recebe um empréstimo.' : 'Marque os exemplares da parceira já identificados para o empréstimo temporário.';
-    }
-    async function loadInterbibLoanPartnerDocuments() {
-      const partnerRow = getSelectedInterbibLoanPartnerRow();
-      const currentLibraryId = getCurrentExchangeLibraryId();
-      if (!partnerRow?.library_id || String(normalizeLibraryId(partnerRow.library_id) || '') === String(currentLibraryId || '')) {
-        currentInterbibLoanPartnerDocs = [];
-        populateExchangeDocumentSelect('interbibLoanPartnerDocSelect', [], 'Selecione');
-        populateExecutionExemplarSelect('interbibLoanPartnerExemplars', [], [], 'Selecione primeiro uma biblioteca parceira e um documento.');
-        return;
-      }
-      currentInterbibLoanPartnerDocs = await fetchSurplusDocumentsByLibrary(partnerRow.library_id);
-      populateExchangeDocumentSelect('interbibLoanPartnerDocSelect', currentInterbibLoanPartnerDocs, 'Selecione');
-    }
-    async function loadInterbibLoanExemplarOptions() {
-      const direction = getSelectedInterbibLoanDirection();
-      currentInterbibLoanLocalExecutionOptions = [];
-      currentInterbibLoanPartnerExecutionOptions = [];
-      if (direction === 'lend_to_partner') {
-        const doc = currentExchangeLocalSurplus.find((row) => String(row?.bib_ref || '') === String($('interbibLoanLocalSelect')?.value || '').trim());
-        if (doc?.bib_ref && currentLibraryRow?.id) {
-          currentInterbibLoanLocalExecutionOptions = await fetchDocumentExemplarsByLibrary(currentLibraryRow.id, doc.bib_ref);
-        }
-      } else {
-        const partnerRow = getSelectedInterbibLoanPartnerRow();
-        const doc = currentInterbibLoanPartnerDocs.find((row) => String(row?.bib_ref || '') === String($('interbibLoanPartnerDocSelect')?.value || '').trim());
-        if (doc?.bib_ref && partnerRow?.library_id) {
-          currentInterbibLoanPartnerExecutionOptions = await fetchDocumentExemplarsByLibrary(partnerRow.library_id, doc.bib_ref);
-        }
-      }
-      populateExecutionExemplarSelect('interbibLoanLocalExemplars', currentInterbibLoanLocalExecutionOptions, getSelectedValues('interbibLoanLocalExemplars'), 'Selecione primeiro um documento local.');
-      populateExecutionExemplarSelect('interbibLoanPartnerExemplars', currentInterbibLoanPartnerExecutionOptions, getSelectedValues('interbibLoanPartnerExemplars'), 'Selecione primeiro um documento da parceira.');
-      syncInterbibLoanModeUi();
-    }
-    function ensureInterbibLoanMessage() {
-      const partnerRow = getSelectedInterbibLoanPartnerRow();
-      const doc = getSelectedInterbibLoanSourceDoc();
-      const direction = getSelectedInterbibLoanDirection();
-      if (!partnerRow || !doc) return;
-      const ourName = firstFilledValue(currentLibraryRow?.short_name, currentLibraryRow?.name, 'nossa biblioteca');
-      const partnerName = getPartnerDisplayName(partnerRow);
-      const startDate = String($('interbibLoanStartDate')?.value || '').trim();
-      const returnDate = String($('interbibLoanReturnDate')?.value || '').trim();
-      const logisticsNote = String($('interbibLoanLogisticsNote')?.value || '').trim();
-      const lines = [
-        `Olá, compas da ${partnerName}.`,
-        '',
-        direction === 'lend_to_partner'
-          ? `Escrevemos em nome da ${ourName} para propor um empréstimo temporário interbibliotecas de um documento do nosso acervo.`
-          : `Escrevemos em nome da ${ourName} para solicitar um empréstimo temporário interbibliotecas de um documento do acervo de vocês.`,
-        '',
-        `Documento de referência: ${formatExchangeDocLabel(doc)}.`,
-        startDate ? `Saída / retirada pretendida: ${fmtDate(startDate)}.` : 'Saída / retirada pretendida: a combinar.',
-        returnDate ? `Retorno previsto: ${fmtDate(returnDate)}.` : 'Retorno previsto: a combinar.',
-        '',
-        'A ideia aqui não é uma troca definitiva, mas um empréstimo temporário entre bibliotecas, com retorno combinado e acompanhamento claro no módulo interbibliotecas do AnarBib.'
-      ];
-      if (logisticsNote) lines.push('', `Observação logística: ${logisticsNote}`);
-      lines.push('', 'Abraços fraternos,', ourName);
-      $('interbibLoanMailSubject').value = `${direction === 'lend_to_partner' ? 'Proposta' : 'Pedido'} de empréstimo interbibliotecas — ${ourName} ↔ ${partnerName}`;
-      $('interbibLoanMessage').value = lines.join('\n');
-      syncInterbibLoanObjectRefField();
-    }
-    function syncInterbibLoanObjectRefField() {
-      const partnerRow = getSelectedInterbibLoanPartnerRow();
-      const doc = getSelectedInterbibLoanSourceDoc();
-      const direction = getSelectedInterbibLoanDirection();
-      const sourceLibraryId = direction === 'lend_to_partner' ? normalizeLibraryId(currentLibraryRow?.id) : normalizeLibraryId(partnerRow?.library_id);
-      const sourceLibraryName = direction === 'lend_to_partner' ? firstFilledValue(currentLibraryRow?.short_name, currentLibraryRow?.name) : getPartnerDisplayName(partnerRow);
-      const selectedIds = direction === 'lend_to_partner' ? getSelectedValues('interbibLoanLocalExemplars') : getSelectedValues('interbibLoanPartnerExemplars');
-      const executionRows = direction === 'lend_to_partner' ? currentInterbibLoanLocalExecutionOptions : currentInterbibLoanPartnerExecutionOptions;
-      if (!partnerRow || !doc || !sourceLibraryId) {
-        $('interbibLoanObjectRef').value = '';
-        return;
-      }
-      $('interbibLoanObjectRef').value = buildInterbibLoanObjectRef({
-        direction,
-        partner_library_id: partnerRow.library_id,
-        partner_library_name: getPartnerDisplayName(partnerRow),
-        source_library_id: sourceLibraryId,
-        source_library_name: sourceLibraryName,
-        source_document: {
-          bib_ref: doc.bib_ref,
-          titulo: firstFilledValue(doc.titulo),
-          autor: firstFilledValue(doc.autor),
-          exemplar_count: doc.count,
-          available_count: doc?.eligibility?.available_count ?? doc?.available_count ?? null,
-          exemplar_ids: asArray(doc.exemplar_ids)
-        },
-        start_date: String($('interbibLoanStartDate')?.value || '').trim() || null,
-        return_date: String($('interbibLoanReturnDate')?.value || '').trim() || null,
-        meeting_point: String($('interbibLoanMeetingPoint')?.value || '').trim() || null,
-        contact_name: String($('interbibLoanContactName')?.value || '').trim() || null,
-        contact_email: String($('interbibLoanContactEmail')?.value || '').trim() || null,
-        contact_phone: String($('interbibLoanContactPhone')?.value || '').trim() || null,
-        logistics_note: String($('interbibLoanLogisticsNote')?.value || '').trim() || null,
-        phase: String($('interbibLoanPhase')?.value || 'pending').trim() || 'pending',
-        exemplar_ids: selectedIds,
-        tombos: executionRows.filter((row) => selectedIds.includes(String(row?.id || ''))).map((row) => firstFilledValue(row?.tombo, `ID ${row?.id}`))
-      });
-    }
-    function resetInterbibLoanForm() {
-      $('interbibLoanRequestId').value = '';
-      $('interbibLoanDirection').value = 'borrow_from_partner';
-      if ($('interbibLoanPartnerSelect')) $('interbibLoanPartnerSelect').value = '';
-      populateExchangeDocumentSelect('interbibLoanLocalSelect', currentExchangeLocalSurplus, 'Selecione');
-      populateExchangeDocumentSelect('interbibLoanPartnerDocSelect', [], 'Selecione');
-      $('interbibLoanPhase').value = 'pending';
-      $('interbibLoanStartDate').value = '';
-      $('interbibLoanReturnDate').value = '';
-      $('interbibLoanMeetingPoint').value = '';
-      $('interbibLoanContactName').value = '';
-      $('interbibLoanContactEmail').value = '';
-      $('interbibLoanContactPhone').value = '';
-      $('interbibLoanMailSubject').value = '';
-      $('interbibLoanObjectRef').value = '';
-      $('interbibLoanLogisticsNote').value = '';
-      $('interbibLoanMessage').value = '';
-      currentInterbibLoanPartnerDocs = [];
-      currentInterbibLoanLocalExecutionOptions = [];
-      currentInterbibLoanPartnerExecutionOptions = [];
-      populateExecutionExemplarSelect('interbibLoanLocalExemplars', [], [], 'Marque exemplares locais quando a nossa biblioteca emprestar.');
-      populateExecutionExemplarSelect('interbibLoanPartnerExemplars', [], [], 'Marque exemplares da parceira quando a nossa biblioteca receber o empréstimo.');
-      syncInterbibLoanModeUi();
-      setStatus('interbibLoanEditorStatus', '');
-    }
-    async function loadInterbibLoanIntoForm(row) {
-      if (!row) {
-        resetInterbibLoanForm();
-        return;
-      }
-      const state = getInterbibLoanState(row);
-      $('interbibLoanRequestId').value = String(row?.id || '');
-      $('interbibLoanDirection').value = firstFilledValue(state.direction, 'borrow_from_partner');
-      populateInterbibLoanPartnerSelect();
-      if ($('interbibLoanPartnerSelect')) $('interbibLoanPartnerSelect').value = String(state.partner_library_id || '');
-      await loadInterbibLoanPartnerDocuments();
-      populateExchangeDocumentSelect('interbibLoanLocalSelect', currentExchangeLocalSurplus, 'Selecione');
-      if (state.direction === 'lend_to_partner' && $('interbibLoanLocalSelect')) $('interbibLoanLocalSelect').value = String(state.source_document?.bib_ref || '');
-      if (state.direction === 'borrow_from_partner' && $('interbibLoanPartnerDocSelect')) $('interbibLoanPartnerDocSelect').value = String(state.source_document?.bib_ref || '');
-      $('interbibLoanPhase').value = firstFilledValue(state.phase, 'pending');
-      $('interbibLoanStartDate').value = toInputDateValue(state.start_date);
-      $('interbibLoanReturnDate').value = toInputDateValue(state.return_date);
-      $('interbibLoanMeetingPoint').value = firstFilledValue(state.meeting_point);
-      $('interbibLoanContactName').value = firstFilledValue(state.contact_name);
-      $('interbibLoanContactEmail').value = firstFilledValue(state.contact_email);
-      $('interbibLoanContactPhone').value = firstFilledValue(state.contact_phone);
-      $('interbibLoanLogisticsNote').value = firstFilledValue(state.logistics_note);
-      $('interbibLoanMailSubject').value = `${friendlyInterbibLoanDirection(state.direction)} — ${buildExchangeRequestShortLabel(row)}`;
-      $('interbibLoanMessage').value = firstFilledValue(row?.message);
-      await loadInterbibLoanExemplarOptions();
-      populateExecutionExemplarSelect('interbibLoanLocalExemplars', currentInterbibLoanLocalExecutionOptions, state.direction === 'lend_to_partner' ? state.exemplar_ids : [], 'Selecione primeiro um documento local.');
-      populateExecutionExemplarSelect('interbibLoanPartnerExemplars', currentInterbibLoanPartnerExecutionOptions, state.direction === 'borrow_from_partner' ? state.exemplar_ids : [], 'Selecione primeiro um documento da parceira.');
-      syncInterbibLoanModeUi();
-      syncInterbibLoanObjectRefField();
-      setStatus('interbibLoanEditorStatus', `Empréstimo interbiblioteca ${row?.id} carregado para edição / acompanhamento.`, 'info');
-    }
-    function renderInterbibLoanSummary(rows) {
-      const loanRows = getInterbibLoanRows(rows);
-      const acceptedRows = loanRows.filter((row) => String(row?.status || '').trim().toLowerCase() === 'accepted');
-      const activeRows = loanRows.filter((row) => ['departure_confirmed','on_loan','return_scheduled'].includes(String(getInterbibLoanState(row).phase || '').trim().toLowerCase()));
-      const returnedRows = loanRows.filter((row) => String(getInterbibLoanState(row).phase || '').trim().toLowerCase() === 'returned');
-      renderKvGrid('interbibLoanSummary', [
-        ['Pedidos / empréstimos interbibliotecas visíveis', loanRows.length],
-        ['Pedidos ainda pendentes', loanRows.filter((row) => String(row?.status || '').trim().toLowerCase() === 'pending').length],
-        ['Pedidos aceitos', acceptedRows.length],
-        ['Em empréstimo ou com retorno agendado', activeRows.length],
-        ['Retornados', returnedRows.length],
-        ['Diferença para Trocas', 'Aqui o material volta depois; em Trocas, a circulação é definitiva']
-      ]);
-    }
-    function renderInterbibLoanTable(rows) {
-      const tbody = $('tbodyInterbibLoans');
-      const loanRows = getInterbibLoanRows(rows);
-      if (!tbody) return;
-      if (!loanRows.length) {
-        tbody.innerHTML = '<tr><td colspan="6">Nenhum empréstimo interbiblioteca registrado por enquanto.</td></tr>';
-        applyStoredSortForTbody('tbodyInterbibLoans');
-        return;
-      }
-      tbody.innerHTML = loanRows.map((row) => {
-        const state = getInterbibLoanState(row);
-        const partnerRow = getExchangePartnerRow(row);
-        const statusLabel = String(row?.status || '').trim().toLowerCase() === 'accepted'
-          ? friendlyInterbibLoanPhase(state.phase)
-          : friendlyDocumentRequestStatus(row?.status, getExchangeDirection(row));
-        const statusTone = String(row?.status || '').trim().toLowerCase() === 'accepted'
-          ? interbibLoanPhaseTone(state.phase)
-          : exchangeStatusTone(row?.status);
-        const exemplarsText = state.tombos?.length ? ` · ${state.tombos.join(', ')}` : '';
-        let actionsHtml = `<div>${esc(firstFilledValue(state.meeting_point, state.logistics_note, '—'))}</div><div class="editor-actions" style="margin-top:8px"><button class="btn mini soft" type="button" data-interbib-loan-edit="${esc(String(row?.id || ''))}">Abrir</button></div>`;
-        if (getExchangeDirection(row) === 'Recebido' && String(row?.status || '').trim().toLowerCase() === 'pending') {
-          actionsHtml = `<div class="editor-actions"><button class="btn mini" type="button" data-interbib-loan-decision="accepted" data-request-id="${esc(String(row?.id || ''))}">Aceitar</button><button class="btn mini danger" type="button" data-interbib-loan-decision="refused" data-request-id="${esc(String(row?.id || ''))}">Recusar</button><button class="btn mini soft" type="button" data-interbib-loan-edit="${esc(String(row?.id || ''))}">Abrir</button></div>`;
-        }
-        return `<tr>
-          <td>${esc(friendlyInterbibLoanDirection(state.direction))}</td>
-          <td>${esc(getPartnerDisplayName(partnerRow))}</td>
-          <td><div><strong>${esc(firstFilledValue(state.source_document?.titulo, state.source_document?.bib_ref, '—'))}</strong>${exemplarsText ? `<div class="inline-note">${esc(exemplarsText.replace(/^ · /, 'Exemplares: '))}</div>` : ''}</div></td>
-          <td><span class="pill ${esc(statusTone)}">${esc(statusLabel)}</span><div class="inline-note">${esc(firstFilledValue(row?.response_note, state.logistics_note, '—'))}</div></td>
-          <td><div>Saída: ${esc(fmtDate(state.start_date))}</div><div class="inline-note">Retorno: ${esc(fmtDate(state.return_date))}</div></td>
-          <td>${actionsHtml}</td>
-        </tr>`;
-      }).join('');
-      applyStoredSortForTbody('tbodyInterbibLoans');
-    }
-    async function loadInterbibLoanPanel() {
-      populateInterbibLoanPartnerSelect();
-      populateExchangeDocumentSelect('interbibLoanLocalSelect', currentExchangeLocalSurplus, 'Selecione');
-      currentInterbibLoanRows = getInterbibLoanRows(currentExchangeRequests);
-      renderInterbibLoanSummary(currentExchangeRequests);
-      renderInterbibLoanTable(currentExchangeRequests);
-      syncInterbibLoanModeUi();
-      setStatus('interbibLoanStatus', currentInterbibLoanRows.length ? `Módulo de empréstimos interbibliotecas pronto. ${currentInterbibLoanRows.length} registro(s) visível(is).` : 'Módulo pronto. Ainda não há empréstimos interbibliotecas registrados.', currentInterbibLoanRows.length ? 'ok' : 'info');
-    }
-    async function refreshInterbibLoanPanelInteractive() {
-      setButtonBusy('btnRefreshInterbibLoans', true, 'Atualizando…');
-      setStatus('interbibLoanStatus', 'Atualizando empréstimos interbibliotecas…', 'info');
-      const selectedPartnerId = normalizeLibraryId($('interbibLoanPartnerSelect')?.value || '');
-      const selectedRequestId = String($('interbibLoanRequestId')?.value || '').trim();
-      const governanceResult = await (async () => {
-        try { await loadGovernancePanel(); return { status: 'fulfilled' }; }
-        catch (reason) { return { status: 'rejected', reason }; }
-      })();
-      const exchangeResult = await (async () => {
-        try { await loadExchangePanel(); return { status: 'fulfilled' }; }
-        catch (reason) { return { status: 'rejected', reason }; }
-      })();
-      const loanResult = await (async () => {
-        try { await loadInterbibLoanPanel(); return { status: 'fulfilled' }; }
-        catch (reason) { return { status: 'rejected', reason }; }
-      })();
-      try {
-        if (selectedPartnerId && $('interbibLoanPartnerSelect') && currentPartnerSources.some((row) => String(normalizeLibraryId(row?.library_id) || '') === String(selectedPartnerId || ''))) {
-          $('interbibLoanPartnerSelect').value = selectedPartnerId;
-          await loadInterbibLoanPartnerDocuments();
-        }
-        if (selectedRequestId) {
-          const row = currentInterbibLoanRows.find((item) => String(item?.id || '') === selectedRequestId);
-          if (row) await loadInterbibLoanIntoForm(row);
-        }
-      } finally {
-        setButtonBusy('btnRefreshInterbibLoans', false);
-      }
-      const failed = [governanceResult, exchangeResult, loanResult].filter((result) => result.status === 'rejected');
-      if (!failed.length) {
-        setStatus('interbibLoanStatus', `Empréstimos interbibliotecas atualizados às ${fmtClock()}.`, 'ok');
-      } else {
-        setStatus('interbibLoanStatus', `Atualização parcial dos empréstimos interbibliotecas às ${fmtClock()}.`, 'warn');
-      }
-    }
-    async function openInterbibLoanEmail() {
-      try {
-        const partnerRow = getSelectedInterbibLoanPartnerRow();
-        const email = firstFilledValue(getPartnerContactEmail(partnerRow?.library_id), $('interbibLoanContactEmail')?.value);
-        if (!email) throw new Error('Ainda não há e-mail de contato para esta biblioteca parceira.');
-        const subject = String($('interbibLoanMailSubject')?.value || '').trim();
-        const message = String($('interbibLoanMessage')?.value || '').trim();
-        if (!subject || !message) throw new Error('Gera ou escreve antes o assunto e a mensagem.');
-        window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
-        setStatus('interbibLoanEditorStatus', 'Cliente de e-mail aberto para o empréstimo interbiblioteca.', 'ok');
-      } catch (error) {
-        setStatus('interbibLoanEditorStatus', 'Não consegui abrir o e-mail do empréstimo interbiblioteca: ' + (error.message || String(error)), 'bad');
-      }
-    }
-    async function saveInterbibLoanRequest() {
-      try {
-        const requestId = String($('interbibLoanRequestId')?.value || '').trim();
-        const partnerRow = getSelectedInterbibLoanPartnerRow();
-        const direction = getSelectedInterbibLoanDirection();
-        const sourceDoc = getSelectedInterbibLoanSourceDoc();
-        if (!partnerRow?.library_id) throw new Error('Escolhe uma biblioteca parceira.');
-        if (!sourceDoc) throw new Error(direction === 'lend_to_partner' ? 'Escolhe o documento local que sairá temporariamente.' : 'Escolhe o documento da parceira que será pedido em empréstimo.');
-        syncInterbibLoanObjectRefField();
-        const objectRef = String($('interbibLoanObjectRef')?.value || '').trim();
-        const message = String($('interbibLoanMessage')?.value || '').trim();
-        if (!objectRef) throw new Error('Faltam dados suficientes para montar a referência interna.');
-        if (!message) throw new Error('Escreve ou gera a mensagem do pedido de empréstimo interbiblioteca.');
-        setStatus('interbibLoanEditorStatus', requestId ? 'Salvando acompanhamento do empréstimo interbiblioteca…' : 'Registrando pedido de empréstimo interbiblioteca…', 'info');
-        if (requestId) {
-          const { error } = await supabase
-            .from('document_permission_requests')
-            .update({
-              object_ref: objectRef,
-              message,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', requestId);
-          if (error) throw error;
-          setStatus('interbibLoanEditorStatus', 'Acompanhamento do empréstimo interbiblioteca salvo.', 'ok');
-        } else {
-          const { data, error } = await supabase.rpc('create_document_permission_request', {
-            p_requester_library_id: currentLibraryRow?.id,
-            p_target_library_id: partnerRow.library_id,
-            p_request: {
-              requested_action: 'proposta_emprestimo_interbibliotecas',
-              object_type: 'interlibrary_loan',
-              object_ref: objectRef,
-              message
-            }
-          });
-          if (error) throw error;
-          const notifyResult = await tryNotifyDocumentPermissionRequest(data?.id, 'document_permission_request_created');
-          setStatus('interbibLoanEditorStatus', notifyResult.ok ? 'Pedido de empréstimo interbiblioteca registrado e e-mail automático disparado.' : 'Pedido de empréstimo interbiblioteca registrado. Se necessário, usa também o botão de e-mail.', notifyResult.ok ? 'ok' : 'warn');
-        }
-        await loadGovernancePanel();
-        await loadExchangePanel();
-        await loadInterbibLoanPanel();
-      } catch (error) {
-        setStatus('interbibLoanEditorStatus', 'Não consegui salvar o empréstimo interbiblioteca: ' + (error.message || String(error)), 'bad');
-      }
-    }
-    async function decideInterbibLoanRequest(requestId, decision) {
-      try {
-        const notePrompt = decision === 'accepted' ? 'Observação opcional para a aceitação do empréstimo interbiblioteca:' : 'Observação opcional para a recusa do empréstimo interbiblioteca:';
-        const note = window.prompt(notePrompt, '') ?? '';
-        setStatus('interbibLoanEditorStatus', decision === 'accepted' ? 'Registrando aceitação do empréstimo interbiblioteca…' : 'Registrando recusa do empréstimo interbiblioteca…', 'info');
-        const { data, error } = await supabase.rpc('decide_document_permission_request', { p_request_id: requestId, p_decision: decision, p_response_note: String(note || '').trim() || null });
-        if (error) throw error;
-        const eventType = decision === 'accepted' ? 'document_permission_request_accepted' : 'document_permission_request_refused';
-        const notifyResult = await tryNotifyDocumentPermissionRequest(data?.id || requestId, eventType);
-        setStatus('interbibLoanEditorStatus', notifyResult.ok ? (decision === 'accepted' ? 'Pedido de empréstimo interbiblioteca aceito e e-mail automático disparado.' : 'Pedido de empréstimo interbiblioteca recusado e e-mail automático disparado.') : (decision === 'accepted' ? 'Pedido de empréstimo interbiblioteca aceito.' : 'Pedido de empréstimo interbiblioteca recusado.'), notifyResult.ok ? 'ok' : 'warn');
-        await loadGovernancePanel();
-        await loadExchangePanel();
-        await loadInterbibLoanPanel();
-      } catch (error) {
-        setStatus('interbibLoanEditorStatus', 'Não consegui registrar a decisão do empréstimo interbiblioteca: ' + (error.message || String(error)), 'bad');
-      }
-    }
-    function openInterbibLoanFromRequest(requestId) {
-      const row = currentInterbibLoanRows.find((item) => String(item?.id || '') === String(requestId || '')) || currentExchangeRequests.find((item) => String(item?.id || '') === String(requestId || '')) || null;
-      if (!row) {
-        setStatus('interbibLoanEditorStatus', 'Não encontrei este empréstimo interbiblioteca.', 'warn');
-        return;
-      }
-      activateTab('prestimos-interbib');
-      void loadInterbibLoanIntoForm(row);
-      $('interbibLoanPartnerSelect')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-
     const TASK_TYPE_LABELS = {
       limpeza_livros: 'Limpeza dos livros',
       arrumacao: 'Arrumação',
@@ -4432,6 +3798,791 @@
         </tr>`;
       }).join('');
       applyStoredSortForTbody('tbodyTasks');
+    }
+
+
+    const REPORT_PRESET_DEFINITIONS = {
+      reservas: {
+        label: 'Reservas',
+        hint: 'Leia reservas por período, por leitor(a/e), por situação ou por documento.',
+        groupings: [
+          { value: 'none', label: 'Sem agrupamento' },
+          { value: 'day', label: 'Período / dia' },
+          { value: 'reader', label: 'Leitor(a/e)' },
+          { value: 'status', label: 'Situação' },
+          { value: 'title', label: 'Documento' }
+        ],
+        statuses: [
+          { value: '', label: 'Todos' },
+          { value: 'pending', label: 'Pendentes' },
+          { value: 'accepted', label: 'Aceitas' },
+          { value: 'cancelled', label: 'Canceladas' },
+          { value: 'expired', label: 'Expiradas' }
+        ]
+      },
+      emprestimos: {
+        label: 'Empréstimos e retornos',
+        hint: 'Cruze saídas, devoluções e estados do fluxo de circulação.',
+        groupings: [
+          { value: 'none', label: 'Sem agrupamento' },
+          { value: 'day', label: 'Período / dia' },
+          { value: 'reader', label: 'Leitor(a/e)' },
+          { value: 'status', label: 'Situação' },
+          { value: 'title', label: 'Documento' }
+        ],
+        statuses: [
+          { value: '', label: 'Todos' },
+          { value: 'active', label: 'Em aberto' },
+          { value: 'returned', label: 'Retornados' },
+          { value: 'overdue', label: 'Em atraso' },
+          { value: 'cancelled', label: 'Cancelados' }
+        ]
+      },
+      consultas: {
+        label: 'Consultas no local',
+        hint: 'Acompanhe pedidos, confirmações e uso local do acervo.',
+        groupings: [
+          { value: 'none', label: 'Sem agrupamento' },
+          { value: 'day', label: 'Período / dia' },
+          { value: 'reader', label: 'Pessoa' },
+          { value: 'status', label: 'Situação' },
+          { value: 'title', label: 'Documento / tema' }
+        ],
+        statuses: [
+          { value: '', label: 'Todos' },
+          { value: 'pending', label: 'Pendentes' },
+          { value: 'confirmed', label: 'Confirmadas' },
+          { value: 'completed', label: 'Concluídas' },
+          { value: 'cancelled', label: 'Canceladas' }
+        ]
+      },
+      inscricoes: {
+        label: 'Inscrições',
+        hint: 'Veja entradas de leitoras/es e vínculos com a biblioteca.',
+        groupings: [
+          { value: 'none', label: 'Sem agrupamento' },
+          { value: 'day', label: 'Período / dia' },
+          { value: 'status', label: 'Situação' },
+          { value: 'reader', label: 'Pessoa' }
+        ],
+        statuses: [
+          { value: '', label: 'Todos' },
+          { value: 'active', label: 'Ativas' },
+          { value: 'pending', label: 'Pendentes' },
+          { value: 'inactive', label: 'Inativas' }
+        ]
+      },
+      catalogacao: {
+        label: 'Catalogação',
+        hint: 'Relatório de exemplares e registros com tombos, autoria, Dewey / CDD e localização.',
+        groupings: [
+          { value: 'none', label: 'Sem agrupamento' },
+          { value: 'day', label: 'Período / dia' },
+          { value: 'title', label: 'Documento' },
+          { value: 'author', label: 'Autoria' },
+          { value: 'cdd', label: 'CDD / Dewey' }
+        ],
+        statuses: [
+          { value: '', label: 'Todos' }
+        ]
+      },
+      catalogo_completo: {
+        label: 'Catálogo completo',
+        hint: 'Quadro agregado do catálogo da biblioteca, com autoria, subtítulo, CDD, exemplares e tombos.',
+        groupings: [
+          { value: 'none', label: 'Sem agrupamento' },
+          { value: 'title', label: 'Documento' },
+          { value: 'author', label: 'Autoria' },
+          { value: 'cdd', label: 'CDD / Dewey' }
+        ],
+        statuses: [
+          { value: '', label: 'Todos' }
+        ]
+      }
+    };
+
+    const REPORT_SORT_OPTIONS = [
+      { value: 'date_desc', label: 'Data mais recente' },
+      { value: 'date_asc', label: 'Data mais antiga' },
+      { value: 'title_asc', label: 'Documento (A → Z)' },
+      { value: 'reader_asc', label: 'Pessoa (A → Z)' },
+      { value: 'status_asc', label: 'Situação (A → Z)' },
+      { value: 'count_desc', label: 'Maior quantidade' },
+      { value: 'count_asc', label: 'Menor quantidade' }
+    ];
+
+    function fillSimpleSelect(selectId, options, fallbackLabel='Selecione') {
+      const select = $(selectId);
+      if (!select) return;
+      select.innerHTML = (Array.isArray(options) && options.length
+        ? options.map((option) => `<option value="${esc(String(option.value || ''))}">${esc(String(option.label || option.value || ''))}</option>`).join('')
+        : `<option value="">${esc(fallbackLabel)}</option>`);
+    }
+
+    function getReportsPresetDefinition() {
+      const preset = String($('reportsPresetSelect')?.value || 'reservas').trim() || 'reservas';
+      return REPORT_PRESET_DEFINITIONS[preset] || REPORT_PRESET_DEFINITIONS.reservas;
+    }
+
+    function updateReportsPresetUi() {
+      const preset = String($('reportsPresetSelect')?.value || 'reservas').trim() || 'reservas';
+      const definition = REPORT_PRESET_DEFINITIONS[preset] || REPORT_PRESET_DEFINITIONS.reservas;
+      const currentGrouping = String($('reportsGroupingSelect')?.value || '').trim();
+      const currentStatus = String($('reportsStatusFilter')?.value || '').trim();
+      const currentSort = String($('reportsSortSelect')?.value || '').trim();
+      fillSimpleSelect('reportsGroupingSelect', definition.groupings, 'Sem agrupamento');
+      fillSimpleSelect('reportsStatusFilter', definition.statuses, 'Todos');
+      fillSimpleSelect('reportsSortSelect', REPORT_SORT_OPTIONS, 'Data mais recente');
+      if (definition.groupings.some((option) => option.value === currentGrouping)) $('reportsGroupingSelect').value = currentGrouping;
+      if (definition.statuses.some((option) => option.value === currentStatus)) $('reportsStatusFilter').value = currentStatus;
+      if (REPORT_SORT_OPTIONS.some((option) => option.value === currentSort)) $('reportsSortSelect').value = currentSort;
+      const hint = $('reportsPresetHint');
+      if (hint) hint.textContent = definition.hint;
+    }
+
+    function getCurrentReportsConfig() {
+      return safeJsonObject(currentGovernance?.reports);
+    }
+
+    function getReportsWeeklyTargetEmail() {
+      return firstFilledValue(
+        currentCommunicationsContext?.weekly_report_email,
+        currentCommunicationsContext?.admin_notification_email,
+        currentContactProfile?.contact_email,
+        currentIdentityRow?.email,
+        session?.user?.email,
+        '—'
+      );
+    }
+
+    function loadReportsConfigForm() {
+      const cfg = getCurrentReportsConfig();
+      if ($('reportsWeeklyEnabled')) $('reportsWeeklyEnabled').checked = cfg.weekly_library_summary_enabled === true;
+      if ($('reportsWeeklyNote')) $('reportsWeeklyNote').value = firstFilledValue(cfg.weekly_library_summary_note);
+      if ($('reportsWeeklyTargetEmail')) $('reportsWeeklyTargetEmail').value = getReportsWeeklyTargetEmail();
+      setStatus('reportsConfigStatus', '');
+    }
+
+    function buildReportsQuickEntries() {
+      const weeklyEnabled = getCurrentReportsConfig().weekly_library_summary_enabled === true;
+      return [
+        ['Resumo semanal automático', weeklyEnabled ? 'Ligado para esta biblioteca' : 'Desligado para esta biblioteca'],
+        ['Fluxos previstos', 'Reservas, empréstimos / retornos, consultas, inscrições, catalogação e catálogo completo'],
+        ['Filtros cruzados', 'Período, situação, agrupamento, ordenação e busca livre'],
+        ['Exemplos diretos', 'Empréstimos por leitor(a/e), reservas por período, catálogo completo e catalogação por tombo / CDD']
+      ];
+    }
+
+    async function saveReportsConfig() {
+      try {
+        setStatus('reportsConfigStatus', 'Salvando opção do resumo semanal…', 'info');
+        const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const base = currentGovernance && typeof currentGovernance === 'object' ? JSON.parse(JSON.stringify(currentGovernance)) : {};
+        base.reports = {
+          ...safeJsonObject(base.reports),
+          weekly_library_summary_enabled: boolValue('reportsWeeklyEnabled'),
+          weekly_library_summary_note: String($('reportsWeeklyNote')?.value || '').trim() || null,
+          weekly_library_summary_target_email: getReportsWeeklyTargetEmail()
+        };
+        const { error } = await supabase
+          .from('library_document_governance')
+          .upsert({
+            library_id: row.id,
+            config: base,
+            updated_at: new Date().toISOString(),
+            updated_by: session?.user?.id || null
+          }, { onConflict: 'library_id' });
+        if (error) throw error;
+        currentGovernance = base;
+        loadReportsConfigForm();
+        renderKvGrid('reportsQuickGrid', buildReportsQuickEntries());
+        setStatus('reportsConfigStatus', 'Opção do resumo semanal salva.', 'ok');
+      } catch (error) {
+        setStatus('reportsConfigStatus', 'Não consegui salvar a opção semanal: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    function normalizeReportDay(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+      const normalized = raw.length <= 10 ? `${raw}T00:00:00` : raw;
+      const d = new Date(normalized);
+      if (Number.isNaN(d.getTime())) return raw.slice(0, 10);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function matchesLibraryScope(row, libraryId, librarySlug='') {
+      const idKeys = ['library_id','pickup_library_id','owner_library_id','loan_library_id','request_library_id','home_library_id','local_library_id','requester_library_id','target_library_id','reader_library_id'];
+      const slugKeys = ['library_slug','pickup_library_slug','owner_library_slug','loan_library_slug','default_library_slug'];
+      for (const key of idKeys) {
+        if (String(firstFilledValue(row?.[key], '') || '') === String(libraryId || '')) return true;
+      }
+      if (librarySlug) {
+        for (const key of slugKeys) {
+          if (String(firstFilledValue(row?.[key], '') || '') === String(librarySlug || '')) return true;
+        }
+      }
+      return false;
+    }
+
+    async function fetchRowsFromCandidates(candidates, limit=2000) {
+      let lastError = null;
+      for (const candidate of asArray(candidates)) {
+        try {
+          const { data, error } = await supabase.from(candidate).select('*').limit(limit);
+          if (error) throw error;
+          return { rows: asArray(data), source: candidate };
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      throw lastError || new Error('Nenhuma fonte de dados disponível para este relatório.');
+    }
+
+    async function fetchProfilesMap(userIds) {
+      const ids = Array.from(new Set(asArray(userIds).map((value) => String(value || '').trim()).filter(Boolean)));
+      const map = new Map();
+      for (let i = 0; i < ids.length; i += 100) {
+        const slice = ids.slice(i, i + 100);
+        if (!slice.length) continue;
+        try {
+          const { data, error } = await supabase.from('profiles').select('*').in('id', slice);
+          if (error) throw error;
+          for (const row of asArray(data)) {
+            const key = String(row?.id || '').trim();
+            if (key) map.set(key, row);
+          }
+        } catch (_error) {
+        }
+      }
+      return map;
+    }
+
+    function profileDisplayLabel(profile) {
+      const joinedName = [firstFilledValue(profile?.first_name), firstFilledValue(profile?.last_name)].filter(Boolean).join(' ');
+      return firstFilledValue(profile?.full_name, joinedName, profile?.email, profile?.id);
+    }
+
+    function collectReportsFilters() {
+      return {
+        preset: String($('reportsPresetSelect')?.value || 'reservas').trim() || 'reservas',
+        grouping: String($('reportsGroupingSelect')?.value || 'none').trim() || 'none',
+        status: String($('reportsStatusFilter')?.value || '').trim().toLowerCase(),
+        dateFrom: String($('reportsDateFrom')?.value || '').trim(),
+        dateTo: String($('reportsDateTo')?.value || '').trim(),
+        search: String($('reportsSearchInput')?.value || '').trim().toLowerCase(),
+        sort: String($('reportsSortSelect')?.value || 'date_desc').trim() || 'date_desc',
+        limit: Math.max(Number($('reportsLimitSelect')?.value || 100) || 100, 1)
+      };
+    }
+
+    function rowMatchesReportsFilters(row, filters) {
+      const day = normalizeReportDay(firstFilledValue(row?.occurred_at, row?.created_at, row?.updated_at, row?.start_date, row?.return_date));
+      if (filters.dateFrom && (!day || day < filters.dateFrom)) return false;
+      if (filters.dateTo && (!day || day > filters.dateTo)) return false;
+      if (filters.status && String(firstFilledValue(row?.status, '')).trim().toLowerCase() !== filters.status) return false;
+      if (filters.search) {
+        const haystack = [
+          row?.reader,
+          row?.reader_email,
+          row?.title,
+          row?.subtitle,
+          row?.author,
+          row?.cdd,
+          row?.status,
+          row?.bib_ref,
+          row?.tombo,
+          row?.location,
+          row?.note,
+          row?.membership_status,
+          row?.emails,
+          row?.tombos
+        ].flat().filter(Boolean).join(' ').toLowerCase();
+        if (!haystack.includes(filters.search)) return false;
+      }
+      return true;
+    }
+
+    function getGroupedReportValue(row, grouping) {
+      if (grouping === 'day') return normalizeReportDay(firstFilledValue(row?.occurred_at, row?.created_at, row?.updated_at)) || 'Sem data';
+      if (grouping === 'reader') return firstFilledValue(row?.reader, row?.reader_email, 'Sem pessoa identificada');
+      if (grouping === 'status') return firstFilledValue(row?.status, 'Sem situação');
+      if (grouping === 'title') return firstFilledValue(row?.title, row?.bib_ref, 'Sem documento');
+      if (grouping === 'author') return firstFilledValue(row?.author, 'Sem autoria');
+      if (grouping === 'cdd') return firstFilledValue(row?.cdd, 'Sem CDD');
+      return 'Sem agrupamento';
+    }
+
+    function aggregateReportRows(rows, grouping) {
+      if (!grouping || grouping === 'none') return { grouped: false, rows: asArray(rows) };
+      const buckets = new Map();
+      for (const row of asArray(rows)) {
+        const key = getGroupedReportValue(row, grouping);
+        if (!buckets.has(key)) {
+          buckets.set(key, {
+            group: key,
+            count: 0,
+            first_at: '',
+            last_at: '',
+            readers: new Set(),
+            titles: new Set(),
+            statuses: new Set(),
+            tombos: new Set(),
+            notes: new Set()
+          });
+        }
+        const bucket = buckets.get(key);
+        bucket.count += Number(row?.count || 1) || 1;
+        const occurred = normalizeReportDay(firstFilledValue(row?.occurred_at, row?.created_at, row?.updated_at));
+        if (occurred && (!bucket.first_at || occurred < bucket.first_at)) bucket.first_at = occurred;
+        if (occurred && (!bucket.last_at || occurred > bucket.last_at)) bucket.last_at = occurred;
+        if (row?.reader) bucket.readers.add(row.reader);
+        if (row?.title) bucket.titles.add(row.title);
+        if (Array.isArray(row?.tombos)) row.tombos.forEach((value) => value && bucket.tombos.add(String(value)));
+        if (row?.tombo) bucket.tombos.add(String(row.tombo));
+        if (row?.status) bucket.statuses.add(String(row.status));
+        if (row?.note) bucket.notes.add(String(row.note));
+      }
+      return {
+        grouped: true,
+        rows: Array.from(buckets.values()).map((bucket) => ({
+          group: bucket.group,
+          count: bucket.count,
+          first_at: bucket.first_at,
+          last_at: bucket.last_at,
+          readers: Array.from(bucket.readers).slice(0, 6).join(' · '),
+          titles: Array.from(bucket.titles).slice(0, 6).join(' · '),
+          tombos: Array.from(bucket.tombos).slice(0, 10).join(', '),
+          statuses: Array.from(bucket.statuses).slice(0, 6).join(' · '),
+          note: Array.from(bucket.notes).slice(0, 4).join(' · ')
+        }))
+      };
+    }
+
+    function sortReportRows(rows, sortKey) {
+      const normalizedRows = [...asArray(rows)];
+      const compareText = (left, right) => tableSortCollator.compare(String(left || ''), String(right || ''));
+      const compareDate = (left, right) => compareText(normalizeReportDay(left), normalizeReportDay(right));
+      normalizedRows.sort((a, b) => {
+        if (sortKey === 'date_asc') return compareDate(firstFilledValue(a?.occurred_at, a?.first_at), firstFilledValue(b?.occurred_at, b?.first_at));
+        if (sortKey === 'title_asc') return compareText(firstFilledValue(a?.title, a?.group), firstFilledValue(b?.title, b?.group));
+        if (sortKey === 'reader_asc') return compareText(firstFilledValue(a?.reader, a?.group), firstFilledValue(b?.reader, b?.group));
+        if (sortKey === 'status_asc') return compareText(firstFilledValue(a?.status, a?.statuses, a?.group), firstFilledValue(b?.status, b?.statuses, b?.group));
+        if (sortKey === 'count_asc') return Number(a?.count || 0) - Number(b?.count || 0);
+        if (sortKey === 'count_desc') return Number(b?.count || 0) - Number(a?.count || 0);
+        return compareDate(firstFilledValue(b?.occurred_at, b?.last_at), firstFilledValue(a?.occurred_at, a?.last_at));
+      });
+      return normalizedRows;
+    }
+
+    function renderReportsTable(columns, rows, emptyMessage='Nenhum resultado para os filtros atuais.') {
+      const thead = $('reportsTableHead');
+      const tbody = $('tbodyReports');
+      if (!thead || !tbody) return;
+      const normalizedColumns = Array.isArray(columns) && columns.length ? columns : [{ label: 'Resultado', value: (row) => row?.group || '—' }];
+      thead.innerHTML = `<tr>${normalizedColumns.map((column) => `<th>${esc(column.label)}</th>`).join('')}</tr>`;
+      const renderCell = (value) => {
+        if (Array.isArray(value)) return value.length ? value.map((item) => esc(displayValue(item))).join('<br>') : '—';
+        if (value == null || value === '') return '—';
+        return esc(displayValue(value));
+      };
+      const normalizedRows = asArray(rows);
+      if (!normalizedRows.length) {
+        tbody.innerHTML = `<tr><td colspan="${normalizedColumns.length}">${esc(emptyMessage)}</td></tr>`;
+        initSortableTables();
+        applyStoredSortForTbody('tbodyReports');
+        return;
+      }
+      tbody.innerHTML = normalizedRows.map((row) => `<tr>${normalizedColumns.map((column) => `<td>${renderCell(typeof column.value === 'function' ? column.value(row) : row?.[column.value])}</td>`).join('')}</tr>`).join('');
+      initSortableTables();
+      applyStoredSortForTbody('tbodyReports');
+    }
+
+    function buildGroupedReportColumns() {
+      return [
+        { label: 'Grupo', value: (row) => row?.group },
+        { label: 'Quantidade', value: (row) => row?.count },
+        { label: 'Primeiro registro', value: (row) => fmtDate(row?.first_at) },
+        { label: 'Último registro', value: (row) => fmtDate(row?.last_at) },
+        { label: 'Pessoas / documentos', value: (row) => [row?.readers, row?.titles].filter(Boolean).join(' · ') || '—' },
+        { label: 'Situações / tombos / observações', value: (row) => [row?.statuses, row?.tombos, row?.note].filter(Boolean).join(' · ') || '—' }
+      ];
+    }
+
+    async function fetchReservationsReportRows(libraryId) {
+      const { rows, source } = await fetchRowsFromCandidates([
+        'api.reserva_itens_followup_ui',
+        'api.reserva_itens_ui',
+        'v_reserva_itens_v2_ui_fix',
+        'reserva_linhas_v2',
+        'reservas_v2'
+      ], 3000);
+      const scopedRows = asArray(rows).filter((row) => matchesLibraryScope(row, libraryId, currentLibraryRow?.slug || ''));
+      const profiles = await fetchProfilesMap(scopedRows.map((row) => firstFilledValue(row?.user_id, row?.reader_user_id, row?.profile_id, row?.reader_id)));
+      return {
+        source,
+        rows: scopedRows.map((row) => {
+          const profile = profiles.get(String(firstFilledValue(row?.user_id, row?.reader_user_id, row?.profile_id, row?.reader_id) || '')) || null;
+          return {
+            id: firstFilledValue(row?.id, row?.line_id, row?.item_id, row?.request_id),
+            occurred_at: firstFilledValue(row?.created_at, row?.requested_at, row?.inserted_at, row?.updated_at),
+            reader: firstFilledValue(row?.reader_name, row?.profile_name, row?.full_name, profileDisplayLabel(profile), row?.reader_email, row?.user_id),
+            reader_email: firstFilledValue(row?.reader_email, row?.email, profile?.email),
+            title: firstFilledValue(row?.book_title, row?.titulo, row?.title, row?.display_title, row?.bib_ref, row?.book_bib_ref),
+            status: String(firstFilledValue(row?.workflow_stage, row?.status_global, row?.status, row?.pickup_reply, 'pending')).trim().toLowerCase(),
+            bib_ref: firstFilledValue(row?.bib_ref, row?.book_bib_ref, row?.local_bib_ref),
+            note: firstFilledValue(row?.response_note, row?.public_note, row?.notes)
+          };
+        })
+      };
+    }
+
+    async function fetchLoansReportRows(libraryId) {
+      const { rows, source } = await fetchRowsFromCandidates([
+        'api.emprestimo_itens_ui',
+        'api.loans_detalhes',
+        'emprestimo_itens_v2',
+        'emprestimos_v2',
+        'loans'
+      ], 3000);
+      const scopedRows = asArray(rows).filter((row) => matchesLibraryScope(row, libraryId, currentLibraryRow?.slug || ''));
+      const profiles = await fetchProfilesMap(scopedRows.map((row) => firstFilledValue(row?.user_id, row?.reader_user_id, row?.profile_id, row?.reader_id)));
+      return {
+        source,
+        rows: scopedRows.map((row) => {
+          const profile = profiles.get(String(firstFilledValue(row?.user_id, row?.reader_user_id, row?.profile_id, row?.reader_id) || '')) || null;
+          const returnedAt = firstFilledValue(row?.returned_at, row?.return_date_actual, row?.devolvido_em);
+          let status = String(firstFilledValue(row?.status, row?.loan_status, row?.workflow_stage, returnedAt ? 'returned' : 'active')).trim().toLowerCase();
+          const dueDay = normalizeReportDay(firstFilledValue(row?.due_date, row?.return_due_at, row?.devolucao_prevista));
+          const today = normalizeReportDay(new Date().toISOString());
+          if (!returnedAt && dueDay && dueDay < today && !['returned','cancelled'].includes(status)) status = 'overdue';
+          return {
+            id: firstFilledValue(row?.id, row?.loan_id, row?.item_id),
+            occurred_at: firstFilledValue(row?.loaned_at, row?.checkout_at, row?.created_at, row?.start_date, row?.updated_at),
+            reader: firstFilledValue(row?.reader_name, row?.profile_name, row?.full_name, profileDisplayLabel(profile), row?.reader_email, row?.user_id),
+            reader_email: firstFilledValue(row?.reader_email, row?.email, profile?.email),
+            title: firstFilledValue(row?.book_title, row?.titulo, row?.title, row?.display_title, row?.bib_ref, row?.book_bib_ref),
+            status,
+            bib_ref: firstFilledValue(row?.bib_ref, row?.book_bib_ref, row?.local_bib_ref),
+            start_date: firstFilledValue(row?.loaned_at, row?.checkout_at, row?.start_date),
+            return_date: firstFilledValue(row?.due_date, row?.return_due_at, row?.devolucao_prevista),
+            returned_at: returnedAt,
+            note: firstFilledValue(row?.notes, row?.public_note)
+          };
+        })
+      };
+    }
+
+    async function fetchConsultationsReportRows(libraryId) {
+      const { rows, source } = await fetchRowsFromCandidates([
+        'consultation_requests',
+        'local_consultations',
+        'consultation_logs',
+        'consultation_attendances'
+      ], 3000);
+      const scopedRows = asArray(rows).filter((row) => matchesLibraryScope(row, libraryId, currentLibraryRow?.slug || ''));
+      const profiles = await fetchProfilesMap(scopedRows.map((row) => firstFilledValue(row?.user_id, row?.reader_user_id, row?.profile_id, row?.reader_id)));
+      return {
+        source,
+        rows: scopedRows.map((row) => {
+          const profile = profiles.get(String(firstFilledValue(row?.user_id, row?.reader_user_id, row?.profile_id, row?.reader_id) || '')) || null;
+          return {
+            id: firstFilledValue(row?.id, row?.request_id),
+            occurred_at: firstFilledValue(row?.consultation_date, row?.scheduled_for, row?.created_at, row?.updated_at),
+            reader: firstFilledValue(row?.reader_name, row?.profile_name, row?.full_name, profileDisplayLabel(profile), row?.reader_email, row?.user_id),
+            reader_email: firstFilledValue(row?.reader_email, row?.email, profile?.email),
+            title: firstFilledValue(row?.book_title, row?.titulo, row?.title, row?.subject, row?.bib_ref),
+            status: String(firstFilledValue(row?.status, row?.workflow_stage, row?.attendance_status, 'pending')).trim().toLowerCase(),
+            bib_ref: firstFilledValue(row?.bib_ref),
+            note: firstFilledValue(row?.notes, row?.public_note, row?.observation)
+          };
+        })
+      };
+    }
+
+    async function fetchMembershipReportRows(libraryId) {
+      let source = 'user_library_memberships';
+      let rows = [];
+      try {
+        const { data, error } = await supabase.from('user_library_memberships').select('*').eq('library_id', libraryId).limit(3000);
+        if (error) throw error;
+        rows = asArray(data);
+      } catch (_error) {
+        source = 'profiles';
+        const { data, error } = await supabase.from('profiles').select('*').or(`library_id.eq.${libraryId},default_library_id.eq.${libraryId}`).limit(3000);
+        if (error) throw error;
+        rows = asArray(data);
+      }
+      const profiles = source === 'user_library_memberships'
+        ? await fetchProfilesMap(rows.map((row) => firstFilledValue(row?.user_id, row?.reader_user_id)))
+        : new Map(rows.map((row) => [String(row?.id || ''), row]));
+      return {
+        source,
+        rows: rows.map((row) => {
+          const profile = profiles.get(String(firstFilledValue(row?.user_id, row?.reader_user_id, row?.id) || '')) || (source === 'profiles' ? row : null);
+          return {
+            id: firstFilledValue(row?.id, row?.user_id),
+            occurred_at: firstFilledValue(row?.created_at, row?.inserted_at, row?.joined_at, row?.updated_at),
+            reader: firstFilledValue(profileDisplayLabel(profile), row?.name, row?.email, row?.user_id),
+            reader_email: firstFilledValue(profile?.email, row?.email),
+            status: String(firstFilledValue(row?.status, row?.membership_status, row?.role, profile?.status, 'active')).trim().toLowerCase(),
+            membership_status: firstFilledValue(row?.membership_status, row?.role, profile?.status),
+            note: firstFilledValue(row?.notes, row?.observation)
+          };
+        })
+      };
+    }
+
+    async function fetchCatalogingReportRows(libraryId) {
+      const { data, error } = await supabase.from('exemplares').select('*').eq('library_id', libraryId).limit(5000).order('bib_ref', { ascending: true });
+      if (error) throw error;
+      const exemplars = asArray(data).filter((row) => row && typeof row === 'object');
+      const booksByRef = await fetchBooksByBibRefs(exemplars.map((row) => row?.bib_ref));
+      return {
+        source: 'exemplares + books',
+        rows: exemplars.map((row) => {
+          const book = booksByRef.get(String(row?.bib_ref || '').trim()) || {};
+          return {
+            id: firstFilledValue(row?.id),
+            occurred_at: firstFilledValue(row?.updated_at, row?.created_at),
+            title: firstFilledValue(book?.titulo, row?.bib_ref),
+            subtitle: firstFilledValue(book?.subtitulo),
+            author: firstFilledValue(book?.autor),
+            cdd: firstFilledValue(book?.cdd),
+            bib_ref: firstFilledValue(row?.bib_ref),
+            tombo: firstFilledValue(row?.tombo),
+            tombos: firstFilledValue(row?.tombo) ? [String(row.tombo)] : [],
+            location: firstFilledValue(row?.shelf_location),
+            status: 'catalogado',
+            note: firstFilledValue(row?.notes, book?.assuntos)
+          };
+        })
+      };
+    }
+
+    async function fetchCatalogFullReportRows(libraryId) {
+      const { data, error } = await supabase.from('exemplares').select('*').eq('library_id', libraryId).limit(5000).order('bib_ref', { ascending: true });
+      if (error) throw error;
+      const exemplars = asArray(data).filter((row) => row && typeof row === 'object');
+      const groups = new Map();
+      for (const row of exemplars) {
+        const bibRef = String(firstFilledValue(row?.bib_ref, '') || '').trim();
+        if (!bibRef) continue;
+        if (!groups.has(bibRef)) {
+          groups.set(bibRef, { bib_ref: bibRef, tombos: [], notes: [], updated_at: '', locations: new Set(), count: 0 });
+        }
+        const bucket = groups.get(bibRef);
+        bucket.count += 1;
+        if (row?.tombo) bucket.tombos.push(String(row.tombo));
+        if (row?.notes) bucket.notes.push(String(row.notes));
+        if (row?.shelf_location) bucket.locations.add(String(row.shelf_location));
+        const updated = firstFilledValue(row?.updated_at, row?.created_at);
+        if (updated && (!bucket.updated_at || normalizeReportDay(updated) > normalizeReportDay(bucket.updated_at))) bucket.updated_at = updated;
+      }
+      const booksByRef = await fetchBooksByBibRefs(Array.from(groups.keys()));
+      let holdingsMap = new Map();
+      try {
+        const { data: holdingRows, error: holdingError } = await supabase.from('book_holdings').select('*').eq('library_id', libraryId).limit(5000);
+        if (holdingError) throw holdingError;
+        holdingsMap = new Map(asArray(holdingRows).map((row) => [String(firstFilledValue(row?.local_bib_ref, row?.bib_ref, row?.book_bib_ref) || '').trim(), row]));
+      } catch (_error) {
+      }
+      return {
+        source: holdingsMap.size ? 'exemplares + books + book_holdings' : 'exemplares + books',
+        rows: Array.from(groups.values()).map((bucket) => {
+          const book = booksByRef.get(bucket.bib_ref) || {};
+          const holding = holdingsMap.get(bucket.bib_ref) || {};
+          return {
+            id: bucket.bib_ref,
+            occurred_at: bucket.updated_at,
+            title: firstFilledValue(book?.titulo, bucket.bib_ref),
+            subtitle: firstFilledValue(book?.subtitulo),
+            author: firstFilledValue(book?.autor),
+            cdd: firstFilledValue(book?.cdd),
+            bib_ref: bucket.bib_ref,
+            count: Number(firstFilledValue(holding?.exemplares_total, bucket.count) || 0),
+            available_count: Number(firstFilledValue(holding?.available_count, bucket.count) || 0),
+            tombos: bucket.tombos,
+            location: Array.from(bucket.locations).slice(0, 4).join(' · '),
+            status: bucket.count ? 'com exemplares' : 'sem exemplares',
+            note: [firstFilledValue(book?.ano), firstFilledValue(book?.colecao), bucket.notes.slice(0, 3).join(' · ')].filter(Boolean).join(' · ')
+          };
+        })
+      };
+    }
+
+    function getDetailedReportColumns(preset) {
+      if (preset === 'reservas') {
+        return [
+          { label: 'Data', value: (row) => fmtDate(row?.occurred_at) },
+          { label: 'Leitor(a/e)', value: (row) => row?.reader || row?.reader_email },
+          { label: 'Documento', value: (row) => [row?.title, row?.bib_ref].filter(Boolean).join(' · ') || '—' },
+          { label: 'Situação', value: (row) => row?.status },
+          { label: 'Referência', value: (row) => row?.id || row?.bib_ref },
+          { label: 'Observação', value: (row) => row?.note }
+        ];
+      }
+      if (preset === 'emprestimos') {
+        return [
+          { label: 'Saída', value: (row) => fmtDate(row?.start_date || row?.occurred_at) },
+          { label: 'Retorno previsto', value: (row) => fmtDate(row?.return_date) },
+          { label: 'Retorno real', value: (row) => fmtDate(row?.returned_at) },
+          { label: 'Leitor(a/e)', value: (row) => row?.reader || row?.reader_email },
+          { label: 'Documento', value: (row) => [row?.title, row?.bib_ref].filter(Boolean).join(' · ') || '—' },
+          { label: 'Situação', value: (row) => row?.status }
+        ];
+      }
+      if (preset === 'consultas') {
+        return [
+          { label: 'Data', value: (row) => fmtDate(row?.occurred_at) },
+          { label: 'Pessoa', value: (row) => row?.reader || row?.reader_email },
+          { label: 'Documento / tema', value: (row) => [row?.title, row?.bib_ref].filter(Boolean).join(' · ') || '—' },
+          { label: 'Situação', value: (row) => row?.status },
+          { label: 'Referência', value: (row) => row?.id || row?.bib_ref },
+          { label: 'Observação', value: (row) => row?.note }
+        ];
+      }
+      if (preset === 'inscricoes') {
+        return [
+          { label: 'Data', value: (row) => fmtDate(row?.occurred_at) },
+          { label: 'Pessoa', value: (row) => row?.reader },
+          { label: 'E-mail', value: (row) => row?.reader_email },
+          { label: 'Vínculo', value: (row) => row?.membership_status },
+          { label: 'Situação', value: (row) => row?.status },
+          { label: 'Observação', value: (row) => row?.note }
+        ];
+      }
+      if (preset === 'catalogacao') {
+        return [
+          { label: 'Atualizado', value: (row) => fmtDate(row?.occurred_at) },
+          { label: 'Tombo', value: (row) => row?.tombo },
+          { label: 'Documento', value: (row) => [row?.title, row?.subtitle, row?.bib_ref].filter(Boolean).join(' · ') || '—' },
+          { label: 'Autoria', value: (row) => row?.author },
+          { label: 'CDD / Dewey', value: (row) => row?.cdd },
+          { label: 'Localização', value: (row) => [row?.location, row?.note].filter(Boolean).join(' · ') || '—' }
+        ];
+      }
+      return [
+        { label: 'Documento', value: (row) => [row?.title, row?.subtitle, row?.bib_ref].filter(Boolean).join(' · ') || '—' },
+        { label: 'Autoria', value: (row) => row?.author },
+        { label: 'CDD / Dewey', value: (row) => row?.cdd },
+        { label: 'Exemplares', value: (row) => `${row?.count || 0} total / ${row?.available_count ?? row?.count ?? 0} disponível(is)` },
+        { label: 'Tombos', value: (row) => Array.isArray(row?.tombos) ? row.tombos.slice(0, 10).join(', ') : '—' },
+        { label: 'Ano / coleção / observação', value: (row) => [row?.location, row?.note].filter(Boolean).join(' · ') || '—' }
+      ];
+    }
+
+    async function buildReportDataset(filters) {
+      const libraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
+      if (!libraryId) throw new Error('Biblioteca ativa não identificada.');
+      if (filters.preset === 'reservas') return await fetchReservationsReportRows(libraryId);
+      if (filters.preset === 'emprestimos') return await fetchLoansReportRows(libraryId);
+      if (filters.preset === 'consultas') return await fetchConsultationsReportRows(libraryId);
+      if (filters.preset === 'inscricoes') return await fetchMembershipReportRows(libraryId);
+      if (filters.preset === 'catalogacao') return await fetchCatalogingReportRows(libraryId);
+      return await fetchCatalogFullReportRows(libraryId);
+    }
+
+    function renderReportsSummary(rows, filters, meta, grouped) {
+      const definition = REPORT_PRESET_DEFINITIONS[filters.preset] || REPORT_PRESET_DEFINITIONS.reservas;
+      const firstDay = grouped ? firstFilledValue(rows[0]?.first_at) : firstFilledValue(rows[0]?.occurred_at);
+      const lastDay = grouped ? firstFilledValue(rows[0]?.last_at) : firstFilledValue(rows[rows.length - 1]?.occurred_at);
+      renderKvGrid('reportsSummaryGrid', [
+        ['Relatório escolhido', definition.label],
+        ['Fonte usada', firstFilledValue(meta?.source, '—')],
+        ['Agrupamento', grouped ? firstFilledValue($('reportsGroupingSelect')?.selectedOptions?.[0]?.textContent, 'Agrupado') : 'Sem agrupamento'],
+        ['Linhas após filtros', rows.length],
+        ['Situação filtrada', firstFilledValue($('reportsStatusFilter')?.selectedOptions?.[0]?.textContent, 'Todos')],
+        ['Período aplicado', [filters.dateFrom ? fmtDate(filters.dateFrom) : 'início livre', filters.dateTo ? fmtDate(filters.dateTo) : 'fim livre'].join(' → ')],
+        ['Busca livre', filters.search || '—'],
+        ['Primeiro / último registro visível', [fmtDate(firstDay), fmtDate(lastDay)].join(' → ')]
+      ]);
+    }
+
+    async function runSelectedReport() {
+      const filters = collectReportsFilters();
+      const definition = REPORT_PRESET_DEFINITIONS[filters.preset] || REPORT_PRESET_DEFINITIONS.reservas;
+      setButtonBusy('btnLoadReports', true, 'Carregando…');
+      setStatus('reportsStatus', `Carregando relatório de ${definition.label.toLowerCase()}…`, 'info');
+      try {
+        const dataset = await buildReportDataset(filters);
+        let rows = asArray(dataset.rows).filter((row) => rowMatchesReportsFilters(row, filters));
+        const aggregated = aggregateReportRows(rows, filters.grouping);
+        rows = sortReportRows(aggregated.rows, filters.sort).slice(0, filters.limit);
+        currentReportsRows = rows;
+        currentReportsMeta = { preset: filters.preset, source: dataset.source, loaded: true };
+        const columns = aggregated.grouped ? buildGroupedReportColumns() : getDetailedReportColumns(filters.preset);
+        renderReportsTable(columns, rows, 'Nenhum resultado para os filtros atuais.');
+        renderReportsSummary(rows, filters, dataset, aggregated.grouped);
+        if ($('reportsSourceNote')) $('reportsSourceNote').value = firstFilledValue(dataset.source, '—');
+        setStatus('reportsStatus', rows.length ? `Relatório de ${definition.label.toLowerCase()} carregado com ${rows.length} linha(s).` : `Relatório de ${definition.label.toLowerCase()} carregado, sem linhas para os filtros atuais.`, rows.length ? 'ok' : 'warn');
+      } catch (error) {
+        currentReportsRows = [];
+        currentReportsMeta = { preset: filters.preset, source: '', loaded: false };
+        renderReportsTable([{ label: 'Resultado', value: () => '—' }, { label: 'Detalhe', value: () => '—' }, { label: 'Observação', value: () => '—' }], [], 'Não consegui carregar este relatório: ' + (error.message || String(error)));
+        renderKvGrid('reportsSummaryGrid', [
+          ['Relatório escolhido', definition.label],
+          ['Estado', 'Falha no carregamento'],
+          ['Detalhe', error.message || String(error)]
+        ]);
+        if ($('reportsSourceNote')) $('reportsSourceNote').value = '—';
+        setStatus('reportsStatus', 'Não consegui carregar este relatório: ' + (error.message || String(error)), 'bad');
+      } finally {
+        setButtonBusy('btnLoadReports', false);
+      }
+    }
+
+    function resetReportsFilters() {
+      if ($('reportsPresetSelect')) $('reportsPresetSelect').value = currentReportsMeta?.preset || 'reservas';
+      updateReportsPresetUi();
+      if ($('reportsGroupingSelect')) $('reportsGroupingSelect').value = 'none';
+      if ($('reportsStatusFilter')) $('reportsStatusFilter').value = '';
+      if ($('reportsDateFrom')) $('reportsDateFrom').value = '';
+      if ($('reportsDateTo')) $('reportsDateTo').value = '';
+      if ($('reportsSearchInput')) $('reportsSearchInput').value = '';
+      if ($('reportsSortSelect')) $('reportsSortSelect').value = 'date_desc';
+      if ($('reportsLimitSelect')) $('reportsLimitSelect').value = '100';
+      if ($('reportsSourceNote')) $('reportsSourceNote').value = currentReportsMeta?.source || '';
+      setStatus('reportsStatus', 'Filtros do relatório limpos.', 'info');
+    }
+
+    async function loadReportsPanel() {
+      updateReportsPresetUi();
+      loadReportsConfigForm();
+      renderKvGrid('reportsQuickGrid', buildReportsQuickEntries());
+      if (!currentReportsMeta?.loaded) {
+        renderKvGrid('reportsSummaryGrid', [
+          ['Estado', 'Escolha um fluxo e clique em “Atualizar relatório”.'],
+          ['Resumo semanal automático', getCurrentReportsConfig().weekly_library_summary_enabled === true ? 'Ligado' : 'Desligado'],
+          ['Destino atual', getReportsWeeklyTargetEmail()],
+          ['Catálogo completo', 'Disponível nesta aba, com autoria, subtítulo, CDD, exemplares e tombos']
+        ]);
+        renderReportsTable([
+          { label: 'Resultado', value: () => 'Escolha um fluxo' },
+          { label: 'Detalhe', value: () => 'Ajuste filtros e clique em “Atualizar relatório”.' },
+          { label: 'Observação', value: () => 'Os dados são carregados sob demanda para evitar peso lateral na página.' }
+        ], [], 'Escolha um fluxo e clique em “Atualizar relatório”.');
+        if ($('reportsSourceNote')) $('reportsSourceNote').value = '';
+      }
+      setStatus('reportsStatus', 'Módulo de relatórios pronto.', 'ok');
+    }
+
+    async function refreshReportsPanelInteractive() {
+      setButtonBusy('btnRefreshReports', true, 'Atualizando…');
+      setStatus('reportsStatus', 'Atualizando configuração e fontes dos relatórios…', 'info');
+      try {
+        await Promise.allSettled([loadCommunicationsPanel(), loadGovernancePanel()]);
+        await loadReportsPanel();
+        if (currentReportsMeta?.loaded) await runSelectedReport();
+        setStatus('reportsStatus', currentReportsMeta?.loaded ? 'Relatórios atualizados.' : 'Configuração dos relatórios atualizada.', 'ok');
+      } catch (error) {
+        setStatus('reportsStatus', 'Não consegui atualizar os relatórios: ' + (error.message || String(error)), 'bad');
+      } finally {
+        setButtonBusy('btnRefreshReports', false);
+      }
     }
 
     function resetTaskForm() {
@@ -4562,7 +4713,7 @@
         loadTasksPanel()
       ]);
       await loadExchangePanel();
-      await loadInterbibLoanPanel();
+      await loadReportsPanel();
     }
 
     async function refreshAllInstitutionalPanelsSafely(force = false) {
@@ -4580,9 +4731,8 @@
     $('btnRefreshIdentity')?.addEventListener('click', loadIdentityPanel);
     $('btnRefreshComms')?.addEventListener('click', loadCommunicationsPanel);
     $('btnRefreshRegimento')?.addEventListener('click', loadWorkspaceAndPolicies);
-    $('btnRefreshDocuments')?.addEventListener('click', async () => { await Promise.allSettled([loadGovernancePanel(), loadExchangePanel(), loadInterbibLoanPanel()]); });
-    $('btnRefreshExchange')?.addEventListener('click', refreshExchangePanelInteractive);
-    $('btnRefreshInterbibLoans')?.addEventListener('click', refreshInterbibLoanPanelInteractive);
+    $('btnRefreshDocuments')?.addEventListener('click', async () => { await loadGovernancePanel(); await loadExchangePanel(); });
+    $('btnRefreshExchange')?.addEventListener('click', async () => { await loadGovernancePanel(); await loadExchangePanel(); });
     $('btnSaveGovernance')?.addEventListener('click', saveGovernanceConfig);
     $('btnResetGovernance')?.addEventListener('click', loadGovernanceForm);
     $('btnGenerateExchangeMessage')?.addEventListener('click', () => { ensureExchangeMessage(); setStatus('exchangeEditorStatus', 'Mensagem sugerida atualizada.', 'ok'); });
@@ -4603,28 +4753,12 @@
     $('exchangeLocalSelect')?.addEventListener('change', () => { syncExchangeObjectRefField(); ensureExchangeMessage(); });
     $('exchangePartnerDocSelect')?.addEventListener('change', () => { syncExchangeObjectRefField(); ensureExchangeMessage(); });
     $('exchangeCustomNote')?.addEventListener('input', () => { if ($('exchangeMessage').value.trim()) ensureExchangeMessage(); });
-
-    $('interbibLoanDirection')?.addEventListener('change', async () => { syncInterbibLoanModeUi(); await loadInterbibLoanExemplarOptions(); syncInterbibLoanObjectRefField(); });
-    $('interbibLoanPartnerSelect')?.addEventListener('change', async () => { await loadInterbibLoanPartnerDocuments(); await loadInterbibLoanExemplarOptions(); ensureInterbibLoanMessage(); });
-    $('interbibLoanLocalSelect')?.addEventListener('change', async () => { await loadInterbibLoanExemplarOptions(); ensureInterbibLoanMessage(); });
-    $('interbibLoanPartnerDocSelect')?.addEventListener('change', async () => { await loadInterbibLoanExemplarOptions(); ensureInterbibLoanMessage(); });
-    $('interbibLoanStartDate')?.addEventListener('change', () => { syncInterbibLoanObjectRefField(); if ($('interbibLoanMessage').value.trim()) ensureInterbibLoanMessage(); });
-    $('interbibLoanReturnDate')?.addEventListener('change', () => { syncInterbibLoanObjectRefField(); if ($('interbibLoanMessage').value.trim()) ensureInterbibLoanMessage(); });
-    $('interbibLoanMeetingPoint')?.addEventListener('input', syncInterbibLoanObjectRefField);
-    $('interbibLoanContactName')?.addEventListener('input', syncInterbibLoanObjectRefField);
-    $('interbibLoanContactEmail')?.addEventListener('input', syncInterbibLoanObjectRefField);
-    $('interbibLoanContactPhone')?.addEventListener('input', syncInterbibLoanObjectRefField);
-    $('interbibLoanPhase')?.addEventListener('change', syncInterbibLoanObjectRefField);
-    $('interbibLoanLogisticsNote')?.addEventListener('input', () => { syncInterbibLoanObjectRefField(); if ($('interbibLoanMessage').value.trim()) ensureInterbibLoanMessage(); });
-    $('interbibLoanLocalExemplars')?.addEventListener('change', syncInterbibLoanObjectRefField);
-    $('interbibLoanPartnerExemplars')?.addEventListener('change', syncInterbibLoanObjectRefField);
-    $('btnGenerateInterbibLoanMessage')?.addEventListener('click', () => { ensureInterbibLoanMessage(); setStatus('interbibLoanEditorStatus', 'Mensagem sugerida atualizada.', 'ok'); });
-    $('btnCopyInterbibLoanMessage')?.addEventListener('click', async () => { try { await copyTextToClipboard($('interbibLoanMessage').value); setStatus('interbibLoanEditorStatus', 'Mensagem copiada.', 'ok'); } catch (error) { setStatus('interbibLoanEditorStatus', 'Não consegui copiar a mensagem: ' + (error.message || String(error)), 'bad'); } });
-    $('btnOpenInterbibLoanEmail')?.addEventListener('click', openInterbibLoanEmail);
-    $('btnSaveInterbibLoanRequest')?.addEventListener('click', saveInterbibLoanRequest);
-    $('btnResetInterbibLoanRequest')?.addEventListener('click', resetInterbibLoanForm);
-
     $('btnRefreshTasks')?.addEventListener('click', loadTasksPanel);
+    $('btnRefreshReports')?.addEventListener('click', refreshReportsPanelInteractive);
+    $('btnLoadReports')?.addEventListener('click', runSelectedReport);
+    $('btnResetReportsFilters')?.addEventListener('click', resetReportsFilters);
+    $('btnSaveReportsConfig')?.addEventListener('click', saveReportsConfig);
+    $('reportsPresetSelect')?.addEventListener('change', updateReportsPresetUi);
     $('btnNewTask')?.addEventListener('click', resetTaskForm);
     $('btnCancelTask')?.addEventListener('click', resetTaskForm);
     $('btnSaveTask')?.addEventListener('click', saveTask);
@@ -4702,15 +4836,9 @@
       }
     });
 
-    $('tab-prestimos-interbib')?.addEventListener('click', async (event) => {
-      const decisionBtn = event.target.closest('[data-interbib-loan-decision]');
-      if (decisionBtn) {
-        await decideInterbibLoanRequest(String(decisionBtn.dataset.requestId || ''), String(decisionBtn.dataset.interbibLoanDecision || ''));
-        return;
-      }
-      const editBtn = event.target.closest('[data-interbib-loan-edit]');
-      if (editBtn) {
-        openInterbibLoanFromRequest(String(editBtn.dataset.interbibLoanEdit || ''));
+    $('tab-relatorios')?.addEventListener('click', async () => {
+      if (!currentReportsMeta?.loaded) {
+        await loadReportsPanel();
       }
     });
 
@@ -4751,13 +4879,14 @@
     resetRegulationDocForm();
     resetPolicySetForm();
     resetPolicyRuleForm();
+    updateReportsPresetUi();
+    loadReportsConfigForm();
+    renderKvGrid('reportsQuickGrid', buildReportsQuickEntries());
     populateExchangePartnerSelect();
     populateExchangeDocumentSelect('exchangeLocalSelect', [], 'Selecione');
     populateExchangeDocumentSelect('exchangePartnerDocSelect', [], 'Selecione');
-    populateExchangeDocumentSelect('interbibLoanLocalSelect', [], 'Selecione');
-    populateExchangeDocumentSelect('interbibLoanPartnerDocSelect', [], 'Selecione');
+    resetReportsFilters();
     resetExchangeFollowupForm();
-    resetInterbibLoanForm();
     await refreshAllInstitutionalPanelsSafely(true);
 
     window.addEventListener('pageshow', () => {
