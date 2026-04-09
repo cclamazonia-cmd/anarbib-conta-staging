@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AnarBib – painel</title>
+  <title>Painel de gestão d@ bibliotecári@ - AnarBib</title>
   <link rel="stylesheet" href="./assets/css/theme-base.css">
   <script src="./assets/js/library-context.js" defer></script>
   <script src="./assets/js/theme-loader.js" defer></script>
@@ -590,8 +590,8 @@
     </div>
 
     <div class="hero">
-      <h1 id="pageHeroTitle">Painel d@ Bibliotecári@</h1>
-      <p id="pageHeroSubtitle">Gestão de biblioteca militante</p>
+      <h1 id="pageHeroTitle">Painel de gestão d@ bibliotecári@</h1>
+      <p id="pageHeroSubtitle">Trabalho do dia, ações, reservas, consultas locais, empréstimos e gestão de leitoras/es.</p>
       <p id="helloLine"></p>
       <div class="chips">
         <span class="chip" id="chipFuncao">Função: —</span>
@@ -2885,6 +2885,10 @@
         btnModoLeitor: "conta"
       }
     });
+
+    document.title = "Painel de gestão d@ bibliotecári@ - AnarBib";
+    $("pageHeroTitle").textContent = "Painel de gestão d@ bibliotecári@";
+    $("pageHeroSubtitle").textContent = "Trabalho do dia, ações, reservas, consultas locais, empréstimos e gestão de leitoras/es.";
 
     const ROUTES = {
       BLOG_HOME: CONFIG.ROUTES.blog,

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AnarBib – conta</title>
+  <title>Conta d@ leitor@ - AnarBib</title>
   <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
   <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
   <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
@@ -845,8 +845,8 @@ button[type="submit"] *,
 
     <main class="card">
       <div class="hero">
-        <h1 id="pageHeroTitle">Conta</h1>
-        <p id="pageHeroSubtitle">Espaço d@ leitor@</p>
+        <h1 id="pageHeroTitle">Conta d@ leitor@</h1>
+        <p id="pageHeroSubtitle">Reservas, empréstimos, consultas, histórico e dados pessoais</p>
         <div class="chips">
           <span class="chip" id="chipContaEspaco">Leitor@ conectad@: —</span>
           <span class="chip" id="chipContaBiblioteca" style="display:none">Biblioteca de vínculo: —</span>
@@ -1331,6 +1331,10 @@ button[type="submit"] *,
         btnCatalogo: "catalogo",
       }
     });
+
+    document.title = "Conta d@ leitor@ - AnarBib";
+    $("pageHeroTitle").textContent = "Conta d@ leitor@";
+    $("pageHeroSubtitle").textContent = "Reservas, empréstimos, consultas, histórico e dados pessoais";
 
     const ROUTES = {
       CADASTRO: CONFIG.ROUTES.cadastro,
