@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AnarBib - Conta d@ leitor@</title>
+  <title>Conta d@ leitor@ - AnarBib</title>
   <link rel="icon" type="image/png" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
   <link rel="shortcut icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
   <link rel="apple-touch-icon" href="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png">
@@ -839,7 +839,7 @@ button[type="submit"] *,
         <a id="goPainelBiblio" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html">Painel de gestão</a>
         <a id="btnRegimento" class="header-btn" href="#" hidden style="display:none">Regimento</a>
         <a id="btnCatalogo" class="header-btn" href="https://cclamazonia-cmd.github.io/anarbib-staging/">Voltar ao catálogo</a>
-        <button id="logout" class="logout-btn" type="button">Logout</button>
+        <button class="logout-btn" id="btnSair" type="button" data-auth-mode="login" data-auth-href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html">Login</button>
       </div>
     </div>
 
@@ -1348,34 +1348,176 @@ button[type="submit"] *,
     };
 
     const $ = (id) => document.getElementById(id);
+
+    function resolveCadastroHref() {
+      return String(ROUTES?.CADASTRO || CONFIG?.ROUTES?.cadastro || "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html").trim() || "https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html";
+    }
+
+    function buildContaRedirectTarget() {
+      try {
+        if (typeof buildAuthRedirectTarget === "function") {
+          return buildAuthRedirectTarget({
+            pathname: window.location.pathname,
+            search: window.location.search,
+            hash: window.location.hash
+          });
+        }
+      } catch (_error) {}
+      return `${window.location.pathname}${window.location.search || ""}${window.location.hash || ""}`;
+    }
+
+    function storeContaPostLoginRedirect() {
+      try {
+        sessionStorage.setItem("anarbib_post_login_redirect", buildContaRedirectTarget());
+      } catch (_error) {}
+    }
+
+    function clearContaSessionCaches() {
+      try {
+        localStorage.removeItem("anarbib_active_tab");
+        sessionStorage.removeItem("anarbib_active_tab");
+      } catch (_error) {}
+    }
+
+    function updateTopbarAuthButton(isLoggedIn) {
+      const btn = $("btnSair");
+      if (!btn) return;
+      const cadastroHref = resolveCadastroHref();
+      btn.dataset.authMode = isLoggedIn ? "logout" : "login";
+      btn.dataset.authHref = cadastroHref;
+      btn.textContent = isLoggedIn ? "Logout" : "Login";
+      btn.setAttribute("aria-label", isLoggedIn ? "Logout" : "Login");
+      btn.setAttribute("aria-busy", "false");
+      btn.title = isLoggedIn ? "Encerrar sessão e voltar ao cadastro" : "Ir para o cadastro / login";
+      btn.disabled = false;
+    }
+
+    async function requireSession({ attempts = 40, delayMs = 150 } = {}) {
+      for (let i = 0; i < attempts; i += 1) {
+        try {
+          const { data: { session: sess } = {} } = await supabase.auth.getSession();
+          if (sess?.user?.id) return sess;
+        } catch (error) {
+          console.warn("Conta: getSession falhou durante o bootstrap.", error);
+        }
+
+        try {
+          const { data } = await supabase.auth.getUser();
+          if (data?.user?.id) {
+            const { data: { session: recoveredSession } = {} } = await supabase.auth.getSession();
+            if (recoveredSession?.user?.id) return recoveredSession;
+          }
+        } catch (error) {
+          console.warn("Conta: getUser falhou durante o bootstrap.", error);
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+      return null;
+    }
+
+    async function getConfirmedCurrentSession({ attempts = 8, delayMs = 220 } = {}) {
+      for (let i = 0; i < attempts; i += 1) {
+        try {
+          const { data: { session: sess } = {} } = await supabase.auth.getSession();
+          if (sess?.user?.id) return sess;
+        } catch (error) {
+          console.warn("Conta: getSession falhou ao confirmar a sessão.", error);
+        }
+
+        try {
+          const { data } = await supabase.auth.getUser();
+          if (data?.user?.id) {
+            const { data: { session: recoveredSession } = {} } = await supabase.auth.getSession();
+            if (recoveredSession?.user?.id) return recoveredSession;
+          }
+        } catch (error) {
+          console.warn("Conta: getUser falhou ao confirmar a sessão.", error);
+        }
+
+        if (i < attempts - 1) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      }
+      return null;
+    }
+
+    let session = null;
+    let contaAuthWatcherBound = false;
+
+    async function bootstrapContaAuthOrRedirect() {
+      updateTopbarAuthButton(false);
+      const bootstrapSession = await requireSession({ attempts: 40, delayMs: 150 });
+      if (!bootstrapSession?.user?.id) {
+        storeContaPostLoginRedirect();
+        window.location.replace(resolveCadastroHref());
+        throw new Error("No session");
+      }
+      session = bootstrapSession;
+      updateTopbarAuthButton(true);
+
+      if (!contaAuthWatcherBound) {
+        contaAuthWatcherBound = true;
+        supabase.auth.onAuthStateChange(async (event, nextSession) => {
+          const eventName = String(event || "").trim().toUpperCase();
+          if (eventName === "INITIAL_SESSION" && !nextSession?.user?.id) return;
+
+          if (nextSession?.user?.id) {
+            session = nextSession;
+            updateTopbarAuthButton(true);
+            return;
+          }
+
+          const recovered = await getConfirmedCurrentSession({ attempts: 8, delayMs: 220 });
+          if (recovered?.user?.id) {
+            session = recovered;
+            updateTopbarAuthButton(true);
+            return;
+          }
+
+          session = null;
+          updateTopbarAuthButton(false);
+        });
+      }
+
+      return bootstrapSession;
+    }
+
     $("btnCatalogo")?.addEventListener("click", (e) => {
       e.preventDefault();
       window.location.assign(ROUTES.CATALOGO);
     });
 
-    $("logout")?.addEventListener("click", async () => {
-      try {
-        await supabase.auth.signOut();
-      } catch (_) {}
-      try {
-        localStorage.removeItem("anarbib_active_tab");
-        sessionStorage.removeItem("anarbib_active_tab");
-      } catch (_e) {}
-      window.location.assign(ROUTES.CADASTRO);
-    });
+    $("btnSair")?.addEventListener("click", async (event) => {
+      const btn = $("btnSair");
+      const targetHref = String(btn?.dataset?.authHref || resolveCadastroHref()).trim() || resolveCadastroHref();
+      const authMode = String(btn?.dataset?.authMode || "login").trim().toLowerCase();
 
-    const { data: sessData } = await supabase.auth.getSession();
-    const session = sessData?.session || null;
-    if (!session) {
+      event.preventDefault();
+      if (authMode !== "logout") {
+        storeContaPostLoginRedirect();
+        window.location.href = targetHref;
+        return;
+      }
+
+      btn.disabled = true;
+      btn.setAttribute("aria-busy", "true");
       try {
-        sessionStorage.setItem(
-          "anarbib_post_login_redirect",
-          `${window.location.pathname}${window.location.search || ""}${window.location.hash || ""}`
-        );
-      } catch (_e) {}
-      window.location.replace(ROUTES.CADASTRO);
-      throw new Error("No session");
-    }
+        await Promise.race([
+          supabase.auth.signOut(),
+          new Promise((resolve) => setTimeout(resolve, 2500))
+        ]);
+      } catch (error) {
+        console.warn("Conta: não consegui encerrar a sessão; seguindo para o cadastro mesmo assim.", error);
+      } finally {
+        clearContaSessionCaches();
+        session = null;
+        updateTopbarAuthButton(false);
+        btn.disabled = false;
+        btn.setAttribute("aria-busy", "false");
+        window.location.href = targetHref;
+      }
+    });
 
     const tabButtons = Array.from(document.querySelectorAll(".tab-btn"));
     const tabPanels = Array.from(document.querySelectorAll(".tab-panel"));
@@ -4172,6 +4314,7 @@ function reservationPickupReplyActions(row) {
       await submitReserveOrConsult("consult");
     });
     setReserveActionMode("reserve");
+    await bootstrapContaAuthOrRedirect();
     await loadProfile();
     await loadPublicServiceState();
     await renderActiveReservations();
