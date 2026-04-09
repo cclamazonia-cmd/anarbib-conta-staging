@@ -130,6 +130,7 @@
     <div class="topbar">
       <div class="brand">
         <img id="brandLogo" data-brand-logo class="logo" src="https://cclamazonia.noblogs.org/files/2026/03/AnarBib_logo.png" alt="AnarBib">
+        <img id="libraryBrandLogo" class="logo hidden" src="" alt="Logo da biblioteca ativa">
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <a class="btn" id="btnPainel" href="https://cclamazonia-cmd.github.io/anarbib-conta-staging/painel.html">Voltar ao painel</a>
@@ -580,6 +581,10 @@
                   <div class="field"><label for="exchangeFollowupContactPhone">Telefone / WhatsApp</label><input id="exchangeFollowupContactPhone" class="input" type="text" placeholder="Número útil para combinar"></div>
                 </div>
                 <div class="editor-grid">
+                  <div class="field"><label for="exchangeFollowupLocalExemplars">Exemplares da nossa biblioteca efetivamente separados</label><select id="exchangeFollowupLocalExemplars" class="select" multiple size="6"></select><div class="inline-note" id="exchangeFollowupLocalExemplarsNote">Selecione os exemplares reais da biblioteca local que entrarão na troca.</div></div>
+                  <div class="field"><label for="exchangeFollowupPartnerExemplars">Exemplares da biblioteca parceira efetivamente separados</label><select id="exchangeFollowupPartnerExemplars" class="select" multiple size="6"></select><div class="inline-note" id="exchangeFollowupPartnerExemplarsNote">Selecione os exemplares reais da biblioteca parceira que entrarão na troca.</div></div>
+                </div>
+                <div class="editor-grid">
                   <div class="field"><label for="exchangeFollowupCoordinationNote">Observação operacional</label><textarea id="exchangeFollowupCoordinationNote" class="textarea" placeholder="Ex.: separar um exemplar em melhor estado, levar no próximo plantão, confirmar embalagem, etc."></textarea></div>
                   <div class="field"><label for="exchangeFollowupOutcomeNote">Resultado / fechamento</label><textarea id="exchangeFollowupOutcomeNote" class="textarea" placeholder="Ex.: troca concluída, não foi possível combinar, ficou para outra rodada, etc."></textarea></div>
                 </div>
@@ -767,10 +772,13 @@
     let currentGovernanceRow = null;
     let currentPartnerSources = [];
     let currentPartnerContacts = new Map();
+    let currentLibraryBrandIdentity = null;
     let currentExchangeRequests = [];
     let currentExchangeLocalSurplus = [];
     let currentExchangePartnerSurplus = [];
     let currentExchangeFollowupRows = [];
+    let currentExchangeLocalExecutionOptions = [];
+    let currentExchangePartnerExecutionOptions = [];
     let currentRegulationDocs = [];
     let currentPolicySets = [];
     let currentPolicyRules = [];
@@ -821,6 +829,57 @@
       if (Array.isArray(value)) return value.length ? value.join(', ') : '—';
       if (typeof value === 'object') return JSON.stringify(value, null, 2);
       return String(value);
+    }
+    function normalizeUrlMaybe(value){
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+      if (/^https?:\/\//i.test(raw)) return raw;
+      if (raw.startsWith('./') || raw.startsWith('../') || raw.startsWith('/')) return raw;
+      return raw;
+    }
+    function getSupabaseBaseUrl(){
+      const direct = String(supabase?.supabaseUrl || '').trim();
+      if (direct) return direct.replace(/\/$/, '');
+      const storageUrl = String(supabase?.storageUrl || '').trim();
+      if (storageUrl) return storageUrl.replace(/\/storage\/v1\/?$/, '').replace(/\/$/, '');
+      return '';
+    }
+    function buildLibraryAssetUrl(fileKey){
+      const key = String(fileKey || '').trim().replace(/^\/+/, '');
+      if (!key) return '';
+      const base = getSupabaseBaseUrl();
+      if (!base) return '';
+      return `${base}/storage/v1/object/public/library-ui-assets/${key}`;
+    }
+    function pickLibraryLogoUrl(...sources){
+      for (const source of sources){
+        if (!source || typeof source !== 'object') continue;
+        const direct = normalizeUrlMaybe(firstFilledValue(source.logo_url, source.library_logo_url, source.brand_logo_url, source.theme_logo_url));
+        if (direct) return direct;
+        const assetUrl = buildLibraryAssetUrl(firstFilledValue(source.logo_file_key, source.library_logo_file_key, source.brand_logo_file_key));
+        if (assetUrl) return assetUrl;
+      }
+      return '';
+    }
+    function applyActiveLibraryBranding(){
+      const img = $('libraryBrandLogo');
+      if (!img) return;
+      const logoUrl = pickLibraryLogoUrl(currentLibraryBrandIdentity, currentLibraryRow);
+      if (logoUrl) {
+        img.src = logoUrl;
+        img.alt = `Logo da ${firstFilledValue(currentLibraryRow?.short_name, currentLibraryRow?.name, 'biblioteca ativa')}`;
+        img.classList.remove('hidden');
+      } else {
+        img.src = '';
+        img.classList.add('hidden');
+      }
+    }
+    function isLibraryActiveRow(row){
+      if (!row || typeof row !== 'object') return false;
+      if (row.is_active === false) return false;
+      const status = String(firstFilledValue(row.status, row.library_status, row.relation_status, '')).trim().toLowerCase();
+      if (['inactive','disabled','archived','deleted','blocked'].includes(status)) return false;
+      return true;
     }
     function friendlyDocumentKind(value){
       const raw = String(value || '').trim();
@@ -953,13 +1012,16 @@
         acordo_parcial: 'Acordo parcial',
         acordo_tecnico: 'Acordo técnico',
         importacao_autorizada: 'Importação autorizada',
-        mutualizacao_autorizada: 'Mutualização autorizada'
+        mutualizacao_autorizada: 'Mutualização autorizada',
+        catalogo_ativo_na_rede: 'Catálogo ativo na rede'
       };
       return labels[raw] || (String(value || '').trim() || '—');
     }
     function partnerAllowsExchange(row){
+      if (row?.network_exchange_available === true) return true;
+      if (row?.mutualize_allowed === true || row?.allows_exchange === true) return true;
       const status = String(row?.relation_status || '').trim().toLowerCase();
-      return status === 'mutualizacao_autorizada';
+      return status === 'mutualizacao_autorizada' || status === 'catalogo_ativo_na_rede';
     }
     function parseRequestObjectRef(value){
       const raw = String(value || '').trim();
@@ -974,6 +1036,7 @@
     function relationStatusNote(row){
       if (partnerAllowsExchange(row)) return 'Troca já autorizada';
       const status = String(row?.relation_status || '').trim().toLowerCase();
+      if (status === 'catalogo_ativo_na_rede') return 'Biblioteca ativa na rede, com catálogo disponível';
       if (status === 'importacao_autorizada') return 'Importação autorizada, troca ainda a combinar';
       if (status === 'acordo_tecnico') return 'Há acordo técnico, mas falta autorizar troca';
       if (status === 'em_discussao' || status === 'contactada') return 'Relação em construção';
@@ -1026,7 +1089,9 @@
     }
     function getExchangePartnerRow(row){
       const partnerId = getExchangePartnerId(row);
-      return currentPartnerSources.find((item) => String(item?.library_id || '') === String(partnerId || '')) || {};
+      return currentPartnerSources.find((item) => String(item?.library_id || '') === String(partnerId || ''))
+        || safeJsonObject(parseRequestObjectRef(row?.object_ref)?.partner_library_ref || {})
+        || {};
     }
     function getExchangeExecutionState(row){
       const ref = parseRequestObjectRef(row?.object_ref);
@@ -1045,6 +1110,10 @@
         contact_phone: firstFilledValue(followup.contact_phone, currentPartnerContacts.get(String(getExchangePartnerId(row) || ''))?.contact_phone, currentPartnerContacts.get(String(getExchangePartnerId(row) || ''))?.contact_whatsapp),
         coordination_note: firstFilledValue(followup.coordination_note),
         outcome_note: firstFilledValue(followup.outcome_note),
+        local_exemplar_ids: Array.isArray(followup.local_exemplar_ids) ? followup.local_exemplar_ids.map((value) => String(value)) : [],
+        partner_exemplar_ids: Array.isArray(followup.partner_exemplar_ids) ? followup.partner_exemplar_ids.map((value) => String(value)) : [],
+        local_tombos: Array.isArray(followup.local_tombos) ? followup.local_tombos : [],
+        partner_tombos: Array.isArray(followup.partner_tombos) ? followup.partner_tombos : [],
         updated_at: firstFilledValue(followup.updated_at, row?.updated_at),
         updated_by_direction: firstFilledValue(followup.updated_by_direction, direction),
         partner_name: getPartnerDisplayName(partnerRow)
@@ -1269,6 +1338,120 @@
           if (byCount) return byCount;
           return tableSortCollator.compare(String(a.titulo || a.bib_ref || ''), String(b.titulo || b.bib_ref || ''));
         });
+    }
+    async function fetchDocumentExemplarsByLibrary(libraryId, bibRef){
+      const scopedLibraryId = normalizeLibraryId(libraryId);
+      const scopedBibRef = String(bibRef || '').trim();
+      if (!scopedLibraryId || !scopedBibRef) return [];
+      const { data, error } = await supabase
+        .from('exemplares')
+        .select('id,bib_ref,tombo,shelf_location,library_id,holding_id,notes')
+        .eq('library_id', scopedLibraryId)
+        .eq('bib_ref', scopedBibRef)
+        .order('tombo', { ascending: true });
+      if (error) throw error;
+      return asArray(data).filter((row) => row && typeof row === 'object');
+    }
+    async function fetchExchangeNetworkPartners(currentLibraryId){
+      const currentId = normalizeLibraryId(currentLibraryId);
+      let identityRows = [];
+      try {
+        if (typeof supabase.schema === 'function') {
+          const res = await supabase.schema('api').from('library_email_identity').select('library_id,library_slug,library_name,short_name,display_name,contact_email,reply_to_email,postal_address,logo_url,logo_file_key,is_active');
+          if (!res?.error) identityRows = asArray(res.data);
+        }
+      } catch (_e) {}
+      try {
+        const { data } = await supabase.from('libraries').select('*');
+        const extraRows = asArray(data).map((row) => ({
+          library_id: row.id,
+          library_slug: firstFilledValue(row.slug),
+          library_name: firstFilledValue(row.name),
+          short_name: firstFilledValue(row.short_name),
+          display_name: firstFilledValue(row.name),
+          is_active: row.is_active,
+          status: row.status,
+          logo_url: firstFilledValue(row.logo_url, row.library_logo_url, row.brand_logo_url),
+          logo_file_key: firstFilledValue(row.logo_file_key, row.library_logo_file_key, row.brand_logo_file_key)
+        }));
+        identityRows = [...identityRows, ...extraRows];
+      } catch (_e) {}
+      if (!identityRows.length) {
+        try {
+          const { data } = await supabase.from('v_library_notification_context').select('library_id,slug,library_name,library_short_name,reply_to_email,logo_url,logo_file_key');
+          identityRows = asArray(data).map((row) => ({
+            library_id: row.library_id,
+            library_slug: row.slug,
+            library_name: row.library_name,
+            short_name: row.library_short_name,
+            display_name: row.library_name,
+            contact_email: row.reply_to_email,
+            reply_to_email: row.reply_to_email,
+            logo_url: row.logo_url,
+            logo_file_key: row.logo_file_key,
+            is_active: true
+          }));
+        } catch (_e) {}
+      }
+      const identityById = new Map();
+      for (const row of identityRows) {
+        const key = normalizeLibraryId(row?.library_id);
+        if (key) identityById.set(key, row);
+      }
+      let holdingRows = [];
+      try {
+        const { data, error } = await supabase.from('book_holdings').select('library_id,local_bib_ref,book_id,available_count,exemplares_total');
+        if (error) throw error;
+        holdingRows = asArray(data);
+      } catch (_e) {
+        const { data, error } = await supabase.from('exemplares').select('library_id,bib_ref');
+        if (error) throw error;
+        holdingRows = asArray(data).map((row) => ({
+          library_id: row.library_id,
+          local_bib_ref: row.bib_ref,
+          book_id: null,
+          available_count: 1,
+          exemplares_total: 1
+        }));
+      }
+      const agg = new Map();
+      for (const row of holdingRows) {
+        const key = normalizeLibraryId(row?.library_id);
+        if (!key || key === currentId) continue;
+        if (!agg.has(key)) agg.set(key, { doc_refs: new Set(), available_count: 0, exemplares_total: 0 });
+        const bucket = agg.get(key);
+        const ref = String(firstFilledValue(row?.local_bib_ref, row?.book_id, '')).trim();
+        if (ref) bucket.doc_refs.add(ref);
+        bucket.available_count += Math.max(Number(row?.available_count || 0) || 0, 0);
+        bucket.exemplares_total += Math.max(Number(row?.exemplares_total || 0) || 0, 0);
+      }
+      const out = [];
+      for (const [libraryId, bucket] of agg.entries()) {
+        if (!bucket.doc_refs.size) continue;
+        const base = identityById.get(libraryId) || {};
+        if (!isLibraryActiveRow(base)) continue;
+        out.push({
+          library_id: libraryId,
+          library_slug: firstFilledValue(base.library_slug, base.slug),
+          library_name: firstFilledValue(base.library_name, base.display_name, base.name),
+          display_name: firstFilledValue(base.short_name, base.library_short_name)
+            ? `${firstFilledValue(base.short_name, base.library_short_name)} — ${firstFilledValue(base.library_name, base.display_name, base.name)}`
+            : firstFilledValue(base.library_name, base.display_name, base.name, libraryId),
+          short_name: firstFilledValue(base.short_name, base.library_short_name),
+          relation_status: 'catalogo_ativo_na_rede',
+          source_kind: 'network_library',
+          notes: `Catálogo ativo com ${bucket.doc_refs.size} documento(s) e ${bucket.exemplares_total} exemplar(es).`,
+          import_enabled: true,
+          network_exchange_available: true,
+          contact_email: firstFilledValue(base.contact_email, base.reply_to_email),
+          logo_url: firstFilledValue(base.logo_url),
+          logo_file_key: firstFilledValue(base.logo_file_key),
+          catalog_document_count: bucket.doc_refs.size,
+          catalog_total_copies: bucket.exemplares_total,
+          catalog_available_count: bucket.available_count
+        });
+      }
+      return out.sort((a, b) => tableSortCollator.compare(String(a.display_name || a.library_name || ''), String(b.display_name || b.library_name || '')));
     }
     function formatExchangeDocLabel(row){
       if (!row) return '—';
@@ -1660,6 +1843,8 @@
         currentIdentityRow = null;
         currentAccessRow = null;
         currentLibraryRow = null;
+        currentLibraryBrandIdentity = null;
+        applyActiveLibraryBranding();
         setChip('chipFuncao', 'Função: —');
         setChip('chipEmail', 'E-mail: —');
         setChip('chipBiblioteca', 'Biblioteca: —');
@@ -1676,6 +1861,8 @@
         setChip('chipFuncao', 'Função: sem acesso');
         setChip('chipEmail', `E-mail: ${session.user.email || '—'}`);
         setChip('chipBiblioteca', 'Biblioteca: —');
+        currentLibraryBrandIdentity = null;
+        applyActiveLibraryBranding();
         $('helloLine').textContent = 'A sessão existe, mas não encontrei um acesso bibliotecário ativo para esta conta.';
         return false;
       }
@@ -1723,6 +1910,7 @@
       if (error) throw error;
       currentLibraryRow = { ...(resolved?.row || {}), ...(data || {}), id: libraryId };
       setChip('chipBiblioteca', `Biblioteca: ${currentLibraryRow?.short_name || currentLibraryRow?.name || currentLibraryRow?.slug || libraryId}`);
+      applyActiveLibraryBranding();
       return currentLibraryRow;
     }
 
@@ -2523,28 +2711,67 @@
       try {
         const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
         const libraryId = normalizeLibraryId(row?.id);
-        const [{ data, error }, partnerRowsResult, requestRowsResult] = await Promise.all([
+        const [{ data, error }, partnerRowsResult, requestRowsResult, brandRowsResult] = await Promise.all([
           supabase
             .from('library_document_governance')
             .select('library_id,config,updated_at,updated_by')
             .eq('library_id', libraryId)
             .maybeSingle(),
-          selectApiViewRows('partner_catalog_sources_ui').catch(() => []),
+          fetchExchangeNetworkPartners(libraryId).catch(() => []),
           supabase
             .from('document_permission_requests')
             .select('*')
             .or(`requester_library_id.eq.${libraryId},target_library_id.eq.${libraryId}`)
-            .order('updated_at', { ascending: false })
+            .order('updated_at', { ascending: false }),
+          (async () => {
+            try {
+              if (typeof supabase.schema === 'function') {
+                const res = await supabase.schema('api').from('library_email_identity').select('library_id,library_slug,library_name,short_name,display_name,contact_email,reply_to_email,postal_address,logo_url,logo_file_key,is_active').eq('library_id', libraryId).maybeSingle();
+                if (!res?.error) return res.data || null;
+              }
+            } catch (_e) {}
+            try {
+              const { data } = await supabase.from('v_library_notification_context').select('library_id,slug,library_name,library_short_name,reply_to_email,logo_url,logo_file_key').eq('library_id', libraryId).maybeSingle();
+              return data ? {
+                library_id: data.library_id,
+                library_slug: data.slug,
+                library_name: data.library_name,
+                short_name: data.library_short_name,
+                display_name: data.library_name,
+                contact_email: data.reply_to_email,
+                reply_to_email: data.reply_to_email,
+                logo_url: data.logo_url,
+                logo_file_key: data.logo_file_key,
+                is_active: true
+              } : null;
+            } catch (_e) {}
+            return null;
+          })()
         ]);
         if (error) throw error;
         currentGovernanceRow = data || null;
         currentGovernance = safeJsonObject(data?.config || {});
+        currentLibraryBrandIdentity = brandRowsResult || null;
+        applyActiveLibraryBranding();
         currentPartnerSources = dedupePartnerSources(asArray(partnerRowsResult).filter((partnerRow) => String(partnerRow?.library_id || '') !== String(libraryId || '')));
         currentExchangeRequests = asArray(requestRowsResult?.data).filter((requestRow) => requestRow && typeof requestRow === 'object');
         if (requestRowsResult?.error) throw requestRowsResult.error;
 
         const contactIds = Array.from(new Set(currentPartnerSources.map((partnerRow) => normalizeLibraryId(partnerRow?.library_id)).filter(Boolean)));
         currentPartnerContacts = new Map();
+        for (const partnerRow of currentPartnerSources) {
+          const key = String(partnerRow?.library_id || '');
+          if (key) {
+            currentPartnerContacts.set(key, {
+              library_id: key,
+              contact_email: firstFilledValue(partnerRow?.contact_email, partnerRow?.reply_to_email),
+              contact_name: firstFilledValue(partnerRow?.display_name, partnerRow?.library_name),
+              contact_phone: firstFilledValue(partnerRow?.contact_phone, partnerRow?.contact_whatsapp),
+              contact_whatsapp: firstFilledValue(partnerRow?.contact_whatsapp),
+              postal_address: firstFilledValue(partnerRow?.postal_address)
+            });
+          }
+        }
         for (let i = 0; i < contactIds.length; i += 100) {
           const slice = contactIds.slice(i, i + 100);
           if (!slice.length) continue;
@@ -2555,7 +2782,7 @@
           if (contactError) throw contactError;
           for (const contactRow of asArray(contactRows)) {
             const key = String(contactRow?.library_id || '');
-            if (key) currentPartnerContacts.set(key, contactRow);
+            if (key) currentPartnerContacts.set(key, { ...(currentPartnerContacts.get(key) || {}), ...contactRow });
           }
         }
 
@@ -2567,14 +2794,16 @@
         renderDocumentRequestsTable(currentExchangeRequests);
         populateExchangePartnerSelect();
         currentExchangeFollowupRows = getExchangeFollowupRows(currentExchangeRequests);
-        setStatus('documentsStatus', 'Organização dos documentos, parceiras e pedidos interbibliotecas carregados.', 'ok');
+        setStatus('documentsStatus', 'Organização dos documentos, bibliotecas ativas com catálogo e pedidos interbibliotecas carregados.', 'ok');
       } catch (error) {
         currentGovernance = {};
         currentGovernanceRow = null;
+        currentLibraryBrandIdentity = null;
         currentPartnerSources = [];
         currentPartnerContacts = new Map();
         currentExchangeRequests = [];
         currentExchangeFollowupRows = [];
+        applyActiveLibraryBranding();
         renderKvGrid('governanceGrid', []);
         $('governanceJson').textContent = '{}';
         renderPartnerLibrariesTable([]);
@@ -2642,7 +2871,7 @@
           <td>${esc(friendlyPartnerRelationStatus(row?.relation_status))}</td>
           <td>${esc(relationStatusNote(row))}</td>
           <td>${esc(firstFilledValue(contact?.contact_email, contact?.contact_name, '—'))}</td>
-          <td>${esc(firstFilledValue(row?.notes, row?.source_kind, '—'))}</td>
+          <td>${esc(firstFilledValue(row?.notes, row?.source_kind, '—'))}${row?.catalog_document_count ? `<div class="inline-note">${esc(`${row.catalog_document_count} documento(s) / ${row.catalog_total_copies || 0} exemplar(es)` )}</div>` : ''}</td>
         </tr>`;
       }).join('');
       applyStoredSortForTbody('tbodyPartnerLibraries');
@@ -2661,7 +2890,7 @@
       tbody.innerHTML = normalizedRows.map((row) => {
         const direction = String(row?.requester_library_id || '') === String(currentLibraryId || '') ? 'Enviado' : 'Recebido';
         const partnerId = direction === 'Enviado' ? row?.target_library_id : row?.requester_library_id;
-        const partnerRow = currentPartnerSources.find((item) => String(item?.library_id || '') === String(partnerId || '')) || {};
+        const partnerRow = getExchangePartnerRow(row);
         const objectRef = parseRequestObjectRef(row?.object_ref);
         const objectText = objectRef?.local_document?.titulo || objectRef?.partner_document?.titulo || firstFilledValue(row?.object_type, row?.object_ref, '—');
         const statusLabel = friendlyDocumentRequestStatus(row?.status, direction);
@@ -2707,8 +2936,9 @@
     function populateExchangePartnerSelect() {
       const select = $('exchangePartnerSelect');
       if (!select) return;
-      const rows = dedupePartnerSources(currentPartnerSources).filter((row) => normalizeLibraryId(row?.library_id));
-      const options = ['<option value="">Selecione</option>'].concat(rows.map((row) => `<option value="${esc(String(row.library_id || ''))}">${esc(getPartnerDisplayName(row))} · ${esc(friendlyPartnerRelationStatus(row?.relation_status))}</option>`));
+      const currentLibraryId = getCurrentExchangeLibraryId();
+      const rows = dedupePartnerSources(currentPartnerSources).filter((row) => normalizeLibraryId(row?.library_id) && String(normalizeLibraryId(row?.library_id) || '') !== String(currentLibraryId || ''));
+      const options = ['<option value="">Selecione</option>'].concat(rows.map((row) => `<option value="${esc(String(row.library_id || ''))}">${esc(getPartnerDisplayName(row))} · ${esc(friendlyPartnerRelationStatus(row?.relation_status))}${row?.catalog_document_count ? ` · ${esc(String(row.catalog_document_count))} doc.` : ''}</option>`));
       select.innerHTML = options.join('');
     }
 
@@ -2812,6 +3042,42 @@
       applyStoredSortForTbody('tbodyExchangeRequests');
     }
 
+    function getSelectedValues(selectId){
+      const select = $(selectId);
+      if (!select) return [];
+      return Array.from(select.selectedOptions || []).map((option) => String(option.value || '').trim()).filter(Boolean);
+    }
+    function populateExecutionExemplarSelect(selectId, rows, selectedIds, emptyLabel){
+      const select = $(selectId);
+      const note = $(`${selectId}Note`);
+      if (!select) return;
+      const selected = new Set(asArray(selectedIds).map((value) => String(value)));
+      if (!asArray(rows).length) {
+        select.innerHTML = '';
+        if (note) note.textContent = emptyLabel;
+        return;
+      }
+      select.innerHTML = asArray(rows).map((row) => {
+        const value = String(row?.id || '');
+        const label = [firstFilledValue(row?.tombo, `ID ${value}`), firstFilledValue(row?.shelf_location), firstFilledValue(row?.notes)].filter(Boolean).join(' · ');
+        return `<option value="${esc(value)}"${selected.has(value) ? ' selected' : ''}>${esc(label || `Exemplar ${value}`)}</option>`;
+      }).join('');
+      if (note) note.textContent = `Disponíveis para marcar aqui: ${asArray(rows).length} exemplar(es).`;
+    }
+    async function loadExchangeFollowupExemplarOptions(row){
+      const ref = parseRequestObjectRef(row?.object_ref);
+      const execution = getExchangeExecutionState(row);
+      const localLibraryId = normalizeLibraryId(ref?.local_document?.library_id || ref?.local_library_id || getCurrentExchangeLibraryId());
+      const partnerLibraryId = normalizeLibraryId(ref?.partner_document?.library_id || ref?.partner_library_id || getExchangePartnerId(row));
+      const localBibRef = String(ref?.local_document?.bib_ref || '').trim();
+      const partnerBibRef = String(ref?.partner_document?.bib_ref || '').trim();
+      currentExchangeLocalExecutionOptions = [];
+      currentExchangePartnerExecutionOptions = [];
+      if (localLibraryId && localBibRef) currentExchangeLocalExecutionOptions = await fetchDocumentExemplarsByLibrary(localLibraryId, localBibRef);
+      if (partnerLibraryId && partnerBibRef && String(partnerLibraryId) !== String(localLibraryId)) currentExchangePartnerExecutionOptions = await fetchDocumentExemplarsByLibrary(partnerLibraryId, partnerBibRef);
+      populateExecutionExemplarSelect('exchangeFollowupLocalExemplars', currentExchangeLocalExecutionOptions, execution.local_exemplar_ids, 'Nenhum exemplar local encontrado para este documento.');
+      populateExecutionExemplarSelect('exchangeFollowupPartnerExemplars', currentExchangePartnerExecutionOptions, execution.partner_exemplar_ids, 'Nenhum exemplar parceiro encontrado para este documento.');
+    }
     function populateExchangeFollowupSelect() {
       const select = $('exchangeFollowupRequestSelect');
       if (!select) return;
@@ -2831,13 +3097,15 @@
       const notCompletedCount = followupRows.filter((row) => getExchangeExecutionState(row).phase === 'not_completed').length;
       const transitCount = followupRows.filter((row) => getExchangeExecutionState(row).phase === 'in_transit').length;
       const logisticsCount = followupRows.filter((row) => getExchangeExecutionState(row).phase === 'logistics_arranged').length;
+      const markedCount = followupRows.filter((row) => (getExchangeExecutionState(row).local_exemplar_ids || []).length || (getExchangeExecutionState(row).partner_exemplar_ids || []).length).length;
       renderKvGrid('exchangeFollowupSummary', [
         ['Propostas aceitas para acompanhar', followupRows.length],
         ['Com logística já combinada', logisticsCount],
         ['Em circulação agora', transitCount],
+        ['Com exemplares já marcados', markedCount],
         ['Trocas concluídas', completedCount],
         ['Trocas não concluídas', notCompletedCount],
-        ['Uso deste bloco', 'Registrar quantidades, logística, data, contato e resultado final']
+        ['Uso deste bloco', 'Registrar quantidades, logística, data, contato, exemplares reais e resultado final']
       ]);
     }
 
@@ -2859,7 +3127,7 @@
           <td>${esc(getPartnerDisplayName(partnerRow))}</td>
           <td>${esc(buildExchangeRequestShortLabel(row))}</td>
           <td><span class="pill ${esc(exchangeExecutionPhaseTone(execution.phase))}">${esc(friendlyExchangeExecutionPhase(execution.phase))}</span><div class="inline-note">${esc(firstFilledValue(execution.outcome_note, execution.coordination_note, '—'))}</div></td>
-          <td>${esc(friendlyExchangeLogisticsMode(execution.logistics_mode))}${execution.meeting_point ? `<div class="inline-note">${esc(execution.meeting_point)}</div>` : ''}</td>
+          <td>${esc(friendlyExchangeLogisticsMode(execution.logistics_mode))}${execution.meeting_point ? `<div class="inline-note">${esc(execution.meeting_point)}</div>` : ''}${execution.local_tombos?.length || execution.partner_tombos?.length ? `<div class="inline-note">${esc(`Exemplares marcados: ${execution.local_tombos?.length || 0} local / ${execution.partner_tombos?.length || 0} parceira`)}</div>` : ''}</td>
           <td>${esc(fmtDate(execution.planned_date))}</td>
           <td><div class="editor-actions"><button class="btn mini soft" type="button" data-exchange-followup-edit="${esc(String(row?.id || ''))}">Editar</button></div></td>
         </tr>`;
@@ -2886,10 +3154,14 @@
       $('exchangeFollowupContactPhone').value = '';
       $('exchangeFollowupCoordinationNote').value = '';
       $('exchangeFollowupOutcomeNote').value = '';
+      currentExchangeLocalExecutionOptions = [];
+      currentExchangePartnerExecutionOptions = [];
+      populateExecutionExemplarSelect('exchangeFollowupLocalExemplars', [], [], 'Selecione primeiro uma proposta aceita.');
+      populateExecutionExemplarSelect('exchangeFollowupPartnerExemplars', [], [], 'Selecione primeiro uma proposta aceita.');
       setStatus('exchangeFollowupStatus', '');
     }
 
-    function loadExchangeFollowupIntoForm(row) {
+    async function loadExchangeFollowupIntoForm(row) {
       if (!row) {
         resetExchangeFollowupForm();
         return;
@@ -2908,24 +3180,41 @@
       $('exchangeFollowupContactPhone').value = firstFilledValue(execution.contact_phone);
       $('exchangeFollowupCoordinationNote').value = firstFilledValue(execution.coordination_note);
       $('exchangeFollowupOutcomeNote').value = firstFilledValue(execution.outcome_note);
+      await loadExchangeFollowupExemplarOptions(row);
       setStatus('exchangeFollowupStatus', `Acompanhamento carregado para ${buildExchangeFollowupOptionLabel(row)}.`, 'info');
     }
 
     function collectExchangeFollowupPatch(phaseOverride='') {
       const row = getSelectedExchangeFollowupRow();
       if (!row) throw new Error('Selecione primeiro uma proposta aceita.');
+      const localSelectedIds = getSelectedValues('exchangeFollowupLocalExemplars');
+      const partnerSelectedIds = getSelectedValues('exchangeFollowupPartnerExemplars');
+      const validLocalIds = new Set(currentExchangeLocalExecutionOptions.map((item) => String(item?.id || '')));
+      const validPartnerIds = new Set(currentExchangePartnerExecutionOptions.map((item) => String(item?.id || '')));
+      if (localSelectedIds.some((value) => !validLocalIds.has(value))) throw new Error('Há exemplar local selecionado fora do documento local desta troca.');
+      if (partnerSelectedIds.some((value) => !validPartnerIds.has(value))) throw new Error('Há exemplar parceiro selecionado fora do documento parceiro desta troca.');
+      let localQty = String($('exchangeFollowupLocalQty').value || '').trim() === '' ? null : Math.max(Number($('exchangeFollowupLocalQty').value || 0) || 0, 0);
+      let partnerQty = String($('exchangeFollowupPartnerQty').value || '').trim() === '' ? null : Math.max(Number($('exchangeFollowupPartnerQty').value || 0) || 0, 0);
+      if (localQty == null && localSelectedIds.length) localQty = localSelectedIds.length;
+      if (partnerQty == null && partnerSelectedIds.length) partnerQty = partnerSelectedIds.length;
+      if (localQty != null && localQty < localSelectedIds.length) throw new Error('A quantidade da nossa biblioteca não pode ser menor que os exemplares locais marcados.');
+      if (partnerQty != null && partnerQty < partnerSelectedIds.length) throw new Error('A quantidade da biblioteca parceira não pode ser menor que os exemplares parceiros marcados.');
       const patch = {
         phase: phaseOverride || String($('exchangeFollowupPhase').value || '').trim() || 'accepted_pending_details',
         logistics_mode: String($('exchangeFollowupLogisticsMode').value || '').trim() || 'to_define',
         planned_date: String($('exchangeFollowupPlannedDate').value || '').trim() || null,
-        local_qty: String($('exchangeFollowupLocalQty').value || '').trim() === '' ? null : Math.max(Number($('exchangeFollowupLocalQty').value || 0) || 0, 0),
-        partner_qty: String($('exchangeFollowupPartnerQty').value || '').trim() === '' ? null : Math.max(Number($('exchangeFollowupPartnerQty').value || 0) || 0, 0),
+        local_qty: localQty,
+        partner_qty: partnerQty,
         meeting_point: String($('exchangeFollowupMeetingPoint').value || '').trim() || null,
         contact_name: String($('exchangeFollowupContactName').value || '').trim() || null,
         contact_email: String($('exchangeFollowupContactEmail').value || '').trim() || null,
         contact_phone: String($('exchangeFollowupContactPhone').value || '').trim() || null,
         coordination_note: String($('exchangeFollowupCoordinationNote').value || '').trim() || null,
-        outcome_note: String($('exchangeFollowupOutcomeNote').value || '').trim() || null
+        outcome_note: String($('exchangeFollowupOutcomeNote').value || '').trim() || null,
+        local_exemplar_ids: localSelectedIds,
+        partner_exemplar_ids: partnerSelectedIds,
+        local_tombos: currentExchangeLocalExecutionOptions.filter((item) => localSelectedIds.includes(String(item?.id || ''))).map((item) => firstFilledValue(item?.tombo, `ID ${item?.id}`)),
+        partner_tombos: currentExchangePartnerExecutionOptions.filter((item) => partnerSelectedIds.includes(String(item?.id || ''))).map((item) => firstFilledValue(item?.tombo, `ID ${item?.id}`))
       };
       return { row, patch };
     }
@@ -2944,7 +3233,7 @@
         await loadGovernancePanel();
         await loadExchangePanel();
         const fresh = currentExchangeFollowupRows.find((item) => String(item?.id || '') === String(row?.id || '')) || null;
-        if (fresh) loadExchangeFollowupIntoForm(fresh);
+        if (fresh) await loadExchangeFollowupIntoForm(fresh);
       } catch (error) {
         setStatus('exchangeFollowupStatus', 'Não consegui salvar o acompanhamento: ' + (error.message || String(error)), 'bad');
       }
@@ -2968,6 +3257,8 @@
         execution.partner_qty != null ? `Quantidade da biblioteca parceira: ${execution.partner_qty}.` : 'Quantidade da biblioteca parceira: ainda a confirmar.',
       ];
       if (execution.meeting_point) lines.push(`Referência logística: ${execution.meeting_point}.`);
+      if (execution.local_tombos?.length) lines.push(`Exemplares já marcados pela nossa biblioteca: ${execution.local_tombos.join(', ')}.`);
+      if (execution.partner_tombos?.length) lines.push(`Exemplares já marcados pela biblioteca parceira: ${execution.partner_tombos.join(', ')}.`);
       if (execution.coordination_note) lines.push(`Observação operacional: ${execution.coordination_note}`);
       lines.push('', 'Pedimos, se possível, que a atualização principal também fique registrada no módulo interbibliotecas do AnarBib, para que as duas bibliotecas acompanhem o mesmo estado da troca.', '', 'Abraços fraternos,', ourName);
       return lines.join('\n');
@@ -2993,7 +3284,8 @@
 
       try {
         const partnerRow = getSelectedExchangePartnerRow();
-        if (!partnerRow?.library_id) {
+        const currentLibraryId = getCurrentExchangeLibraryId();
+        if (!partnerRow?.library_id || String(normalizeLibraryId(partnerRow.library_id) || '') === String(currentLibraryId || '')) {
           currentExchangePartnerSurplus = [];
           populateExchangeDocumentSelect('exchangePartnerDocSelect', [], 'Selecione');
           renderExchangePartnerSummary();
@@ -3018,6 +3310,12 @@
         currentExchangeLocalSurplus = await fetchSurplusDocumentsByLibrary(row.id);
         currentExchangeFollowupRows = getExchangeFollowupRows(currentExchangeRequests);
         populateExchangeDocumentSelect('exchangeLocalSelect', currentExchangeLocalSurplus, 'Selecione');
+        const selectedPartnerId = normalizeLibraryId($('exchangePartnerSelect')?.value || '');
+        if (selectedPartnerId && !currentPartnerSources.find((item) => String(normalizeLibraryId(item?.library_id) || '') === String(selectedPartnerId || ''))) {
+          if ($('exchangePartnerSelect')) $('exchangePartnerSelect').value = '';
+          currentExchangePartnerSurplus = [];
+          populateExchangeDocumentSelect('exchangePartnerDocSelect', [], 'Selecione');
+        }
         populateExchangeFollowupSelect();
         renderExchangeLocalSummary(currentExchangeLocalSurplus);
         renderExchangePartnerSummary();
@@ -3048,6 +3346,9 @@
         if (!email) throw new Error('Esta biblioteca parceira ainda não tem e-mail responsável cadastrado.');
         const localDoc = getSelectedLocalExchangeDoc();
         const partnerDoc = getSelectedPartnerExchangeDoc();
+        const currentLibraryId = getCurrentExchangeLibraryId();
+        if (partnerRow?.library_id && String(normalizeLibraryId(partnerRow.library_id) || '') === String(currentLibraryId || '')) throw new Error('A biblioteca parceira precisa ser diferente da biblioteca local.');
+        if (localDoc && String(normalizeLibraryId(currentLibraryRow?.id || '') || '') !== String(currentLibraryId || '')) throw new Error('O documento local precisa sair da biblioteca ativa nesta sessão.');
         if (localDoc && localDoc.exchange_ready !== true) throw new Error(localDoc?.eligibility?.summary || 'O documento local já não passa pelos filtros atuais.');
         if (partnerDoc && partnerDoc.exchange_ready !== true) throw new Error(partnerDoc?.eligibility?.summary || 'O documento da parceira já não passa pelos filtros atuais.');
         const subject = String($('exchangeMailSubject').value || '').trim();
@@ -3089,7 +3390,9 @@
         const partnerRow = getSelectedExchangePartnerRow();
         const localDoc = getSelectedLocalExchangeDoc();
         const partnerDoc = getSelectedPartnerExchangeDoc();
+        const currentLibraryId = getCurrentExchangeLibraryId();
         if (!partnerRow?.library_id) throw new Error('Escolhe uma biblioteca parceira.');
+        if (String(normalizeLibraryId(partnerRow.library_id) || '') === String(currentLibraryId || '')) throw new Error('A biblioteca parceira precisa ser diferente da biblioteca local.');
         if (!localDoc) throw new Error('Escolhe um documento local com excedente.');
         if (!partnerDoc) throw new Error('Escolhe um documento da biblioteca parceira.');
         const cfg = getCurrentGovernanceExchangeConfig();
@@ -3156,7 +3459,7 @@
         return;
       }
       activateTab('interbib');
-      loadExchangeFollowupIntoForm(row);
+      void loadExchangeFollowupIntoForm(row);
       $('exchangeFollowupRequestSelect')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
@@ -3417,9 +3720,9 @@
     $('btnMarkExchangeCompleted')?.addEventListener('click', () => saveExchangeFollowup('completed'));
     $('btnMarkExchangeNotCompleted')?.addEventListener('click', () => saveExchangeFollowup('not_completed'));
     $('btnResetExchangeFollowup')?.addEventListener('click', resetExchangeFollowupForm);
-    $('exchangeFollowupRequestSelect')?.addEventListener('change', () => {
+    $('exchangeFollowupRequestSelect')?.addEventListener('change', async () => {
       const row = getSelectedExchangeFollowupRow();
-      if (row) loadExchangeFollowupIntoForm(row);
+      if (row) await loadExchangeFollowupIntoForm(row);
       else resetExchangeFollowupForm();
     });
     $('exchangePartnerSelect')?.addEventListener('change', async () => { await loadPartnerExchangeDocuments(); syncExchangeObjectRefField(); });
