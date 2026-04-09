@@ -633,7 +633,7 @@
               <div class="status" id="interbibLoanStatus"></div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Resumo dos empréstimos interbilbiotecas</h3><div class="mini">Pedidos, empréstimos aceitos, saídas previstas, retornos previstos e situação geral desta frente.</div></div></div>
+              <div class="section-head"><div><h3>Resumo dos empréstimos interbibliotecas</h3><div class="mini">Pedidos, empréstimos aceitos, saídas previstas, retornos previstos e situação geral desta frente.</div></div></div>
               <div id="interbibLoanSummary" class="kv-grid"><div class="empty">Carregando…</div></div>
             </div>
             <div class="card">
@@ -647,7 +647,7 @@
                     <option value="pending">Pedido enviado / pendente</option>
                     <option value="accepted_pending_departure">Aceito — saída ainda pendente</option>
                     <option value="departure_confirmed">Saída confirmada</option>
-                    <option value="on_loan">Em empréstimo interbilbioteca</option>
+                    <option value="on_loan">Em empréstimo interbiblioteca</option>
                     <option value="return_scheduled">Retorno agendado</option>
                     <option value="returned">Retornado</option>
                     <option value="not_completed">Não concluído</option>
@@ -690,7 +690,7 @@
               </div>
             </div>
             <div class="card">
-              <div class="section-head"><div><h3>Pedidos e empréstimos interbilbiotecas já registrados</h3><div class="mini">Aqui ficam visíveis os pedidos, as aceitações, as saídas confirmadas, os retornos previstos e o fechamento do empréstimo temporário.</div></div></div>
+              <div class="section-head"><div><h3>Pedidos e empréstimos interbibliotecas já registrados</h3><div class="mini">Aqui ficam visíveis os pedidos, as aceitações, as saídas confirmadas, os retornos previstos e o fechamento do empréstimo temporário.</div></div></div>
               <div class="tableWrap">
                 <table>
                   <thead><tr><th>Sentido</th><th>Parceira</th><th>Documento / exemplares</th><th>Situação</th><th>Datas</th><th>Logística / ações</th></tr></thead>
@@ -1257,7 +1257,7 @@
       const raw = String(value || '').trim().toLowerCase();
       const labels = {
         proposta_troca_exemplares: 'Proposta de troca de exemplares',
-        proposta_emprestimo_interbibliotecas: 'Pedido de empréstimo interbilbiotecas',
+        proposta_emprestimo_interbibliotecas: 'Pedido de empréstimo interbibliotecas',
         correcao_documental: 'Pedido de correção documental',
         copia_local: 'Pedido de cópia local',
         recurso_digital: 'Pedido sobre recurso digital'
@@ -3871,14 +3871,14 @@
       const raw = String(value || '').trim().toLowerCase();
       if (raw === 'borrow_from_partner') return 'Nossa biblioteca recebe um empréstimo';
       if (raw === 'lend_to_partner') return 'Nossa biblioteca empresta temporariamente';
-      return 'Empréstimo interbilbioteca';
+      return 'Empréstimo interbiblioteca';
     }
     function friendlyInterbibLoanPhase(value) {
       const raw = String(value || '').trim().toLowerCase();
       if (raw === 'pending') return 'Pedido pendente';
       if (raw === 'accepted_pending_departure') return 'Aceito — saída pendente';
       if (raw === 'departure_confirmed') return 'Saída confirmada';
-      if (raw === 'on_loan') return 'Em empréstimo interbilbioteca';
+      if (raw === 'on_loan') return 'Em empréstimo interbiblioteca';
       if (raw === 'return_scheduled') return 'Retorno agendado';
       if (raw === 'returned') return 'Retornado';
       if (raw === 'not_completed') return 'Não concluído';
@@ -4038,11 +4038,11 @@
         startDate ? `Saída / retirada pretendida: ${fmtDate(startDate)}.` : 'Saída / retirada pretendida: a combinar.',
         returnDate ? `Retorno previsto: ${fmtDate(returnDate)}.` : 'Retorno previsto: a combinar.',
         '',
-        'A ideia aqui não é uma troca definitiva, mas um empréstimo temporário entre bibliotecas, com retorno combinado e acompanhamento claro no módulo interbilbiotecas do AnarBib.'
+        'A ideia aqui não é uma troca definitiva, mas um empréstimo temporário entre bibliotecas, com retorno combinado e acompanhamento claro no módulo interbibliotecas do AnarBib.'
       ];
       if (logisticsNote) lines.push('', `Observação logística: ${logisticsNote}`);
       lines.push('', 'Abraços fraternos,', ourName);
-      $('interbibLoanMailSubject').value = `${direction === 'lend_to_partner' ? 'Proposta' : 'Pedido'} de empréstimo interbilbiotecas — ${ourName} ↔ ${partnerName}`;
+      $('interbibLoanMailSubject').value = `${direction === 'lend_to_partner' ? 'Proposta' : 'Pedido'} de empréstimo interbibliotecas — ${ourName} ↔ ${partnerName}`;
       $('interbibLoanMessage').value = lines.join('\n');
       syncInterbibLoanObjectRefField();
     }
@@ -4138,7 +4138,7 @@
       populateExecutionExemplarSelect('interbibLoanPartnerExemplars', currentInterbibLoanPartnerExecutionOptions, state.direction === 'borrow_from_partner' ? state.exemplar_ids : [], 'Selecione primeiro um documento da parceira.');
       syncInterbibLoanModeUi();
       syncInterbibLoanObjectRefField();
-      setStatus('interbibLoanEditorStatus', `Empréstimo interbilbioteca ${row?.id} carregado para edição / acompanhamento.`, 'info');
+      setStatus('interbibLoanEditorStatus', `Empréstimo interbiblioteca ${row?.id} carregado para edição / acompanhamento.`, 'info');
     }
     function renderInterbibLoanSummary(rows) {
       const loanRows = getInterbibLoanRows(rows);
@@ -4146,7 +4146,7 @@
       const activeRows = loanRows.filter((row) => ['departure_confirmed','on_loan','return_scheduled'].includes(String(getInterbibLoanState(row).phase || '').trim().toLowerCase()));
       const returnedRows = loanRows.filter((row) => String(getInterbibLoanState(row).phase || '').trim().toLowerCase() === 'returned');
       renderKvGrid('interbibLoanSummary', [
-        ['Pedidos / empréstimos interbilbiotecas visíveis', loanRows.length],
+        ['Pedidos / empréstimos interbibliotecas visíveis', loanRows.length],
         ['Pedidos ainda pendentes', loanRows.filter((row) => String(row?.status || '').trim().toLowerCase() === 'pending').length],
         ['Pedidos aceitos', acceptedRows.length],
         ['Em empréstimo ou com retorno agendado', activeRows.length],
@@ -4159,7 +4159,7 @@
       const loanRows = getInterbibLoanRows(rows);
       if (!tbody) return;
       if (!loanRows.length) {
-        tbody.innerHTML = '<tr><td colspan="6">Nenhum empréstimo interbilbioteca registrado por enquanto.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6">Nenhum empréstimo interbiblioteca registrado por enquanto.</td></tr>';
         applyStoredSortForTbody('tbodyInterbibLoans');
         return;
       }
@@ -4195,11 +4195,11 @@
       renderInterbibLoanSummary(currentExchangeRequests);
       renderInterbibLoanTable(currentExchangeRequests);
       syncInterbibLoanModeUi();
-      setStatus('interbibLoanStatus', currentInterbibLoanRows.length ? `Módulo de empréstimos interbilbiotecas pronto. ${currentInterbibLoanRows.length} registro(s) visível(is).` : 'Módulo pronto. Ainda não há empréstimos interbilbiotecas registrados.', currentInterbibLoanRows.length ? 'ok' : 'info');
+      setStatus('interbibLoanStatus', currentInterbibLoanRows.length ? `Módulo de empréstimos interbibliotecas pronto. ${currentInterbibLoanRows.length} registro(s) visível(is).` : 'Módulo pronto. Ainda não há empréstimos interbibliotecas registrados.', currentInterbibLoanRows.length ? 'ok' : 'info');
     }
     async function refreshInterbibLoanPanelInteractive() {
       setButtonBusy('btnRefreshInterbibLoans', true, 'Atualizando…');
-      setStatus('interbibLoanStatus', 'Atualizando empréstimos interbilbiotecas…', 'info');
+      setStatus('interbibLoanStatus', 'Atualizando empréstimos interbibliotecas…', 'info');
       const selectedPartnerId = normalizeLibraryId($('interbibLoanPartnerSelect')?.value || '');
       const selectedRequestId = String($('interbibLoanRequestId')?.value || '').trim();
       const governanceResult = await (async () => {
@@ -4228,9 +4228,9 @@
       }
       const failed = [governanceResult, exchangeResult, loanResult].filter((result) => result.status === 'rejected');
       if (!failed.length) {
-        setStatus('interbibLoanStatus', `Empréstimos interbilbiotecas atualizados às ${fmtClock()}.`, 'ok');
+        setStatus('interbibLoanStatus', `Empréstimos interbibliotecas atualizados às ${fmtClock()}.`, 'ok');
       } else {
-        setStatus('interbibLoanStatus', `Atualização parcial dos empréstimos interbilbiotecas às ${fmtClock()}.`, 'warn');
+        setStatus('interbibLoanStatus', `Atualização parcial dos empréstimos interbibliotecas às ${fmtClock()}.`, 'warn');
       }
     }
     async function openInterbibLoanEmail() {
@@ -4242,9 +4242,9 @@
         const message = String($('interbibLoanMessage')?.value || '').trim();
         if (!subject || !message) throw new Error('Gera ou escreve antes o assunto e a mensagem.');
         window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
-        setStatus('interbibLoanEditorStatus', 'Cliente de e-mail aberto para o empréstimo interbilbioteca.', 'ok');
+        setStatus('interbibLoanEditorStatus', 'Cliente de e-mail aberto para o empréstimo interbiblioteca.', 'ok');
       } catch (error) {
-        setStatus('interbibLoanEditorStatus', 'Não consegui abrir o e-mail do empréstimo interbilbioteca: ' + (error.message || String(error)), 'bad');
+        setStatus('interbibLoanEditorStatus', 'Não consegui abrir o e-mail do empréstimo interbiblioteca: ' + (error.message || String(error)), 'bad');
       }
     }
     async function saveInterbibLoanRequest() {
@@ -4259,8 +4259,8 @@
         const objectRef = String($('interbibLoanObjectRef')?.value || '').trim();
         const message = String($('interbibLoanMessage')?.value || '').trim();
         if (!objectRef) throw new Error('Faltam dados suficientes para montar a referência interna.');
-        if (!message) throw new Error('Escreve ou gera a mensagem do pedido de empréstimo interbilbioteca.');
-        setStatus('interbibLoanEditorStatus', requestId ? 'Salvando acompanhamento do empréstimo interbilbioteca…' : 'Registrando pedido de empréstimo interbilbioteca…', 'info');
+        if (!message) throw new Error('Escreve ou gera a mensagem do pedido de empréstimo interbiblioteca.');
+        setStatus('interbibLoanEditorStatus', requestId ? 'Salvando acompanhamento do empréstimo interbiblioteca…' : 'Registrando pedido de empréstimo interbiblioteca…', 'info');
         if (requestId) {
           const { error } = await supabase
             .from('document_permission_requests')
@@ -4271,7 +4271,7 @@
             })
             .eq('id', requestId);
           if (error) throw error;
-          setStatus('interbibLoanEditorStatus', 'Acompanhamento do empréstimo interbilbioteca salvo.', 'ok');
+          setStatus('interbibLoanEditorStatus', 'Acompanhamento do empréstimo interbiblioteca salvo.', 'ok');
         } else {
           const { data, error } = await supabase.rpc('create_document_permission_request', {
             p_requester_library_id: currentLibraryRow?.id,
@@ -4285,36 +4285,36 @@
           });
           if (error) throw error;
           const notifyResult = await tryNotifyDocumentPermissionRequest(data?.id, 'document_permission_request_created');
-          setStatus('interbibLoanEditorStatus', notifyResult.ok ? 'Pedido de empréstimo interbilbioteca registrado e e-mail automático disparado.' : 'Pedido de empréstimo interbilbioteca registrado. Se necessário, usa também o botão de e-mail.', notifyResult.ok ? 'ok' : 'warn');
+          setStatus('interbibLoanEditorStatus', notifyResult.ok ? 'Pedido de empréstimo interbiblioteca registrado e e-mail automático disparado.' : 'Pedido de empréstimo interbiblioteca registrado. Se necessário, usa também o botão de e-mail.', notifyResult.ok ? 'ok' : 'warn');
         }
         await loadGovernancePanel();
         await loadExchangePanel();
         await loadInterbibLoanPanel();
       } catch (error) {
-        setStatus('interbibLoanEditorStatus', 'Não consegui salvar o empréstimo interbilbioteca: ' + (error.message || String(error)), 'bad');
+        setStatus('interbibLoanEditorStatus', 'Não consegui salvar o empréstimo interbiblioteca: ' + (error.message || String(error)), 'bad');
       }
     }
     async function decideInterbibLoanRequest(requestId, decision) {
       try {
-        const notePrompt = decision === 'accepted' ? 'Observação opcional para a aceitação do empréstimo interbilbioteca:' : 'Observação opcional para a recusa do empréstimo interbilbioteca:';
+        const notePrompt = decision === 'accepted' ? 'Observação opcional para a aceitação do empréstimo interbiblioteca:' : 'Observação opcional para a recusa do empréstimo interbiblioteca:';
         const note = window.prompt(notePrompt, '') ?? '';
-        setStatus('interbibLoanEditorStatus', decision === 'accepted' ? 'Registrando aceitação do empréstimo interbilbioteca…' : 'Registrando recusa do empréstimo interbilbioteca…', 'info');
+        setStatus('interbibLoanEditorStatus', decision === 'accepted' ? 'Registrando aceitação do empréstimo interbiblioteca…' : 'Registrando recusa do empréstimo interbiblioteca…', 'info');
         const { data, error } = await supabase.rpc('decide_document_permission_request', { p_request_id: requestId, p_decision: decision, p_response_note: String(note || '').trim() || null });
         if (error) throw error;
         const eventType = decision === 'accepted' ? 'document_permission_request_accepted' : 'document_permission_request_refused';
         const notifyResult = await tryNotifyDocumentPermissionRequest(data?.id || requestId, eventType);
-        setStatus('interbibLoanEditorStatus', notifyResult.ok ? (decision === 'accepted' ? 'Pedido de empréstimo interbilbioteca aceito e e-mail automático disparado.' : 'Pedido de empréstimo interbilbioteca recusado e e-mail automático disparado.') : (decision === 'accepted' ? 'Pedido de empréstimo interbilbioteca aceito.' : 'Pedido de empréstimo interbilbioteca recusado.'), notifyResult.ok ? 'ok' : 'warn');
+        setStatus('interbibLoanEditorStatus', notifyResult.ok ? (decision === 'accepted' ? 'Pedido de empréstimo interbiblioteca aceito e e-mail automático disparado.' : 'Pedido de empréstimo interbiblioteca recusado e e-mail automático disparado.') : (decision === 'accepted' ? 'Pedido de empréstimo interbiblioteca aceito.' : 'Pedido de empréstimo interbiblioteca recusado.'), notifyResult.ok ? 'ok' : 'warn');
         await loadGovernancePanel();
         await loadExchangePanel();
         await loadInterbibLoanPanel();
       } catch (error) {
-        setStatus('interbibLoanEditorStatus', 'Não consegui registrar a decisão do empréstimo interbilbioteca: ' + (error.message || String(error)), 'bad');
+        setStatus('interbibLoanEditorStatus', 'Não consegui registrar a decisão do empréstimo interbiblioteca: ' + (error.message || String(error)), 'bad');
       }
     }
     function openInterbibLoanFromRequest(requestId) {
       const row = currentInterbibLoanRows.find((item) => String(item?.id || '') === String(requestId || '')) || currentExchangeRequests.find((item) => String(item?.id || '') === String(requestId || '')) || null;
       if (!row) {
-        setStatus('interbibLoanEditorStatus', 'Não encontrei este empréstimo interbilbioteca.', 'warn');
+        setStatus('interbibLoanEditorStatus', 'Não encontrei este empréstimo interbiblioteca.', 'warn');
         return;
       }
       activateTab('prestimos-interbib');
