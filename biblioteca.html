@@ -4135,7 +4135,9 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
             updated_at: firstFilledValue(header?.updated_at),
             created_at: firstFilledValue(header?.created_at),
             item_status: firstFilledValue(item?.item_status),
-            item_line_no: item?.line_no != null ? Number(item.line_no) : null
+            item_line_no: item?.line_no != null ? Number(item.line_no) : null,
+            item_sub_id: firstFilledValue(item?.sub_id),
+            items_count: Number(header?.items_count || 0) || 0
           };
         })
         .sort((a, b) => {
@@ -4152,7 +4154,7 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
       const openCount = currentInterlibraryLoans.filter((row) => !['devolvido', 'cancelado'].includes(String(row?.status || '').trim().toLowerCase())).length;
       const overdueCount = currentInterlibraryLoans.filter((row) => String(row?.status || '').trim().toLowerCase() === 'atrasado').length;
       renderKvGrid('interlibraryLoansSummary', [
-        ['Registros V2 neste bloco', currentInterlibraryLoans.length],
+        ['Registros neste bloco', currentInterlibraryLoans.length],
         ['Biblioteca ativa empresta em', lentCount],
         ['Biblioteca ativa recebe em', borrowedCount],
         ['Em aberto', openCount],
@@ -4165,13 +4167,19 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
       const tbody = $('tbodyInterlibraryLoans');
       if (!tbody) return;
       if (!currentInterlibraryLoans.length) {
-        tbody.innerHTML = '<tr><td colspan="7">Nenhum empréstimo interbibliotecas registrado na V2 backend.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7">Nenhum empréstimo interbibliotecas registrado no momento.</td></tr>';
         applyStoredSortForTbody('tbodyInterlibraryLoans');
         return;
       }
       tbody.innerHTML = currentInterlibraryLoans.map((row) => {
         const librariesText = `${getInterlibraryLoanLibraryLabel(row?.lender_library_id)} → ${getInterlibraryLoanLibraryLabel(row?.borrower_library_id)}`;
         const docText = [firstFilledValue(row?.lender_document_title, row?.lender_document_bib_ref, '—'), row?.lender_exemplar_tombo ? `Tombo ${row.lender_exemplar_tombo}` : '', row?.coordination_contact_name ? `Contato: ${row.coordination_contact_name}` : ''].filter(Boolean).join(' · ');
+        const cancellable = canInterlibraryLoanBeCancelled(row);
+        const multiItem = Number(row?.items_count || 0) > 1;
+        const actionLabel = cancellable ? 'Cancelar' : (multiItem ? 'Vários itens' : 'Sem ação');
+        const actionTitle = cancellable
+          ? 'Cancelar antes da saída.'
+          : (multiItem ? 'Este formulário ainda não cancela empréstimos com vários itens.' : 'Este empréstimo já saiu ou já foi encerrado.');
         return `<tr>
           <td>${esc(getInterlibraryLoanLocalRole(row))}</td>
           <td>${esc(librariesText)}</td>
@@ -4179,10 +4187,73 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
           <td>${esc(fmtDate(row?.start_date))}</td>
           <td>${esc(fmtDate(row?.due_date))}</td>
           <td><span class="pill ${esc(interlibraryLoanStatusTone(row?.status))}">${esc(friendlyInterlibraryLoanStatus(row?.status))}</span></td>
-          <td><div class="editor-actions"><button class="btn mini soft" type="button" data-interloan-edit="${esc(String(row?.id || ''))}">Abrir</button><button class="btn mini danger" type="button" disabled title="Escrita V2 ainda não conectada neste patch">Excluir</button></div></td>
+          <td><div class="editor-actions"><button class="btn mini soft" type="button" data-interloan-edit="${esc(String(row?.id || ''))}">Abrir</button><button class="btn mini danger" type="button" ${cancellable ? `data-interloan-delete="${esc(String(row?.id || ''))}"` : 'disabled'} title="${esc(actionTitle)}">${esc(actionLabel)}</button></div></td>
         </tr>`;
       }).join('');
       applyStoredSortForTbody('tbodyInterlibraryLoans');
+    }
+
+    function setInterlibraryLoanStructuralFieldsDisabled(disabled) {
+      [
+        'interloanLenderLibrarySelect',
+        'interloanBorrowerLibrarySelect',
+        'interloanLenderDocumentSelect',
+        'interloanLenderExemplarSelect',
+        'interloanCoordinationContactName',
+        'interloanCoordinationContactEmail'
+      ].forEach((id) => {
+        const el = $(id);
+        if (el) el.disabled = !!disabled;
+      });
+    }
+
+    function getInterlibraryLoanCurrentRow(loanId = null) {
+      const id = String(loanId || $('interloanId')?.value || '').trim();
+      if (!id) return null;
+      return currentInterlibraryLoans.find((row) => String(row?.id || '') === id) || null;
+    }
+
+    function getInterlibraryLoanItemRowsByLoanId(loanId) {
+      const id = String(loanId || '').trim();
+      if (!id) return [];
+      return asArray(currentInterlibraryLoanItemRowsV2)
+        .filter((row) => String(row?.interlibrary_loan_id || '') === id)
+        .sort((a, b) => Number(a?.line_no || 0) - Number(b?.line_no || 0));
+    }
+
+    function isInterlibraryLoanClosedStatus(value) {
+      const raw = String(value || '').trim().toLowerCase();
+      return raw === 'devolvido' || raw === 'cancelado';
+    }
+
+    function canInterlibraryLoanBeCancelled(row) {
+      const raw = String(row?.status || '').trim().toLowerCase();
+      const singleItem = Number(row?.items_count || 0) <= 1;
+      return singleItem && (raw === 'preparacao' || raw === 'aguardando_saida');
+    }
+
+    function updateInterlibraryLoanEditorButtons(row = null) {
+      const currentRow = row || getInterlibraryLoanCurrentRow();
+      const saveBtn = $('btnSaveInterlibraryLoan');
+      const deleteBtn = $('btnDeleteInterlibraryLoan');
+      if (!saveBtn || !deleteBtn) return;
+      if (!currentRow) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Salvar empréstimo';
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = 'Cancelar empréstimo';
+        deleteBtn.title = 'Abra um empréstimo primeiro.';
+        return;
+      }
+      const closed = isInterlibraryLoanClosedStatus(currentRow?.status);
+      const multiItem = Number(currentRow?.items_count || 0) > 1;
+      saveBtn.disabled = closed || multiItem;
+      saveBtn.textContent = 'Aplicar ação';
+      deleteBtn.disabled = !canInterlibraryLoanBeCancelled(currentRow);
+      deleteBtn.textContent = 'Cancelar empréstimo';
+      deleteBtn.title = deleteBtn.disabled
+        ? (multiItem ? 'Este formulário ainda não cancela empréstimos com vários itens.' : 'Só é possível cancelar antes da saída.')
+        : 'Cancelar antes da saída.';
     }
 
     function resetInterlibraryLoanForm() {
@@ -4198,9 +4269,9 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
       currentInterlibraryLoanExemplarOptions = [];
       populateInterlibraryLoanDocumentSelect([], 'Selecione');
       populateInterlibraryLoanExemplarSelect([], 'Selecione');
-      $('btnSaveInterlibraryLoan').disabled = true;
-      $('btnDeleteInterlibraryLoan').disabled = true;
-      setStatus('interlibraryLoanEditorStatus', 'Leitura V2 backend já ligada. Escrita V2 será conectada no próximo patch.', 'info');
+      setInterlibraryLoanStructuralFieldsDisabled(false);
+      updateInterlibraryLoanEditorButtons(null);
+      setStatus('interlibraryLoanEditorStatus', 'Preenche os campos para registrar um empréstimo interbibliotecas.', 'info');
     }
 
     async function loadInterlibraryLoanIntoForm(row) {
@@ -4222,9 +4293,16 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
         preferredBibRef: String(row?.lender_document_bib_ref || '').trim(),
         preferredExemplarId: String(row?.lender_exemplar_id || '').trim()
       });
-      $('btnSaveInterlibraryLoan').disabled = true;
-      $('btnDeleteInterlibraryLoan').disabled = true;
-      setStatus('interlibraryLoanEditorStatus', row?.id ? `Empréstimo ${row.id} carregado em leitura. Escrita V2 será conectada no próximo patch.` : '', row?.id ? 'info' : '');
+      setInterlibraryLoanStructuralFieldsDisabled(true);
+      updateInterlibraryLoanEditorButtons(row);
+      const multiItem = Number(row?.items_count || 0) > 1;
+      const closed = isInterlibraryLoanClosedStatus(row?.status);
+      const message = multiItem
+        ? `Empréstimo ${row.id} carregado. Este formulário ainda acompanha apenas empréstimos com um exemplar.`
+        : (closed
+          ? `Empréstimo ${row.id} carregado. Este registro já está encerrado.`
+          : `Empréstimo ${row.id} carregado. Aqui você pode avançar a etapa ou cancelar antes da saída.`);
+      setStatus('interlibraryLoanEditorStatus', row?.id ? message : '', row?.id ? 'info' : '');
     }
 
     function collectInterlibraryLoanPayload() {
@@ -4251,9 +4329,8 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
       const exemplarRow = currentInterlibraryLoanExemplarOptions.find((row) => String(row?.id || '') === lenderExemplarId) || null;
       if (!documentRow) throw new Error('O documento escolhido já não está disponível na lista atual da biblioteca emprestadora.');
       if (!exemplarRow) throw new Error('O exemplar escolhido já não está disponível na lista atual do documento.');
-      const nowIso = new Date().toISOString();
       return {
-        id: id || buildInterlibraryLoanId(),
+        id,
         lender_library_id: lenderLibraryId,
         borrower_library_id: borrowerLibraryId,
         lender_library_name: getInterlibraryLoanLibraryLabel(lenderLibraryId),
@@ -4268,38 +4345,250 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
         start_date: startDate,
         due_date: dueDate,
         status,
-        logistics_note: logisticsNote,
-        updated_at: nowIso,
-        updated_by: session?.user?.id || null,
-        created_at: id ? firstFilledValue(currentInterlibraryLoans.find((row) => String(row?.id || '') === id)?.created_at, nowIso) : nowIso,
-        source: 'biblioteca_html_v1'
+        logistics_note: logisticsNote
       };
     }
 
-    async function persistInterlibraryLoansConfig(nextRows) {
-      const libraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
-      if (!libraryId) throw new Error('Biblioteca ativa não identificada.');
-      const nextConfig = currentGovernance && typeof currentGovernance === 'object' ? JSON.parse(JSON.stringify(currentGovernance)) : {};
-      nextConfig.interlibrary_loans_v1 = asArray(nextRows).map((row) => ({ ...row }));
-      const { error } = await supabase
-        .from('library_document_governance')
-        .upsert({
-          library_id: libraryId,
-          config: nextConfig,
-          updated_at: new Date().toISOString(),
-          updated_by: session?.user?.id || null
-        }, { onConflict: 'library_id' });
+    function unwrapRpcRow(data) {
+      if (Array.isArray(data)) return data[0] || null;
+      return data || null;
+    }
+
+    async function callInterlibraryLoanRpc(rpcName, args) {
+      const { data, error } = await supabase.rpc(rpcName, args);
       if (error) throw error;
-      currentGovernance = nextConfig;
-      currentGovernanceRow = { ...(currentGovernanceRow || {}), library_id: libraryId, config: nextConfig, updated_at: new Date().toISOString(), updated_by: session?.user?.id || null };
+      return data;
+    }
+
+    function getInterlibraryLoanSingleLineNo(row) {
+      const itemRows = getInterlibraryLoanItemRowsByLoanId(row?.id);
+      if (itemRows.length !== 1) {
+        throw new Error('Este formulário ainda acompanha apenas empréstimos com um único exemplar.');
+      }
+      const lineNo = Number(firstFilledValue(row?.item_line_no, itemRows[0]?.line_no, 0)) || 0;
+      if (!lineNo) throw new Error('Não consegui identificar a linha deste empréstimo.');
+      return lineNo;
+    }
+
+    function hasInterlibraryLoanImmutableChanges(currentRow, payload) {
+      return [
+        String(normalizeLibraryId(currentRow?.lender_library_id) || '') !== String(normalizeLibraryId(payload?.lender_library_id) || ''),
+        String(normalizeLibraryId(currentRow?.borrower_library_id) || '') !== String(normalizeLibraryId(payload?.borrower_library_id) || ''),
+        String(currentRow?.lender_document_bib_ref || '') !== String(payload?.lender_document_bib_ref || ''),
+        String(currentRow?.lender_exemplar_id || '') !== String(payload?.lender_exemplar_id || ''),
+        String(firstFilledValue(currentRow?.coordination_contact_name) || '') !== String(firstFilledValue(payload?.coordination_contact_name) || ''),
+        String(firstFilledValue(currentRow?.coordination_contact_email) || '') !== String(firstFilledValue(payload?.coordination_contact_email) || '')
+      ].some(Boolean);
+    }
+
+    async function createInterlibraryLoanViaV2(payload) {
+      const targetStatus = String(payload?.status || 'preparacao').trim().toLowerCase();
+      const todayIso = new Date().toISOString().slice(0, 10);
+      if (targetStatus === 'atrasado' && String(payload?.due_date || '') >= todayIso) {
+        throw new Error('Para registrar como atrasado, usa uma data de retorno já passada.');
+      }
+      const createdData = await callInterlibraryLoanRpc('fn_v2_create_emprestimo_interbibliotecas', {
+        p_payload: {
+          lender_library_id: payload.lender_library_id,
+          borrower_library_id: payload.borrower_library_id,
+          status_global: 'preparacao',
+          start_date: payload.start_date,
+          due_date: payload.due_date,
+          coordination_contact_name: payload.coordination_contact_name,
+          coordination_contact_email: payload.coordination_contact_email,
+          notes: payload.logistics_note
+        }
+      });
+      const createdRow = unwrapRpcRow(createdData);
+      const loanId = Number(createdRow?.id || 0);
+      if (!loanId) throw new Error('Não consegui confirmar a criação do empréstimo interbibliotecas.');
+      await callInterlibraryLoanRpc('fn_v2_add_emprestimo_interbibliotecas_itens', {
+        p_loan_id: loanId,
+        p_item_ids: [Number(payload.lender_exemplar_id)],
+        p_due_date: payload.due_date,
+        p_notes: payload.logistics_note
+      });
+
+      if (targetStatus === 'cancelado') {
+        await callInterlibraryLoanRpc('fn_v2_cancel_emprestimo_interbibliotecas', {
+          p_loan_id: loanId,
+          p_note: payload.logistics_note
+        });
+        return { loanId, finalHint: 'cancelado' };
+      }
+
+      if (['emprestado', 'em_devolucao', 'devolvido', 'atrasado'].includes(targetStatus)) {
+        await callInterlibraryLoanRpc('fn_v2_dispatch_emprestimo_interbibliotecas', {
+          p_loan_id: loanId,
+          p_start_date: payload.start_date,
+          p_due_date: payload.due_date,
+          p_note: payload.logistics_note
+        });
+      }
+
+      if (targetStatus === 'em_devolucao' || targetStatus === 'devolvido') {
+        await callInterlibraryLoanRpc('fn_v2_start_devolucao_emprestimo_interbibliotecas', {
+          p_loan_id: loanId,
+          p_note: payload.logistics_note
+        });
+      }
+
+      if (targetStatus === 'devolvido') {
+        await callInterlibraryLoanRpc('fn_v2_return_emprestimo_interbibliotecas_linhas', {
+          p_loan_id: loanId,
+          p_line_nos: [1],
+          p_condition_back: null,
+          p_note: payload.logistics_note
+        });
+      }
+
+      return {
+        loanId,
+        finalHint: targetStatus === 'preparacao' ? 'aguardando_saida' : targetStatus
+      };
+    }
+
+    async function updateInterlibraryLoanViaV2(currentRow, payload) {
+      if (!currentRow?.id) throw new Error('Nenhum empréstimo selecionado.');
+      if (hasInterlibraryLoanImmutableChanges(currentRow, payload)) {
+        throw new Error('Depois da criação, bibliotecas, documento, exemplar e contato ficam fixados neste formulário. Para mudar isso, cria um novo empréstimo.');
+      }
+      if (Number(currentRow?.items_count || 0) > 1) {
+        throw new Error('Este formulário ainda não acompanha empréstimos com vários exemplares.');
+      }
+      const currentStatus = String(currentRow?.status || '').trim().toLowerCase();
+      const targetStatus = String(payload?.status || currentStatus || 'preparacao').trim().toLowerCase();
+      const loanId = Number(currentRow.id);
+      const lineNo = getInterlibraryLoanSingleLineNo(currentRow);
+
+      if (isInterlibraryLoanClosedStatus(currentStatus)) {
+        throw new Error('Este empréstimo já está encerrado.');
+      }
+      if (targetStatus === currentStatus) {
+        throw new Error('Escolhe uma etapa diferente para avançar este empréstimo.');
+      }
+      if (targetStatus === 'preparacao' || targetStatus === 'aguardando_saida') {
+        throw new Error('Este patch não reabre etapas anteriores. Use cancelar antes da saída ou avance para a próxima etapa.');
+      }
+
+      if (currentStatus === 'preparacao' || currentStatus === 'aguardando_saida') {
+        if (targetStatus === 'cancelado') {
+          await callInterlibraryLoanRpc('fn_v2_cancel_emprestimo_interbibliotecas', {
+            p_loan_id: loanId,
+            p_note: payload.logistics_note
+          });
+          return { loanId, finalHint: 'cancelado' };
+        }
+        if (!['emprestado', 'em_devolucao', 'devolvido', 'atrasado'].includes(targetStatus)) {
+          throw new Error('Antes da saída, este formulário só consegue cancelar ou registrar a saída.');
+        }
+        const todayIso = new Date().toISOString().slice(0, 10);
+        if (targetStatus === 'atrasado' && String(payload?.due_date || '') >= todayIso) {
+          throw new Error('Para marcar como atrasado, usa uma data de retorno já passada.');
+        }
+        await callInterlibraryLoanRpc('fn_v2_dispatch_emprestimo_interbibliotecas', {
+          p_loan_id: loanId,
+          p_start_date: payload.start_date,
+          p_due_date: payload.due_date,
+          p_note: payload.logistics_note
+        });
+        if (targetStatus === 'em_devolucao' || targetStatus === 'devolvido') {
+          await callInterlibraryLoanRpc('fn_v2_start_devolucao_emprestimo_interbibliotecas', {
+            p_loan_id: loanId,
+            p_note: payload.logistics_note
+          });
+        }
+        if (targetStatus === 'devolvido') {
+          await callInterlibraryLoanRpc('fn_v2_return_emprestimo_interbibliotecas_linhas', {
+            p_loan_id: loanId,
+            p_line_nos: [lineNo],
+            p_condition_back: null,
+            p_note: payload.logistics_note
+          });
+        }
+        return { loanId, finalHint: targetStatus };
+      }
+
+      if (currentStatus === 'emprestado' || currentStatus === 'atrasado') {
+        if (targetStatus === 'em_devolucao') {
+          await callInterlibraryLoanRpc('fn_v2_start_devolucao_emprestimo_interbibliotecas', {
+            p_loan_id: loanId,
+            p_note: payload.logistics_note
+          });
+          return { loanId, finalHint: 'em_devolucao' };
+        }
+        if (targetStatus === 'devolvido') {
+          await callInterlibraryLoanRpc('fn_v2_start_devolucao_emprestimo_interbibliotecas', {
+            p_loan_id: loanId,
+            p_note: payload.logistics_note
+          });
+          await callInterlibraryLoanRpc('fn_v2_return_emprestimo_interbibliotecas_linhas', {
+            p_loan_id: loanId,
+            p_line_nos: [lineNo],
+            p_condition_back: null,
+            p_note: payload.logistics_note
+          });
+          return { loanId, finalHint: 'devolvido' };
+        }
+        throw new Error('Depois da saída, este formulário só acompanha a devolução e o fechamento.');
+      }
+
+      if (currentStatus === 'em_devolucao') {
+        if (targetStatus === 'devolvido') {
+          await callInterlibraryLoanRpc('fn_v2_return_emprestimo_interbibliotecas_linhas', {
+            p_loan_id: loanId,
+            p_line_nos: [lineNo],
+            p_condition_back: null,
+            p_note: payload.logistics_note
+          });
+          return { loanId, finalHint: 'devolvido' };
+        }
+        throw new Error('Quando a devolução já começou, falta apenas registrar a devolução final.');
+      }
+
+      throw new Error('Não reconheci uma etapa compatível para este empréstimo.');
     }
 
     async function saveInterlibraryLoan() {
-      setStatus('interlibraryLoanEditorStatus', 'Leitura V2 backend já ligada. Escrita V2 será conectada no próximo patch.', 'warn');
+      try {
+        setStatus('interlibraryLoanEditorStatus', 'Salvando empréstimo interbibliotecas…', 'info');
+        const payload = collectInterlibraryLoanPayload();
+        const currentRow = getInterlibraryLoanCurrentRow(payload.id);
+        const result = currentRow
+          ? await updateInterlibraryLoanViaV2(currentRow, payload)
+          : await createInterlibraryLoanViaV2(payload);
+        await loadInterlibraryLoansPanel();
+        const fresh = getInterlibraryLoanCurrentRow(String(result?.loanId || payload.id || ''));
+        if (fresh) await loadInterlibraryLoanIntoForm(fresh);
+        const hint = String(result?.finalHint || fresh?.status || payload?.status || '').trim().toLowerCase();
+        const message = hint === 'aguardando_saida'
+          ? 'Empréstimo interbibliotecas salvo. Com exemplar separado, ele fica em aguardando saída.'
+          : `Empréstimo interbibliotecas salvo. Situação atual: ${friendlyInterlibraryLoanStatus(hint)}.`;
+        setStatus('interlibraryLoanEditorStatus', message, 'ok');
+      } catch (error) {
+        setStatus('interlibraryLoanEditorStatus', 'Não consegui salvar o empréstimo interbibliotecas: ' + (error.message || String(error)), 'bad');
+      }
     }
 
     async function deleteInterlibraryLoan(loanId = null) {
-      setStatus('interlibraryLoanEditorStatus', 'Leitura V2 backend já ligada. Exclusão V2 será conectada no próximo patch.', 'warn');
+      try {
+        const row = getInterlibraryLoanCurrentRow(loanId);
+        if (!row?.id) throw new Error('Nenhum empréstimo interbibliotecas selecionado.');
+        if (!canInterlibraryLoanBeCancelled(row)) {
+          throw new Error('Só é possível cancelar antes da saída.');
+        }
+        if (!window.confirm('Cancelar este empréstimo interbibliotecas? Ele continuará visível no histórico.')) return;
+        setStatus('interlibraryLoanEditorStatus', 'Cancelando empréstimo interbibliotecas…', 'info');
+        await callInterlibraryLoanRpc('fn_v2_cancel_emprestimo_interbibliotecas', {
+          p_loan_id: Number(row.id),
+          p_note: String($('interloanLogisticsNote')?.value || row?.logistics_note || '').trim() || null
+        });
+        resetInterlibraryLoanForm();
+        await loadInterlibraryLoansPanel();
+        setStatus('interlibraryLoanEditorStatus', 'Empréstimo interbibliotecas cancelado.', 'ok');
+      } catch (error) {
+        setStatus('interlibraryLoanEditorStatus', 'Não consegui cancelar o empréstimo interbibliotecas: ' + (error.message || String(error)), 'bad');
+      }
     }
 
     async function loadInterlibraryLoansPanel() {
@@ -5426,8 +5715,7 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
     $('btnResetInterlibraryLoan')?.addEventListener('click', resetInterlibraryLoanForm);
     $('btnSaveInterlibraryLoan')?.addEventListener('click', saveInterlibraryLoan);
     $('btnDeleteInterlibraryLoan')?.addEventListener('click', () => deleteInterlibraryLoan());
-    if ($('btnSaveInterlibraryLoan')) $('btnSaveInterlibraryLoan').disabled = true;
-    if ($('btnDeleteInterlibraryLoan')) $('btnDeleteInterlibraryLoan').disabled = true;
+    updateInterlibraryLoanEditorButtons();
     $('interloanLenderLibrarySelect')?.addEventListener('change', async () => {
       const lenderId = String($('interloanLenderLibrarySelect')?.value || '');
       if (String($('interloanBorrowerLibrarySelect')?.value || '') === lenderId) {
