@@ -4320,7 +4320,7 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
         } else {
           resetInterlibraryLoanForm();
         }
-        setStatus('interlibraryLoansStatus', currentInterlibraryLoans.length ? `Módulo de empréstimos interbibliotecas pronto na V2 backend. Última atualização: ${fmtTime(new Date())}.` : `Nenhum empréstimo interbibliotecas registrado na V2 backend. Última atualização: ${fmtTime(new Date())}.`, currentInterlibraryLoans.length ? 'ok' : 'info');
+        setStatus('interlibraryLoansStatus', currentInterlibraryLoans.length ? `Empréstimos interbibliotecas atualizados. Última atualização: ${fmtTime(new Date())}.` : `Nenhum empréstimo interbibliotecas registrado no momento. Última atualização: ${fmtTime(new Date())}.`, currentInterlibraryLoans.length ? 'ok' : 'info');
       } catch (error) {
         currentInterlibraryLoans = [];
         currentInterlibraryLoanRowsV2 = [];
