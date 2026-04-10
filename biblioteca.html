@@ -176,6 +176,10 @@
           Trocas interbibliotecas
           <span class="hint">Propostas de troca entre bibliotecas do AnarBib, com mensagem e acompanhamento</span>
         </button>
+        <button class="tab-btn" type="button" data-tab="emprestimos-interbib" role="tab" aria-selected="false" aria-controls="tab-emprestimos-interbib">
+          Empréstimos interbibliotecas
+          <span class="hint">Preparação e acompanhamento de empréstimos temporários entre bibliotecas, separados das trocas</span>
+        </button>
         <button class="tab-btn" type="button" data-tab="relatorios" role="tab" aria-selected="false" aria-controls="tab-relatorios">
           Relatórios e resumos
           <span class="hint">Contas-rendidas por fluxo, catálogo completo e envio semanal opcional da biblioteca</span>
@@ -618,6 +622,89 @@
               </div>
             </div>
           </div>
+
+        </section>
+
+        <section id="tab-emprestimos-interbib" class="tab-panel" data-tab="emprestimos-interbib" role="tabpanel">
+          <div class="stack">
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h2>Empréstimos interbibliotecas</h2>
+                  <div class="mini">Registro operacional local para preparar e acompanhar empréstimos temporários entre bibliotecas, separado das trocas e dos pedidos.</div>
+                </div>
+                <div class="actions"><button class="btn mini" id="btnRefreshInterlibraryLoans" type="button">Atualizar</button></div>
+              </div>
+              <div class="status" id="interlibraryLoansStatus"></div>
+            </div>
+            <div class="row">
+              <div class="card">
+                <div class="section-head"><div><h3>Resumo rápido</h3><div class="mini">Quadro simples para ver o volume em aberto, o papel da biblioteca ativa e o estado atual do seguimento.</div></div></div>
+                <div id="interlibraryLoansSummary" class="kv-grid"><div class="empty">Carregando…</div></div>
+              </div>
+              <div class="card">
+                <div class="section-head"><div><h3>Separação arquitetural</h3><div class="mini">Este bloco não substitui pedidos nem trocas: ele acompanha apenas os empréstimos temporários entre bibliotecas.</div></div></div>
+                <div class="muted-box">
+                  <div class="inline-note">Use “Trocas interbibliotecas” para permutas de exemplares. Use este bloco apenas para saídas temporárias com devolução prevista, mantendo o acompanhamento separado e legível.</div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h3>Preparar ou atualizar um empréstimo temporário</h3>
+                  <div class="mini">Escolhe a biblioteca que empresta, a biblioteca que recebe, o documento e o exemplar efetivamente emprestado, depois registra datas, contato e logística.</div>
+                </div>
+                <div class="editor-actions">
+                  <button class="btn mini soft" id="btnNewInterlibraryLoan" type="button">Novo empréstimo</button>
+                  <button class="btn mini" id="btnResetInterlibraryLoan" type="button">Limpar</button>
+                </div>
+              </div>
+              <div class="editor-shell">
+                <input id="interloanId" type="hidden">
+                <div class="editor-grid-3">
+                  <div class="field"><label for="interloanLenderLibrarySelect">Biblioteca emprestadora</label><select id="interloanLenderLibrarySelect" class="select"><option value="">Selecione</option></select></div>
+                  <div class="field"><label for="interloanBorrowerLibrarySelect">Biblioteca tomadora</label><select id="interloanBorrowerLibrarySelect" class="select"><option value="">Selecione</option></select></div>
+                  <div class="field"><label for="interloanStatusField">Status do empréstimo</label><select id="interloanStatusField" class="select">
+                    <option value="preparacao">Em preparação</option>
+                    <option value="aguardando_saida">Aguardando saída</option>
+                    <option value="emprestado">Emprestado</option>
+                    <option value="em_devolucao">Em devolução</option>
+                    <option value="devolvido">Devolvido</option>
+                    <option value="cancelado">Cancelado</option>
+                    <option value="atrasado">Atrasado</option>
+                  </select></div>
+                </div>
+                <div class="editor-grid">
+                  <div class="field"><label for="interloanLenderDocumentSelect">Documento da biblioteca emprestadora</label><select id="interloanLenderDocumentSelect" class="select"><option value="">Selecione</option></select></div>
+                  <div class="field"><label for="interloanLenderExemplarSelect">Exemplar / tombo efetivamente emprestado</label><select id="interloanLenderExemplarSelect" class="select"><option value="">Selecione</option></select></div>
+                </div>
+                <div class="editor-grid-3">
+                  <div class="field"><label for="interloanCoordinationContactName">Contato de coordenação</label><input id="interloanCoordinationContactName" class="input" type="text" placeholder="Nome da pessoa de referência"></div>
+                  <div class="field"><label for="interloanCoordinationContactEmail">E-mail de coordenação</label><input id="interloanCoordinationContactEmail" class="input" type="email" placeholder="contato@biblioteca.org"></div>
+                  <div class="field"><label for="interloanStartDate">Data de saída</label><input id="interloanStartDate" class="input" type="date"></div>
+                </div>
+                <div class="editor-grid">
+                  <div class="field"><label for="interloanDueDate">Data prevista de retorno</label><input id="interloanDueDate" class="input" type="date"></div>
+                  <div class="field" style="grid-column:1 / -1"><label for="interloanLogisticsNote">Notas logísticas</label><textarea id="interloanLogisticsNote" class="textarea" placeholder="Ex.: retirada no plantão de sábado, embalagem reforçada, devolução combinada por mão militante, contato a confirmar no dia anterior."></textarea></div>
+                </div>
+                <div class="editor-actions">
+                  <button class="btn mini primary" id="btnSaveInterlibraryLoan" type="button">Salvar empréstimo</button>
+                  <button class="btn mini danger" id="btnDeleteInterlibraryLoan" type="button" disabled>Excluir empréstimo</button>
+                </div>
+                <div class="status" id="interlibraryLoanEditorStatus"></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Quadro de seguimento</h3><div class="mini">Tabela de acompanhamento local dos empréstimos temporários entre bibliotecas já registrados nesta página.</div></div></div>
+              <div class="tableWrap">
+                <table>
+                  <thead><tr><th>Papel local</th><th>Bibliotecas</th><th>Documento / exemplar</th><th>Saída</th><th>Retorno previsto</th><th>Status</th><th>Ações</th></tr></thead>
+                  <tbody id="tbodyInterlibraryLoans"><tr><td colspan="7">Carregando…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section id="tab-relatorios" class="tab-panel" data-tab="relatorios" role="tabpanel">
@@ -872,6 +959,9 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
     let currentExchangeFollowupRows = [];
     let currentExchangeLocalExecutionOptions = [];
     let currentExchangePartnerExecutionOptions = [];
+    let currentInterlibraryLoans = [];
+    let currentInterlibraryLoanDocumentOptions = [];
+    let currentInterlibraryLoanExemplarOptions = [];
     let currentRegulationDocs = [];
     let currentPolicySets = [];
     let currentPolicyRules = [];
@@ -893,6 +983,11 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
       if (!value) return '—';
       const d = new Date(String(value).length <= 10 ? `${value}T00:00:00` : value);
       return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString('pt-BR');
+    }
+    function fmtTime(value){
+      if (!value) return '—';
+      const d = value instanceof Date ? value : new Date(value);
+      return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleTimeString('pt-BR');
     }
     function setButtonBusy(buttonId, busy, busyLabel='Atualizando…'){
       const btn = $(buttonId);
@@ -1614,11 +1709,16 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
     function buildExchangeObjectRef(localDoc, partnerDoc, partnerRow){
       const payload = {
         type: 'interlibrary_exchange',
+        created_at: new Date().toISOString(),
         local_library_id: normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || ''),
         local_library_name: firstFilledValue(currentLibraryRow?.short_name, currentLibraryRow?.name),
         partner_library_id: normalizeLibraryId(partnerRow?.library_id || ''),
         partner_library_name: firstFilledValue(partnerRow?.display_name, partnerRow?.library_name, partnerRow?.partner_name),
+        partner_contact_email: firstFilledValue(getPartnerContactEmail(partnerRow?.library_id)),
+        suggested_mail_subject: String($('exchangeMailSubject')?.value || '').trim() || null,
+        custom_note: String($('exchangeCustomNote')?.value || '').trim() || null,
         local_document: localDoc ? {
+          library_id: normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || ''),
           bib_ref: localDoc.bib_ref,
           titulo: firstFilledValue(localDoc.titulo),
           autor: firstFilledValue(localDoc.autor),
@@ -1628,6 +1728,7 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
           exemplar_ids: asArray(localDoc.exemplar_ids)
         } : null,
         partner_document: partnerDoc ? {
+          library_id: normalizeLibraryId(partnerRow?.library_id || ''),
           bib_ref: partnerDoc.bib_ref,
           titulo: firstFilledValue(partnerDoc.titulo),
           autor: firstFilledValue(partnerDoc.autor),
@@ -3189,17 +3290,25 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
     function populateExchangeDocumentSelect(selectId, rows, placeholder) {
       const select = $(selectId);
       if (!select) return;
+      const previousValue = String(select.value || '').trim();
       const options = [`<option value="">${esc(placeholder)}</option>`].concat(asArray(rows).map((row) => `<option value="${esc(String(row.bib_ref || ''))}">${esc(formatExchangeDocLabel(row))} · ${esc(exchangeEligibilityText(row))}</option>`));
       select.innerHTML = options.join('');
+      if (previousValue && asArray(rows).some((row) => String(row?.bib_ref || '') === previousValue)) {
+        select.value = previousValue;
+      }
     }
 
     function populateExchangePartnerSelect() {
       const select = $('exchangePartnerSelect');
       if (!select) return;
+      const previousValue = normalizeLibraryId(select.value || '');
       const currentLibraryId = getCurrentExchangeLibraryId();
       const rows = dedupePartnerSources(currentPartnerSources).filter((row) => normalizeLibraryId(row?.library_id) && String(normalizeLibraryId(row?.library_id) || '') !== String(currentLibraryId || ''));
       const options = ['<option value="">Selecione</option>'].concat(rows.map((row) => `<option value="${esc(String(row.library_id || ''))}">${esc(getPartnerDisplayName(row))} · ${esc(friendlyPartnerRelationStatus(row?.relation_status))}${row?.catalog_document_count ? ` · ${esc(String(row.catalog_document_count))} doc.` : ''}</option>`));
       select.innerHTML = options.join('');
+      if (previousValue && rows.some((row) => String(normalizeLibraryId(row?.library_id) || '') === String(previousValue || ''))) {
+        select.value = previousValue;
+      }
     }
 
     function getSelectedExchangePartnerRow() {
@@ -3540,7 +3649,9 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
       }
     }
 
-    async function loadPartnerExchangeDocuments() {
+    async function loadPartnerExchangeDocuments(options = {}) {
+      const preferredBibRef = typeof options === 'string' ? String(options || '').trim() : String(options?.preferredBibRef || '').trim();
+      const silent = typeof options === 'object' ? options?.silent === true : false;
 
       try {
         const partnerRow = getSelectedExchangePartnerRow();
@@ -3549,17 +3660,26 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
           currentExchangePartnerSurplus = [];
           populateExchangeDocumentSelect('exchangePartnerDocSelect', [], 'Selecione');
           renderExchangePartnerSummary();
+          syncExchangeObjectRefField();
           return;
         }
-        setStatus('exchangeEditorStatus', 'Carregando excedentes da biblioteca parceira…', 'info');
+        if (!silent) setStatus('exchangeEditorStatus', 'Carregando excedentes da biblioteca parceira…', 'info');
+        const previousPartnerDocRef = String($('exchangePartnerDocSelect')?.value || '').trim();
         currentExchangePartnerSurplus = await fetchSurplusDocumentsByLibrary(partnerRow.library_id);
         populateExchangeDocumentSelect('exchangePartnerDocSelect', currentExchangePartnerSurplus, 'Selecione');
+        const partnerSelect = $('exchangePartnerDocSelect');
+        const candidateBibRef = preferredBibRef || previousPartnerDocRef;
+        if (partnerSelect && candidateBibRef && currentExchangePartnerSurplus.some((row) => String(row?.bib_ref || '') === candidateBibRef)) {
+          partnerSelect.value = candidateBibRef;
+        }
         renderExchangePartnerSummary();
-        setStatus('exchangeEditorStatus', currentExchangePartnerSurplus.length ? 'Documentos aptos da biblioteca parceira carregados segundo os filtros atuais.' : 'A biblioteca parceira não mostrou documentos que passem pelos filtros atuais de troca.', currentExchangePartnerSurplus.length ? 'ok' : 'warn');
+        syncExchangeObjectRefField();
+        if (!silent) setStatus('exchangeEditorStatus', currentExchangePartnerSurplus.length ? 'Documentos aptos da biblioteca parceira carregados segundo os filtros atuais.' : 'A biblioteca parceira não mostrou documentos que passem pelos filtros atuais de troca.', currentExchangePartnerSurplus.length ? 'ok' : 'warn');
       } catch (error) {
         currentExchangePartnerSurplus = [];
         populateExchangeDocumentSelect('exchangePartnerDocSelect', [], 'Selecione');
         renderExchangePartnerSummary();
+        syncExchangeObjectRefField();
         setStatus('exchangeEditorStatus', 'Não consegui carregar os excedentes da biblioteca parceira: ' + (error.message || String(error)), 'bad');
       }
     }
@@ -3567,23 +3687,43 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
     async function loadExchangePanel() {
       try {
         const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+        const selectedPartnerId = normalizeLibraryId($('exchangePartnerSelect')?.value || '');
+        const selectedLocalBibRef = String($('exchangeLocalSelect')?.value || '').trim();
+        const selectedPartnerBibRef = String($('exchangePartnerDocSelect')?.value || '').trim();
+        const selectedFollowupRequestId = String($('exchangeFollowupRequestId')?.value || $('exchangeFollowupRequestSelect')?.value || '').trim();
         currentExchangeLocalSurplus = await fetchSurplusDocumentsByLibrary(row.id);
         currentExchangeFollowupRows = getExchangeFollowupRows(currentExchangeRequests);
         populateExchangeDocumentSelect('exchangeLocalSelect', currentExchangeLocalSurplus, 'Selecione');
-        const selectedPartnerId = normalizeLibraryId($('exchangePartnerSelect')?.value || '');
+        if (selectedLocalBibRef && currentExchangeLocalSurplus.some((item) => String(item?.bib_ref || '') === selectedLocalBibRef)) {
+          $('exchangeLocalSelect').value = selectedLocalBibRef;
+        }
         if (selectedPartnerId && !currentPartnerSources.find((item) => String(normalizeLibraryId(item?.library_id) || '') === String(selectedPartnerId || ''))) {
           if ($('exchangePartnerSelect')) $('exchangePartnerSelect').value = '';
           currentExchangePartnerSurplus = [];
           populateExchangeDocumentSelect('exchangePartnerDocSelect', [], 'Selecione');
+        } else if (normalizeLibraryId($('exchangePartnerSelect')?.value || '')) {
+          await loadPartnerExchangeDocuments({ preferredBibRef: selectedPartnerBibRef, silent: true });
+        } else {
+          currentExchangePartnerSurplus = [];
+          populateExchangeDocumentSelect('exchangePartnerDocSelect', [], 'Selecione');
         }
         populateExchangeFollowupSelect();
+        if (selectedFollowupRequestId && currentExchangeFollowupRows.some((item) => String(item?.id || '') === selectedFollowupRequestId)) {
+          $('exchangeFollowupRequestId').value = selectedFollowupRequestId;
+          $('exchangeFollowupRequestSelect').value = selectedFollowupRequestId;
+          const followupRow = getSelectedExchangeFollowupRow();
+          if (followupRow) await loadExchangeFollowupIntoForm(followupRow);
+        } else if ($('exchangeFollowupRequestId')?.value) {
+          resetExchangeFollowupForm();
+        }
         renderExchangeLocalSummary(currentExchangeLocalSurplus);
         renderExchangePartnerSummary();
         renderExchangeRequestsTable(currentExchangeRequests);
         renderExchangeFollowupSummary(currentExchangeRequests);
         renderExchangeFollowupTable(currentExchangeRequests);
+        syncExchangeObjectRefField();
         const rules = getNormalizedExchangeEligibilityRules();
-        setStatus('exchangeStatus', currentExchangeLocalSurplus.length ? `Módulo de trocas pronto para uso. Critério atual: ${rules.min_total_copies} total / ${rules.require_available_now ? `${rules.min_available_copies} disponível(is) agora` : 'sem filtro de disponibilidade imediata'}.` : 'A biblioteca ainda não mostra documentos locais que passem pelos filtros atuais de troca.', currentExchangeLocalSurplus.length ? 'ok' : 'warn');
+        setStatus('exchangeStatus', currentExchangeLocalSurplus.length ? `Módulo de trocas pronto para uso. Critério atual: ${rules.min_total_copies} total / ${rules.require_available_now ? `${rules.min_available_copies} disponível(is) agora` : 'sem filtro de disponibilidade imediata'}. Última atualização: ${fmtTime(new Date())}.` : `A biblioteca ainda não mostra documentos locais que passem pelos filtros atuais de troca. Última atualização: ${fmtTime(new Date())}.`, currentExchangeLocalSurplus.length ? 'ok' : 'warn');
       } catch (error) {
         currentExchangeLocalSurplus = [];
         currentExchangePartnerSurplus = [];
@@ -3707,6 +3847,9 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
         }
         await loadGovernancePanel();
         await loadExchangePanel();
+        if (String(decision || '').trim().toLowerCase() === 'accepted') {
+          openExchangeFollowupFromRequest(String(data?.id || requestId || ''));
+        }
       } catch (error) {
         setStatus('exchangeEditorStatus', 'Não consegui registrar a decisão: ' + (error.message || String(error)), 'bad');
       }
@@ -3721,6 +3864,447 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
       activateTab('interbib');
       void loadExchangeFollowupIntoForm(row);
       $('exchangeFollowupRequestSelect')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+
+    function getCurrentInterlibraryLoansConfig() {
+      return asArray(currentGovernance?.interlibrary_loans_v1).filter((row) => row && typeof row === 'object').sort((a, b) => {
+        const aTime = new Date(firstFilledValue(a?.updated_at, a?.created_at, 0)).getTime() || 0;
+        const bTime = new Date(firstFilledValue(b?.updated_at, b?.created_at, 0)).getTime() || 0;
+        return bTime - aTime;
+      });
+    }
+
+    function buildInterlibraryLoanId() {
+      if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+      return `interloan_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    }
+
+    function getInterlibraryLoanLibraryOptions() {
+      const currentLibraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
+      const byId = new Map();
+      const push = (row, fallback = {}) => {
+        const libraryId = normalizeLibraryId(row?.library_id || row?.id || fallback?.library_id || fallback?.id || '');
+        if (!libraryId) return;
+        if (String(libraryId) === String(currentLibraryId || '')) {
+          byId.set(libraryId, {
+            library_id: libraryId,
+            display_name: firstFilledValue(currentLibraryRow?.short_name, currentLibraryRow?.name, row?.display_name, row?.library_name, fallback?.display_name, fallback?.library_name, libraryId),
+            library_name: firstFilledValue(currentLibraryRow?.name, row?.library_name, fallback?.library_name),
+            short_name: firstFilledValue(currentLibraryRow?.short_name, row?.short_name, fallback?.short_name),
+            is_active: true
+          });
+          return;
+        }
+        if (!isLibraryActiveRow(row) && !isLibraryActiveRow(fallback)) return;
+        const existing = byId.get(libraryId) || {};
+        byId.set(libraryId, {
+          ...existing,
+          ...fallback,
+          ...row,
+          library_id: libraryId,
+          display_name: firstFilledValue(row?.display_name, row?.library_name, fallback?.display_name, fallback?.library_name, libraryId),
+          library_name: firstFilledValue(row?.library_name, fallback?.library_name, row?.display_name, fallback?.display_name),
+          short_name: firstFilledValue(row?.short_name, fallback?.short_name)
+        });
+      };
+      if (currentLibraryId) {
+        push({
+          library_id: currentLibraryId,
+          library_name: firstFilledValue(currentLibraryRow?.name),
+          display_name: firstFilledValue(currentLibraryRow?.short_name, currentLibraryRow?.name, currentLibraryId),
+          short_name: firstFilledValue(currentLibraryRow?.short_name),
+          is_active: true
+        });
+      }
+      currentPartnerSources.forEach((row) => push(row));
+      return Array.from(byId.values()).sort((a, b) => tableSortCollator.compare(String(a.display_name || a.library_name || ''), String(b.display_name || b.library_name || '')));
+    }
+
+    function getInterlibraryLoanLibraryLabel(libraryId) {
+      const normalizedId = normalizeLibraryId(libraryId);
+      if (!normalizedId) return '—';
+      if (String(normalizedId) === String(normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '') || '')) {
+        return firstFilledValue(currentLibraryRow?.short_name, currentLibraryRow?.name, normalizedId);
+      }
+      const row = getInterlibraryLoanLibraryOptions().find((item) => String(normalizeLibraryId(item?.library_id) || '') === String(normalizedId || ''));
+      return firstFilledValue(row?.display_name, row?.library_name, normalizedId);
+    }
+
+    function friendlyInterlibraryLoanStatus(value) {
+      const raw = String(value || '').trim().toLowerCase();
+      if (raw === 'preparacao') return 'Em preparação';
+      if (raw === 'aguardando_saida') return 'Aguardando saída';
+      if (raw === 'emprestado') return 'Emprestado';
+      if (raw === 'em_devolucao') return 'Em devolução';
+      if (raw === 'devolvido') return 'Devolvido';
+      if (raw === 'cancelado') return 'Cancelado';
+      if (raw === 'atrasado') return 'Atrasado';
+      return String(value || '').trim() || '—';
+    }
+
+    function interlibraryLoanStatusTone(value) {
+      const raw = String(value || '').trim().toLowerCase();
+      if (raw === 'devolvido') return 'ok';
+      if (raw === 'cancelado' || raw === 'atrasado') return 'bad';
+      if (raw === 'emprestado' || raw === 'em_devolucao') return 'info';
+      return 'warn';
+    }
+
+    function getInterlibraryLoanLocalRole(row) {
+      const currentLibraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
+      const lenderId = normalizeLibraryId(row?.lender_library_id);
+      const borrowerId = normalizeLibraryId(row?.borrower_library_id);
+      if (currentLibraryId && String(lenderId || '') === String(currentLibraryId)) return 'Empresta';
+      if (currentLibraryId && String(borrowerId || '') === String(currentLibraryId)) return 'Recebe';
+      return 'Acompanha';
+    }
+
+    async function fetchLibraryDocumentInventoryByLibrary(libraryId) {
+      const scopedLibraryId = normalizeLibraryId(libraryId);
+      if (!scopedLibraryId) return [];
+      const { data, error } = await supabase
+        .from('exemplares')
+        .select('id,bib_ref,tombo,shelf_location,library_id,holding_id,notes')
+        .eq('library_id', scopedLibraryId)
+        .order('bib_ref', { ascending: true })
+        .order('tombo', { ascending: true });
+      if (error) throw error;
+      const grouped = new Map();
+      for (const row of asArray(data)) {
+        const bibRef = String(row?.bib_ref || '').trim();
+        if (!bibRef) continue;
+        if (!grouped.has(bibRef)) {
+          grouped.set(bibRef, { bib_ref: bibRef, exemplar_ids: [], tombos: [], shelf_locations: [], exemplar_notes: [] });
+        }
+        const bucket = grouped.get(bibRef);
+        bucket.exemplar_ids.push(row.id);
+        if (row?.tombo) bucket.tombos.push(row.tombo);
+        if (row?.shelf_location) bucket.shelf_locations.push(row.shelf_location);
+        if (row?.notes) bucket.exemplar_notes.push(row.notes);
+      }
+      const booksByRef = await fetchBooksByBibRefs(Array.from(grouped.keys()));
+      return Array.from(grouped.values()).map((row) => {
+        const book = booksByRef.get(row.bib_ref) || {};
+        return {
+          ...row,
+          count: row.exemplar_ids.length,
+          titulo: firstFilledValue(book.titulo, row.bib_ref),
+          subtitulo: firstFilledValue(book.subtitulo),
+          autor: firstFilledValue(book.autor),
+          ano: firstFilledValue(book.ano),
+          cdd: firstFilledValue(book.cdd)
+        };
+      }).sort((a, b) => tableSortCollator.compare(String(a.titulo || a.bib_ref || ''), String(b.titulo || b.bib_ref || '')));
+    }
+
+    function formatInterlibraryLoanDocumentLabel(row) {
+      if (!row) return '—';
+      const suffix = [
+        row?.autor ? row.autor : '',
+        `${row?.count || 0} exemplar(es)`,
+        row?.bib_ref ? `bib_ref ${row.bib_ref}` : ''
+      ].filter(Boolean).join(' · ');
+      return `${firstFilledValue(row?.titulo, row?.bib_ref, 'Documento sem título')}${row?.subtitulo ? ` — ${row.subtitulo}` : ''}${suffix ? ` · ${suffix}` : ''}`;
+    }
+
+    function populateInterlibraryLoanLibrarySelects() {
+      const lenderSelect = $('interloanLenderLibrarySelect');
+      const borrowerSelect = $('interloanBorrowerLibrarySelect');
+      if (!lenderSelect || !borrowerSelect) return;
+      const previousLender = normalizeLibraryId(lenderSelect.value || '');
+      const previousBorrower = normalizeLibraryId(borrowerSelect.value || '');
+      const currentLibraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
+      const rows = getInterlibraryLoanLibraryOptions();
+      const optionsHtml = ['<option value="">Selecione</option>'].concat(rows.map((row) => `<option value="${esc(String(row.library_id || ''))}">${esc(firstFilledValue(row?.display_name, row?.library_name, row?.library_id))}</option>`)).join('');
+      lenderSelect.innerHTML = optionsHtml;
+      borrowerSelect.innerHTML = optionsHtml;
+      lenderSelect.value = previousLender && rows.some((row) => String(normalizeLibraryId(row?.library_id) || '') === String(previousLender || ''))
+        ? previousLender
+        : (currentLibraryId && rows.some((row) => String(normalizeLibraryId(row?.library_id) || '') === String(currentLibraryId || '')) ? currentLibraryId : '');
+      const borrowerFallback = rows.find((row) => String(normalizeLibraryId(row?.library_id) || '') !== String(lenderSelect.value || ''));
+      borrowerSelect.value = previousBorrower && rows.some((row) => String(normalizeLibraryId(row?.library_id) || '') === String(previousBorrower || '')) && String(previousBorrower || '') !== String(lenderSelect.value || '')
+        ? previousBorrower
+        : String(borrowerFallback?.library_id || '');
+    }
+
+    function populateInterlibraryLoanDocumentSelect(rows, placeholder='Selecione') {
+      const select = $('interloanLenderDocumentSelect');
+      if (!select) return;
+      const previousValue = String(select.value || '').trim();
+      select.innerHTML = [`<option value="">${esc(placeholder)}</option>`].concat(asArray(rows).map((row) => `<option value="${esc(String(row?.bib_ref || ''))}">${esc(formatInterlibraryLoanDocumentLabel(row))}</option>`)).join('');
+      if (previousValue && asArray(rows).some((row) => String(row?.bib_ref || '') === previousValue)) {
+        select.value = previousValue;
+      }
+    }
+
+    function populateInterlibraryLoanExemplarSelect(rows, placeholder='Selecione') {
+      const select = $('interloanLenderExemplarSelect');
+      if (!select) return;
+      const previousValue = String(select.value || '').trim();
+      select.innerHTML = [`<option value="">${esc(placeholder)}</option>`].concat(asArray(rows).map((row) => {
+        const value = String(row?.id || '');
+        const label = [firstFilledValue(row?.tombo, `ID ${value}`), firstFilledValue(row?.shelf_location), firstFilledValue(row?.notes)].filter(Boolean).join(' · ');
+        return `<option value="${esc(value)}">${esc(label || `Exemplar ${value}`)}</option>`;
+      })).join('');
+      if (previousValue && asArray(rows).some((row) => String(row?.id || '') === previousValue)) {
+        select.value = previousValue;
+      }
+    }
+
+    async function loadInterlibraryLoanExemplarsForDocument(options = {}) {
+      const preferredExemplarId = typeof options === 'string' ? String(options || '').trim() : String(options?.preferredExemplarId || '').trim();
+      const lenderLibraryId = normalizeLibraryId($('interloanLenderLibrarySelect')?.value || '');
+      const bibRef = String($('interloanLenderDocumentSelect')?.value || '').trim();
+      if (!lenderLibraryId || !bibRef) {
+        currentInterlibraryLoanExemplarOptions = [];
+        populateInterlibraryLoanExemplarSelect([], 'Selecione');
+        return;
+      }
+      currentInterlibraryLoanExemplarOptions = await fetchDocumentExemplarsByLibrary(lenderLibraryId, bibRef);
+      populateInterlibraryLoanExemplarSelect(currentInterlibraryLoanExemplarOptions, 'Selecione');
+      if (preferredExemplarId && currentInterlibraryLoanExemplarOptions.some((row) => String(row?.id || '') === preferredExemplarId)) {
+        $('interloanLenderExemplarSelect').value = preferredExemplarId;
+      }
+    }
+
+    async function loadInterlibraryLoanDocumentsForLender(options = {}) {
+      const preferredBibRef = typeof options === 'string' ? String(options || '').trim() : String(options?.preferredBibRef || '').trim();
+      const preferredExemplarId = typeof options === 'object' ? String(options?.preferredExemplarId || '').trim() : '';
+      const lenderLibraryId = normalizeLibraryId($('interloanLenderLibrarySelect')?.value || '');
+      if (!lenderLibraryId) {
+        currentInterlibraryLoanDocumentOptions = [];
+        currentInterlibraryLoanExemplarOptions = [];
+        populateInterlibraryLoanDocumentSelect([], 'Selecione');
+        populateInterlibraryLoanExemplarSelect([], 'Selecione');
+        return;
+      }
+      currentInterlibraryLoanDocumentOptions = await fetchLibraryDocumentInventoryByLibrary(lenderLibraryId);
+      populateInterlibraryLoanDocumentSelect(currentInterlibraryLoanDocumentOptions, currentInterlibraryLoanDocumentOptions.length ? 'Selecione' : 'Nenhum documento encontrado');
+      const docSelect = $('interloanLenderDocumentSelect');
+      if (docSelect && preferredBibRef && currentInterlibraryLoanDocumentOptions.some((row) => String(row?.bib_ref || '') === preferredBibRef)) {
+        docSelect.value = preferredBibRef;
+      }
+      await loadInterlibraryLoanExemplarsForDocument({ preferredExemplarId });
+    }
+
+    function renderInterlibraryLoansSummary() {
+      currentInterlibraryLoans = getCurrentInterlibraryLoansConfig();
+      const currentLibraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
+      const lentCount = currentInterlibraryLoans.filter((row) => String(normalizeLibraryId(row?.lender_library_id) || '') === String(currentLibraryId || '')).length;
+      const borrowedCount = currentInterlibraryLoans.filter((row) => String(normalizeLibraryId(row?.borrower_library_id) || '') === String(currentLibraryId || '')).length;
+      const openCount = currentInterlibraryLoans.filter((row) => !['devolvido', 'cancelado'].includes(String(row?.status || '').trim().toLowerCase())).length;
+      const overdueCount = currentInterlibraryLoans.filter((row) => String(row?.status || '').trim().toLowerCase() === 'atrasado').length;
+      renderKvGrid('interlibraryLoansSummary', [
+        ['Registros locais neste bloco', currentInterlibraryLoans.length],
+        ['Biblioteca ativa empresta em', lentCount],
+        ['Biblioteca ativa recebe em', borrowedCount],
+        ['Em aberto', openCount],
+        ['Marcados como atrasados', overdueCount],
+        ['Última atualização', currentInterlibraryLoans.length ? fmtDateTime(firstFilledValue(currentInterlibraryLoans[0]?.updated_at, currentInterlibraryLoans[0]?.created_at)) : '—']
+      ]);
+    }
+
+    function renderInterlibraryLoansTable() {
+      const tbody = $('tbodyInterlibraryLoans');
+      if (!tbody) return;
+      if (!currentInterlibraryLoans.length) {
+        tbody.innerHTML = '<tr><td colspan="7">Nenhum empréstimo interbibliotecas registrado nesta V1 local.</td></tr>';
+        applyStoredSortForTbody('tbodyInterlibraryLoans');
+        return;
+      }
+      tbody.innerHTML = currentInterlibraryLoans.map((row) => {
+        const librariesText = `${getInterlibraryLoanLibraryLabel(row?.lender_library_id)} → ${getInterlibraryLoanLibraryLabel(row?.borrower_library_id)}`;
+        const docText = [firstFilledValue(row?.lender_document_title, row?.lender_document_bib_ref, '—'), row?.lender_exemplar_tombo ? `Tombo ${row.lender_exemplar_tombo}` : '', row?.coordination_contact_name ? `Contato: ${row.coordination_contact_name}` : ''].filter(Boolean).join(' · ');
+        return `<tr>
+          <td>${esc(getInterlibraryLoanLocalRole(row))}</td>
+          <td>${esc(librariesText)}</td>
+          <td>${esc(docText)}${row?.logistics_note ? `<div class="inline-note">${esc(row.logistics_note)}</div>` : ''}</td>
+          <td>${esc(fmtDate(row?.start_date))}</td>
+          <td>${esc(fmtDate(row?.due_date))}</td>
+          <td><span class="pill ${esc(interlibraryLoanStatusTone(row?.status))}">${esc(friendlyInterlibraryLoanStatus(row?.status))}</span></td>
+          <td><div class="editor-actions"><button class="btn mini soft" type="button" data-interloan-edit="${esc(String(row?.id || ''))}">Editar</button><button class="btn mini danger" type="button" data-interloan-delete="${esc(String(row?.id || ''))}">Excluir</button></div></td>
+        </tr>`;
+      }).join('');
+      applyStoredSortForTbody('tbodyInterlibraryLoans');
+    }
+
+    function resetInterlibraryLoanForm() {
+      $('interloanId').value = '';
+      populateInterlibraryLoanLibrarySelects();
+      $('interloanStatusField').value = 'preparacao';
+      $('interloanCoordinationContactName').value = '';
+      $('interloanCoordinationContactEmail').value = '';
+      $('interloanStartDate').value = '';
+      $('interloanDueDate').value = '';
+      $('interloanLogisticsNote').value = '';
+      currentInterlibraryLoanDocumentOptions = [];
+      currentInterlibraryLoanExemplarOptions = [];
+      populateInterlibraryLoanDocumentSelect([], 'Selecione');
+      populateInterlibraryLoanExemplarSelect([], 'Selecione');
+      $('btnDeleteInterlibraryLoan').disabled = true;
+      setStatus('interlibraryLoanEditorStatus', '');
+    }
+
+    async function loadInterlibraryLoanIntoForm(row) {
+      if (!row) {
+        resetInterlibraryLoanForm();
+        return;
+      }
+      populateInterlibraryLoanLibrarySelects();
+      $('interloanId').value = String(row?.id || '');
+      $('interloanLenderLibrarySelect').value = String(row?.lender_library_id || '');
+      $('interloanBorrowerLibrarySelect').value = String(row?.borrower_library_id || '');
+      $('interloanStatusField').value = firstFilledValue(row?.status, 'preparacao');
+      $('interloanCoordinationContactName').value = firstFilledValue(row?.coordination_contact_name);
+      $('interloanCoordinationContactEmail').value = firstFilledValue(row?.coordination_contact_email);
+      $('interloanStartDate').value = toInputDateValue(row?.start_date);
+      $('interloanDueDate').value = toInputDateValue(row?.due_date);
+      $('interloanLogisticsNote').value = firstFilledValue(row?.logistics_note);
+      await loadInterlibraryLoanDocumentsForLender({
+        preferredBibRef: String(row?.lender_document_bib_ref || '').trim(),
+        preferredExemplarId: String(row?.lender_exemplar_id || '').trim()
+      });
+      $('btnDeleteInterlibraryLoan').disabled = !row?.id;
+      setStatus('interlibraryLoanEditorStatus', row?.id ? `Empréstimo ${row.id} carregado para edição.` : '', row?.id ? 'info' : '');
+    }
+
+    function collectInterlibraryLoanPayload() {
+      const id = String($('interloanId').value || '').trim();
+      const lenderLibraryId = normalizeLibraryId($('interloanLenderLibrarySelect')?.value || '');
+      const borrowerLibraryId = normalizeLibraryId($('interloanBorrowerLibrarySelect')?.value || '');
+      const lenderDocumentBibRef = String($('interloanLenderDocumentSelect')?.value || '').trim();
+      const lenderExemplarId = String($('interloanLenderExemplarSelect')?.value || '').trim();
+      const status = String($('interloanStatusField')?.value || 'preparacao').trim() || 'preparacao';
+      const startDate = String($('interloanStartDate')?.value || '').trim() || null;
+      const dueDate = String($('interloanDueDate')?.value || '').trim() || null;
+      const coordinationContactName = String($('interloanCoordinationContactName')?.value || '').trim() || null;
+      const coordinationContactEmail = String($('interloanCoordinationContactEmail')?.value || '').trim() || null;
+      const logisticsNote = String($('interloanLogisticsNote')?.value || '').trim() || null;
+      if (!lenderLibraryId) throw new Error('Escolhe a biblioteca emprestadora.');
+      if (!borrowerLibraryId) throw new Error('Escolhe a biblioteca tomadora.');
+      if (String(lenderLibraryId) === String(borrowerLibraryId)) throw new Error('A biblioteca emprestadora e a biblioteca tomadora precisam ser diferentes.');
+      if (!lenderDocumentBibRef) throw new Error('Escolhe o documento da biblioteca emprestadora.');
+      if (!lenderExemplarId) throw new Error('Escolhe o exemplar efetivamente emprestado.');
+      if (!startDate) throw new Error('Preenche a data de saída.');
+      if (!dueDate) throw new Error('Preenche a data prevista de retorno.');
+      if (dueDate < startDate) throw new Error('A data prevista de retorno não pode ser anterior à data de saída.');
+      const documentRow = currentInterlibraryLoanDocumentOptions.find((row) => String(row?.bib_ref || '') === lenderDocumentBibRef) || null;
+      const exemplarRow = currentInterlibraryLoanExemplarOptions.find((row) => String(row?.id || '') === lenderExemplarId) || null;
+      if (!documentRow) throw new Error('O documento escolhido já não está disponível na lista atual da biblioteca emprestadora.');
+      if (!exemplarRow) throw new Error('O exemplar escolhido já não está disponível na lista atual do documento.');
+      const nowIso = new Date().toISOString();
+      return {
+        id: id || buildInterlibraryLoanId(),
+        lender_library_id: lenderLibraryId,
+        borrower_library_id: borrowerLibraryId,
+        lender_library_name: getInterlibraryLoanLibraryLabel(lenderLibraryId),
+        borrower_library_name: getInterlibraryLoanLibraryLabel(borrowerLibraryId),
+        lender_document_bib_ref: lenderDocumentBibRef,
+        lender_document_title: firstFilledValue(documentRow?.titulo, lenderDocumentBibRef),
+        lender_document_author: firstFilledValue(documentRow?.autor),
+        lender_exemplar_id: lenderExemplarId,
+        lender_exemplar_tombo: firstFilledValue(exemplarRow?.tombo, lenderExemplarId),
+        coordination_contact_name: coordinationContactName,
+        coordination_contact_email: coordinationContactEmail,
+        start_date: startDate,
+        due_date: dueDate,
+        status,
+        logistics_note: logisticsNote,
+        updated_at: nowIso,
+        updated_by: session?.user?.id || null,
+        created_at: id ? firstFilledValue(currentInterlibraryLoans.find((row) => String(row?.id || '') === id)?.created_at, nowIso) : nowIso,
+        source: 'biblioteca_html_v1'
+      };
+    }
+
+    async function persistInterlibraryLoansConfig(nextRows) {
+      const libraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
+      if (!libraryId) throw new Error('Biblioteca ativa não identificada.');
+      const nextConfig = currentGovernance && typeof currentGovernance === 'object' ? JSON.parse(JSON.stringify(currentGovernance)) : {};
+      nextConfig.interlibrary_loans_v1 = asArray(nextRows).map((row) => ({ ...row }));
+      const { error } = await supabase
+        .from('library_document_governance')
+        .upsert({
+          library_id: libraryId,
+          config: nextConfig,
+          updated_at: new Date().toISOString(),
+          updated_by: session?.user?.id || null
+        }, { onConflict: 'library_id' });
+      if (error) throw error;
+      currentGovernance = nextConfig;
+      currentGovernanceRow = { ...(currentGovernanceRow || {}), library_id: libraryId, config: nextConfig, updated_at: new Date().toISOString(), updated_by: session?.user?.id || null };
+    }
+
+    async function saveInterlibraryLoan() {
+      try {
+        setStatus('interlibraryLoanEditorStatus', 'Salvando empréstimo interbibliotecas…', 'info');
+        const payload = collectInterlibraryLoanPayload();
+        const nextRows = currentInterlibraryLoans.filter((row) => String(row?.id || '') !== String(payload.id || ''));
+        nextRows.unshift(payload);
+        await persistInterlibraryLoansConfig(nextRows);
+        setStatus('interlibraryLoanEditorStatus', 'Empréstimo interbibliotecas salvo.', 'ok');
+        await loadInterlibraryLoansPanel();
+        const fresh = currentInterlibraryLoans.find((row) => String(row?.id || '') === String(payload.id || '')) || null;
+        if (fresh) await loadInterlibraryLoanIntoForm(fresh);
+      } catch (error) {
+        setStatus('interlibraryLoanEditorStatus', 'Não consegui salvar o empréstimo interbibliotecas: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function deleteInterlibraryLoan(loanId = null) {
+      try {
+        const id = String(loanId || $('interloanId')?.value || '').trim();
+        if (!id) throw new Error('Nenhum empréstimo interbibliotecas selecionado.');
+        if (!window.confirm('Excluir este empréstimo interbibliotecas? Esta ação é irreversível.')) return;
+        setStatus('interlibraryLoanEditorStatus', 'Excluindo empréstimo interbibliotecas…', 'info');
+        const nextRows = currentInterlibraryLoans.filter((row) => String(row?.id || '') !== id);
+        await persistInterlibraryLoansConfig(nextRows);
+        setStatus('interlibraryLoanEditorStatus', 'Empréstimo interbibliotecas excluído.', 'ok');
+        resetInterlibraryLoanForm();
+        await loadInterlibraryLoansPanel();
+      } catch (error) {
+        setStatus('interlibraryLoanEditorStatus', 'Não consegui excluir o empréstimo interbibliotecas: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function loadInterlibraryLoansPanel() {
+      try {
+        populateInterlibraryLoanLibrarySelects();
+        currentInterlibraryLoans = getCurrentInterlibraryLoansConfig();
+        renderInterlibraryLoansSummary();
+        renderInterlibraryLoansTable();
+        const editingId = String($('interloanId')?.value || '').trim();
+        if (editingId && currentInterlibraryLoans.some((row) => String(row?.id || '') === editingId)) {
+          const fresh = currentInterlibraryLoans.find((row) => String(row?.id || '') === editingId) || null;
+          if (fresh) await loadInterlibraryLoanIntoForm(fresh);
+        } else if (!editingId) {
+          resetInterlibraryLoanForm();
+        } else {
+          resetInterlibraryLoanForm();
+        }
+        setStatus('interlibraryLoansStatus', currentInterlibraryLoans.length ? `Módulo de empréstimos interbibliotecas pronto. Última atualização: ${fmtTime(new Date())}.` : `Nenhum empréstimo interbibliotecas registrado nesta V1 local. Última atualização: ${fmtTime(new Date())}.`, currentInterlibraryLoans.length ? 'ok' : 'info');
+      } catch (error) {
+        currentInterlibraryLoans = [];
+        currentInterlibraryLoanDocumentOptions = [];
+        currentInterlibraryLoanExemplarOptions = [];
+        renderKvGrid('interlibraryLoansSummary', []);
+        renderRowsTable('tbodyInterlibraryLoans', [], [1,2,3,4,5,6,7].map((n) => ({ value: () => n })), 'Falha ao carregar os empréstimos interbibliotecas: ' + (error.message || String(error)));
+        setStatus('interlibraryLoansStatus', 'Não consegui carregar os empréstimos interbibliotecas: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function refreshInterlibraryLoansPanelInteractive() {
+      setButtonBusy('btnRefreshInterlibraryLoans', true, 'Atualizando…');
+      setStatus('interlibraryLoansStatus', 'Atualizando empréstimos interbibliotecas…', 'info');
+      try {
+        await loadGovernancePanel();
+        await loadInterlibraryLoansPanel();
+      } catch (error) {
+        setStatus('interlibraryLoansStatus', 'Não consegui atualizar os empréstimos interbibliotecas: ' + (error.message || String(error)), 'bad');
+      } finally {
+        setButtonBusy('btnRefreshInterlibraryLoans', false);
+      }
     }
 
     const TASK_TYPE_LABELS = {
@@ -4748,6 +5332,7 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
         loadTasksPanel()
       ]);
       await loadExchangePanel();
+      await loadInterlibraryLoansPanel();
       await loadReportsPanel();
     }
 
@@ -4766,8 +5351,18 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
     $('btnRefreshIdentity')?.addEventListener('click', loadIdentityPanel);
     $('btnRefreshComms')?.addEventListener('click', loadCommunicationsPanel);
     $('btnRefreshRegimento')?.addEventListener('click', loadWorkspaceAndPolicies);
-    $('btnRefreshDocuments')?.addEventListener('click', async () => { await loadGovernancePanel(); await loadExchangePanel(); });
-    $('btnRefreshExchange')?.addEventListener('click', async () => { await loadGovernancePanel(); await loadExchangePanel(); });
+    $('btnRefreshDocuments')?.addEventListener('click', async () => { await loadGovernancePanel(); await loadExchangePanel(); await loadInterlibraryLoansPanel(); });
+    $('btnRefreshExchange')?.addEventListener('click', async () => {
+      setButtonBusy('btnRefreshExchange', true, 'Atualizando…');
+      setStatus('exchangeStatus', 'Atualizando trocas interbibliotecas…', 'info');
+      try {
+        await loadGovernancePanel();
+        await loadExchangePanel();
+      } finally {
+        setButtonBusy('btnRefreshExchange', false);
+      }
+    });
+    $('btnRefreshInterlibraryLoans')?.addEventListener('click', refreshInterlibraryLoansPanelInteractive);
     $('btnSaveGovernance')?.addEventListener('click', saveGovernanceConfig);
     $('btnResetGovernance')?.addEventListener('click', loadGovernanceForm);
     $('btnGenerateExchangeMessage')?.addEventListener('click', () => { ensureExchangeMessage(); setStatus('exchangeEditorStatus', 'Mensagem sugerida atualizada.', 'ok'); });
@@ -4788,6 +5383,19 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
     $('exchangeLocalSelect')?.addEventListener('change', () => { syncExchangeObjectRefField(); ensureExchangeMessage(); });
     $('exchangePartnerDocSelect')?.addEventListener('change', () => { syncExchangeObjectRefField(); ensureExchangeMessage(); });
     $('exchangeCustomNote')?.addEventListener('input', () => { if ($('exchangeMessage').value.trim()) ensureExchangeMessage(); });
+    $('btnNewInterlibraryLoan')?.addEventListener('click', resetInterlibraryLoanForm);
+    $('btnResetInterlibraryLoan')?.addEventListener('click', resetInterlibraryLoanForm);
+    $('btnSaveInterlibraryLoan')?.addEventListener('click', saveInterlibraryLoan);
+    $('btnDeleteInterlibraryLoan')?.addEventListener('click', () => deleteInterlibraryLoan());
+    $('interloanLenderLibrarySelect')?.addEventListener('change', async () => {
+      const lenderId = String($('interloanLenderLibrarySelect')?.value || '');
+      if (String($('interloanBorrowerLibrarySelect')?.value || '') === lenderId) {
+        const alternative = getInterlibraryLoanLibraryOptions().find((row) => String(row?.library_id || '') !== lenderId);
+        if (alternative && $('interloanBorrowerLibrarySelect')) $('interloanBorrowerLibrarySelect').value = String(alternative.library_id || '');
+      }
+      await loadInterlibraryLoanDocumentsForLender();
+    });
+    $('interloanLenderDocumentSelect')?.addEventListener('change', async () => { await loadInterlibraryLoanExemplarsForDocument(); });
     $('btnRefreshTasks')?.addEventListener('click', loadTasksPanel);
     $('btnRefreshReports')?.addEventListener('click', refreshReportsPanelInteractive);
     $('btnLoadReports')?.addEventListener('click', runSelectedReport);
@@ -4871,6 +5479,19 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
       }
     });
 
+    $('tab-emprestimos-interbib')?.addEventListener('click', async (event) => {
+      const editBtn = event.target.closest('[data-interloan-edit]');
+      if (editBtn) {
+        const row = currentInterlibraryLoans.find((item) => String(item?.id || '') === String(editBtn.dataset.interloanEdit || ''));
+        if (row) await loadInterlibraryLoanIntoForm(row);
+        return;
+      }
+      const deleteBtn = event.target.closest('[data-interloan-delete]');
+      if (deleteBtn) {
+        await deleteInterlibraryLoan(String(deleteBtn.dataset.interloanDelete || ''));
+      }
+    });
+
     $('tab-relatorios')?.addEventListener('click', async () => {
       if (!currentReportsMeta?.loaded) {
         await loadReportsPanel();
@@ -4911,6 +5532,7 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
     setupTabs();
     initSortableTables();
     resetTaskForm();
+    resetInterlibraryLoanForm();
     resetRegulationDocForm();
     resetPolicySetForm();
     resetPolicyRuleForm();
