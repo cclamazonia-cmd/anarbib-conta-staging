@@ -1319,6 +1319,154 @@ button[type="submit"] *,
   </script>
 
   <script type="module">
+    import { supabase } from "./js/blmf-supabase.js";
+
+    const contaMinBoot = window.__ANARBIB_CONTA_BOOTSTRAP_STATE__ = window.__ANARBIB_CONTA_BOOTSTRAP_STATE__ || { hydrated: false };
+
+    const $boot = (id) => document.getElementById(id);
+
+    function bootResolveCadastroHref() {
+      const btn = $boot('btnSair');
+      return String(
+        btn?.dataset?.authHref ||
+        btn?.getAttribute('data-auth-href') ||
+        'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html'
+      ).trim() || 'https://cclamazonia-cmd.github.io/anarbib-conta-staging/cadastro.html';
+    }
+
+    function bootBuildContaRedirectTarget() {
+      return `${window.location.pathname}${window.location.search || ''}${window.location.hash || ''}`;
+    }
+
+    function bootStorePostLoginRedirect() {
+      try {
+        sessionStorage.setItem('anarbib_post_login_redirect', bootBuildContaRedirectTarget());
+      } catch (_error) {}
+    }
+
+    function bootUpdateTopbarAuthButton(isLoggedIn) {
+      const btn = $boot('btnSair');
+      if (!btn) return;
+      btn.dataset.authMode = isLoggedIn ? 'logout' : 'login';
+      btn.dataset.authHref = bootResolveCadastroHref();
+      btn.textContent = isLoggedIn ? 'Logout' : 'Login';
+      btn.setAttribute('aria-label', isLoggedIn ? 'Logout' : 'Login');
+      btn.setAttribute('aria-busy', 'false');
+      btn.title = isLoggedIn ? 'Encerrar sessão e voltar ao cadastro' : 'Ir para o cadastro / login';
+      btn.disabled = false;
+    }
+
+    async function bootResolveSession(attempts = 10, delayMs = 180) {
+      for (let i = 0; i < attempts; i += 1) {
+        try {
+          const { data: { session } = {} } = await supabase.auth.getSession();
+          if (session?.user?.id) return session;
+        } catch (error) {
+          console.warn('Bootstrap mínimo da conta: getSession falhou.', error);
+        }
+        try {
+          const { data } = await supabase.auth.getUser();
+          if (data?.user?.id) {
+            const { data: { session } = {} } = await supabase.auth.getSession();
+            if (session?.user?.id) return session;
+          }
+        } catch (error) {
+          console.warn('Bootstrap mínimo da conta: getUser falhou.', error);
+        }
+        if (i < attempts - 1) await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+      return null;
+    }
+
+    async function bootHydrateContaAuthChrome(nextSession = null, { allowAnonymousReset = false } = {}) {
+      const previousSession = contaMinBoot?.session;
+      const session = nextSession?.user?.id ? nextSession : await bootResolveSession();
+      if (!session?.user?.id) {
+        if (previousSession?.user?.id && !allowAnonymousReset) {
+          bootUpdateTopbarAuthButton(true);
+          return { session: previousSession };
+        }
+        contaMinBoot.session = null;
+        contaMinBoot.hydrated = false;
+        bootUpdateTopbarAuthButton(false);
+        return null;
+      }
+
+      contaMinBoot.session = session;
+      contaMinBoot.hydrated = true;
+      bootUpdateTopbarAuthButton(true);
+      return { session };
+    }
+
+    const CONTA_BOOTSTRAP_AUTH_ACTIVE = true;
+    const CONTA_BOOTSTRAP_AUTH_WATCHER_ACTIVE = false;
+
+    if (CONTA_BOOTSTRAP_AUTH_ACTIVE) {
+      const bootAuthButton = $boot('btnSair');
+      if (bootAuthButton && !bootAuthButton.dataset.minAuthBound) {
+        bootAuthButton.dataset.minAuthBound = 'true';
+        bootAuthButton.addEventListener('click', async (event) => {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          const targetHref = bootResolveCadastroHref();
+          const authMode = String(bootAuthButton.dataset.authMode || 'login').trim().toLowerCase();
+          if (authMode !== 'logout') {
+            bootStorePostLoginRedirect();
+            window.location.href = targetHref;
+            return;
+          }
+          bootAuthButton.disabled = true;
+          bootAuthButton.setAttribute('aria-busy', 'true');
+          try {
+            await Promise.race([
+              supabase.auth.signOut(),
+              new Promise((resolve) => setTimeout(resolve, 2500))
+            ]);
+          } catch (error) {
+            console.warn('Bootstrap mínimo da conta: signOut falhou; seguindo mesmo assim.', error);
+          } finally {
+            contaMinBoot.session = null;
+            contaMinBoot.hydrated = false;
+            bootUpdateTopbarAuthButton(false);
+            bootAuthButton.disabled = false;
+            bootAuthButton.setAttribute('aria-busy', 'false');
+            window.location.href = targetHref;
+          }
+        });
+      }
+
+      if (CONTA_BOOTSTRAP_AUTH_WATCHER_ACTIVE) {
+        supabase.auth.onAuthStateChange(async (event, nextSession) => {
+          const eventName = String(event || '').trim().toUpperCase();
+          if (nextSession?.user?.id) {
+            await bootHydrateContaAuthChrome(nextSession);
+            return;
+          }
+          if (eventName === 'SIGNED_OUT') {
+            if (contaMinBoot?.session?.user?.id || contaMinBoot?.hydrated) { bootUpdateTopbarAuthButton(true); return; }
+            contaMinBoot.session = null;
+            contaMinBoot.hydrated = false;
+            bootUpdateTopbarAuthButton(false);
+            return;
+          }
+          const recovered = await bootResolveSession(4, 120);
+          if (recovered?.user?.id) {
+            await bootHydrateContaAuthChrome(recovered);
+            return;
+          }
+          if (!contaMinBoot?.session?.user?.id && !contaMinBoot?.hydrated) {
+            bootUpdateTopbarAuthButton(false);
+          }
+        });
+      }
+
+      bootHydrateContaAuthChrome().catch((error) => {
+        console.warn('Bootstrap mínimo da conta: hidratação inicial falhou.', error);
+      });
+    }
+  </script>
+
+  <script type="module">
     import { CONFIG, applyPageChrome, buildAuthRedirectTarget } from "./shared/config.js";
     import { supabase } from "./js/blmf-supabase.js";
 
@@ -1333,8 +1481,12 @@ button[type="submit"] *,
     });
 
     document.title = "Conta d@ leitor@ - AnarBib";
-    document.getElementById("pageHeroTitle")?.textContent = "Conta d@ leitor@";
-    document.getElementById("pageHeroSubtitle")?.textContent = "Reservas, empréstimos, consultas, histórico e dados pessoais";
+    {
+      const heroTitle = document.getElementById("pageHeroTitle");
+      const heroSubtitle = document.getElementById("pageHeroSubtitle");
+      if (heroTitle) heroTitle.textContent = "Conta d@ leitor@";
+      if (heroSubtitle) heroSubtitle.textContent = "Reservas, empréstimos, consultas, histórico e dados pessoais";
+    }
 
     const ROUTES = {
       CADASTRO: CONFIG.ROUTES.cadastro,
@@ -1443,44 +1595,15 @@ button[type="submit"] *,
     }
 
     let session = null;
-    let contaAuthWatcherBound = false;
 
-    async function bootstrapContaAuthOrRedirect() {
-      updateTopbarAuthButton(false);
-      const bootstrapSession = await requireSession({ attempts: 40, delayMs: 150 });
-      if (!bootstrapSession?.user?.id) {
-        storeContaPostLoginRedirect();
-        window.location.replace(resolveCadastroHref());
-        throw new Error("No session");
-      }
-      session = bootstrapSession;
-      updateTopbarAuthButton(true);
-
-      if (!contaAuthWatcherBound) {
-        contaAuthWatcherBound = true;
-        supabase.auth.onAuthStateChange(async (event, nextSession) => {
-          const eventName = String(event || "").trim().toUpperCase();
-          if (eventName === "INITIAL_SESSION" && !nextSession?.user?.id) return;
-
-          if (nextSession?.user?.id) {
-            session = nextSession;
-            updateTopbarAuthButton(true);
-            return;
-          }
-
-          const recovered = await getConfirmedCurrentSession({ attempts: 8, delayMs: 220 });
-          if (recovered?.user?.id) {
-            session = recovered;
-            updateTopbarAuthButton(true);
-            return;
-          }
-
-          session = null;
-          updateTopbarAuthButton(false);
-        });
-      }
-
-      return bootstrapSession;
+    function adoptContaBootstrapState() {
+      const boot = window.__ANARBIB_CONTA_BOOTSTRAP_STATE__;
+      if (!boot?.session?.user?.id) return false;
+      const bootUserId = String(boot?.session?.user?.id || "").trim();
+      const sessionUserId = String(session?.user?.id || "").trim();
+      if (sessionUserId && bootUserId && sessionUserId !== bootUserId) return false;
+      if (!session?.user?.id && boot?.session?.user?.id) session = boot.session;
+      return !!session?.user?.id;
     }
 
     $("btnCatalogo")?.addEventListener("click", (e) => {
@@ -4314,14 +4437,115 @@ function reservationPickupReplyActions(row) {
       await submitReserveOrConsult("consult");
     });
     setReserveActionMode("reserve");
-    await bootstrapContaAuthOrRedirect();
-    await loadProfile();
-    await loadPublicServiceState();
-    await renderActiveReservations();
-    await renderActiveConsultations();
-    await renderLoans();
-    await renderHistory();
-    setupContaStateSyncHooks();
+
+    let authSyncSerial = 0;
+    let contaAuthBootstrapping = true;
+
+    async function resolveContaSession(nextSession, { allowAnonymousReset = false } = {}) {
+      if (nextSession?.user?.id) return nextSession;
+
+      const immediateSession = await requireSession({ attempts: allowAnonymousReset ? 4 : 12, delayMs: 180 });
+      if (immediateSession?.user?.id) return immediateSession;
+
+      if (!allowAnonymousReset) {
+        await new Promise((resolve) => setTimeout(resolve, 320));
+        const delayedSession = await getConfirmedCurrentSession({ attempts: 8, delayMs: 220 });
+        if (delayedSession?.user?.id) return delayedSession;
+      }
+
+      return null;
+    }
+
+    async function runContaDataLoadsSafely({ syncId } = {}) {
+      const steps = [
+        ["loadProfile", () => loadProfile()],
+        ["loadPublicServiceState", () => loadPublicServiceState()],
+        ["renderActiveReservations", () => renderActiveReservations()],
+        ["renderActiveConsultations", () => renderActiveConsultations()],
+        ["renderLoans", () => renderLoans()],
+        ["renderHistory", () => renderHistory()],
+      ];
+
+      for (const [stepName, stepRun] of steps) {
+        if (syncId && syncId !== authSyncSerial) return;
+        try {
+          await stepRun();
+        } catch (error) {
+          console.warn(`Conta: etapa não bloqueante falhou (${stepName}).`, error);
+        }
+      }
+
+      if (syncId && syncId !== authSyncSerial) return;
+      setupContaStateSyncHooks();
+    }
+
+    async function syncContaAuthState(nextSession, { reloadData = false, allowAnonymousReset = false } = {}) {
+      const syncId = ++authSyncSerial;
+      const previousSession = session;
+      const adoptedBootstrapBeforeSync = !allowAnonymousReset && adoptContaBootstrapState();
+
+      if (!previousSession?.user?.id && session?.user?.id && adoptedBootstrapBeforeSync) {
+        updateTopbarAuthButton(true);
+      }
+
+      updateTopbarAuthButton(!!session?.user?.id || !!previousSession?.user?.id);
+
+      try {
+        session = await resolveContaSession(nextSession, { allowAnonymousReset });
+
+        if (!session?.user?.id && !allowAnonymousReset && adoptContaBootstrapState()) {
+          session = window.__ANARBIB_CONTA_BOOTSTRAP_STATE__?.session || session;
+        }
+
+        if (!session?.user?.id && previousSession?.user?.id && !allowAnonymousReset) {
+          session = previousSession;
+        }
+
+        if (syncId !== authSyncSerial) return !!session?.user?.id;
+
+        updateTopbarAuthButton(!!session?.user?.id);
+
+        if (!session?.user?.id) {
+          storeContaPostLoginRedirect();
+          window.location.replace(resolveCadastroHref());
+          return false;
+        }
+
+        if (!reloadData) return true;
+
+        await runContaDataLoadsSafely({ syncId });
+        if (syncId !== authSyncSerial) return true;
+        return true;
+      } catch (error) {
+        console.warn("Conta: não consegui sincronizar a sessão.", error);
+        storeContaPostLoginRedirect();
+        window.location.replace(resolveCadastroHref());
+        return false;
+      } finally {
+        if (syncId === authSyncSerial) {
+          updateTopbarAuthButton(!!session?.user?.id);
+        }
+      }
+    }
+
+    requireSession({ attempts: 40, delayMs: 150 })
+      .then(async (bootstrapContaSession) => {
+        contaAuthBootstrapping = false;
+        await syncContaAuthState(bootstrapContaSession, { reloadData: !!bootstrapContaSession?.user?.id, allowAnonymousReset: false });
+
+        supabase.auth.onAuthStateChange(async (event, nextSession) => {
+          const eventName = String(event || "").trim().toUpperCase();
+          if (contaAuthBootstrapping && eventName === "INITIAL_SESSION" && !nextSession?.user?.id) return;
+          const allowAnonymousReset = false; // ignore SIGNED_OUT passif; le logout explicite gère déjà la sortie.
+          await syncContaAuthState(nextSession, { reloadData: false, allowAnonymousReset });
+        });
+      })
+      .catch((error) => {
+        contaAuthBootstrapping = false;
+        console.warn("Conta: bootstrap principal d'auth a échoué.", error);
+        storeContaPostLoginRedirect();
+        window.location.replace(resolveCadastroHref());
+      });
   </script>
 </body>
 </html>
