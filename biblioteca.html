@@ -143,7 +143,7 @@
 
     <div class="hero">
       <h1 id="pageHeroTitle">Biblioteca - Organização da biblioteca</h1>
-      <p id="pageHeroSubtitle">Informações gerais, regimento, regras de circulação, comunicações, documentos, trocas e empréstimos interbibliotecas, relatórios e tarefas internas</p>
+      <p id="pageHeroSubtitle">Informações gerais, regimento, regras de circulação, comunicações, documentos e tarefas internas.</p>
       <p id="helloLine"></p>
       <div class="chips">
         <span class="chip" id="chipFuncao">Função: —</span>
@@ -844,10 +844,6 @@
 
     const $ = (id) => document.getElementById(id);
     const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-    const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
-    const HERO_SUBTITLE_TEXT = 'Informações gerais, regimento, regras de circulação, comunicações, documentos, trocas e empréstimos interbibliotecas, relatórios e tarefas internas';
-    if ($('pageHeroTitle')) $('pageHeroTitle').textContent = HERO_TITLE_TEXT;
-    if ($('pageHeroSubtitle')) $('pageHeroSubtitle').textContent = HERO_SUBTITLE_TEXT;
     const TAB_STORAGE_KEY = 'anarbib_biblioteca_active_tab';
     const AUTH_RETURN_STORAGE_KEY = 'anarbib_biblioteca_auth_return';
 
@@ -865,6 +861,7 @@
     let currentPartnerSources = [];
     let currentPartnerContacts = new Map();
     let currentLibraryBrandIdentity = null;
+    let currentLibraryLogoCandidates = [];
     let currentExchangeRequests = [];
     let currentExchangeLocalSurplus = [];
     let currentExchangePartnerSurplus = [];
@@ -954,39 +951,68 @@
       if (!base) return '';
       return `${base}/storage/v1/object/public/library-ui-assets/${key}`;
     }
-    function pickLibraryLogoUrl(...sources){
+    function collectLibraryLogoCandidates(...sources){
+      const seen = new Set();
+      const candidates = [];
+      const pushCandidate = (value) => {
+        const normalized = normalizeUrlMaybe(value);
+        if (!normalized || seen.has(normalized)) return;
+        seen.add(normalized);
+        candidates.push(normalized);
+      };
       for (const source of sources){
         if (!source || typeof source !== 'object') continue;
-        const direct = normalizeUrlMaybe(firstFilledValue(
+        [
           source.logo_url,
           source.library_logo_url,
           source.brand_logo_url,
           source.theme_logo_url,
           source.header_logo_url,
           source.public_logo_url
-        ));
-        if (direct) return direct;
-        const assetUrl = buildLibraryAssetUrl(firstFilledValue(
+        ].forEach(pushCandidate);
+        [
           source.logo_file_key,
           source.library_logo_file_key,
           source.brand_logo_file_key,
           source.theme_logo_file_key,
           source.header_logo_file_key,
           source.public_logo_file_key
-        ));
-        if (assetUrl) return assetUrl;
+        ].forEach((fileKey) => {
+          pushCandidate(fileKey);
+          pushCandidate(buildLibraryAssetUrl(fileKey));
+        });
       }
-      return '';
+      return candidates;
     }
     function applyActiveLibraryBranding(){
       const img = $('libraryBrandLogo');
       if (!img) return;
-      const logoUrl = pickLibraryLogoUrl(currentLibraryBrandIdentity, currentLibraryRow);
-      if (logoUrl) {
-        img.src = logoUrl;
-        img.alt = `Logo da ${firstFilledValue(currentLibraryRow?.short_name, currentLibraryRow?.name, 'biblioteca ativa')}`;
+      currentLibraryLogoCandidates = collectLibraryLogoCandidates(
+        currentLibraryBrandIdentity,
+        currentLibraryRow,
+        currentCommunicationsContext,
+        currentAccessRow,
+        currentIdentityRow
+      );
+      const nextLogoUrl = currentLibraryLogoCandidates[0] || '';
+      img.alt = `Logo da ${firstFilledValue(currentLibraryRow?.short_name, currentLibraryRow?.name, currentLibraryBrandIdentity?.short_name, currentLibraryBrandIdentity?.library_name, 'biblioteca ativa')}`;
+      img.onerror = () => {
+        currentLibraryLogoCandidates.shift();
+        const fallbackUrl = currentLibraryLogoCandidates[0] || '';
+        if (fallbackUrl) {
+          img.src = fallbackUrl;
+          img.classList.remove('hidden');
+          return;
+        }
+        img.onerror = null;
+        img.src = '';
+        img.classList.add('hidden');
+      };
+      if (nextLogoUrl) {
+        if (img.src !== nextLogoUrl) img.src = nextLogoUrl;
         img.classList.remove('hidden');
       } else {
+        img.onerror = null;
         img.src = '';
         img.classList.add('hidden');
       }
@@ -2246,6 +2272,7 @@
           ['E-mail mostrado no envio', data?.sender_visible_email || '—']
         ]);
         $('communicationsJson').textContent = JSON.stringify(data || {}, null, 2);
+        applyActiveLibraryBranding();
         setStatus('communicationsStatus', 'Comunicações carregadas.', 'ok');
       } catch (error) {
         renderKvGrid('communicationsIdentityGrid', []);
