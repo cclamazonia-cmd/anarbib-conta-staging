@@ -143,7 +143,7 @@
 
     <div class="hero">
       <h1 id="pageHeroTitle">Biblioteca - Organização da biblioteca</h1>
-      <p id="pageHeroSubtitle">Informações gerais, regimento, regras de circulação, comunicações, documentos e tarefas internas.</p>
+      <p id="pageHeroSubtitle">Informações gerais, regimento, regras de circulação, comunicações, documentos, trocas e empréstimos interbibliotecas, relatórios e tarefas internas</p>
       <p id="helloLine"></p>
       <div class="chips">
         <span class="chip" id="chipFuncao">Função: —</span>
@@ -844,6 +844,10 @@
 
     const $ = (id) => document.getElementById(id);
     const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
+    const HERO_SUBTITLE_TEXT = 'Informações gerais, regimento, regras de circulação, comunicações, documentos, trocas e empréstimos interbibliotecas, relatórios e tarefas internas';
+    if ($('pageHeroTitle')) $('pageHeroTitle').textContent = HERO_TITLE_TEXT;
+    if ($('pageHeroSubtitle')) $('pageHeroSubtitle').textContent = HERO_SUBTITLE_TEXT;
     const TAB_STORAGE_KEY = 'anarbib_biblioteca_active_tab';
     const AUTH_RETURN_STORAGE_KEY = 'anarbib_biblioteca_auth_return';
 
