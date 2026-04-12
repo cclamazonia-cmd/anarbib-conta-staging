@@ -197,11 +197,94 @@
               <div class="section-head">
                 <div>
                   <h2>Identidade e funcionamento</h2>
-                  <div class="mini">Leitura direta das informações da biblioteca já usadas nesta página.</div>
+                  <div class="mini">Leitura, edição e conferência dos parâmetros locais que já alimentam esta página.</div>
                 </div>
                 <div class="actions"><button class="btn mini" id="btnRefreshIdentity" type="button">Atualizar</button></div>
               </div>
               <div class="status" id="identityStatus"></div>
+            </div>
+            <div class="row">
+              <div class="card">
+                <div class="section-head">
+                  <div><h3>Identidade básica da biblioteca</h3><div class="mini">Restaura aqui a edição do nome visível, do nome curto e da referência interna.</div></div>
+                  <div class="editor-actions">
+                    <button class="btn mini soft" id="btnResetIdentityBasics" type="button">Recarregar</button>
+                    <button class="btn mini primary" id="btnSaveIdentityBasics" type="button">Salvar identidade</button>
+                  </div>
+                </div>
+                <div class="editor-shell">
+                  <div class="editor-grid">
+                    <div class="field"><label for="identityLibraryName">Nome completo</label><input id="identityLibraryName" class="input" type="text" placeholder="Nome completo da biblioteca"></div>
+                    <div class="field"><label for="identityLibraryShortName">Nome abreviado</label><input id="identityLibraryShortName" class="input" type="text" placeholder="Sigla ou nome curto"></div>
+                    <div class="field"><label for="identityLibrarySlug">Nome curto no sistema</label><input id="identityLibrarySlug" class="input" type="text" readonly placeholder="Será carregado automaticamente"></div>
+                    <div class="field"><label for="identityLibraryId">ID da biblioteca</label><input id="identityLibraryId" class="input mono" type="text" readonly placeholder="Será carregado automaticamente"></div>
+                  </div>
+                  <div class="field"><label for="identityLocalRulesJson">Regras locais transitórias (JSON)</label><textarea id="identityLocalRulesJson" class="textarea" placeholder='{}'></textarea><div class="inline-note">Este bloco serve para recolocar um quadro local de regras visíveis quando a biblioteca ainda depende de regras transitórias fora do regimento formal.</div></div>
+                </div>
+                <div class="status" id="identityBasicsEditorStatus"></div>
+              </div>
+              <div class="card">
+                <div class="section-head">
+                  <div><h3>Contato principal e endereço</h3><div class="mini">Restaura a edição do perfil de contato usado nesta página.</div></div>
+                  <div class="editor-actions">
+                    <button class="btn mini soft" id="btnResetIdentityContact" type="button">Recarregar</button>
+                    <button class="btn mini primary" id="btnSaveIdentityContact" type="button">Salvar contato</button>
+                  </div>
+                </div>
+                <div class="editor-shell">
+                  <div class="editor-grid">
+                    <div class="field"><label for="identityContactName">Contato principal</label><input id="identityContactName" class="input" type="text" placeholder="Nome da pessoa ou coletivo"></div>
+                    <div class="field"><label for="identityContactRole">Papel do contato</label><input id="identityContactRole" class="input" type="text" placeholder="Ex.: coordenação, plantão, comunicação"></div>
+                    <div class="field"><label for="identityContactEmail">E-mail</label><input id="identityContactEmail" class="input" type="email" placeholder="contato@biblioteca.org"></div>
+                    <div class="field"><label for="identityContactPhone">Telefone</label><input id="identityContactPhone" class="input" type="text" placeholder="Telefone útil"></div>
+                    <div class="field"><label for="identityContactWhatsapp">WhatsApp</label><input id="identityContactWhatsapp" class="input" type="text" placeholder="Número de WhatsApp"></div>
+                    <div class="field"><label for="identityContactAlternate">Contato alternativo</label><input id="identityContactAlternate" class="input" type="text" placeholder="Outro canal ou pessoa"></div>
+                  </div>
+                  <div class="field"><label for="identityPostalAddress">Endereço postal</label><textarea id="identityPostalAddress" class="textarea" placeholder="Endereço usado pela biblioteca"></textarea></div>
+                </div>
+                <div class="status" id="identityContactEditorStatus"></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="section-head">
+                <div><h3>Funcionamento, atendimento e consulta local</h3><div class="mini">Restaura a edição dos parâmetros de funcionamento já lidos pela página.</div></div>
+                <div class="editor-actions">
+                  <button class="btn mini soft" id="btnResetIdentityService" type="button">Recarregar</button>
+                  <button class="btn mini primary" id="btnSaveIdentityService" type="button">Salvar funcionamento</button>
+                </div>
+              </div>
+              <div class="editor-shell">
+                <div class="editor-grid-3">
+                  <div class="field"><label for="identityServiceMode">Modo atual</label><input id="identityServiceMode" class="input" type="text" list="identityServiceModeList" placeholder="funcionamento_normal"></div>
+                  <div class="field"><label for="identityConsultationTimezone">Fuso da consulta local</label><input id="identityConsultationTimezone" class="input" type="text" placeholder="America/Belem"></div>
+                  <div class="field"><label for="identityMaxConsultations">Limite ao mesmo tempo</label><input id="identityMaxConsultations" class="input" type="number" min="1" step="1" placeholder="1"></div>
+                </div>
+                <datalist id="identityServiceModeList">
+                  <option value="funcionamento_normal"></option>
+                  <option value="somente_consulta"></option>
+                  <option value="pausada"></option>
+                  <option value="em_organizacao"></option>
+                </datalist>
+                <div class="check-row">
+                  <label class="check-item"><input id="identityAllowsReservations" type="checkbox"> Permitir novas reservas públicas</label>
+                  <label class="check-item"><input id="identityAllowsLoans" type="checkbox"> Permitir novos empréstimos públicos</label>
+                </div>
+                <div class="editor-grid">
+                  <div class="field"><label for="identityPublicMessage">Mensagem pública</label><textarea id="identityPublicMessage" class="textarea" placeholder="Mensagem visível ao público"></textarea></div>
+                  <div class="field"><label for="identityServiceScheduleText">Horários escritos</label><textarea id="identityServiceScheduleText" class="textarea" placeholder='Pode ser texto livre ou JSON'></textarea></div>
+                </div>
+                <div class="field"><label for="identityConsultationScheduleJson">Agenda organizada da consulta (JSON)</label><textarea id="identityConsultationScheduleJson" class="textarea" placeholder='{}'></textarea></div>
+              </div>
+              <div class="status" id="identityServiceEditorStatus"></div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Quadro atual dos ajustes locais</h3><div class="mini">Quadro de controle para verificar o que está sendo lido e o que será regravado.</div></div></div>
+              <div class="tableWrap">
+                <table>
+                  <thead><tr><th>Parâmetro</th><th>Valor atual</th><th>Origem</th><th>Observação</th></tr></thead>
+                  <tbody id="tbodyIdentitySettings"><tr><td colspan="4">Carregando…</td></tr></tbody>
+                </table>
+              </div>
             </div>
             <div class="card">
               <div class="section-head"><div><h3>Resumo da biblioteca</h3><div class="mini">Nome da biblioteca, contato principal e atendimento ao público.</div></div></div>
@@ -2235,6 +2318,162 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
       return data || { library_id: libraryId };
     }
 
+    function getIdentityLocalRulesKey() {
+      const row = currentLibraryRow && typeof currentLibraryRow === 'object' ? currentLibraryRow : {};
+      if (Object.prototype.hasOwnProperty.call(row, 'local_rules')) return 'local_rules';
+      if (Object.prototype.hasOwnProperty.call(row, 'circulation_local_rules')) return 'circulation_local_rules';
+      if (Object.prototype.hasOwnProperty.call(row, 'non_member_rules')) return 'non_member_rules';
+      return '';
+    }
+
+    function getIdentityLocalRulesValue() {
+      const row = currentLibraryRow && typeof currentLibraryRow === 'object' ? currentLibraryRow : {};
+      const key = getIdentityLocalRulesKey();
+      return key ? safeJsonObject(row[key]) : safeJsonObject(currentServiceState?.local_rules);
+    }
+
+    function parseJsonTextareaOrTextValue(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return null;
+      if (raw.startsWith('{') || raw.startsWith('[')) {
+        return JSON.parse(raw);
+      }
+      return raw;
+    }
+
+    function stringifyTextareaValue(value, fallback='') {
+      if (value == null || value === '') return fallback;
+      if (typeof value === 'string') return value;
+      return JSON.stringify(value, null, 2);
+    }
+
+    function renderIdentitySettingsTable() {
+      const tbody = $('tbodyIdentitySettings');
+      if (!tbody) return;
+      const localRulesKey = getIdentityLocalRulesKey();
+      const localRulesValue = getIdentityLocalRulesValue();
+      const rows = [
+        ['Nome completo', firstFilledValue(currentLibraryRow?.name), 'libraries', 'Usado no cabeçalho e nos resumos.'],
+        ['Nome abreviado', firstFilledValue(currentLibraryRow?.short_name), 'libraries', 'Mostrado em chips, listas e atalhos.'],
+        ['Nome curto no sistema', firstFilledValue(currentLibraryRow?.slug), 'libraries', 'Mantido somente para leitura aqui.'],
+        ['Contato principal', firstFilledValue(currentContactProfile?.contact_name), 'library_contact_profiles', 'Pessoa ou coletivo de referência.'],
+        ['E-mail de contato', firstFilledValue(currentContactProfile?.contact_email), 'library_contact_profiles', 'Canal humano local.'],
+        ['Telefone / WhatsApp', [firstFilledValue(currentContactProfile?.contact_phone), firstFilledValue(currentContactProfile?.contact_whatsapp)].filter(Boolean).join(' · '), 'library_contact_profiles', 'Canais rápidos de coordenação.'],
+        ['Modo atual', firstFilledValue(currentServiceState?.service_mode), 'library_service_state', 'Controla o funcionamento público da biblioteca.'],
+        ['Reservas públicas abertas', displayValue(currentServiceState?.allows_new_reservations), 'library_service_state', 'Leitura direta desta página.'],
+        ['Empréstimos públicos abertos', displayValue(currentServiceState?.allows_new_loans), 'library_service_state', 'Leitura direta desta página.'],
+        ['Horários escritos', stringifyTextareaValue(currentServiceState?.service_schedule_text, '—'), 'library_service_state', 'Texto livre ou estrutura curta.'],
+        ['Agenda organizada', stringifyTextareaValue(currentServiceState?.consultation_schedule_struct, '—'), 'library_service_state', 'JSON da consulta local.'],
+        ['Regras locais transitórias', localRulesKey ? stringifyTextareaValue(localRulesValue, '—') : 'Sem chave local detectada', localRulesKey ? `libraries.${localRulesKey}` : 'não detectado', localRulesKey ? 'Será salva na mesma coluna já presente nesta base.' : 'Nenhuma coluna conhecida foi detectada no row atual.']
+      ];
+      tbody.innerHTML = rows.map((row) => `<tr><td>${esc(row[0])}</td><td>${esc(row[1] || '—')}</td><td>${esc(row[2] || '—')}</td><td>${esc(row[3] || '—')}</td></tr>`).join('');
+      applyStoredSortForTbody('tbodyIdentitySettings');
+    }
+
+    function loadIdentityEditorsFromCurrentState() {
+      if ($('identityLibraryName')) $('identityLibraryName').value = firstFilledValue(currentLibraryRow?.name);
+      if ($('identityLibraryShortName')) $('identityLibraryShortName').value = firstFilledValue(currentLibraryRow?.short_name);
+      if ($('identityLibrarySlug')) $('identityLibrarySlug').value = firstFilledValue(currentLibraryRow?.slug);
+      if ($('identityLibraryId')) $('identityLibraryId').value = firstFilledValue(currentLibraryRow?.id);
+      if ($('identityLocalRulesJson')) $('identityLocalRulesJson').value = toPrettyJson(getIdentityLocalRulesValue());
+
+      if ($('identityContactName')) $('identityContactName').value = firstFilledValue(currentContactProfile?.contact_name);
+      if ($('identityContactRole')) $('identityContactRole').value = firstFilledValue(currentContactProfile?.contact_role);
+      if ($('identityContactEmail')) $('identityContactEmail').value = firstFilledValue(currentContactProfile?.contact_email);
+      if ($('identityContactPhone')) $('identityContactPhone').value = firstFilledValue(currentContactProfile?.contact_phone);
+      if ($('identityContactWhatsapp')) $('identityContactWhatsapp').value = firstFilledValue(currentContactProfile?.contact_whatsapp);
+      if ($('identityContactAlternate')) $('identityContactAlternate').value = firstFilledValue(currentContactProfile?.contact_alternate);
+      if ($('identityPostalAddress')) $('identityPostalAddress').value = firstFilledValue(currentContactProfile?.postal_address);
+
+      if ($('identityServiceMode')) $('identityServiceMode').value = firstFilledValue(currentServiceState?.service_mode, 'funcionamento_normal');
+      if ($('identityConsultationTimezone')) $('identityConsultationTimezone').value = firstFilledValue(currentServiceState?.consultation_timezone, 'America/Belem');
+      if ($('identityMaxConsultations')) $('identityMaxConsultations').value = String(firstFilledValue(currentServiceState?.max_simultaneous_consultations, 1));
+      if ($('identityAllowsReservations')) $('identityAllowsReservations').checked = currentServiceState?.allows_new_reservations !== false;
+      if ($('identityAllowsLoans')) $('identityAllowsLoans').checked = currentServiceState?.allows_new_loans !== false;
+      if ($('identityPublicMessage')) $('identityPublicMessage').value = firstFilledValue(currentServiceState?.public_message);
+      if ($('identityServiceScheduleText')) $('identityServiceScheduleText').value = stringifyTextareaValue(currentServiceState?.service_schedule_text, '');
+      if ($('identityConsultationScheduleJson')) $('identityConsultationScheduleJson').value = toPrettyJson(safeJsonObject(currentServiceState?.consultation_schedule_struct));
+
+      setStatus('identityBasicsEditorStatus', '');
+      setStatus('identityContactEditorStatus', '');
+      setStatus('identityServiceEditorStatus', '');
+      renderIdentitySettingsTable();
+    }
+
+    async function saveIdentityBasics() {
+      try {
+        const libraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
+        if (!libraryId) throw new Error('Biblioteca ativa não identificada.');
+        const payload = {
+          name: String($('identityLibraryName')?.value || '').trim() || firstFilledValue(currentLibraryRow?.name) || null,
+          short_name: String($('identityLibraryShortName')?.value || '').trim() || firstFilledValue(currentLibraryRow?.short_name) || null
+        };
+        const localRulesKey = getIdentityLocalRulesKey();
+        if (localRulesKey) payload[localRulesKey] = parseJsonTextareaValue($('identityLocalRulesJson')?.value || '{}');
+        setStatus('identityBasicsEditorStatus', 'Salvando identidade da biblioteca…', 'info');
+        const { error } = await supabase.from('libraries').update(payload).eq('id', libraryId);
+        if (error) throw error;
+        currentLibraryRow = { ...(currentLibraryRow || {}), ...payload, id: libraryId };
+        setStatus('identityBasicsEditorStatus', 'Identidade da biblioteca salva.', 'ok');
+        await loadIdentityPanel();
+      } catch (error) {
+        setStatus('identityBasicsEditorStatus', 'Não consegui salvar a identidade da biblioteca: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function saveIdentityContact() {
+      try {
+        const libraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
+        if (!libraryId) throw new Error('Biblioteca ativa não identificada.');
+        const payload = {
+          library_id: libraryId,
+          contact_name: String($('identityContactName')?.value || '').trim() || null,
+          contact_role: String($('identityContactRole')?.value || '').trim() || null,
+          contact_email: String($('identityContactEmail')?.value || '').trim() || null,
+          contact_phone: String($('identityContactPhone')?.value || '').trim() || null,
+          contact_whatsapp: String($('identityContactWhatsapp')?.value || '').trim() || null,
+          contact_alternate: String($('identityContactAlternate')?.value || '').trim() || null,
+          postal_address: String($('identityPostalAddress')?.value || '').trim() || null,
+          updated_at: new Date().toISOString()
+        };
+        setStatus('identityContactEditorStatus', 'Salvando contato principal…', 'info');
+        const { error } = await supabase.from('library_contact_profiles').upsert(payload, { onConflict: 'library_id' });
+        if (error) throw error;
+        currentContactProfile = { ...(currentContactProfile || {}), ...payload };
+        setStatus('identityContactEditorStatus', 'Contato principal salvo.', 'ok');
+        await loadIdentityPanel();
+      } catch (error) {
+        setStatus('identityContactEditorStatus', 'Não consegui salvar o contato principal: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function saveIdentityService() {
+      try {
+        const libraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
+        if (!libraryId) throw new Error('Biblioteca ativa não identificada.');
+        const payload = {
+          library_id: libraryId,
+          service_mode: String($('identityServiceMode')?.value || '').trim() || null,
+          public_message: String($('identityPublicMessage')?.value || '').trim() || null,
+          allows_new_reservations: !!$('identityAllowsReservations')?.checked,
+          allows_new_loans: !!$('identityAllowsLoans')?.checked,
+          consultation_timezone: String($('identityConsultationTimezone')?.value || '').trim() || 'America/Belem',
+          max_simultaneous_consultations: Math.max(Number($('identityMaxConsultations')?.value || 1) || 1, 1),
+          consultation_schedule_struct: parseJsonTextareaValue($('identityConsultationScheduleJson')?.value || '{}'),
+          service_schedule_text: parseJsonTextareaOrTextValue($('identityServiceScheduleText')?.value || ''),
+          updated_at: new Date().toISOString()
+        };
+        setStatus('identityServiceEditorStatus', 'Salvando funcionamento local…', 'info');
+        const { error } = await supabase.from('library_service_state').upsert(payload, { onConflict: 'library_id' });
+        if (error) throw error;
+        currentServiceState = { ...(currentServiceState || {}), ...payload };
+        setStatus('identityServiceEditorStatus', 'Funcionamento local salvo.', 'ok');
+        await loadIdentityPanel();
+      } catch (error) {
+        setStatus('identityServiceEditorStatus', 'Não consegui salvar o funcionamento local: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
     async function loadActiveLibraryBrandingContext() {
       const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
       const libraryId = normalizeLibraryId(row?.id);
@@ -2339,17 +2578,21 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
           ['Agenda organizada', Object.keys(scheduleStruct).length ? JSON.stringify(scheduleStruct) : '—']
         ]);
 
-        const localRules = safeJsonObject(firstFilledValue(row?.local_rules, row?.circulation_local_rules, row?.non_member_rules, currentServiceState?.local_rules));
+        const localRules = getIdentityLocalRulesValue();
         renderKvGrid('localRulesGrid', Object.keys(localRules).length ? summarizeObjectEntries(localRules, 10) : [
           ['Estado', 'Nenhum resumo local claro foi encontrado nesta página'],
           ['Observação', 'Os conjuntos de regras e as regras aparecem no separador seguinte.']
         ]);
 
-        setStatus('identityStatus', 'Identidade e funcionamento carregados.', 'ok');
+        loadIdentityEditorsFromCurrentState();
+        renderIdentitySettingsTable();
+        setStatus('identityStatus', 'Identidade, contato, funcionamento e quadro de ajustes carregados.', 'ok');
       } catch (error) {
         renderKvGrid('identityGrid', []);
         renderKvGrid('scheduleGrid', []);
         renderKvGrid('localRulesGrid', []);
+        const tbody = $('tbodyIdentitySettings');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="4">Falha ao carregar os ajustes locais.</td></tr>';
         setStatus('identityStatus', 'Não consegui carregar a identidade e o funcionamento: ' + (error.message || String(error)), 'bad');
       }
     }
@@ -5903,6 +6146,12 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
     }
 
     $('btnRefreshIdentity')?.addEventListener('click', loadIdentityPanel);
+    $('btnResetIdentityBasics')?.addEventListener('click', loadIdentityEditorsFromCurrentState);
+    $('btnSaveIdentityBasics')?.addEventListener('click', saveIdentityBasics);
+    $('btnResetIdentityContact')?.addEventListener('click', loadIdentityEditorsFromCurrentState);
+    $('btnSaveIdentityContact')?.addEventListener('click', saveIdentityContact);
+    $('btnResetIdentityService')?.addEventListener('click', loadIdentityEditorsFromCurrentState);
+    $('btnSaveIdentityService')?.addEventListener('click', saveIdentityService);
     $('btnRefreshComms')?.addEventListener('click', loadCommunicationsPanel);
     $('btnRefreshRegimento')?.addEventListener('click', loadWorkspaceAndPolicies);
     $('btnRefreshDocuments')?.addEventListener('click', async () => { await loadGovernancePanel(); await loadExchangePanel(); await loadInterlibraryLoansPanel(); });
