@@ -1025,6 +1025,39 @@
                 <div id="reportsQuickGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
               </div>
             </div>
+            <div class="row">
+              <div class="card">
+                <div class="section-head">
+                  <div><h3>Vistas salvas da biblioteca</h3><div class="mini">Guarda aqui combinações de fluxo + filtros + ordenação para reutilizar depois, sem remontar tudo à mão.</div></div>
+                  <div class="editor-actions">
+                    <button class="btn mini soft" id="btnReloadSavedReportViews" type="button">Recarregar</button>
+                    <button class="btn mini primary" id="btnSaveCurrentReportView" type="button">Salvar vista atual</button>
+                  </div>
+                </div>
+                <div class="status" id="reportsSavedViewsStatus"></div>
+                <div class="tableWrap">
+                  <table>
+                    <thead><tr><th>Nome</th><th>Fluxo</th><th>Filtros</th><th>Atualizado</th><th>Ações</th></tr></thead>
+                    <tbody id="tbodyReportsSavedViews"><tr><td colspan="5">Nenhuma vista salva ainda.</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="card">
+                <div class="section-head">
+                  <div><h3>Últimas execuções desta aba</h3><div class="mini">Memória local das últimas consultas lançadas daqui, para reabrir rápido a mesma leitura.</div></div>
+                  <div class="editor-actions">
+                    <button class="btn mini soft" id="btnReloadReportsRunHistory" type="button">Recarregar</button>
+                  </div>
+                </div>
+                <div class="status" id="reportsRunHistoryStatus"></div>
+                <div class="tableWrap">
+                  <table>
+                    <thead><tr><th>Quando</th><th>Fluxo</th><th>Filtros</th><th>Linhas</th><th>Ações</th></tr></thead>
+                    <tbody id="tbodyReportsRunHistory"><tr><td colspan="5">Nenhuma execução registrada ainda.</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
             <div class="card">
               <div class="section-head">
                 <div>
@@ -6087,39 +6120,223 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
     }
 
     function buildReportsQuickEntries() {
-      const weeklyEnabled = getCurrentReportsConfig().weekly_library_summary_enabled === true;
+      const reportsCfg = getCurrentReportsConfig();
+      const weeklyEnabled = reportsCfg.weekly_library_summary_enabled === true;
+      const savedViews = asArray(reportsCfg.saved_views);
+      const recentRuns = asArray(reportsCfg.recent_runs);
       return [
         ['Resumo semanal automático', weeklyEnabled ? 'Ligado para esta biblioteca' : 'Desligado para esta biblioteca'],
         ['Fluxos previstos', 'Reservas, empréstimos / retornos, consultas, inscrições, catalogação e catálogo completo'],
         ['Filtros cruzados', 'Período, situação, agrupamento, ordenação e busca livre'],
+        ['Vistas salvas', `${savedViews.length} vista(s) guardada(s) nesta biblioteca`],
+        ['Últimas execuções guardadas', `${recentRuns.length} execução(ões) recentes nesta aba`],
         ['Exemplos diretos', 'Empréstimos por leitor(a/e), reservas por período, catálogo completo e catalogação por tombo / CDD']
       ];
+    }
+
+    function getSavedReportViews() {
+      return asArray(getCurrentReportsConfig().saved_views).filter((row) => row && typeof row === 'object');
+    }
+
+    function getRecentReportRuns() {
+      return asArray(getCurrentReportsConfig().recent_runs).filter((row) => row && typeof row === 'object');
+    }
+
+    function describeReportFiltersCompact(snapshot) {
+      if (!snapshot || typeof snapshot !== 'object') return '—';
+      const bits = [];
+      const definition = REPORT_PRESET_DEFINITIONS[String(snapshot.preset || 'reservas').trim()] || REPORT_PRESET_DEFINITIONS.reservas;
+      bits.push(definition.label);
+      if (snapshot.grouping && snapshot.grouping !== 'none') bits.push(`agrupado por ${snapshot.grouping}`);
+      if (snapshot.status) bits.push(`situação ${snapshot.status}`);
+      if (snapshot.dateFrom || snapshot.dateTo) bits.push(`${snapshot.dateFrom || '…'} → ${snapshot.dateTo || '…'}`);
+      if (snapshot.search) bits.push(`busca “${snapshot.search}”`);
+      if (snapshot.sort) bits.push(`ordem ${snapshot.sort}`);
+      if (snapshot.limit) bits.push(`máx. ${snapshot.limit}`);
+      return bits.join(' · ');
+    }
+
+    function buildCurrentReportViewSnapshot() {
+      const filters = collectReportsFilters();
+      return {
+        id: `${Date.now()}`,
+        name: '',
+        preset: filters.preset,
+        grouping: filters.grouping,
+        status: filters.status,
+        dateFrom: filters.dateFrom,
+        dateTo: filters.dateTo,
+        search: filters.search,
+        sort: filters.sort,
+        limit: filters.limit,
+        source: currentReportsMeta?.source || '',
+        updated_at: new Date().toISOString()
+      };
+    }
+
+    function applyReportViewSnapshot(snapshot) {
+      if (!snapshot || typeof snapshot !== 'object') return;
+      if ($('reportsPresetSelect')) $('reportsPresetSelect').value = String(snapshot.preset || 'reservas').trim() || 'reservas';
+      updateReportsPresetUi();
+      if ($('reportsGroupingSelect')) $('reportsGroupingSelect').value = String(snapshot.grouping || 'none').trim() || 'none';
+      if ($('reportsStatusFilter')) $('reportsStatusFilter').value = String(snapshot.status || '').trim();
+      if ($('reportsDateFrom')) $('reportsDateFrom').value = String(snapshot.dateFrom || '').trim();
+      if ($('reportsDateTo')) $('reportsDateTo').value = String(snapshot.dateTo || '').trim();
+      if ($('reportsSearchInput')) $('reportsSearchInput').value = String(snapshot.search || '').trim();
+      if ($('reportsSortSelect')) $('reportsSortSelect').value = String(snapshot.sort || 'date_desc').trim() || 'date_desc';
+      if ($('reportsLimitSelect')) $('reportsLimitSelect').value = String(snapshot.limit || 100).trim() || '100';
+      if ($('reportsSourceNote')) $('reportsSourceNote').value = String(snapshot.source || '').trim();
+    }
+
+    async function persistReportsConfigMutation(mutateFn, statusId, successMessage) {
+      const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+      const base = currentGovernance && typeof currentGovernance === 'object' ? JSON.parse(JSON.stringify(currentGovernance)) : {};
+      const reports = { ...safeJsonObject(base.reports) };
+      const nextReports = mutateFn(reports) || reports;
+      base.reports = nextReports;
+      const { error } = await supabase
+        .from('library_document_governance')
+        .upsert({
+          library_id: row.id,
+          config: base,
+          updated_at: new Date().toISOString(),
+          updated_by: session?.user?.id || null
+        }, { onConflict: 'library_id' });
+      if (error) throw error;
+      currentGovernance = base;
+      loadReportsConfigForm();
+      renderKvGrid('reportsQuickGrid', buildReportsQuickEntries());
+      renderReportsSavedViewsTable();
+      renderReportsRunHistoryTable();
+      if (statusId && successMessage) setStatus(statusId, successMessage, 'ok');
+      return base;
+    }
+
+    function renderReportsSavedViewsTable() {
+      const tbody = $('tbodyReportsSavedViews');
+      if (!tbody) return;
+      const rows = getSavedReportViews();
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5">Nenhuma vista salva ainda.</td></tr>';
+        applyStoredSortForTbody('tbodyReportsSavedViews');
+        return;
+      }
+      tbody.innerHTML = rows.map((row) => `
+        <tr>
+          <td>${esc(firstFilledValue(row?.name, 'Vista sem nome'))}</td>
+          <td>${esc((REPORT_PRESET_DEFINITIONS[String(row?.preset || 'reservas').trim()] || REPORT_PRESET_DEFINITIONS.reservas).label)}</td>
+          <td>${esc(describeReportFiltersCompact(row))}</td>
+          <td>${esc(fmtDateTime(row?.updated_at))}</td>
+          <td>
+            <div class="editor-actions">
+              <button class="btn mini soft" type="button" data-report-view-action="load" data-report-view-id="${esc(String(row?.id || ''))}">Carregar</button>
+              <button class="btn mini danger" type="button" data-report-view-action="delete" data-report-view-id="${esc(String(row?.id || ''))}">Excluir</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+      applyStoredSortForTbody('tbodyReportsSavedViews');
+    }
+
+    function renderReportsRunHistoryTable() {
+      const tbody = $('tbodyReportsRunHistory');
+      if (!tbody) return;
+      const rows = getRecentReportRuns();
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5">Nenhuma execução registrada ainda.</td></tr>';
+        applyStoredSortForTbody('tbodyReportsRunHistory');
+        return;
+      }
+      tbody.innerHTML = rows.map((row) => `
+        <tr>
+          <td>${esc(fmtDateTime(row?.executed_at))}</td>
+          <td>${esc((REPORT_PRESET_DEFINITIONS[String(row?.preset || 'reservas').trim()] || REPORT_PRESET_DEFINITIONS.reservas).label)}</td>
+          <td>${esc(describeReportFiltersCompact(row))}</td>
+          <td>${esc(displayValue(row?.row_count))}</td>
+          <td>
+            <div class="editor-actions">
+              <button class="btn mini soft" type="button" data-report-run-action="reload" data-report-run-id="${esc(String(row?.id || ''))}">Reabrir</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+      applyStoredSortForTbody('tbodyReportsRunHistory');
+    }
+
+    async function saveCurrentReportView() {
+      try {
+        const snapshot = buildCurrentReportViewSnapshot();
+        const suggested = prompt('Nome da vista de relatório a guardar:', `${(REPORT_PRESET_DEFINITIONS[snapshot.preset] || REPORT_PRESET_DEFINITIONS.reservas).label} — ${new Date().toLocaleDateString('pt-BR')}`);
+        const trimmed = String(suggested || '').trim();
+        if (!trimmed) {
+          setStatus('reportsSavedViewsStatus', 'Salvamento da vista cancelado.', 'warn');
+          return;
+        }
+        snapshot.name = trimmed;
+        setStatus('reportsSavedViewsStatus', 'Salvando vista local de relatório…', 'info');
+        await persistReportsConfigMutation((reports) => {
+          const existing = asArray(reports.saved_views).filter((row) => row && typeof row === 'object');
+          const next = [snapshot, ...existing.filter((row) => String(row?.name || '').trim().toLowerCase() !== trimmed.toLowerCase())].slice(0, 8);
+          reports.saved_views = next;
+          return reports;
+        }, 'reportsSavedViewsStatus', 'Vista de relatório salva.');
+      } catch (error) {
+        setStatus('reportsSavedViewsStatus', 'Não consegui salvar a vista do relatório: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function deleteSavedReportView(viewId) {
+      try {
+        const targetId = String(viewId || '').trim();
+        if (!targetId) throw new Error('Vista local não identificada.');
+        if (!window.confirm('Excluir esta vista salva?')) return;
+        setStatus('reportsSavedViewsStatus', 'Excluindo vista local…', 'info');
+        await persistReportsConfigMutation((reports) => {
+          reports.saved_views = asArray(reports.saved_views).filter((row) => String(row?.id || '') !== targetId);
+          return reports;
+        }, 'reportsSavedViewsStatus', 'Vista local excluída.');
+      } catch (error) {
+        setStatus('reportsSavedViewsStatus', 'Não consegui excluir a vista local: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function loadSavedReportView(viewId, runAfter=true) {
+      try {
+        const targetId = String(viewId || '').trim();
+        const snapshot = getSavedReportViews().find((row) => String(row?.id || '') === targetId);
+        if (!snapshot) throw new Error('Vista salva não encontrada.');
+        applyReportViewSnapshot(snapshot);
+        setStatus('reportsSavedViewsStatus', `Vista “${snapshot.name || 'sem nome'}” carregada nos filtros.`, 'ok');
+        if (runAfter) await runSelectedReport();
+      } catch (error) {
+        setStatus('reportsSavedViewsStatus', 'Não consegui recarregar a vista salva: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function recordRecentReportRun(filters, rowCount, source) {
+      const snapshot = {
+        ...filters,
+        id: `${Date.now()}`,
+        executed_at: new Date().toISOString(),
+        row_count: rowCount,
+        source: source || ''
+      };
+      await persistReportsConfigMutation((reports) => {
+        const existing = asArray(reports.recent_runs).filter((row) => row && typeof row === 'object');
+        reports.recent_runs = [snapshot, ...existing].slice(0, 12);
+        return reports;
+      }, '', '');
     }
 
     async function saveReportsConfig() {
       try {
         setStatus('reportsConfigStatus', 'Salvando opção do resumo semanal…', 'info');
-        const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
-        const base = currentGovernance && typeof currentGovernance === 'object' ? JSON.parse(JSON.stringify(currentGovernance)) : {};
-        base.reports = {
-          ...safeJsonObject(base.reports),
-          weekly_library_summary_enabled: boolValue('reportsWeeklyEnabled'),
-          weekly_library_summary_note: String($('reportsWeeklyNote')?.value || '').trim() || null,
-          weekly_library_summary_target_email: getReportsWeeklyTargetEmail()
-        };
-        const { error } = await supabase
-          .from('library_document_governance')
-          .upsert({
-            library_id: row.id,
-            config: base,
-            updated_at: new Date().toISOString(),
-            updated_by: session?.user?.id || null
-          }, { onConflict: 'library_id' });
-        if (error) throw error;
-        currentGovernance = base;
-        loadReportsConfigForm();
-        renderKvGrid('reportsQuickGrid', buildReportsQuickEntries());
-        setStatus('reportsConfigStatus', 'Opção do resumo semanal salva.', 'ok');
+        await persistReportsConfigMutation((reports) => {
+          reports.weekly_library_summary_enabled = boolValue('reportsWeeklyEnabled');
+          reports.weekly_library_summary_note = String($('reportsWeeklyNote')?.value || '').trim() || null;
+          reports.weekly_library_summary_target_email = getReportsWeeklyTargetEmail();
+          return reports;
+        }, 'reportsConfigStatus', 'Opção do resumo semanal salva.');
       } catch (error) {
         setStatus('reportsConfigStatus', 'Não consegui salvar a opção semanal: ' + (error.message || String(error)), 'bad');
       }
@@ -6641,6 +6858,7 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
         renderReportsTable(columns, rows, 'Nenhum resultado para os filtros atuais.');
         renderReportsSummary(rows, filters, dataset, aggregated.grouped);
         if ($('reportsSourceNote')) $('reportsSourceNote').value = firstFilledValue(dataset.source, '—');
+        await recordRecentReportRun(filters, rows.length, dataset.source);
         setStatus('reportsStatus', rows.length ? `Relatório de ${definition.label.toLowerCase()} carregado com ${rows.length} linha(s).` : `Relatório de ${definition.label.toLowerCase()} carregado, sem linhas para os filtros atuais.`, rows.length ? 'ok' : 'warn');
       } catch (error) {
         currentReportsRows = [];
@@ -6676,11 +6894,17 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
       updateReportsPresetUi();
       loadReportsConfigForm();
       renderKvGrid('reportsQuickGrid', buildReportsQuickEntries());
+      renderReportsSavedViewsTable();
+      renderReportsRunHistoryTable();
+      setStatus('reportsSavedViewsStatus', getSavedReportViews().length ? 'Vistas salvas prontas.' : 'Nenhuma vista salva nesta biblioteca ainda.', getSavedReportViews().length ? 'ok' : 'info');
+      setStatus('reportsRunHistoryStatus', getRecentReportRuns().length ? 'Histórico local pronto.' : 'Nenhuma execução guardada ainda.', getRecentReportRuns().length ? 'ok' : 'info');
       if (!currentReportsMeta?.loaded) {
         renderKvGrid('reportsSummaryGrid', [
           ['Estado', 'Escolha um fluxo e clique em “Atualizar relatório”.'],
           ['Resumo semanal automático', getCurrentReportsConfig().weekly_library_summary_enabled === true ? 'Ligado' : 'Desligado'],
           ['Destino atual', getReportsWeeklyTargetEmail()],
+          ['Vistas salvas', `${getSavedReportViews().length} guardada(s)`],
+          ['Últimas execuções', `${getRecentReportRuns().length} guardada(s)`],
           ['Catálogo completo', 'Disponível nesta aba, com autoria, subtítulo, CDD, exemplares e tombos']
         ]);
         renderReportsTable([
@@ -6931,6 +7155,9 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
     $('btnLoadReports')?.addEventListener('click', runSelectedReport);
     $('btnResetReportsFilters')?.addEventListener('click', resetReportsFilters);
     $('btnSaveReportsConfig')?.addEventListener('click', saveReportsConfig);
+    $('btnSaveCurrentReportView')?.addEventListener('click', saveCurrentReportView);
+    $('btnReloadSavedReportViews')?.addEventListener('click', loadReportsPanel);
+    $('btnReloadReportsRunHistory')?.addEventListener('click', loadReportsPanel);
     $('reportsPresetSelect')?.addEventListener('change', updateReportsPresetUi);
     $('btnNewTask')?.addEventListener('click', resetTaskForm);
     $('btnCancelTask')?.addEventListener('click', resetTaskForm);
@@ -6948,6 +7175,27 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
     $('btnCancelPolicyRule')?.addEventListener('click', resetPolicyRuleForm);
     $('btnSavePolicyRule')?.addEventListener('click', savePolicyRule);
     $('btnDeletePolicyRule')?.addEventListener('click', () => deletePolicyRule());
+
+    $('tab-relatorios')?.addEventListener('click', async (event) => {
+      const viewBtn = event.target.closest('[data-report-view-action]');
+      if (viewBtn) {
+        const action = String(viewBtn.dataset.reportViewAction || '');
+        const viewId = String(viewBtn.dataset.reportViewId || '');
+        if (action === 'load') await loadSavedReportView(viewId, true);
+        if (action === 'delete') await deleteSavedReportView(viewId);
+        return;
+      }
+      const runBtn = event.target.closest('[data-report-run-action]');
+      if (runBtn) {
+        const runId = String(runBtn.dataset.reportRunId || '');
+        const snapshot = getRecentReportRuns().find((row) => String(row?.id || '') === runId);
+        if (snapshot) {
+          applyReportViewSnapshot(snapshot);
+          setStatus('reportsRunHistoryStatus', 'Execução anterior recarregada nos filtros.', 'ok');
+          await runSelectedReport();
+        }
+      }
+    });
 
     $('tab-regimento')?.addEventListener('click', async (event) => {
       const assistBtn = event.target.closest('[data-regime-assist]');
