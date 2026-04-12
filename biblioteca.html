@@ -1115,6 +1115,36 @@
               </div>
               <div class="status" id="tasksStatus"></div>
             </div>
+            <div class="row">
+              <div class="card">
+                <div class="section-head">
+                  <div>
+                    <h3>Resumo rápido das tarefas</h3>
+                    <div class="mini">Quadro local para ver volume, urgência, pendências e próximos prazos sem abrir cada linha.</div>
+                  </div>
+                </div>
+                <div id="tasksSummaryGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
+              </div>
+              <div class="card">
+                <div class="section-head">
+                  <div>
+                    <h3>Filtro rápido local</h3>
+                    <div class="mini">Filtra a tabela abaixo por situação, prioridade e responsável, sem alterar os dados salvos.</div>
+                  </div>
+                  <div class="editor-actions">
+                    <button class="btn mini soft" id="btnApplyTaskFilters" type="button">Aplicar filtros</button>
+                    <button class="btn mini" id="btnClearTaskFilters" type="button">Limpar filtros</button>
+                    <button class="btn mini" id="btnOpenTaskInvitesEmail" type="button">Abrir e-mail</button>
+                  </div>
+                </div>
+                <div class="editor-grid-3">
+                  <div class="field"><label for="taskFilterStatus">Situação</label><select id="taskFilterStatus" class="select"><option value="">Todas</option><option value="aberta">Aberta</option><option value="em_andamento">Em andamento</option><option value="bloqueada">Bloqueada</option><option value="concluida">Concluída</option><option value="arquivada">Arquivada</option></select></div>
+                  <div class="field"><label for="taskFilterPriority">Prioridade</label><select id="taskFilterPriority" class="select"><option value="">Todas</option><option value="baixa">Baixa</option><option value="media">Média</option><option value="alta">Alta</option><option value="urgente">Urgente</option></select></div>
+                  <div class="field"><label for="taskFilterOwner">Responsável</label><input id="taskFilterOwner" class="input" type="text" placeholder="Filtrar por responsável"></div>
+                </div>
+                <div class="status" id="taskFiltersStatus"></div>
+              </div>
+            </div>
             <div class="card">
               <div class="section-head">
                 <div>
@@ -1283,6 +1313,7 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
     let currentPolicySets = [];
     let currentPolicyRules = [];
     let currentTasks = [];
+    let currentVisibleTasks = [];
     let currentReportsRows = [];
     let currentReportsMeta = { preset: 'reservas', source: '', loaded: false };
     let refreshPanelsPromise = null;
@@ -2435,6 +2466,60 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
       }
     }
 
+    function resetInstitutionalAuthState() {
+      session = null;
+      currentIdentityRow = null;
+      currentAccessRow = null;
+      currentLibraryRow = null;
+      currentLibraryBrandIdentity = null;
+      currentServiceState = null;
+      currentContactProfile = null;
+      currentCommunicationsContext = null;
+      currentWorkspace = null;
+      currentGovernance = null;
+      currentGovernanceRow = null;
+      currentPartnerSources = [];
+      currentPartnerContacts = new Map();
+      currentExchangeRequests = [];
+      currentExchangeLocalSurplus = [];
+      currentExchangePartnerSurplus = [];
+      currentExchangeFollowupRows = [];
+      currentExchangeLocalExecutionOptions = [];
+      currentExchangePartnerExecutionOptions = [];
+      currentInterlibraryLoans = [];
+      currentInterlibraryLoanRowsV2 = [];
+      currentInterlibraryLoanItemRowsV2 = [];
+      currentInterlibraryLoanDocumentOptions = [];
+      currentInterlibraryLoanExemplarOptions = [];
+      currentInterlibraryLoanDraftItems = [];
+      currentRegulationDocs = [];
+      currentPolicySets = [];
+      currentPolicyRules = [];
+      currentTasks = [];
+      currentVisibleTasks = [];
+      currentReportsRows = [];
+      currentReportsMeta = { preset: String($('reportsPresetSelect')?.value || 'reservas').trim() || 'reservas', source: '', loaded: false };
+      applyActiveLibraryBranding();
+      setChip('chipFuncao', 'Função: —');
+      setChip('chipEmail', 'E-mail: —');
+      setChip('chipBiblioteca', 'Biblioteca: —');
+      setChip('chipServiceMode', 'Modo: —');
+      setChip('chipWorkspace', 'Resumo geral da biblioteca: sem sessão');
+      if ($('helloLine')) $('helloLine').textContent = 'Faz login com uma conta bibliotecária para abrir a área da biblioteca.';
+    }
+
+    async function resolveLibrarianAccessWithRetry(userId, attempts = 8, delayMs = 220) {
+      let lastState = { rows: [], profileRow: null, accessRow: null };
+      for (let i = 0; i < attempts; i += 1) {
+        const accessState = await fetchAccessRows(userId);
+        const accessRow = pickCurrentLibrarianAccess(accessState.rows);
+        lastState = { ...accessState, accessRow };
+        if (accessRow) return lastState;
+        if (i < attempts - 1) await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+      return lastState;
+    }
+
     function updateTopbarAuthButton(isLoggedIn) {
       const btn = $('btnSair');
       if (!btn) return;
@@ -2444,43 +2529,11 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
       btn.disabled = false;
     }
 
-    function resetInstitutionalAccessState(message='Faz login com uma conta bibliotecária para abrir a área da biblioteca.') {
-      currentIdentityRow = null;
-      currentAccessRow = null;
-      currentLibraryRow = null;
-      currentLibraryBrandIdentity = null;
-      currentServiceState = null;
-      currentContactProfile = null;
-      currentCommunicationsContext = null;
-      setChip('chipFuncao', 'Função: —');
-      setChip('chipEmail', 'E-mail: —');
-      setChip('chipBiblioteca', 'Biblioteca: —');
-      setChip('chipServiceMode', 'Modo: —');
-      setChip('chipWorkspace', 'Resumo geral da biblioteca: sem sessão');
-      if ($('helloLine')) $('helloLine').textContent = message;
-      applyActiveLibraryBranding();
-    }
-
-    async function resolveLibrarianAccessWithRetry(userId, attempts = 6, delayMs = 220) {
-      let lastState = { rows: [], profileRow: null };
-      for (let i = 0; i < attempts; i += 1) {
-        lastState = await fetchAccessRows(userId);
-        const accessRow = pickCurrentLibrarianAccess(lastState.rows);
-        if (accessRow) {
-          return { accessRow, profileRow: lastState.profileRow || null };
-        }
-        if (i < attempts - 1) {
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
-        }
-      }
-      return { accessRow: null, profileRow: lastState.profileRow || null };
-    }
-
     async function adoptSessionState() {
       session = await resolveSession();
       updateTopbarAuthButton(!!session?.user?.id);
       if (!session?.user?.id) {
-        resetInstitutionalAccessState();
+        resetInstitutionalAuthState();
         return false;
       }
 
@@ -2489,18 +2542,24 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
       currentIdentityRow = accessState.profileRow || null;
       currentAccessRow = accessState.accessRow || null;
       if (!currentAccessRow) {
+        currentLibraryRow = null;
+        currentLibraryBrandIdentity = null;
+        currentServiceState = null;
+        currentContactProfile = null;
+        currentCommunicationsContext = null;
+        applyActiveLibraryBranding();
         setChip('chipFuncao', 'Função: sem acesso');
         setChip('chipEmail', `E-mail: ${session.user.email || '—'}`);
         setChip('chipBiblioteca', 'Biblioteca: —');
-        currentLibraryBrandIdentity = null;
-        applyActiveLibraryBranding();
-        $('helloLine').textContent = 'A sessão existe, mas o acesso bibliotecário desta conta ainda não foi confirmado nesta página.';
+        setChip('chipServiceMode', 'Modo: —');
+        setChip('chipWorkspace', 'Resumo geral da biblioteca: acesso bibliotecário não confirmado');
+        if ($('helloLine')) $('helloLine').textContent = 'A sessão existe, mas não encontrei um acesso bibliotecário ativo para esta conta.';
         return false;
       }
 
       setChip('chipFuncao', 'Função: bibliotecária/o');
       setChip('chipEmail', `E-mail: ${session.user.email || '—'}`);
-      $('helloLine').textContent = `Sessão ativa para ${session.user.email || 'bibliotecária/o'} — página aberta para consulta.`;
+      if ($('helloLine')) $('helloLine').textContent = `Sessão ativa para ${session.user.email || 'bibliotecária/o'} — página aberta para consulta.`;
       return true;
     }
 
@@ -4147,8 +4206,7 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
         String($('govPartnerPoliticalNote')?.value || '').trim(),
         '',
         String($('govPartnerNextStep')?.value || '').trim()
-      ].filter(Boolean).join('
-');
+      ].filter(Boolean).join('\n');
       openMailtoLink(to, subject, body);
       setStatus('governancePartnerEditorStatus', 'Abrindo o e-mail para a parceira selecionada.', 'ok');
     }
@@ -6951,6 +7009,82 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
       }
     }
 
+    function getTaskFilterState() {
+      return {
+        status: String($('taskFilterStatus')?.value || '').trim().toLowerCase(),
+        priority: String($('taskFilterPriority')?.value || '').trim().toLowerCase(),
+        owner: String($('taskFilterOwner')?.value || '').trim().toLowerCase()
+      };
+    }
+
+    function taskMatchesFilter(row, filterState) {
+      if (!row || typeof row !== 'object') return false;
+      const rowStatus = String(firstFilledValue(row?.status)).trim().toLowerCase();
+      const rowPriority = String(firstFilledValue(row?.priority)).trim().toLowerCase();
+      const rowOwner = String(firstFilledValue(row?.owner)).trim().toLowerCase();
+      if (filterState.status && rowStatus !== filterState.status) return false;
+      if (filterState.priority && rowPriority !== filterState.priority) return false;
+      if (filterState.owner && !rowOwner.includes(filterState.owner)) return false;
+      return true;
+    }
+
+    function renderTasksSummary(rows) {
+      const normalizedRows = asArray(rows).filter((row) => row && typeof row === 'object');
+      const openRows = normalizedRows.filter((row) => !['concluida', 'arquivada'].includes(String(row?.status || '').trim().toLowerCase()));
+      const urgentRows = normalizedRows.filter((row) => String(row?.priority || '').trim().toLowerCase() === 'urgente');
+      const blockedRows = normalizedRows.filter((row) => String(row?.status || '').trim().toLowerCase() === 'bloqueada');
+      const inviteCount = normalizedRows.reduce((sum, row) => sum + getTaskInviteEmails(row).length, 0);
+      const dueDates = normalizedRows
+        .map((row) => String(row?.due_date || '').trim())
+        .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value))
+        .sort();
+      renderKvGrid('tasksSummaryGrid', [
+        ['Total de tarefas', normalizedRows.length],
+        ['Tarefas em aberto', openRows.length],
+        ['Prioridade urgente', urgentRows.length],
+        ['Bloqueadas', blockedRows.length],
+        ['Convites registrados', inviteCount],
+        ['Próximo prazo', dueDates[0] ? fmtDate(dueDates[0]) : '—']
+      ]);
+    }
+
+    function renderTaskFiltersStatus(totalRows, filteredRows, filterState) {
+      const parts = [];
+      if (filterState.status) parts.push(`situação: ${filterState.status}`);
+      if (filterState.priority) parts.push(`prioridade: ${filterState.priority}`);
+      if (filterState.owner) parts.push(`responsável contém: ${filterState.owner}`);
+      if (!parts.length) {
+        setStatus('taskFiltersStatus', `${filteredRows} tarefa(s) visível(is) de ${totalRows}.`, totalRows ? 'info' : 'warn');
+        return;
+      }
+      setStatus('taskFiltersStatus', `${filteredRows} tarefa(s) visível(is) de ${totalRows} com filtros ativos (${parts.join(' · ')}).`, filteredRows ? 'ok' : 'warn');
+    }
+
+    function applyTaskFilters() {
+      const filterState = getTaskFilterState();
+      currentVisibleTasks = asArray(currentTasks).filter((row) => taskMatchesFilter(row, filterState));
+      renderTasksSummary(currentTasks);
+      renderTasksTable(currentVisibleTasks);
+      renderTaskFiltersStatus(asArray(currentTasks).length, currentVisibleTasks.length, filterState);
+    }
+
+    function clearTaskFilters() {
+      if ($('taskFilterStatus')) $('taskFilterStatus').value = '';
+      if ($('taskFilterPriority')) $('taskFilterPriority').value = '';
+      if ($('taskFilterOwner')) $('taskFilterOwner').value = '';
+      applyTaskFilters();
+    }
+
+    function openTaskInvitesEmailFromVisibleRows() {
+      const emails = Array.from(new Set(currentVisibleTasks.flatMap((row) => getTaskInviteEmails(row)).map((value) => String(value || '').trim()).filter(Boolean)));
+      if (!emails.length) {
+        setStatus('taskFiltersStatus', 'Nenhum e-mail de convite encontrado nas tarefas visíveis.', 'warn');
+        return;
+      }
+      const subject = encodeURIComponent('Tarefas internas da biblioteca');
+      window.location.href = `mailto:${encodeURIComponent(emails.join(','))}?subject=${subject}`;
+    }
+
     function resetTaskForm() {
       $('taskId').value = '';
       $('taskTitle').value = '';
@@ -7056,12 +7190,17 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
         const { data, error } = libraryId ? await query.eq('library_id', libraryId) : await query;
         if (error) throw error;
         currentTasks = asArray(data).filter((row) => row && typeof row === 'object');
-        renderTasksTable(currentTasks);
+        currentVisibleTasks = [...currentTasks];
+        renderTasksSummary(currentTasks);
+        applyTaskFilters();
         if (!$('taskId').value) resetTaskForm();
         setStatus('tasksStatus', 'Tarefas internas carregadas.', 'ok');
       } catch (error) {
         currentTasks = [];
+        currentVisibleTasks = [];
+        renderKvGrid('tasksSummaryGrid', []);
         renderRowsTable('tbodyTasks', [], [1,2,3,4,5,6,7].map((n) => ({ value: () => n })), 'Falha ao carregar as tarefas internas: ' + (error.message || String(error)));
+        setStatus('taskFiltersStatus', 'Filtros indisponíveis enquanto as tarefas não carregam.', 'warn');
         setStatus('tasksStatus', 'Não consegui carregar as tarefas internas: ' + (error.message || String(error)), 'warn');
       }
     }
@@ -7170,6 +7309,12 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
     });
     $('interloanLenderDocumentSelect')?.addEventListener('change', async () => { await loadInterlibraryLoanExemplarsForDocument(); });
     $('btnRefreshTasks')?.addEventListener('click', loadTasksPanel);
+    $('btnApplyTaskFilters')?.addEventListener('click', applyTaskFilters);
+    $('btnClearTaskFilters')?.addEventListener('click', clearTaskFilters);
+    $('btnOpenTaskInvitesEmail')?.addEventListener('click', openTaskInvitesEmailFromVisibleRows);
+    $('taskFilterStatus')?.addEventListener('change', applyTaskFilters);
+    $('taskFilterPriority')?.addEventListener('change', applyTaskFilters);
+    $('taskFilterOwner')?.addEventListener('input', applyTaskFilters);
     $('btnRefreshReports')?.addEventListener('click', refreshReportsPanelInteractive);
     $('btnLoadReports')?.addEventListener('click', runSelectedReport);
     $('btnResetReportsFilters')?.addEventListener('click', resetReportsFilters);
@@ -7323,6 +7468,7 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
       }
       btn.disabled = true;
       clearAuthReturn();
+      resetInstitutionalAuthState();
       try {
         await supabase.auth.signOut();
       } catch (_e) {
@@ -7363,7 +7509,8 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
       updateTopbarAuthButton(!!session?.user?.id);
       if (event === 'SIGNED_OUT') {
         clearAuthReturn();
-        resetInstitutionalAccessState();
+        resetInstitutionalAuthState();
+        return;
       }
       if (['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED', 'PASSWORD_RECOVERY'].includes(String(event || '').trim())) {
         setTimeout(() => {
