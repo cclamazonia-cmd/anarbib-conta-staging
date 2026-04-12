@@ -71,6 +71,10 @@
     .tab-panel{display:none}
     .tab-panel.active{display:block}
     .tableWrap{overflow:auto;max-height:58vh;border-radius:16px;border:1px solid rgba(255,255,255,.10)}
+    .tableWrap.compact-table{overflow-x:visible}
+    .tableWrap.compact-table table{min-width:0;table-layout:fixed}
+    .tableWrap.compact-table thead th,.tableWrap.compact-table tbody td{padding:10px 12px}
+    .tableWrap.compact-table tbody td{font-size:.9rem}
     table{width:100%;border-collapse:separate;border-spacing:0;min-width:860px;background:rgba(10,10,10,.35)}
     thead th{position:sticky;top:0;z-index:2;text-align:left;padding:12px 14px;background:linear-gradient(180deg,#26060a,#160407);color:#fff;border-bottom:1px solid rgba(255,255,255,.10);font-size:.86rem;text-transform:uppercase;letter-spacing:.05em}
     thead th.sortable{padding:0}
@@ -118,6 +122,8 @@
       .tab-btn .hint{display:none}
       .tableWrap{max-height:none}
       table{min-width:720px}
+      .tableWrap.compact-table{overflow-x:visible}
+      .tableWrap.compact-table table{min-width:0}
     }
     @media (max-width:560px){
       .wrap{padding:14px}
@@ -915,6 +921,19 @@
                 <div class="muted-box">
                   <div class="inline-note">Use “Trocas interbibliotecas” para permutas de exemplares. Use este bloco apenas para saídas temporárias com devolução prevista, mantendo o acompanhamento separado e legível.</div>
                 </div>
+                <div class="section-head" style="margin-top:12px">
+                  <div><h3>Filtro rápido local</h3><div class="mini">Filtra o quadro de seguimento por situação, papel da biblioteca ativa e busca livre, sem alterar os dados salvos.</div></div>
+                  <div class="editor-actions">
+                    <button class="btn mini soft" id="btnApplyInterlibraryLoanFilters" type="button">Aplicar filtros</button>
+                    <button class="btn mini" id="btnClearInterlibraryLoanFilters" type="button">Limpar filtros</button>
+                  </div>
+                </div>
+                <div class="editor-grid-3" style="margin-top:12px">
+                  <div class="field"><label for="interloanFilterStatus">Situação</label><select id="interloanFilterStatus" class="select"><option value="">Todas</option><option value="preparacao">Em preparação</option><option value="aguardando_saida">Aguardando saída</option><option value="emprestado">Emprestado</option><option value="em_devolucao">Em devolução</option><option value="devolvido">Devolvido</option><option value="cancelado">Cancelado</option><option value="atrasado">Atrasado</option></select></div>
+                  <div class="field"><label for="interloanFilterRole">Papel da biblioteca ativa</label><select id="interloanFilterRole" class="select"><option value="">Todos</option><option value="empresta">Empresta</option><option value="recebe">Recebe</option></select></div>
+                  <div class="field"><label for="interloanFilterSearch">Busca livre</label><input id="interloanFilterSearch" class="input" type="text" placeholder="Biblioteca, documento, tombo, contato…"></div>
+                </div>
+                <div class="status" id="interloanFiltersStatus"></div>
               </div>
             </div>
             <div class="card">
@@ -1035,7 +1054,7 @@
                   </div>
                 </div>
                 <div class="status" id="reportsSavedViewsStatus"></div>
-                <div class="tableWrap">
+                <div class="tableWrap compact-table">
                   <table>
                     <thead><tr><th>Nome</th><th>Fluxo</th><th>Filtros</th><th>Atualizado</th><th>Ações</th></tr></thead>
                     <tbody id="tbodyReportsSavedViews"><tr><td colspan="5">Nenhuma vista salva ainda.</td></tr></tbody>
@@ -1050,7 +1069,7 @@
                   </div>
                 </div>
                 <div class="status" id="reportsRunHistoryStatus"></div>
-                <div class="tableWrap">
+                <div class="tableWrap compact-table">
                   <table>
                     <thead><tr><th>Quando</th><th>Fluxo</th><th>Filtros</th><th>Linhas</th><th>Ações</th></tr></thead>
                     <tbody id="tbodyReportsRunHistory"><tr><td colspan="5">Nenhuma execução registrada ainda.</td></tr></tbody>
@@ -1304,6 +1323,7 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
     let currentExchangeLocalExecutionOptions = [];
     let currentExchangePartnerExecutionOptions = [];
     let currentInterlibraryLoans = [];
+    let currentVisibleInterlibraryLoans = [];
     let currentInterlibraryLoanRowsV2 = [];
     let currentInterlibraryLoanItemRowsV2 = [];
     let currentInterlibraryLoanDocumentOptions = [];
@@ -5333,21 +5353,70 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
         });
     }
 
+    function getInterlibraryLoanFilteredRows() {
+      const statusFilter = String($('interloanFilterStatus')?.value || '').trim().toLowerCase();
+      const roleFilter = String($('interloanFilterRole')?.value || '').trim().toLowerCase();
+      const searchFilter = String($('interloanFilterSearch')?.value || '').trim().toLowerCase();
+      return currentInterlibraryLoans.filter((row) => {
+        const localRole = String(getInterlibraryLoanLocalRole(row) || '').trim().toLowerCase();
+        const mappedRole = localRole.includes('empresta') ? 'empresta' : (localRole.includes('recebe') ? 'recebe' : localRole);
+        if (statusFilter && String(row?.status || '').trim().toLowerCase() !== statusFilter) return false;
+        if (roleFilter && mappedRole !== roleFilter) return false;
+        if (searchFilter) {
+          const haystack = [
+            getInterlibraryLoanLibraryLabel(row?.lender_library_id),
+            getInterlibraryLoanLibraryLabel(row?.borrower_library_id),
+            row?.lender_document_title,
+            row?.lender_document_bib_ref,
+            row?.lender_exemplar_tombo,
+            row?.coordination_contact_name,
+            row?.coordination_contact_email,
+            row?.logistics_note,
+            ...formatInterlibraryLoanItemsPreview(row)
+          ].filter(Boolean).join(' ').toLowerCase();
+          if (!haystack.includes(searchFilter)) return false;
+        }
+        return true;
+      });
+    }
+
+    function applyInterlibraryLoanFilters(showStatus=true) {
+      currentVisibleInterlibraryLoans = getInterlibraryLoanFilteredRows();
+      renderInterlibraryLoansSummary();
+      renderInterlibraryLoansTable();
+      if (showStatus) {
+        const hiddenCount = Math.max(currentInterlibraryLoans.length - currentVisibleInterlibraryLoans.length, 0);
+        const message = currentInterlibraryLoans.length
+          ? `${currentVisibleInterlibraryLoans.length} registro(s) visível(is)${hiddenCount ? ` · ${hiddenCount} ocultado(s) pelos filtros` : ''}.`
+          : 'Nenhum empréstimo interbibliotecas registrado no momento.';
+        setStatus('interloanFiltersStatus', message, currentInterlibraryLoans.length ? 'info' : 'warn');
+      }
+    }
+
+    function clearInterlibraryLoanFilters(showStatus=true) {
+      if ($('interloanFilterStatus')) $('interloanFilterStatus').value = '';
+      if ($('interloanFilterRole')) $('interloanFilterRole').value = '';
+      if ($('interloanFilterSearch')) $('interloanFilterSearch').value = '';
+      applyInterlibraryLoanFilters(showStatus);
+    }
+
     function renderInterlibraryLoansSummary() {
+      const summaryRows = currentVisibleInterlibraryLoans.length || !currentInterlibraryLoans.length ? currentVisibleInterlibraryLoans : currentInterlibraryLoans;
       const currentLibraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
-      const lentCount = currentInterlibraryLoans.filter((row) => String(normalizeLibraryId(row?.lender_library_id) || '') === String(currentLibraryId || '')).length;
-      const borrowedCount = currentInterlibraryLoans.filter((row) => String(normalizeLibraryId(row?.borrower_library_id) || '') === String(currentLibraryId || '')).length;
-      const openCount = currentInterlibraryLoans.filter((row) => !['devolvido', 'cancelado'].includes(String(row?.status || '').trim().toLowerCase())).length;
-      const overdueCount = currentInterlibraryLoans.filter((row) => String(row?.status || '').trim().toLowerCase() === 'atrasado').length;
-      const totalItems = currentInterlibraryLoans.reduce((sum, row) => sum + (Number(row?.items_count || 0) || 0), 0);
+      const lentCount = summaryRows.filter((row) => String(normalizeLibraryId(row?.lender_library_id) || '') === String(currentLibraryId || '')).length;
+      const borrowedCount = summaryRows.filter((row) => String(normalizeLibraryId(row?.borrower_library_id) || '') === String(currentLibraryId || '')).length;
+      const openCount = summaryRows.filter((row) => !['devolvido', 'cancelado'].includes(String(row?.status || '').trim().toLowerCase())).length;
+      const overdueCount = summaryRows.filter((row) => String(row?.status || '').trim().toLowerCase() === 'atrasado').length;
+      const totalItems = summaryRows.reduce((sum, row) => sum + (Number(row?.items_count || 0) || 0), 0);
       renderKvGrid('interlibraryLoansSummary', [
-        ['Registros neste bloco', currentInterlibraryLoans.length],
+        ['Registros visíveis', summaryRows.length],
+        ['Registros totais', currentInterlibraryLoans.length],
         ['Exemplares nesses registros', totalItems],
         ['Biblioteca ativa empresta em', lentCount],
         ['Biblioteca ativa recebe em', borrowedCount],
         ['Em aberto', openCount],
         ['Marcados como atrasados', overdueCount],
-        ['Última atualização', currentInterlibraryLoans.length ? fmtDateTime(firstFilledValue(currentInterlibraryLoans[0]?.updated_at, currentInterlibraryLoans[0]?.created_at)) : '—']
+        ['Última atualização', summaryRows.length ? fmtDateTime(firstFilledValue(summaryRows[0]?.updated_at, summaryRows[0]?.created_at)) : '—']
       ]);
     }
 
@@ -5370,12 +5439,13 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
     function renderInterlibraryLoansTable() {
       const tbody = $('tbodyInterlibraryLoans');
       if (!tbody) return;
-      if (!currentInterlibraryLoans.length) {
-        tbody.innerHTML = '<tr><td colspan="7">Nenhum empréstimo interbibliotecas registrado no momento.</td></tr>';
+      const rows = currentVisibleInterlibraryLoans.length || !currentInterlibraryLoans.length ? currentVisibleInterlibraryLoans : currentInterlibraryLoans;
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="7">Nenhum empréstimo interbibliotecas visível com os filtros atuais.</td></tr>';
         applyStoredSortForTbody('tbodyInterlibraryLoans');
         return;
       }
-      tbody.innerHTML = currentInterlibraryLoans.map((row) => {
+      tbody.innerHTML = rows.map((row) => {
         const librariesText = `${getInterlibraryLoanLibraryLabel(row?.lender_library_id)} → ${getInterlibraryLoanLibraryLabel(row?.borrower_library_id)}`;
         const docLines = formatInterlibraryLoanItemsPreview(row);
         const cancellable = canInterlibraryLoanBeCancelled(row);
@@ -5882,8 +5952,8 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
         currentInterlibraryLoanRowsV2 = bundle.headers;
         currentInterlibraryLoanItemRowsV2 = bundle.items;
         currentInterlibraryLoans = adaptInterlibraryLoansV2ForCurrentPanel(bundle.headers, bundle.items);
-        renderInterlibraryLoansSummary();
-        renderInterlibraryLoansTable();
+        currentVisibleInterlibraryLoans = [...currentInterlibraryLoans];
+        applyInterlibraryLoanFilters(false);
         const editingId = String($('interloanId')?.value || '').trim();
         if (editingId && currentInterlibraryLoans.some((row) => String(row?.id || '') === editingId)) {
           const fresh = currentInterlibraryLoans.find((row) => String(row?.id || '') === editingId) || null;
@@ -5898,6 +5968,7 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
         currentInterlibraryLoans = [];
         currentInterlibraryLoanRowsV2 = [];
         currentInterlibraryLoanItemRowsV2 = [];
+        currentVisibleInterlibraryLoans = [];
         currentInterlibraryLoanDocumentOptions = [];
         currentInterlibraryLoanExemplarOptions = [];
         currentInterlibraryLoanDraftItems = [];
@@ -7261,6 +7332,11 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
       }
     });
     $('btnRefreshInterlibraryLoans')?.addEventListener('click', refreshInterlibraryLoansPanelInteractive);
+    $('btnApplyInterlibraryLoanFilters')?.addEventListener('click', () => applyInterlibraryLoanFilters(true));
+    $('btnClearInterlibraryLoanFilters')?.addEventListener('click', () => clearInterlibraryLoanFilters(true));
+    $('interloanFilterStatus')?.addEventListener('change', () => applyInterlibraryLoanFilters(true));
+    $('interloanFilterRole')?.addEventListener('change', () => applyInterlibraryLoanFilters(true));
+    $('interloanFilterSearch')?.addEventListener('input', () => applyInterlibraryLoanFilters(false));
     $('btnSaveGovernance')?.addEventListener('click', saveGovernanceConfig);
     $('btnResetGovernance')?.addEventListener('click', loadGovernanceForm);
     $('btnResetGovernancePartner')?.addEventListener('click', () => { const row = getSelectedGovernancePartnerRow(); if (row) loadGovernancePartnerIntoEditor(row); else resetGovernancePartnerForm(); });
