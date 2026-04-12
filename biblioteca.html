@@ -658,11 +658,112 @@
               </div>
             </div>
             <div class="card">
+              <div class="section-head">
+                <div><h3>Seguimento local de uma biblioteca parceira</h3><div class="mini">Restaura um bloco de trabalho local para registrar estado político da relação, contato útil, próxima etapa e observações próprias da biblioteca.</div></div>
+                <div class="editor-actions">
+                  <button class="btn mini soft" id="btnResetGovernancePartner" type="button">Recarregar</button>
+                  <button class="btn mini primary" id="btnSaveGovernancePartner" type="button">Salvar seguimento</button>
+                  <button class="btn mini" id="btnOpenGovernancePartnerEmail" type="button">Abrir e-mail</button>
+                </div>
+              </div>
+              <div class="editor-shell">
+                <input id="govPartnerLibraryId" type="hidden">
+                <div class="editor-grid-3">
+                  <div class="field"><label for="govPartnerSelect">Biblioteca parceira</label><select id="govPartnerSelect" class="select"><option value="">Selecione</option></select></div>
+                  <div class="field"><label for="govPartnerResolvedStatus">Estado já visível na rede</label><input id="govPartnerResolvedStatus" class="input" type="text" readonly placeholder="Será preenchido ao escolher uma parceira"></div>
+                  <div class="field"><label for="govPartnerLocalRelationStatus">Estado local de seguimento</label><select id="govPartnerLocalRelationStatus" class="select">
+                    <option value="">Sem marcação local</option>
+                    <option value="identificada">Identificada</option>
+                    <option value="contactada">Contactada</option>
+                    <option value="em_discussao">Em discussão</option>
+                    <option value="acordo_parcial">Acordo parcial</option>
+                    <option value="acordo_tecnico">Acordo técnico</option>
+                    <option value="importacao_autorizada">Importação autorizada</option>
+                    <option value="mutualizacao_autorizada">Mutualização autorizada</option>
+                    <option value="catalogo_ativo_na_rede">Catálogo ativo na rede</option>
+                  </select></div>
+                </div>
+                <div class="editor-grid-3">
+                  <div class="field"><label for="govPartnerContactName">Contato localmente priorizado</label><input id="govPartnerContactName" class="input" type="text" placeholder="Nome da pessoa ou do coletivo"></div>
+                  <div class="field"><label for="govPartnerContactEmail">E-mail útil</label><input id="govPartnerContactEmail" class="input" type="email" placeholder="contato@biblioteca.org"></div>
+                  <div class="field"><label for="govPartnerContactPhone">Telefone / WhatsApp</label><input id="govPartnerContactPhone" class="input" type="text" placeholder="Número útil"></div>
+                </div>
+                <div class="editor-grid">
+                  <div class="field"><label for="govPartnerNextStep">Próxima etapa combinada</label><input id="govPartnerNextStep" class="input" type="text" placeholder="Ex.: retomar por e-mail, marcar conversa, verificar condições políticas"></div>
+                  <div class="field"><label for="govPartnerPoliticalNote">Observação política</label><textarea id="govPartnerPoliticalNote" class="textarea" placeholder="Ex.: relação promissora, mas ainda depende de clareza sobre mutualização e uso do catálogo."></textarea></div>
+                </div>
+                <div class="editor-grid">
+                  <div class="field"><label for="govPartnerOperationalNote">Observação operacional</label><textarea id="govPartnerOperationalNote" class="textarea" placeholder="Ex.: responderam em tal data, preferem centralizar o contato neste e-mail, catálogo ativo mas ainda sem acordo completo."></textarea></div>
+                  <div class="field"><label for="govPartnerLocalSource">Fonte / memória local</label><textarea id="govPartnerLocalSource" class="textarea" placeholder="Ex.: conversa em encontro, e-mail recebido, decisão interna da biblioteca."></textarea></div>
+                </div>
+                <div class="check-row">
+                  <label class="check-item"><input id="govPartnerImportAuthorized" type="checkbox"> Importação autorizada localmente</label>
+                  <label class="check-item"><input id="govPartnerMutualizationAuthorized" type="checkbox"> Mutualização autorizada localmente</label>
+                </div>
+              </div>
+              <div class="status" id="governancePartnerEditorStatus"></div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Quadro local das parceiras acompanhadas</h3><div class="mini">Este quadro conserva o seguimento local saído do bloc de edição ci-dessus, sans écraser les données réseau.</div></div></div>
+              <div class="tableWrap">
+                <table>
+                  <thead><tr><th>Biblioteca parceira</th><th>Estado local</th><th>Contato priorizado</th><th>Próxima etapa</th><th>Observações</th></tr></thead>
+                  <tbody id="tbodyGovernancePartnerFollowups"><tr><td colspan="5">Nenhum seguimento local registrado ainda.</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card">
               <div class="section-head"><div><h3>Pedidos e acordos já registrados</h3><div class="mini">Acompanhamento das solicitações interbibliotecas que envolvem esta biblioteca.</div></div></div>
               <div class="tableWrap">
                 <table>
                   <thead><tr><th>Sentido</th><th>Biblioteca parceira</th><th>Ação</th><th>Objeto</th><th>Status</th><th>Atualizado</th></tr></thead>
                   <tbody id="tbodyDocumentRequests"><tr><td colspan="6">Carregando…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card">
+              <div class="section-head">
+                <div><h3>Seguimento local de um pedido documental</h3><div class="mini">Restaura un bloco d’action local pour noter qui répond, où en est le traitement interne, et préparer un retour clair vers la bibliothèque partenaire.</div></div>
+                <div class="editor-actions">
+                  <button class="btn mini soft" id="btnResetGovernanceRequest" type="button">Recarregar</button>
+                  <button class="btn mini primary" id="btnSaveGovernanceRequest" type="button">Salvar seguimento</button>
+                  <button class="btn mini" id="btnOpenGovernanceRequestEmail" type="button">Abrir e-mail</button>
+                </div>
+              </div>
+              <div class="editor-shell">
+                <input id="govRequestId" type="hidden">
+                <div class="editor-grid-3">
+                  <div class="field"><label for="govRequestSelect">Pedido interbibliotecas</label><select id="govRequestSelect" class="select"><option value="">Selecione</option></select></div>
+                  <div class="field"><label for="govRequestGlobalStatus">Estado global do pedido</label><input id="govRequestGlobalStatus" class="input" type="text" readonly placeholder="Será preenchido ao escolher um pedido"></div>
+                  <div class="field"><label for="govRequestLocalState">Estado local de tratamento</label><select id="govRequestLocalState" class="select">
+                    <option value="">Sem marcação local</option>
+                    <option value="a_verificar">A verificar</option>
+                    <option value="resposta_pendente">Resposta pendente</option>
+                    <option value="resposta_enviada">Resposta enviada</option>
+                    <option value="acordo_em_preparacao">Acordo em preparação</option>
+                    <option value="concluido_localmente">Concluído localmente</option>
+                    <option value="sem_seguimento">Sem seguimento</option>
+                  </select></div>
+                </div>
+                <div class="editor-grid-3">
+                  <div class="field"><label for="govRequestAssignedTo">Responsável local</label><input id="govRequestAssignedTo" class="input" type="text" placeholder="Nome do compa ou coletivo"></div>
+                  <div class="field"><label for="govRequestPartnerEmail">E-mail da parceira</label><input id="govRequestPartnerEmail" class="input" type="text" readonly placeholder="Será preenchido ao escolher um pedido"></div>
+                  <div class="field"><label for="govRequestMailSubject">Assunto sugerido</label><input id="govRequestMailSubject" class="input" type="text" placeholder="Resposta sobre pedido interbibliotecas"></div>
+                </div>
+                <div class="editor-grid">
+                  <div class="field"><label for="govRequestObjectLabel">Objeto do pedido</label><input id="govRequestObjectLabel" class="input" type="text" readonly placeholder="Será preenchido ao escolher um pedido"></div>
+                  <div class="field"><label for="govRequestInternalNote">Observação interna</label><textarea id="govRequestInternalNote" class="textarea" placeholder="Ex.: falta conferir condição do exemplar, precisamos consultar o coletivo, aguarda retorno de outro compa."></textarea></div>
+                </div>
+                <div class="field"><label for="govRequestResponseNote">Rascunho de resposta / retorno</label><textarea id="govRequestResponseNote" class="textarea" placeholder="Texto livre para compor a resposta à biblioteca parceira."></textarea></div>
+              </div>
+              <div class="status" id="governanceRequestEditorStatus"></div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Quadro local dos pedidos acompanhados</h3><div class="mini">Synthèse locale des demandes déjà annotées ici, sans modifier le statut global du pedido dans les autres onglets.</div></div></div>
+              <div class="tableWrap">
+                <table>
+                  <thead><tr><th>Pedido</th><th>Estado local</th><th>Responsável</th><th>Assunto / retorno</th><th>Observações</th></tr></thead>
+                  <tbody id="tbodyGovernanceRequestFollowups"><tr><td colspan="5">Nenhum seguimento local registrado ainda.</td></tr></tbody>
                 </table>
               </div>
             </div>
@@ -3673,8 +3774,12 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
         renderPartnerLibrariesTable(currentPartnerSources);
         renderDocumentRequestsTable(currentExchangeRequests);
         populateExchangePartnerSelect();
+        populateGovernancePartnerSelect();
+        populateGovernanceRequestSelect();
+        renderGovernancePartnerFollowupsTable();
+        renderGovernanceRequestFollowupsTable();
         currentExchangeFollowupRows = getExchangeFollowupRows(currentExchangeRequests);
-        setStatus('documentsStatus', 'Organização dos documentos, bibliotecas ativas com catálogo e pedidos interbibliotecas carregados.', 'ok');
+        setStatus('documentsStatus', 'Organização dos documentos, bibliotecas ativas com catálogo, seguimento local de parceiras e pedidos interbibliotecas carregados.', 'ok');
       } catch (error) {
         currentGovernance = {};
         currentGovernanceRow = null;
@@ -3687,9 +3792,328 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
         $('governanceJson').textContent = '{}';
         renderPartnerLibrariesTable([]);
         renderDocumentRequestsTable([]);
+        renderGovernancePartnerFollowupsTable();
+        renderGovernanceRequestFollowupsTable();
         populateExchangePartnerSelect();
+        populateGovernancePartnerSelect();
+        populateGovernanceRequestSelect();
         setStatus('documentsStatus', 'Não consegui carregar a governança documental: ' + (error.message || String(error)), 'warn');
       }
+    }
+
+    function getGovernancePartnerRegistry() {
+      return safeJsonObject(currentGovernance?.partner_registry);
+    }
+
+    function getGovernanceRequestRegistry() {
+      return safeJsonObject(currentGovernance?.request_registry);
+    }
+
+    function friendlyGovernanceRequestState(value) {
+      const raw = String(value || '').trim().toLowerCase();
+      const labels = {
+        a_verificar: 'A verificar',
+        resposta_pendente: 'Resposta pendente',
+        resposta_enviada: 'Resposta enviada',
+        acordo_em_preparacao: 'Acordo em preparação',
+        concluido_localmente: 'Concluído localmente',
+        sem_seguimento: 'Sem seguimento'
+      };
+      return labels[raw] || (String(value || '').trim() || '—');
+    }
+
+    function getGovernancePartnerLocalEntry(libraryId) {
+      const registry = getGovernancePartnerRegistry();
+      return safeJsonObject(registry[String(libraryId || '').trim()]);
+    }
+
+    function getGovernanceRequestLocalEntry(requestId) {
+      const registry = getGovernanceRequestRegistry();
+      return safeJsonObject(registry[String(requestId || '').trim()]);
+    }
+
+    function buildGovernancePartnerOptionLabel(row) {
+      return `${getPartnerDisplayName(row)} · ${friendlyPartnerRelationStatus(row?.relation_status)}`;
+    }
+
+    function buildGovernanceRequestOptionLabel(row) {
+      const partnerRow = getExchangePartnerRow(row);
+      return `${getExchangeDirection(row)} · ${getPartnerDisplayName(partnerRow)} · ${buildExchangeRequestShortLabel(row)}`;
+    }
+
+    function populateGovernancePartnerSelect() {
+      fillSelectOptions('govPartnerSelect', currentPartnerSources, 'Selecione', (row) => ({
+        value: String(row?.library_id || ''),
+        label: buildGovernancePartnerOptionLabel(row)
+      }));
+    }
+
+    function populateGovernanceRequestSelect() {
+      fillSelectOptions('govRequestSelect', currentExchangeRequests, 'Selecione', (row) => ({
+        value: String(row?.id || ''),
+        label: buildGovernanceRequestOptionLabel(row)
+      }));
+    }
+
+    function getSelectedGovernancePartnerRow() {
+      const partnerId = String($('govPartnerSelect')?.value || $('govPartnerLibraryId')?.value || '').trim();
+      return currentPartnerSources.find((row) => String(row?.library_id || '') === partnerId) || null;
+    }
+
+    function getSelectedGovernanceRequestRow() {
+      const requestId = String($('govRequestSelect')?.value || $('govRequestId')?.value || '').trim();
+      return currentExchangeRequests.find((row) => String(row?.id || '') === requestId) || null;
+    }
+
+    function resetGovernancePartnerForm() {
+      if ($('govPartnerLibraryId')) $('govPartnerLibraryId').value = '';
+      if ($('govPartnerSelect')) $('govPartnerSelect').value = '';
+      if ($('govPartnerResolvedStatus')) $('govPartnerResolvedStatus').value = '';
+      if ($('govPartnerLocalRelationStatus')) $('govPartnerLocalRelationStatus').value = '';
+      if ($('govPartnerContactName')) $('govPartnerContactName').value = '';
+      if ($('govPartnerContactEmail')) $('govPartnerContactEmail').value = '';
+      if ($('govPartnerContactPhone')) $('govPartnerContactPhone').value = '';
+      if ($('govPartnerNextStep')) $('govPartnerNextStep').value = '';
+      if ($('govPartnerPoliticalNote')) $('govPartnerPoliticalNote').value = '';
+      if ($('govPartnerOperationalNote')) $('govPartnerOperationalNote').value = '';
+      if ($('govPartnerLocalSource')) $('govPartnerLocalSource').value = '';
+      if ($('govPartnerImportAuthorized')) $('govPartnerImportAuthorized').checked = false;
+      if ($('govPartnerMutualizationAuthorized')) $('govPartnerMutualizationAuthorized').checked = false;
+      setStatus('governancePartnerEditorStatus', '');
+    }
+
+    function loadGovernancePartnerIntoEditor(row = null) {
+      const partnerRow = row || getSelectedGovernancePartnerRow();
+      if (!partnerRow) {
+        resetGovernancePartnerForm();
+        return;
+      }
+      const localEntry = getGovernancePartnerLocalEntry(partnerRow.library_id);
+      const contact = currentPartnerContacts.get(String(partnerRow?.library_id || '')) || {};
+      if ($('govPartnerLibraryId')) $('govPartnerLibraryId').value = String(partnerRow.library_id || '');
+      if ($('govPartnerSelect')) $('govPartnerSelect').value = String(partnerRow.library_id || '');
+      if ($('govPartnerResolvedStatus')) $('govPartnerResolvedStatus').value = `${friendlyPartnerRelationStatus(partnerRow?.relation_status)} · ${relationStatusNote(partnerRow)}`;
+      if ($('govPartnerLocalRelationStatus')) $('govPartnerLocalRelationStatus').value = firstFilledValue(localEntry?.relation_status);
+      if ($('govPartnerContactName')) $('govPartnerContactName').value = firstFilledValue(localEntry?.contact_name, contact?.contact_name, partnerRow?.display_name, partnerRow?.library_name);
+      if ($('govPartnerContactEmail')) $('govPartnerContactEmail').value = firstFilledValue(localEntry?.contact_email, contact?.contact_email, partnerRow?.contact_email, partnerRow?.reply_to_email);
+      if ($('govPartnerContactPhone')) $('govPartnerContactPhone').value = firstFilledValue(localEntry?.contact_phone, contact?.contact_phone, contact?.contact_whatsapp, partnerRow?.contact_phone);
+      if ($('govPartnerNextStep')) $('govPartnerNextStep').value = firstFilledValue(localEntry?.next_step);
+      if ($('govPartnerPoliticalNote')) $('govPartnerPoliticalNote').value = firstFilledValue(localEntry?.political_note);
+      if ($('govPartnerOperationalNote')) $('govPartnerOperationalNote').value = firstFilledValue(localEntry?.operational_note, partnerRow?.notes);
+      if ($('govPartnerLocalSource')) $('govPartnerLocalSource').value = firstFilledValue(localEntry?.local_source);
+      if ($('govPartnerImportAuthorized')) $('govPartnerImportAuthorized').checked = localEntry?.import_authorized === true || partnerRow?.import_enabled === true;
+      if ($('govPartnerMutualizationAuthorized')) $('govPartnerMutualizationAuthorized').checked = localEntry?.mutualization_authorized === true || partnerAllowsExchange(partnerRow);
+      setStatus('governancePartnerEditorStatus', partnerRow?.library_id ? `Parceira ${getPartnerDisplayName(partnerRow)} carregada para seguimento local.` : '', partnerRow?.library_id ? 'info' : '');
+    }
+
+    function buildGovernancePartnerRegistryFromForm() {
+      const partnerRow = getSelectedGovernancePartnerRow();
+      const libraryId = String(partnerRow?.library_id || $('govPartnerLibraryId')?.value || '').trim();
+      if (!libraryId) throw new Error('Escolhe primeiro uma biblioteca parceira.');
+      return {
+        library_id: libraryId,
+        partner_name: getPartnerDisplayName(partnerRow || {}),
+        relation_status: String($('govPartnerLocalRelationStatus')?.value || '').trim() || null,
+        contact_name: String($('govPartnerContactName')?.value || '').trim() || null,
+        contact_email: String($('govPartnerContactEmail')?.value || '').trim() || null,
+        contact_phone: String($('govPartnerContactPhone')?.value || '').trim() || null,
+        next_step: String($('govPartnerNextStep')?.value || '').trim() || null,
+        political_note: String($('govPartnerPoliticalNote')?.value || '').trim() || null,
+        operational_note: String($('govPartnerOperationalNote')?.value || '').trim() || null,
+        local_source: String($('govPartnerLocalSource')?.value || '').trim() || null,
+        import_authorized: !!$('govPartnerImportAuthorized')?.checked,
+        mutualization_authorized: !!$('govPartnerMutualizationAuthorized')?.checked,
+        updated_at: new Date().toISOString()
+      };
+    }
+
+    function renderGovernancePartnerFollowupsTable() {
+      const tbody = $('tbodyGovernancePartnerFollowups');
+      if (!tbody) return;
+      const registry = getGovernancePartnerRegistry();
+      const rows = Object.values(registry || {}).filter((row) => row && typeof row === 'object');
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5">Nenhum seguimento local registrado ainda.</td></tr>';
+        applyStoredSortForTbody('tbodyGovernancePartnerFollowups');
+        return;
+      }
+      tbody.innerHTML = rows.map((row) => `
+        <tr>
+          <td><strong>${esc(firstFilledValue(row?.partner_name, currentPartnerSources.find((item) => String(item?.library_id || '') === String(row?.library_id || ''))?.display_name, row?.library_id, '—'))}</strong></td>
+          <td>${esc(friendlyPartnerRelationStatus(row?.relation_status))}</td>
+          <td>${esc(firstFilledValue(row?.contact_email, row?.contact_name, row?.contact_phone, '—'))}</td>
+          <td>${esc(firstFilledValue(row?.next_step, '—'))}</td>
+          <td>${esc(firstFilledValue(row?.political_note, row?.operational_note, row?.local_source, '—'))}</td>
+        </tr>
+      `).join('');
+      applyStoredSortForTbody('tbodyGovernancePartnerFollowups');
+    }
+
+    function resetGovernanceRequestForm() {
+      if ($('govRequestId')) $('govRequestId').value = '';
+      if ($('govRequestSelect')) $('govRequestSelect').value = '';
+      if ($('govRequestGlobalStatus')) $('govRequestGlobalStatus').value = '';
+      if ($('govRequestLocalState')) $('govRequestLocalState').value = '';
+      if ($('govRequestAssignedTo')) $('govRequestAssignedTo').value = '';
+      if ($('govRequestPartnerEmail')) $('govRequestPartnerEmail').value = '';
+      if ($('govRequestMailSubject')) $('govRequestMailSubject').value = '';
+      if ($('govRequestObjectLabel')) $('govRequestObjectLabel').value = '';
+      if ($('govRequestInternalNote')) $('govRequestInternalNote').value = '';
+      if ($('govRequestResponseNote')) $('govRequestResponseNote').value = '';
+      setStatus('governanceRequestEditorStatus', '');
+    }
+
+    function loadGovernanceRequestIntoEditor(row = null) {
+      const requestRow = row || getSelectedGovernanceRequestRow();
+      if (!requestRow) {
+        resetGovernanceRequestForm();
+        return;
+      }
+      const localEntry = getGovernanceRequestLocalEntry(requestRow.id);
+      const direction = getExchangeDirection(requestRow);
+      const partnerRow = getExchangePartnerRow(requestRow);
+      const objectLabel = buildExchangeRequestShortLabel(requestRow);
+      if ($('govRequestId')) $('govRequestId').value = String(requestRow.id || '');
+      if ($('govRequestSelect')) $('govRequestSelect').value = String(requestRow.id || '');
+      if ($('govRequestGlobalStatus')) $('govRequestGlobalStatus').value = `${friendlyDocumentRequestStatus(requestRow?.status, direction)} · ${direction}`;
+      if ($('govRequestLocalState')) $('govRequestLocalState').value = firstFilledValue(localEntry?.local_state);
+      if ($('govRequestAssignedTo')) $('govRequestAssignedTo').value = firstFilledValue(localEntry?.assigned_to);
+      if ($('govRequestPartnerEmail')) $('govRequestPartnerEmail').value = firstFilledValue(localEntry?.partner_email, getPartnerContactEmail(getExchangePartnerId(requestRow)));
+      if ($('govRequestMailSubject')) $('govRequestMailSubject').value = firstFilledValue(localEntry?.mail_subject, `Resposta sobre ${objectLabel}`);
+      if ($('govRequestObjectLabel')) $('govRequestObjectLabel').value = `${getPartnerDisplayName(partnerRow)} · ${objectLabel}`;
+      if ($('govRequestInternalNote')) $('govRequestInternalNote').value = firstFilledValue(localEntry?.internal_note);
+      if ($('govRequestResponseNote')) $('govRequestResponseNote').value = firstFilledValue(localEntry?.response_note);
+      setStatus('governanceRequestEditorStatus', requestRow?.id ? `Pedido ${requestRow.id} carregado para seguimento local.` : '', requestRow?.id ? 'info' : '');
+    }
+
+    function buildGovernanceRequestRegistryFromForm() {
+      const requestRow = getSelectedGovernanceRequestRow();
+      const requestId = String(requestRow?.id || $('govRequestId')?.value || '').trim();
+      if (!requestId) throw new Error('Escolhe primeiro um pedido interbibliotecas.');
+      return {
+        request_id: requestId,
+        local_state: String($('govRequestLocalState')?.value || '').trim() || null,
+        assigned_to: String($('govRequestAssignedTo')?.value || '').trim() || null,
+        partner_email: String($('govRequestPartnerEmail')?.value || '').trim() || null,
+        mail_subject: String($('govRequestMailSubject')?.value || '').trim() || null,
+        internal_note: String($('govRequestInternalNote')?.value || '').trim() || null,
+        response_note: String($('govRequestResponseNote')?.value || '').trim() || null,
+        updated_at: new Date().toISOString()
+      };
+    }
+
+    function renderGovernanceRequestFollowupsTable() {
+      const tbody = $('tbodyGovernanceRequestFollowups');
+      if (!tbody) return;
+      const registry = getGovernanceRequestRegistry();
+      const rows = Object.values(registry || {}).filter((row) => row && typeof row === 'object');
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5">Nenhum seguimento local registrado ainda.</td></tr>';
+        applyStoredSortForTbody('tbodyGovernanceRequestFollowups');
+        return;
+      }
+      tbody.innerHTML = rows.map((row) => {
+        const requestRow = currentExchangeRequests.find((item) => String(item?.id || '') === String(row?.request_id || '')) || null;
+        return `
+          <tr>
+            <td>${esc(requestRow ? buildExchangeRequestShortLabel(requestRow) : firstFilledValue(row?.request_id, '—'))}</td>
+            <td>${esc(friendlyGovernanceRequestState(row?.local_state))}</td>
+            <td>${esc(firstFilledValue(row?.assigned_to, '—'))}</td>
+            <td>${esc(firstFilledValue(row?.mail_subject, row?.partner_email, '—'))}</td>
+            <td>${esc(firstFilledValue(row?.internal_note, row?.response_note, '—'))}</td>
+          </tr>
+        `;
+      }).join('');
+      applyStoredSortForTbody('tbodyGovernanceRequestFollowups');
+    }
+
+    async function persistGovernanceConfig(nextConfig, options = {}) {
+      const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
+      const { error } = await supabase
+        .from('library_document_governance')
+        .upsert({
+          library_id: row.id,
+          config: nextConfig,
+          updated_at: new Date().toISOString(),
+          updated_by: session?.user?.id || null
+        }, { onConflict: 'library_id' });
+      if (error) throw error;
+      currentGovernance = nextConfig;
+      currentGovernanceRow = { ...(currentGovernanceRow || {}), library_id: row.id, config: nextConfig };
+      return nextConfig;
+    }
+
+    async function saveGovernancePartnerFollowup() {
+      try {
+        setStatus('governancePartnerEditorStatus', 'Salvando seguimento local da parceira…', 'info');
+        const entry = buildGovernancePartnerRegistryFromForm();
+        const nextConfig = JSON.parse(JSON.stringify(currentGovernance && typeof currentGovernance === 'object' ? currentGovernance : {}));
+        nextConfig.partner_registry = { ...getGovernancePartnerRegistry(), [String(entry.library_id)]: entry };
+        await persistGovernanceConfig(nextConfig);
+        setStatus('governancePartnerEditorStatus', 'Seguimento local da parceira salvo.', 'ok');
+        await loadGovernancePanel();
+      } catch (error) {
+        setStatus('governancePartnerEditorStatus', 'Não consegui salvar o seguimento local da parceira: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function saveGovernanceRequestFollowup() {
+      try {
+        setStatus('governanceRequestEditorStatus', 'Salvando seguimento local do pedido…', 'info');
+        const entry = buildGovernanceRequestRegistryFromForm();
+        const nextConfig = JSON.parse(JSON.stringify(currentGovernance && typeof currentGovernance === 'object' ? currentGovernance : {}));
+        nextConfig.request_registry = { ...getGovernanceRequestRegistry(), [String(entry.request_id)]: entry };
+        await persistGovernanceConfig(nextConfig);
+        setStatus('governanceRequestEditorStatus', 'Seguimento local do pedido salvo.', 'ok');
+        await loadGovernancePanel();
+      } catch (error) {
+        setStatus('governanceRequestEditorStatus', 'Não consegui salvar o seguimento local do pedido: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    function openMailtoLink(to='', subject='', body='') {
+      const params = new URLSearchParams();
+      if (subject) params.set('subject', subject);
+      if (body) params.set('body', body);
+      const href = `mailto:${encodeURIComponent(String(to || '').trim())}${params.toString() ? `?${params.toString()}` : ''}`;
+      window.location.href = href;
+    }
+
+    function openGovernancePartnerEmail() {
+      const partnerRow = getSelectedGovernancePartnerRow();
+      const to = String($('govPartnerContactEmail')?.value || '').trim() || getPartnerContactEmail(partnerRow?.library_id);
+      if (!to) {
+        setStatus('governancePartnerEditorStatus', 'Não encontrei e-mail para esta parceira.', 'warn');
+        return;
+      }
+      const subject = `Contato entre bibliotecas — ${getPartnerDisplayName(partnerRow || {})}`;
+      const body = [
+        `Olá, compas da ${getPartnerDisplayName(partnerRow || {})}.`,
+        '',
+        String($('govPartnerOperationalNote')?.value || '').trim(),
+        '',
+        String($('govPartnerPoliticalNote')?.value || '').trim(),
+        '',
+        String($('govPartnerNextStep')?.value || '').trim()
+      ].filter(Boolean).join('
+');
+      openMailtoLink(to, subject, body);
+      setStatus('governancePartnerEditorStatus', 'Abrindo o e-mail para a parceira selecionada.', 'ok');
+    }
+
+    function openGovernanceRequestEmail() {
+      const requestRow = getSelectedGovernanceRequestRow();
+      const to = String($('govRequestPartnerEmail')?.value || '').trim() || getPartnerContactEmail(getExchangePartnerId(requestRow || {}));
+      if (!to) {
+        setStatus('governanceRequestEditorStatus', 'Não encontrei e-mail para este pedido.', 'warn');
+        return;
+      }
+      const subject = String($('govRequestMailSubject')?.value || '').trim() || `Resposta sobre ${buildExchangeRequestShortLabel(requestRow || {})}`;
+      const body = String($('govRequestResponseNote')?.value || '').trim() || `Olá, compas.
+
+Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
+      openMailtoLink(to, subject, body);
+      setStatus('governanceRequestEditorStatus', 'Abrindo o e-mail para o pedido selecionado.', 'ok');
     }
 
     function loadGovernanceForm() {
@@ -3707,6 +4131,12 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
       $('govExchangePolicyNote').value = firstFilledValue(cfg.interlibrary_exchange.policy_note);
       $('govExchangeGuardrailNote').value = firstFilledValue(cfg.interlibrary_exchange.guardrail_note);
       $('govNetworkNote').value = firstFilledValue(cfg.document_requests.notes, cfg.interlibrary_exchange.notes);
+      populateGovernancePartnerSelect();
+      populateGovernanceRequestSelect();
+      renderGovernancePartnerFollowupsTable();
+      renderGovernanceRequestFollowupsTable();
+      resetGovernancePartnerForm();
+      resetGovernanceRequestForm();
       setStatus('governanceEditorStatus', '');
     }
 
@@ -3737,18 +4167,8 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
     async function saveGovernanceConfig() {
       try {
         setStatus('governanceEditorStatus', 'Salvando política local…', 'info');
-        const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
         const payload = collectGovernancePayload();
-        const { error } = await supabase
-          .from('library_document_governance')
-          .upsert({
-            library_id: row.id,
-            config: payload,
-            updated_at: new Date().toISOString(),
-            updated_by: session?.user?.id || null
-          }, { onConflict: 'library_id' });
-        if (error) throw error;
-        currentGovernance = payload;
+        await persistGovernanceConfig(payload);
         setStatus('governanceEditorStatus', 'Política local salva.', 'ok');
         await loadGovernancePanel();
         await loadExchangePanel();
@@ -3770,12 +4190,15 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
       }
       tbody.innerHTML = normalizedRows.map((row) => {
         const contact = currentPartnerContacts.get(String(row?.library_id || '')) || {};
+        const localEntry = getGovernancePartnerLocalEntry(row?.library_id);
+        const localState = firstFilledValue(localEntry?.relation_status);
+        const localNotes = [firstFilledValue(localEntry?.next_step), firstFilledValue(localEntry?.operational_note), firstFilledValue(localEntry?.political_note)].filter(Boolean);
         return `<tr>
           <td><strong>${esc(getPartnerDisplayName(row))}</strong><div class="inline-note">${esc(firstFilledValue(row?.city, row?.region, row?.country, '—'))}</div></td>
-          <td>${esc(friendlyPartnerRelationStatus(row?.relation_status))}</td>
-          <td>${esc(relationStatusNote(row))}</td>
-          <td>${esc(firstFilledValue(contact?.contact_email, contact?.contact_name, '—'))}</td>
-          <td>${esc(firstFilledValue(row?.notes, row?.source_kind, '—'))}${row?.catalog_document_count ? `<div class="inline-note">${esc(`${row.catalog_document_count} documento(s) / ${row.catalog_total_copies || 0} exemplar(es)` )}</div>` : ''}</td>
+          <td>${esc(friendlyPartnerRelationStatus(row?.relation_status))}${localState ? `<div class="inline-note">Seguimento local: ${esc(friendlyPartnerRelationStatus(localState))}</div>` : ''}</td>
+          <td>${esc(relationStatusNote(row))}${localEntry?.mutualization_authorized ? '<div class="inline-note">Mutualização marcada localmente.</div>' : ''}</td>
+          <td>${esc(firstFilledValue(localEntry?.contact_email, localEntry?.contact_name, localEntry?.contact_phone, contact?.contact_email, contact?.contact_name, '—'))}</td>
+          <td>${esc(firstFilledValue(row?.notes, row?.source_kind, '—'))}${row?.catalog_document_count ? `<div class="inline-note">${esc(`${row.catalog_document_count} documento(s) / ${row.catalog_total_copies || 0} exemplar(es)` )}</div>` : ''}${localNotes.length ? `<div class="inline-note">${esc(localNotes.join(' · '))}</div>` : ''}</td>
         </tr>`;
       }).join('');
       applyStoredSortForTbody('tbodyPartnerLibraries');
@@ -3793,20 +4216,20 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
       }
       tbody.innerHTML = normalizedRows.map((row) => {
         const direction = String(row?.requester_library_id || '') === String(currentLibraryId || '') ? 'Enviado' : 'Recebido';
-        const partnerId = direction === 'Enviado' ? row?.target_library_id : row?.requester_library_id;
         const partnerRow = getExchangePartnerRow(row);
         const objectRef = parseRequestObjectRef(row?.object_ref);
         const objectText = objectRef?.local_document?.titulo || objectRef?.partner_document?.titulo || firstFilledValue(row?.object_type, row?.object_ref, '—');
         const statusLabel = friendlyDocumentRequestStatus(row?.status, direction);
         const statusTone = exchangeStatusTone(row?.status);
         const statusNote = exchangeStatusNote(row?.status, direction);
+        const localEntry = getGovernanceRequestLocalEntry(row?.id);
         return `<tr>
           <td>${esc(direction)}</td>
           <td>${esc(getPartnerDisplayName(partnerRow))}</td>
           <td>${esc(friendlyDocumentRequestAction(row?.requested_action))}</td>
           <td>${esc(objectText)}</td>
-          <td><span class="pill ${esc(statusTone)}">${esc(statusLabel)}</span><div class="inline-note">${esc(statusNote)}</div></td>
-          <td>${esc(fmtDateTime(firstFilledValue(row?.updated_at, row?.created_at)))}</td>
+          <td><span class="pill ${esc(statusTone)}">${esc(statusLabel)}</span><div class="inline-note">${esc(statusNote)}</div>${localEntry?.local_state ? `<div class="inline-note">Seguimento local: ${esc(friendlyGovernanceRequestState(localEntry.local_state))}</div>` : ''}</td>
+          <td>${esc(fmtDateTime(firstFilledValue(row?.updated_at, row?.created_at)))}${localEntry?.assigned_to ? `<div class="inline-note">Responsável: ${esc(localEntry.assigned_to)}</div>` : ''}</td>
         </tr>`;
       }).join('');
       applyStoredSortForTbody('tbodyDocumentRequests');
@@ -6458,6 +6881,14 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
     $('btnRefreshInterlibraryLoans')?.addEventListener('click', refreshInterlibraryLoansPanelInteractive);
     $('btnSaveGovernance')?.addEventListener('click', saveGovernanceConfig);
     $('btnResetGovernance')?.addEventListener('click', loadGovernanceForm);
+    $('btnResetGovernancePartner')?.addEventListener('click', () => { const row = getSelectedGovernancePartnerRow(); if (row) loadGovernancePartnerIntoEditor(row); else resetGovernancePartnerForm(); });
+    $('btnSaveGovernancePartner')?.addEventListener('click', saveGovernancePartnerFollowup);
+    $('btnOpenGovernancePartnerEmail')?.addEventListener('click', openGovernancePartnerEmail);
+    $('govPartnerSelect')?.addEventListener('change', () => { const row = getSelectedGovernancePartnerRow(); if (row) loadGovernancePartnerIntoEditor(row); else resetGovernancePartnerForm(); });
+    $('btnResetGovernanceRequest')?.addEventListener('click', () => { const row = getSelectedGovernanceRequestRow(); if (row) loadGovernanceRequestIntoEditor(row); else resetGovernanceRequestForm(); });
+    $('btnSaveGovernanceRequest')?.addEventListener('click', saveGovernanceRequestFollowup);
+    $('btnOpenGovernanceRequestEmail')?.addEventListener('click', openGovernanceRequestEmail);
+    $('govRequestSelect')?.addEventListener('change', () => { const row = getSelectedGovernanceRequestRow(); if (row) loadGovernanceRequestIntoEditor(row); else resetGovernanceRequestForm(); });
     $('btnGenerateExchangeMessage')?.addEventListener('click', () => { ensureExchangeMessage(); setStatus('exchangeEditorStatus', 'Mensagem sugerida atualizada.', 'ok'); });
     $('btnCopyExchangeMessage')?.addEventListener('click', async () => { try { await copyTextToClipboard($('exchangeMessage').value); setStatus('exchangeEditorStatus', 'Mensagem copiada.', 'ok'); } catch (error) { setStatus('exchangeEditorStatus', 'Não consegui copiar a mensagem: ' + (error.message || String(error)), 'bad'); } });
     $('btnOpenExchangeEmail')?.addEventListener('click', openExchangeEmail);
