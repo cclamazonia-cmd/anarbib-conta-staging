@@ -1115,28 +1115,6 @@
               </div>
               <div class="status" id="tasksStatus"></div>
             </div>
-            <div class="row">
-              <div class="card">
-                <div class="section-head"><div><h3>Resumo rápido das tarefas</h3><div class="mini">Quadro curto para ver pendências, tarefas urgentes, concluídas e convites ainda em circulação.</div></div></div>
-                <div id="tasksSummaryGrid" class="kv-grid"><div class="empty">Carregando…</div></div>
-              </div>
-              <div class="card">
-                <div class="section-head">
-                  <div><h3>Filtro rápido local</h3><div class="mini">Filtra a tabela sem apagar nada e ajuda a retomar uma frente de trabalho específica.</div></div>
-                  <div class="editor-actions">
-                    <button class="btn mini soft" id="btnApplyTaskQuickFilters" type="button">Aplicar</button>
-                    <button class="btn mini" id="btnClearTaskQuickFilters" type="button">Limpar</button>
-                    <button class="btn mini" id="btnOpenTaskInviteMail" type="button">Abrir e-mail coletivo</button>
-                  </div>
-                </div>
-                <div class="editor-grid-3">
-                  <div class="field"><label for="taskQuickStatusFilter">Situação</label><select id="taskQuickStatusFilter" class="select"><option value="">Todas</option></select></div>
-                  <div class="field"><label for="taskQuickPriorityFilter">Prioridade</label><select id="taskQuickPriorityFilter" class="select"><option value="">Todas</option></select></div>
-                  <div class="field"><label for="taskQuickOwnerFilter">Responsável</label><select id="taskQuickOwnerFilter" class="select"><option value="">Todos</option></select></div>
-                </div>
-                <div class="status" id="tasksQuickFilterStatus"></div>
-              </div>
-            </div>
             <div class="card">
               <div class="section-head">
                 <div>
@@ -1276,7 +1254,6 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
 
 
     let session = null;
-    let authStateSubscription = null;
     let currentIdentityRow = null;
     let currentAccessRow = null;
     let currentLibraryRow = null;
@@ -1306,7 +1283,6 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
     let currentPolicySets = [];
     let currentPolicyRules = [];
     let currentTasks = [];
-    let currentTaskFilters = { status: '', priority: '', owner: '' };
     let currentReportsRows = [];
     let currentReportsMeta = { preset: 'reservas', source: '', loaded: false };
     let refreshPanelsPromise = null;
@@ -2468,7 +2444,7 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
       btn.disabled = false;
     }
 
-    function resetInstitutionalAuthState(message='Faz login com uma conta bibliotecária para abrir a área da biblioteca.') {
+    function resetInstitutionalAccessState(message='Faz login com uma conta bibliotecária para abrir a área da biblioteca.') {
       currentIdentityRow = null;
       currentAccessRow = null;
       currentLibraryRow = null;
@@ -2476,44 +2452,49 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
       currentServiceState = null;
       currentContactProfile = null;
       currentCommunicationsContext = null;
-      currentWorkspace = null;
-      currentGovernance = null;
-      applyActiveLibraryBranding();
       setChip('chipFuncao', 'Função: —');
       setChip('chipEmail', 'E-mail: —');
       setChip('chipBiblioteca', 'Biblioteca: —');
       setChip('chipServiceMode', 'Modo: —');
       setChip('chipWorkspace', 'Resumo geral da biblioteca: sem sessão');
       if ($('helloLine')) $('helloLine').textContent = message;
-      const statusIds = [
-        'identityStatus','communicationsStatus','workspaceStatus','documentsStatus','exchangeStatus',
-        'interlibraryLoansStatus','reportsStatus','tasksStatus','regimentoStatus'
-      ];
-      statusIds.forEach((id) => setStatus(id, '', ''));
+      applyActiveLibraryBranding();
+    }
+
+    async function resolveLibrarianAccessWithRetry(userId, attempts = 6, delayMs = 220) {
+      let lastState = { rows: [], profileRow: null };
+      for (let i = 0; i < attempts; i += 1) {
+        lastState = await fetchAccessRows(userId);
+        const accessRow = pickCurrentLibrarianAccess(lastState.rows);
+        if (accessRow) {
+          return { accessRow, profileRow: lastState.profileRow || null };
+        }
+        if (i < attempts - 1) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      }
+      return { accessRow: null, profileRow: lastState.profileRow || null };
     }
 
     async function adoptSessionState() {
       session = await resolveSession();
       updateTopbarAuthButton(!!session?.user?.id);
       if (!session?.user?.id) {
-        resetInstitutionalAuthState();
+        resetInstitutionalAccessState();
         return false;
       }
 
       clearAuthReturn();
-      let accessState = { rows: [], profileRow: null };
-      try {
-        accessState = await fetchAccessRows(session.user.id);
-      } catch (error) {
-        console.warn('Biblioteca: falha ao carregar os acessos da sessão.', error);
-        accessState = { rows: [], profileRow: null };
-      }
+      const accessState = await resolveLibrarianAccessWithRetry(session.user.id);
       currentIdentityRow = accessState.profileRow || null;
-      currentAccessRow = pickCurrentLibrarianAccess(accessState.rows);
+      currentAccessRow = accessState.accessRow || null;
       if (!currentAccessRow) {
-        resetInstitutionalAuthState('A sessão existe, mas não encontrei um acesso bibliotecário ativo para esta conta.');
         setChip('chipFuncao', 'Função: sem acesso');
         setChip('chipEmail', `E-mail: ${session.user.email || '—'}`);
+        setChip('chipBiblioteca', 'Biblioteca: —');
+        currentLibraryBrandIdentity = null;
+        applyActiveLibraryBranding();
+        $('helloLine').textContent = 'A sessão existe, mas o acesso bibliotecário desta conta ainda não foi confirmado nesta página.';
         return false;
       }
 
@@ -6970,115 +6951,6 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
       }
     }
 
-    const TASK_STATUS_OPTIONS = [
-      { value: '', label: 'Todas' },
-      { value: 'aberta', label: 'Aberta' },
-      { value: 'em_andamento', label: 'Em andamento' },
-      { value: 'bloqueada', label: 'Bloqueada' },
-      { value: 'concluida', label: 'Concluída' },
-      { value: 'arquivada', label: 'Arquivada' }
-    ];
-
-    const TASK_PRIORITY_OPTIONS = [
-      { value: '', label: 'Todas' },
-      { value: 'baixa', label: 'Baixa' },
-      { value: 'media', label: 'Média' },
-      { value: 'alta', label: 'Alta' },
-      { value: 'urgente', label: 'Urgente' }
-    ];
-
-    function getUniqueTaskOwners(rows) {
-      return Array.from(new Set(asArray(rows).map((row) => firstFilledValue(row?.owner)).filter(Boolean)))
-        .sort((a, b) => tableSortCollator.compare(String(a), String(b)));
-    }
-
-    function getFilteredTasks(rows=currentTasks) {
-      return asArray(rows).filter((row) => {
-        const statusOk = !currentTaskFilters.status || String(firstFilledValue(row?.status)).trim() === currentTaskFilters.status;
-        const priorityOk = !currentTaskFilters.priority || String(firstFilledValue(row?.priority)).trim() === currentTaskFilters.priority;
-        const ownerOk = !currentTaskFilters.owner || String(firstFilledValue(row?.owner)).trim() === currentTaskFilters.owner;
-        return statusOk && priorityOk && ownerOk;
-      });
-    }
-
-    function renderTasksSummary(rows=currentTasks) {
-      const filteredRows = getFilteredTasks(rows);
-      const now = new Date();
-      now.setHours(0,0,0,0);
-      const overdue = filteredRows.filter((row) => {
-        const due = String(row?.due_date || '').trim();
-        if (!due) return false;
-        const dueDate = new Date(`${due}T00:00:00`);
-        return !Number.isNaN(dueDate.getTime()) && dueDate < now && String(firstFilledValue(row?.status)).trim() !== 'concluida' && String(firstFilledValue(row?.status)).trim() !== 'arquivada';
-      }).length;
-      const inviteCount = filteredRows.reduce((sum, row) => sum + getTaskInviteEmails(row).length, 0);
-      renderKvGrid('tasksSummaryGrid', [
-        ['Tarefas visíveis', filteredRows.length],
-        ['Em aberto', filteredRows.filter((row) => String(firstFilledValue(row?.status)).trim() === 'aberta').length],
-        ['Em andamento', filteredRows.filter((row) => String(firstFilledValue(row?.status)).trim() === 'em_andamento').length],
-        ['Urgentes', filteredRows.filter((row) => String(firstFilledValue(row?.priority)).trim() === 'urgente').length],
-        ['Atrasadas', overdue],
-        ['Concluídas', filteredRows.filter((row) => String(firstFilledValue(row?.status)).trim() === 'concluida').length],
-        ['Responsáveis visíveis', getUniqueTaskOwners(filteredRows).length],
-        ['Convites listados', inviteCount]
-      ]);
-    }
-
-    function fillTaskQuickFilters(rows=currentTasks) {
-      fillSimpleSelect('taskQuickStatusFilter', TASK_STATUS_OPTIONS, 'Todas');
-      fillSimpleSelect('taskQuickPriorityFilter', TASK_PRIORITY_OPTIONS, 'Todas');
-      const ownerOptions = [{ value: '', label: 'Todos' }].concat(getUniqueTaskOwners(rows).map((owner) => ({ value: owner, label: owner })));
-      fillSimpleSelect('taskQuickOwnerFilter', ownerOptions, 'Todos');
-      if ($('taskQuickStatusFilter')) $('taskQuickStatusFilter').value = currentTaskFilters.status || '';
-      if ($('taskQuickPriorityFilter')) $('taskQuickPriorityFilter').value = currentTaskFilters.priority || '';
-      if ($('taskQuickOwnerFilter')) $('taskQuickOwnerFilter').value = currentTaskFilters.owner || '';
-    }
-
-    function applyTaskQuickFilters() {
-      currentTaskFilters = {
-        status: String($('taskQuickStatusFilter')?.value || '').trim(),
-        priority: String($('taskQuickPriorityFilter')?.value || '').trim(),
-        owner: String($('taskQuickOwnerFilter')?.value || '').trim()
-      };
-      const filteredRows = getFilteredTasks(currentTasks);
-      renderTasksTable(filteredRows);
-      renderTasksSummary(currentTasks);
-      const labels = [];
-      if (currentTaskFilters.status) labels.push(`situação: ${currentTaskFilters.status}`);
-      if (currentTaskFilters.priority) labels.push(`prioridade: ${currentTaskFilters.priority}`);
-      if (currentTaskFilters.owner) labels.push(`responsável: ${currentTaskFilters.owner}`);
-      setStatus('tasksQuickFilterStatus', labels.length ? `Filtro ativo — ${labels.join(' · ')}.` : 'Sem filtro ativo.', labels.length ? 'ok' : 'info');
-    }
-
-    function clearTaskQuickFilters() {
-      currentTaskFilters = { status: '', priority: '', owner: '' };
-      fillTaskQuickFilters(currentTasks);
-      renderTasksTable(currentTasks);
-      renderTasksSummary(currentTasks);
-      setStatus('tasksQuickFilterStatus', 'Filtros rápidos limpos.', 'info');
-    }
-
-    function openTaskInviteMail() {
-      const emails = Array.from(new Set(getFilteredTasks(currentTasks).flatMap((row) => getTaskInviteEmails(row))));
-      if (!emails.length) {
-        setStatus('tasksQuickFilterStatus', 'Nenhum e-mail de convite aparece nas tarefas visíveis.', 'warn');
-        return;
-      }
-      const subject = 'Tarefas internas da biblioteca';
-      const body = [
-        'Olá, compas.',
-        '',
-        'Segue um lembrete rápido das tarefas internas atualmente visíveis nesta área da biblioteca.',
-        '',
-        ...getFilteredTasks(currentTasks).slice(0, 20).map((row) => `- ${firstFilledValue(row?.title, 'Tarefa')} · ${firstFilledValue(row?.status, '—')} · ${firstFilledValue(row?.priority, '—')} · prazo ${fmtDate(row?.due_date)}`),
-        '',
-        'Abraços.'
-      ].join('
-');
-      window.location.href = `mailto:${encodeURIComponent(emails.join(','))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      setStatus('tasksQuickFilterStatus', 'E-mail coletivo preparado com os convites visíveis.', 'ok');
-    }
-
     function resetTaskForm() {
       $('taskId').value = '';
       $('taskTitle').value = '';
@@ -7184,49 +7056,31 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
         const { data, error } = libraryId ? await query.eq('library_id', libraryId) : await query;
         if (error) throw error;
         currentTasks = asArray(data).filter((row) => row && typeof row === 'object');
-        fillTaskQuickFilters(currentTasks);
-        renderTasksTable(getFilteredTasks(currentTasks));
-        renderTasksSummary(currentTasks);
+        renderTasksTable(currentTasks);
         if (!$('taskId').value) resetTaskForm();
         setStatus('tasksStatus', 'Tarefas internas carregadas.', 'ok');
-        setStatus('tasksQuickFilterStatus', Object.values(currentTaskFilters).some(Boolean) ? 'Filtro rápido reaplicado.' : 'Sem filtro ativo.', Object.values(currentTaskFilters).some(Boolean) ? 'ok' : 'info');
       } catch (error) {
         currentTasks = [];
-        fillTaskQuickFilters([]);
-        renderTasksSummary([]);
         renderRowsTable('tbodyTasks', [], [1,2,3,4,5,6,7].map((n) => ({ value: () => n })), 'Falha ao carregar as tarefas internas: ' + (error.message || String(error)));
-        setStatus('tasksQuickFilterStatus', '', '');
         setStatus('tasksStatus', 'Não consegui carregar as tarefas internas: ' + (error.message || String(error)), 'warn');
       }
     }
 
     async function refreshAllInstitutionalPanels() {
-      try {
-        const hasAccess = await adoptSessionState();
-        if (!hasAccess) return;
-        await fetchCurrentLibraryRow();
-        await loadActiveLibraryBrandingContext();
-        await Promise.all([
-          loadIdentityPanel(),
-          loadCommunicationsPanel(),
-          loadWorkspaceAndPolicies(),
-          loadGovernancePanel(),
-          loadTasksPanel()
-        ]);
-        await loadExchangePanel();
-        await loadInterlibraryLoansPanel();
-        await loadReportsPanel();
-      } catch (error) {
-        console.warn('Biblioteca: falha ao atualizar os painéis institucionais.', error);
-        const message = String(error?.message || error || '').trim();
-        if (/biblioteca ativa não identificada/i.test(message)) {
-          resetInstitutionalAuthState('Sessão reconhecida, mas a biblioteca ativa ainda não foi resolvida. Tenta atualizar a página ou entrar novamente.');
-          setChip('chipFuncao', session?.user?.id ? 'Função: sem acesso' : 'Função: —');
-          setChip('chipEmail', session?.user?.email ? `E-mail: ${session.user.email}` : 'E-mail: —');
-          return;
-        }
-        throw error;
-      }
+      const hasAccess = await adoptSessionState();
+      if (!hasAccess) return;
+      await fetchCurrentLibraryRow();
+      await loadActiveLibraryBrandingContext();
+      await Promise.all([
+        loadIdentityPanel(),
+        loadCommunicationsPanel(),
+        loadWorkspaceAndPolicies(),
+        loadGovernancePanel(),
+        loadTasksPanel()
+      ]);
+      await loadExchangePanel();
+      await loadInterlibraryLoansPanel();
+      await loadReportsPanel();
     }
 
     async function refreshAllInstitutionalPanelsSafely(force = false) {
@@ -7324,12 +7178,6 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
     $('btnReloadSavedReportViews')?.addEventListener('click', loadReportsPanel);
     $('btnReloadReportsRunHistory')?.addEventListener('click', loadReportsPanel);
     $('reportsPresetSelect')?.addEventListener('change', updateReportsPresetUi);
-    $('btnApplyTaskQuickFilters')?.addEventListener('click', applyTaskQuickFilters);
-    $('btnClearTaskQuickFilters')?.addEventListener('click', clearTaskQuickFilters);
-    $('btnOpenTaskInviteMail')?.addEventListener('click', openTaskInviteMail);
-    $('taskQuickStatusFilter')?.addEventListener('change', applyTaskQuickFilters);
-    $('taskQuickPriorityFilter')?.addEventListener('change', applyTaskQuickFilters);
-    $('taskQuickOwnerFilter')?.addEventListener('change', applyTaskQuickFilters);
     $('btnNewTask')?.addEventListener('click', resetTaskForm);
     $('btnCancelTask')?.addEventListener('click', resetTaskForm);
     $('btnSaveTask')?.addEventListener('click', saveTask);
@@ -7476,11 +7324,6 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
       btn.disabled = true;
       clearAuthReturn();
       try {
-        if (typeof authStateSubscription?.subscription?.unsubscribe === 'function') {
-          authStateSubscription.subscription.unsubscribe();
-        }
-      } catch (_e) {}
-      try {
         await supabase.auth.signOut();
       } catch (_e) {
       } finally {
@@ -7515,12 +7358,12 @@ Escrevemos sobre ${buildExchangeRequestShortLabel(requestRow || {})}.`;
       }
     });
 
-    authStateSubscription = supabase.auth.onAuthStateChange((event, newSession) => {
+    supabase.auth.onAuthStateChange((event, newSession) => {
       session = newSession || null;
       updateTopbarAuthButton(!!session?.user?.id);
       if (event === 'SIGNED_OUT') {
         clearAuthReturn();
-        resetInstitutionalAuthState();
+        resetInstitutionalAccessState();
       }
       if (['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED', 'PASSWORD_RECOVERY'].includes(String(event || '').trim())) {
         setTimeout(() => {
