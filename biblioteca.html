@@ -318,11 +318,95 @@
               <div class="section-head">
                 <div>
                   <h2>Comunicações</h2>
-                  <div class="mini">Leitura do nome usado nos avisos e do canal de e-mail da biblioteca.</div>
+                  <div class="mini">Leitura, edição e conferência do nome usado nos avisos, dos destinatários internos e do estado do envio.</div>
                 </div>
                 <div class="actions"><button class="btn mini" id="btnRefreshComms" type="button">Atualizar</button></div>
               </div>
               <div class="status" id="communicationsStatus"></div>
+            </div>
+            <div class="row">
+              <div class="card">
+                <div class="section-head">
+                  <div><h3>Identidade usada nos avisos</h3><div class="mini">Restaura aqui a edição do nome de envio, resposta, assinatura e rodapé local.</div></div>
+                  <div class="editor-actions">
+                    <button class="btn mini soft" id="btnResetCommsIdentity" type="button">Recarregar</button>
+                    <button class="btn mini primary" id="btnSaveCommsIdentity" type="button">Salvar identidade</button>
+                  </div>
+                </div>
+                <div class="editor-shell">
+                  <div class="editor-grid">
+                    <div class="field"><label for="communicationsSenderDisplayName">Nome que aparece nos avisos</label><input id="communicationsSenderDisplayName" class="input" type="text" placeholder="Nome mostrado no envio"></div>
+                    <div class="field"><label for="communicationsResolvedIdentityPreview">Nome efetivo resolvido</label><input id="communicationsResolvedIdentityPreview" class="input" type="text" readonly placeholder="Será recalculado ao atualizar"></div>
+                    <div class="field"><label for="communicationsReplyToName">Nome para responder</label><input id="communicationsReplyToName" class="input" type="text" placeholder="Nome do retorno"></div>
+                    <div class="field"><label for="communicationsReplyToEmail">E-mail para resposta</label><input id="communicationsReplyToEmail" class="input" type="email" placeholder="resposta@biblioteca.org"></div>
+                    <div class="field"><label for="communicationsSignatureShort">Assinatura curta</label><input id="communicationsSignatureShort" class="input" type="text" placeholder="Ex.: Biblioteca Libertária Maxwell Ferreira"></div>
+                    <div class="field"><label for="communicationsFooterLocal">Rodapé local</label><input id="communicationsFooterLocal" class="input" type="text" placeholder="Frase curta para o rodapé"></div>
+                  </div>
+                  <div class="check-row">
+                    <label class="check-item"><input id="communicationsUseLibraryNameAsSender" type="checkbox"> Usar automaticamente o nome da biblioteca como base do envio</label>
+                    <label class="check-item"><input id="communicationsUseLibraryLogo" type="checkbox"> Usar a identidade visual da biblioteca nos avisos</label>
+                  </div>
+                </div>
+                <div class="status" id="communicationsIdentityEditorStatus"></div>
+              </div>
+              <div class="card">
+                <div class="section-head">
+                  <div><h3>Destinatários internos e políticas de aviso</h3><div class="mini">Restaura aqui o bloco de ação sobre os avisos de reserva, empréstimo, consulta e cópias internas.</div></div>
+                  <div class="editor-actions">
+                    <button class="btn mini soft" id="btnResetCommsPolicy" type="button">Recarregar</button>
+                    <button class="btn mini primary" id="btnSaveCommsPolicy" type="button">Salvar políticas</button>
+                  </div>
+                </div>
+                <div class="editor-shell">
+                  <div class="check-row">
+                    <label class="check-item"><input id="communicationsReservationCreatedEnabled" type="checkbox"> Avisar criação de reserva</label>
+                    <label class="check-item"><input id="communicationsReservationStatusEnabled" type="checkbox"> Avisar mudança de status da reserva</label>
+                    <label class="check-item"><input id="communicationsReservationWorkflowEnabled" type="checkbox"> Avisar etapas da reserva</label>
+                    <label class="check-item"><input id="communicationsLocalConsultationEnabled" type="checkbox"> Avisar consulta local</label>
+                    <label class="check-item"><input id="communicationsLoanLifecycleEnabled" type="checkbox"> Avisar ciclo de empréstimo</label>
+                    <label class="check-item"><input id="communicationsLoanRemindersEnabled" type="checkbox"> Avisar lembretes de empréstimo</label>
+                    <label class="check-item"><input id="communicationsLoanOverdueEnabled" type="checkbox"> Avisar atrasos</label>
+                    <label class="check-item"><input id="communicationsAdminCopyReservationsEnabled" type="checkbox"> Enviar cópia interna das reservas</label>
+                    <label class="check-item"><input id="communicationsAdminCopyLoansEnabled" type="checkbox"> Enviar cópia interna dos empréstimos</label>
+                  </div>
+                  <div class="editor-grid">
+                    <div class="field"><label for="communicationsAdminNotificationEmail">E-mail admin</label><input id="communicationsAdminNotificationEmail" class="input" type="email" placeholder="admin@biblioteca.org"></div>
+                    <div class="field"><label for="communicationsWeeklyReportEmail">E-mail do resumo semanal</label><input id="communicationsWeeklyReportEmail" class="input" type="email" placeholder="relatorios@biblioteca.org"></div>
+                    <div class="field"><label for="communicationsSevereAlertEmail">E-mail para alertas graves</label><input id="communicationsSevereAlertEmail" class="input" type="email" placeholder="alertas@biblioteca.org"></div>
+                  </div>
+                </div>
+                <div class="status" id="communicationsPolicyEditorStatus"></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="section-head">
+                <div><h3>Transporte e conferência local</h3><div class="mini">Restaura o bloco de controle do modo de envio, do canal efetivo e do estado atual do transporte.</div></div>
+                <div class="editor-actions">
+                  <button class="btn mini soft" id="btnResetCommsTransport" type="button">Recarregar</button>
+                  <button class="btn mini primary" id="btnSaveCommsTransport" type="button">Salvar transporte</button>
+                </div>
+              </div>
+              <div class="editor-shell">
+                <div class="editor-grid-3">
+                  <div class="field"><label for="communicationsDeliveryMode">Modo de envio</label><input id="communicationsDeliveryMode" class="input" type="text" placeholder="Ex.: brevo, smtp, manual"></div>
+                  <div class="field"><label for="communicationsTransportChannel">Canal de envio</label><input id="communicationsTransportChannel" class="input" type="text" placeholder="Ex.: e-mail"></div>
+                  <div class="field"><label for="communicationsTransportState">Estado do transporte</label><input id="communicationsTransportState" class="input" type="text" placeholder="Ex.: ativo"></div>
+                </div>
+                <div class="editor-grid">
+                  <div class="field"><label for="communicationsSenderVisibleEmail">E-mail mostrado no envio</label><input id="communicationsSenderVisibleEmail" class="input" type="text" readonly placeholder="Leitura do contexto atual"></div>
+                  <div class="field"><label for="communicationsLastTestedAt">Último teste</label><input id="communicationsLastTestedAt" class="input" type="text" readonly placeholder="Leitura do contexto atual"></div>
+                </div>
+              </div>
+              <div class="status" id="communicationsTransportEditorStatus"></div>
+            </div>
+            <div class="card">
+              <div class="section-head"><div><h3>Quadro atual das comunicações</h3><div class="mini">Quadro de controle para conferência do que está sendo lido e regravado nesta aba.</div></div></div>
+              <div class="tableWrap">
+                <table>
+                  <thead><tr><th>Parâmetro</th><th>Valor atual</th><th>Origem</th><th>Observação</th></tr></thead>
+                  <tbody id="tbodyCommunicationsSettings"><tr><td colspan="4">Carregando…</td></tr></tbody>
+                </table>
+              </div>
             </div>
             <div class="row">
               <div class="card">
@@ -2597,6 +2681,201 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
       }
     }
 
+    const COMMUNICATIONS_IDENTITY_TABLE_CANDIDATES = ['library_email_identity'];
+    const COMMUNICATIONS_POLICY_TABLE_CANDIDATES = ['library_notification_policy', 'library_notification_settings', 'library_notification_preferences', 'library_notification_config'];
+    const COMMUNICATIONS_TRANSPORT_TABLE_CANDIDATES = ['library_notification_policy', 'library_notification_settings', 'library_notification_preferences', 'library_notification_config', 'library_notification_transport'];
+
+    function loadCommunicationsEditorsFromContext() {
+      const data = currentCommunicationsContext && typeof currentCommunicationsContext === 'object' ? currentCommunicationsContext : {};
+      if ($('communicationsSenderDisplayName')) $('communicationsSenderDisplayName').value = firstFilledValue(data?.sender_display_name);
+      if ($('communicationsResolvedIdentityPreview')) $('communicationsResolvedIdentityPreview').value = firstFilledValue(data?.resolved_identity);
+      if ($('communicationsReplyToName')) $('communicationsReplyToName').value = firstFilledValue(data?.reply_to_name);
+      if ($('communicationsReplyToEmail')) $('communicationsReplyToEmail').value = firstFilledValue(data?.reply_to_email);
+      if ($('communicationsSignatureShort')) $('communicationsSignatureShort').value = firstFilledValue(data?.signature_short);
+      if ($('communicationsFooterLocal')) $('communicationsFooterLocal').value = firstFilledValue(data?.footer_local);
+      if ($('communicationsUseLibraryNameAsSender')) $('communicationsUseLibraryNameAsSender').checked = data?.use_library_name_as_sender === true;
+      if ($('communicationsUseLibraryLogo')) $('communicationsUseLibraryLogo').checked = data?.use_library_logo === true;
+
+      if ($('communicationsReservationCreatedEnabled')) $('communicationsReservationCreatedEnabled').checked = data?.reservation_created_enabled !== false;
+      if ($('communicationsReservationStatusEnabled')) $('communicationsReservationStatusEnabled').checked = data?.reservation_status_enabled !== false;
+      if ($('communicationsReservationWorkflowEnabled')) $('communicationsReservationWorkflowEnabled').checked = data?.reservation_workflow_enabled !== false;
+      if ($('communicationsLocalConsultationEnabled')) $('communicationsLocalConsultationEnabled').checked = data?.local_consultation_enabled !== false;
+      if ($('communicationsLoanLifecycleEnabled')) $('communicationsLoanLifecycleEnabled').checked = data?.loan_lifecycle_enabled !== false;
+      if ($('communicationsLoanRemindersEnabled')) $('communicationsLoanRemindersEnabled').checked = data?.loan_reminders_enabled !== false;
+      if ($('communicationsLoanOverdueEnabled')) $('communicationsLoanOverdueEnabled').checked = data?.loan_overdue_enabled !== false;
+      if ($('communicationsAdminCopyReservationsEnabled')) $('communicationsAdminCopyReservationsEnabled').checked = data?.admin_copy_reservations_enabled === true;
+      if ($('communicationsAdminCopyLoansEnabled')) $('communicationsAdminCopyLoansEnabled').checked = data?.admin_copy_loans_enabled === true;
+      if ($('communicationsAdminNotificationEmail')) $('communicationsAdminNotificationEmail').value = firstFilledValue(data?.admin_notification_email);
+      if ($('communicationsWeeklyReportEmail')) $('communicationsWeeklyReportEmail').value = firstFilledValue(data?.weekly_report_email);
+      if ($('communicationsSevereAlertEmail')) $('communicationsSevereAlertEmail').value = firstFilledValue(data?.severe_alert_email);
+
+      if ($('communicationsDeliveryMode')) $('communicationsDeliveryMode').value = firstFilledValue(data?.delivery_mode);
+      if ($('communicationsTransportChannel')) $('communicationsTransportChannel').value = firstFilledValue(data?.transport_channel);
+      if ($('communicationsTransportState')) $('communicationsTransportState').value = firstFilledValue(data?.transport_state);
+      if ($('communicationsSenderVisibleEmail')) $('communicationsSenderVisibleEmail').value = firstFilledValue(data?.sender_visible_email);
+      if ($('communicationsLastTestedAt')) $('communicationsLastTestedAt').value = fmtDateTime(firstFilledValue(data?.transport_last_tested_at, data?.last_tested_at));
+
+      setStatus('communicationsIdentityEditorStatus', '');
+      setStatus('communicationsPolicyEditorStatus', '');
+      setStatus('communicationsTransportEditorStatus', '');
+      renderCommunicationsSettingsTable();
+    }
+
+    function renderCommunicationsSettingsTable() {
+      const tbody = $('tbodyCommunicationsSettings');
+      if (!tbody) return;
+      const data = currentCommunicationsContext && typeof currentCommunicationsContext === 'object' ? currentCommunicationsContext : {};
+      const rows = [
+        ['Nome de envio', firstFilledValue(data?.sender_display_name), 'get_library_notification_context / library_email_identity', 'Identidade principal dos avisos.'],
+        ['Nome para responder', firstFilledValue(data?.reply_to_name), 'get_library_notification_context / library_email_identity', 'Usado no retorno manual.'],
+        ['E-mail para resposta', firstFilledValue(data?.reply_to_email), 'get_library_notification_context / library_email_identity', 'Canal de retorno humano.'],
+        ['Assinatura curta', firstFilledValue(data?.signature_short), 'get_library_notification_context / library_email_identity', 'Assinatura local dos avisos.'],
+        ['Rodapé local', firstFilledValue(data?.footer_local), 'get_library_notification_context / library_email_identity', 'Linha curta exibida no rodapé.'],
+        ['Reserva criada', displayValue(data?.reservation_created_enabled), 'get_library_notification_context / política de avisos', 'Liga ou desliga este aviso.'],
+        ['Mudança de status de reserva', displayValue(data?.reservation_status_enabled), 'get_library_notification_context / política de avisos', 'Liga ou desliga este aviso.'],
+        ['Etapas da reserva', displayValue(data?.reservation_workflow_enabled), 'get_library_notification_context / política de avisos', 'Liga ou desliga este aviso.'],
+        ['Consulta local', displayValue(data?.local_consultation_enabled), 'get_library_notification_context / política de avisos', 'Liga ou desliga este aviso.'],
+        ['Ciclo de empréstimo', displayValue(data?.loan_lifecycle_enabled), 'get_library_notification_context / política de avisos', 'Liga ou desliga este aviso.'],
+        ['Lembretes de empréstimo', displayValue(data?.loan_reminders_enabled), 'get_library_notification_context / política de avisos', 'Liga ou desliga este aviso.'],
+        ['Avisos de atraso', displayValue(data?.loan_overdue_enabled), 'get_library_notification_context / política de avisos', 'Liga ou desliga este aviso.'],
+        ['E-mail admin', firstFilledValue(data?.admin_notification_email), 'get_library_notification_context / política de avisos', 'Destino interno para cópias e alertas.'],
+        ['Relatório semanal', firstFilledValue(data?.weekly_report_email), 'get_library_notification_context / política de avisos', 'Destino do resumo semanal local.'],
+        ['Alertas graves', firstFilledValue(data?.severe_alert_email), 'get_library_notification_context / política de avisos', 'Destino dos alertas importantes.'],
+        ['Modo de envio', firstFilledValue(data?.delivery_mode), 'get_library_notification_context / transporte', 'Modo atual do envio.'],
+        ['Canal de envio', firstFilledValue(data?.transport_channel), 'get_library_notification_context / transporte', 'Canal efetivo.'],
+        ['Estado do transporte', firstFilledValue(data?.transport_state), 'get_library_notification_context / transporte', 'Situação do transporte.'],
+        ['Último teste', fmtDateTime(firstFilledValue(data?.transport_last_tested_at, data?.last_tested_at)), 'get_library_notification_context / transporte', 'Informação de conferência técnica.']
+      ];
+      tbody.innerHTML = rows.map((row) => `<tr><td>${esc(row[0])}</td><td>${esc(row[1] || '—')}</td><td>${esc(row[2] || '—')}</td><td>${esc(row[3] || '—')}</td></tr>`).join('');
+      applyStoredSortForTbody('tbodyCommunicationsSettings');
+    }
+
+    async function upsertFirstAvailableCommunicationTable(tableNames, payloadOrPayloads) {
+      const errors = [];
+      const payloads = Array.isArray(payloadOrPayloads) ? payloadOrPayloads : [payloadOrPayloads];
+      for (const tableName of asArray(tableNames)) {
+        for (const payload of payloads) {
+          try {
+            const { error } = await supabase.from(tableName).upsert(payload, { onConflict: 'library_id' });
+            if (!error) return { tableName, payload };
+            errors.push(`${tableName}: ${error.message || String(error)}`);
+          } catch (error) {
+            errors.push(`${tableName}: ${error.message || String(error)}`);
+          }
+        }
+      }
+      throw new Error(errors.join(' | ') || 'Nenhuma superfície de gravação disponível.');
+    }
+
+    async function saveCommunicationsIdentity() {
+      try {
+        const libraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
+        if (!libraryId) throw new Error('Biblioteca ativa não identificada.');
+        const senderDisplayName = String($('communicationsSenderDisplayName')?.value || '').trim() || null;
+        const replyToName = String($('communicationsReplyToName')?.value || '').trim() || null;
+        const replyToEmail = String($('communicationsReplyToEmail')?.value || '').trim() || null;
+        const signatureShort = String($('communicationsSignatureShort')?.value || '').trim() || null;
+        const footerLocal = String($('communicationsFooterLocal')?.value || '').trim() || null;
+        const useLibraryNameAsSender = !!$('communicationsUseLibraryNameAsSender')?.checked;
+        const useLibraryLogo = !!$('communicationsUseLibraryLogo')?.checked;
+        const payloads = [
+          {
+            library_id: libraryId,
+            sender_display_name: senderDisplayName,
+            reply_to_name: replyToName,
+            reply_to_email: replyToEmail,
+            signature_short: signatureShort,
+            footer_local: footerLocal,
+            use_library_name_as_sender: useLibraryNameAsSender,
+            use_library_logo: useLibraryLogo
+          },
+          {
+            library_id: libraryId,
+            display_name: senderDisplayName,
+            reply_to_name: replyToName,
+            reply_to_email: replyToEmail,
+            contact_email: replyToEmail,
+            signature_short: signatureShort,
+            footer_local: footerLocal
+          },
+          {
+            library_id: libraryId,
+            display_name: senderDisplayName,
+            reply_to_email: replyToEmail,
+            contact_email: replyToEmail
+          }
+        ];
+        setStatus('communicationsIdentityEditorStatus', 'Salvando identidade dos avisos…', 'info');
+        const { tableName } = await upsertFirstAvailableCommunicationTable(COMMUNICATIONS_IDENTITY_TABLE_CANDIDATES, payloads);
+        setStatus('communicationsIdentityEditorStatus', `Identidade dos avisos salva em ${tableName}.`, 'ok');
+        await loadCommunicationsPanel();
+      } catch (error) {
+        setStatus('communicationsIdentityEditorStatus', 'Não consegui salvar a identidade dos avisos: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function saveCommunicationsPolicy() {
+      try {
+        const libraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
+        if (!libraryId) throw new Error('Biblioteca ativa não identificada.');
+        const payloads = [
+          {
+            library_id: libraryId,
+            reservation_created_enabled: !!$('communicationsReservationCreatedEnabled')?.checked,
+            reservation_status_enabled: !!$('communicationsReservationStatusEnabled')?.checked,
+            reservation_workflow_enabled: !!$('communicationsReservationWorkflowEnabled')?.checked,
+            local_consultation_enabled: !!$('communicationsLocalConsultationEnabled')?.checked,
+            loan_lifecycle_enabled: !!$('communicationsLoanLifecycleEnabled')?.checked,
+            loan_reminders_enabled: !!$('communicationsLoanRemindersEnabled')?.checked,
+            loan_overdue_enabled: !!$('communicationsLoanOverdueEnabled')?.checked,
+            admin_copy_reservations_enabled: !!$('communicationsAdminCopyReservationsEnabled')?.checked,
+            admin_copy_loans_enabled: !!$('communicationsAdminCopyLoansEnabled')?.checked,
+            admin_notification_email: String($('communicationsAdminNotificationEmail')?.value || '').trim() || null,
+            weekly_report_email: String($('communicationsWeeklyReportEmail')?.value || '').trim() || null,
+            severe_alert_email: String($('communicationsSevereAlertEmail')?.value || '').trim() || null
+          },
+          {
+            library_id: libraryId,
+            admin_notification_email: String($('communicationsAdminNotificationEmail')?.value || '').trim() || null,
+            weekly_report_email: String($('communicationsWeeklyReportEmail')?.value || '').trim() || null,
+            severe_alert_email: String($('communicationsSevereAlertEmail')?.value || '').trim() || null
+          }
+        ];
+        setStatus('communicationsPolicyEditorStatus', 'Salvando políticas de aviso…', 'info');
+        const { tableName } = await upsertFirstAvailableCommunicationTable(COMMUNICATIONS_POLICY_TABLE_CANDIDATES, payloads);
+        setStatus('communicationsPolicyEditorStatus', `Políticas de aviso salvas em ${tableName}.`, 'ok');
+        await loadCommunicationsPanel();
+      } catch (error) {
+        setStatus('communicationsPolicyEditorStatus', 'Não consegui salvar as políticas de aviso: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
+    async function saveCommunicationsTransport() {
+      try {
+        const libraryId = normalizeLibraryId(currentLibraryRow?.id || currentAccessRow?.library_id || currentIdentityRow?.library_id || '');
+        if (!libraryId) throw new Error('Biblioteca ativa não identificada.');
+        const payloads = [
+          {
+            library_id: libraryId,
+            delivery_mode: String($('communicationsDeliveryMode')?.value || '').trim() || null,
+            transport_channel: String($('communicationsTransportChannel')?.value || '').trim() || null,
+            transport_state: String($('communicationsTransportState')?.value || '').trim() || null
+          },
+          {
+            library_id: libraryId,
+            transport_channel: String($('communicationsTransportChannel')?.value || '').trim() || null,
+            transport_state: String($('communicationsTransportState')?.value || '').trim() || null
+          }
+        ];
+        setStatus('communicationsTransportEditorStatus', 'Salvando transporte local…', 'info');
+        const { tableName } = await upsertFirstAvailableCommunicationTable(COMMUNICATIONS_TRANSPORT_TABLE_CANDIDATES, payloads);
+        setStatus('communicationsTransportEditorStatus', `Transporte local salvo em ${tableName}.`, 'ok');
+        await loadCommunicationsPanel();
+      } catch (error) {
+        setStatus('communicationsTransportEditorStatus', 'Não consegui salvar o transporte local: ' + (error.message || String(error)), 'bad');
+      }
+    }
+
     async function loadCommunicationsPanel() {
       try {
         const row = currentLibraryRow?.id ? currentLibraryRow : await fetchCurrentLibraryRow();
@@ -2636,12 +2915,17 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
           ['E-mail mostrado no envio', data?.sender_visible_email || '—']
         ]);
         $('communicationsJson').textContent = JSON.stringify(data || {}, null, 2);
+        loadCommunicationsEditorsFromContext();
+        renderCommunicationsSettingsTable();
         applyActiveLibraryBranding();
-        setStatus('communicationsStatus', 'Comunicações carregadas.', 'ok');
+        setStatus('communicationsStatus', 'Comunicações carregadas com edição local restaurada.', 'ok');
       } catch (error) {
+        currentCommunicationsContext = {};
         renderKvGrid('communicationsIdentityGrid', []);
         renderKvGrid('communicationsPolicyGrid', []);
         renderKvGrid('communicationsTransportGrid', []);
+        const tbody = $('tbodyCommunicationsSettings');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="4">Falha ao carregar os ajustes de comunicação.</td></tr>';
         $('communicationsJson').textContent = '{}';
         setStatus('communicationsStatus', 'Não consegui carregar as comunicações: ' + (error.message || String(error)), 'bad');
       }
@@ -6153,6 +6437,12 @@ const HERO_TITLE_TEXT = 'Biblioteca - Organização da biblioteca';
     $('btnResetIdentityService')?.addEventListener('click', loadIdentityEditorsFromCurrentState);
     $('btnSaveIdentityService')?.addEventListener('click', saveIdentityService);
     $('btnRefreshComms')?.addEventListener('click', loadCommunicationsPanel);
+    $('btnResetCommsIdentity')?.addEventListener('click', loadCommunicationsEditorsFromContext);
+    $('btnSaveCommsIdentity')?.addEventListener('click', saveCommunicationsIdentity);
+    $('btnResetCommsPolicy')?.addEventListener('click', loadCommunicationsEditorsFromContext);
+    $('btnSaveCommsPolicy')?.addEventListener('click', saveCommunicationsPolicy);
+    $('btnResetCommsTransport')?.addEventListener('click', loadCommunicationsEditorsFromContext);
+    $('btnSaveCommsTransport')?.addEventListener('click', saveCommunicationsTransport);
     $('btnRefreshRegimento')?.addEventListener('click', loadWorkspaceAndPolicies);
     $('btnRefreshDocuments')?.addEventListener('click', async () => { await loadGovernancePanel(); await loadExchangePanel(); await loadInterlibraryLoansPanel(); });
     $('btnRefreshExchange')?.addEventListener('click', async () => {
